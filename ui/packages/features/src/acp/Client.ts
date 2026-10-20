@@ -46,6 +46,11 @@ export class ACPClient implements Client {
           this.agentServer,
           params as unknown as ACPTurnEndedNotification,
         );
+      case "camber/acp/session_replay_started":
+        if (typeof params.sessionId === "string") {
+          this.repo.handleSessionReplayStarted(this.agentServer, params.sessionId);
+        }
+        return;
       case CLAUDE_SDK_MESSAGE_METHOD: {
         const suggestion = parseClaudePromptSuggestion(params);
         if (suggestion) {

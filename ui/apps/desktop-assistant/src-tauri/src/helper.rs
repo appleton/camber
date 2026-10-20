@@ -88,7 +88,7 @@ impl HelperJsonRpcError {
         }
     }
 
-    fn to_jsonrpc_value(&self) -> Value {
+    pub(crate) fn to_jsonrpc_value(&self) -> Value {
         let mut error = json!({ "message": self.message });
         if let Some(code) = self.code {
             error["code"] = json!(code);
@@ -169,6 +169,11 @@ pub struct HelperState {
 }
 
 impl HelperState {
+    pub(crate) async fn control_readiness(&self) -> (bool, bool) {
+        let inner = self.inner.lock().await;
+        (inner.ready, inner.notification_bridge_ready)
+    }
+
     async fn set_starting(&self, helper: Arc<HelperProcess>) {
         let mut inner = self.inner.lock().await;
         helper
@@ -692,8 +697,18 @@ impl HelperCommandSpec {
         if let Some(cwd) = self.cwd {
             command = command.current_dir(cwd);
         }
+        let helper_path = self
+            .env
+            .iter()
+            .rev()
+            .find(|(name, _)| name == "PATH")
+            .map(|(_, value)| std::ffi::OsString::from(value))
+            .or_else(|| std::env::var_os("PATH"));
         if !self.env.is_empty() {
             command = command.envs(self.env);
+        }
+        if let Some(state) = app.try_state::<crate::control::ControlState>() {
+            command = command.envs(state.helper_env(helper_path));
         }
 
         Ok(command)

@@ -47,6 +47,15 @@ func (s *sessionEventSink) Cursor(agentServer, sessionID string) acpproxy.Sessio
 	return acpproxy.SessionCursor{Epoch: info.Epoch, Seq: info.Seq, TurnActive: info.TurnActive}
 }
 
+func (s *sessionEventSink) MarkSessionHistory(agentServer, sessionID string, complete bool) {
+	s.log.MarkSessionHistory(agentServer, sessionID, complete)
+}
+
+func (s *sessionEventSink) SessionReplay(agentServer, sessionID, originID string) ([]map[string]any, acpproxy.SessionCursor, bool) {
+	messages, info, ok := s.log.SessionReplay(agentServer, sessionID, originID)
+	return messages, acpproxy.SessionCursor{Epoch: info.Epoch, Seq: info.Seq, TurnActive: info.TurnActive}, ok
+}
+
 // remoteResume replays buffered live session events after the caller's
 // cursors (allowlisted for remote clients; see methods.RemoteResumeMethod).
 func (h *CamberHandler) remoteResume(ctx context.Context, params *methods.RemoteResumeParams, gCtx *glsp.Context) (methods.RemoteResumeOutput, error) {

@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "auth.go",
         "cert.go",
+        "control.go",
         "denylist.go",
         "file.go",
         "hub.go",
@@ -21,6 +22,7 @@ go_library(
         "//pkg/camber-helper/methods",
         "@com_github_google_uuid//:uuid",
         "@com_github_gorilla_websocket//:websocket",
+        "@com_github_pkg_errors//:errors",
         "@com_github_sourcegraph_jsonrpc2//:jsonrpc2",
         "@com_github_sourcegraph_jsonrpc2//websocket",
         "@com_github_tliron_glsp//:glsp",
@@ -32,6 +34,7 @@ go_test(
     srcs = [
         "auth_test.go",
         "cert_test.go",
+        "control_test.go",
         "dev_server_test.go",
         "file_test.go",
         "hub_test.go",

@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "camber_lib",
+    srcs = ["main.go"],
+    importpath = "github.com/appleton/camber/cmd/camber",
+    visibility = ["//visibility:private"],
+    deps = ["//pkg/camber-cli"],
+)
+
+go_binary(
+    name = "poolside",
+    embed = [":camber_lib"],
+    gc_linkopts = [
+        "-s",
+        "-w",
+    ],
+    visibility = ["//visibility:public"],
+)

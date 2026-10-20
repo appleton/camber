@@ -107,6 +107,17 @@ export class ACPSession {
   // session, which used to swallow the user's very first prompt. Plain field:
   // consumed only by the loader.
   restoreRequired = false;
+  // A connector refresh found this conversation mid-turn (locally or on
+  // another surface) and was skipped or refused by the helper. The live pane
+  // is left untouched and the refresh re-runs when the helper reports the
+  // turn ended. Plain field: consumed only by lifecycle code.
+  connectorRefreshDeferred = false;
+  private deferredConnectorRefresh: Promise<void> | null = null;
+  // While a connector-refresh reload is on the wire, live updates are routed
+  // to the replay materializer like any load. If the helper then refuses the
+  // reload (turn running), the loader puts these back on the live transcript
+  // instead of discarding them with the replay. Plain field: loader-owned.
+  connectorRefreshCapture: SessionNotification[] | null = null;
   // session/load restored this conversation and the agent replayed nothing at
   // all: its history is gone agent-side even though the sidebar still lists the
   // conversation. Surfaces read it so they stop presenting the conversation as
@@ -446,7 +457,10 @@ export class ACPSession {
     return this.loader.loadExisting(gen, cwd, mcpServers, seedInfo, fallbackCwds);
   }
 
-  async refreshMCPServers(gen: number): Promise<boolean> {
+  async refreshMCPServers(
+    gen: number,
+    options: { trustRemoteStatus?: boolean } = {},
+  ): Promise<boolean> {
     // Every resume path must let an in-flight suspending close settle first,
     // or the resume can be answered and then torn down by the late close.
     if (this.pendingClose) {
@@ -459,7 +473,7 @@ export class ACPSession {
     // from starting while a resume is on the wire.
     this.refreshInFlight = true;
     try {
-      const ok = await this.loader.refreshMCPServers(gen);
+      const ok = await this.loader.refreshMCPServers(gen, options);
       // A successful resume/reload means the agent side is attached again, no
       // matter which flow triggered it (reattach, MCP-server refresh sweep).
       // Leaving `suspended` set here would make future idle sweeps and evicts
@@ -570,6 +584,7 @@ export class ACPSession {
   }
 
   applyReplayUpdate(params: SessionNotification): void {
+    this.connectorRefreshCapture?.push(params);
     this.transcript.applyReplayUpdate(params);
   }
 
@@ -619,6 +634,25 @@ export class ACPSession {
 
   handleTurnEnded(): void {
     this.extensions.camber?.endTurn();
+    this.retryDeferredConnectorRefresh();
+  }
+
+  /**
+   * Re-run a connector refresh deferred while this conversation was mid-turn.
+   * Serialized so it queues behind a prompt whose turnEnded arrived before its
+   * own completion; single-flight. The helper remains the authority: a turn
+   * that started again meanwhile is refused and defers the refresh once more.
+   */
+  retryDeferredConnectorRefresh(): void {
+    if (!this.connectorRefreshDeferred || this.suspended || this.deferredConnectorRefresh) {
+      return;
+    }
+    this.deferredConnectorRefresh = this.serialize(async (gen) => {
+      if (!this.connectorRefreshDeferred || this.suspended) return;
+      await this.refreshMCPServers(gen, { trustRemoteStatus: false });
+    }).finally(() => {
+      this.deferredConnectorRefresh = null;
+    });
   }
 
   sendCore(...args: ACPSessionSendCoreArgs): Promise<string | null> {

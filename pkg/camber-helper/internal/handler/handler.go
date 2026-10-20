@@ -26,6 +26,7 @@ import (
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/acpnav"
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/acpproxy"
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/approvals"
+	"github.com/appleton/camber/pkg/camber-helper/internal/handler/control"
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/filesearch"
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/localinference"
 	acpsdk "github.com/coder/acp-go-sdk"
@@ -92,6 +93,7 @@ type CamberHandler struct {
 	remoteTerminals *remoteterminal.Manager
 
 	// endpoints
+	controlHandler             *control.Service
 	acpProxyHandler            *acpproxy.Handler
 	acpNavHandler              *acpnav.Server
 	fileSearchHandler          *filesearch.Server
@@ -416,6 +418,8 @@ func New() *CamberHandler {
 		Method:      methods.LocalInferenceUnloadModelMethod,
 		Description: "releases the model resident in the local sidecar's memory",
 	}, handler.localInferenceHandler.UnloadModel)
+
+	registerExtensionMethodNoDeadline(handler, JSONRPCOperation{Method: methods.ControlDispatchMethod, Description: "dispatches discoverable local desktop orchestration actions"}, handler.controlHandler.Dispatch)
 
 	registerExtensionMethod(handler, JSONRPCOperation{
 		Method:      methods.ACPNavListMethod,
@@ -835,6 +839,7 @@ func newHandlerBaseState() *CamberHandler {
 	)
 
 	h.sessionLog = remoteaccess.NewSessionLog(h.remoteHub)
+	h.controlHandler = control.New(h.acpNavHandler, h.acpProxyHandler, h.sessionLog)
 	h.acpProxyHandler.SetSessionEvents(&sessionEventSink{log: h.sessionLog, hub: h.remoteHub})
 
 	// Pending approvals are helper-owned state: every change pushes the full

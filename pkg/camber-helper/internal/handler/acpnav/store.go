@@ -1402,6 +1402,15 @@ WHERE workspace_path = ?
 }
 
 func (s *Store) RemoveWorktree(ctx context.Context, path string) error {
+	return s.removeWorktree(ctx, path, true)
+}
+
+// RemoveWorktreeSafely preserves Git failures and never forces removal.
+func (s *Store) RemoveWorktreeSafely(ctx context.Context, path string) error {
+	return s.removeWorktree(ctx, path, false)
+}
+
+func (s *Store) removeWorktree(ctx context.Context, path string, force bool) error {
 	path = cleanPath(path)
 	if path == "" {
 		return fmt.Errorf("worktree path is required")
@@ -1418,8 +1427,16 @@ func (s *Store) RemoveWorktree(ctx context.Context, path string) error {
 		parentPath := cleanPath(parent.String)
 		rl := s.repoLock(parentPath)
 		rl.Lock()
-		_, _ = s.runGit(ctx, "-C", parentPath, "worktree", "remove", "--force", path)
+		args := []string{"-C", parentPath, "worktree", "remove"}
+		if force {
+			args = append(args, "--force")
+		}
+		args = append(args, path)
+		output, removeErr := s.runGit(ctx, args...)
 		rl.Unlock()
+		if !force && removeErr != nil {
+			return fmt.Errorf("removing worktree: %w: %s", removeErr, strings.TrimSpace(string(output)))
+		}
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -1668,13 +1685,24 @@ ORDER BY
 }
 
 func (s *Store) listConversations(ctx context.Context) ([]methods.ACPNavConversation, error) {
-	rows, err := s.db.QueryContext(ctx, `
+	return s.queryConversations(ctx, "")
+}
+
+func (s *Store) queryConversations(ctx context.Context, id string) ([]methods.ACPNavConversation, error) {
+	query := `
 SELECT id, workspace_path, agent_server, COALESCE(session_id, ''), cwd, title, nickname, updated_at, active, archived, working_directories_json, metadata_json
 FROM conversations
-ORDER BY
+`
+	var args []any
+	if id != "" {
+		query += "WHERE id = ?\n"
+		args = append(args, id)
+	}
+	query += `ORDER BY
   CASE WHEN updated_at = '' THEN touched_at ELSE updated_at END DESC,
   touched_at DESC
-`)
+`
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("listing conversations: %w", err)
 	}

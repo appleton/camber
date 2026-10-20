@@ -34,6 +34,7 @@ type publishedEvent struct {
 type directEvent struct {
 	originID string
 	method   string
+	params   any
 }
 
 type broadcastEvent struct {
@@ -57,7 +58,122 @@ func (s *fakeEventSink) PublishSessionUpdate(agentServer, sessionID, originDevic
 func (s *fakeEventSink) NotifyClient(originID string, method string, params any) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.direct = append(s.direct, directEvent{originID: originID, method: method})
+	s.direct = append(s.direct, directEvent{originID: originID, method: method, params: params})
+}
+
+type replayEventSink struct {
+	fakeEventSink
+	messages []map[string]any
+	complete bool
+}
+
+func (s *replayEventSink) MarkSessionHistory(_, _ string, complete bool) {
+	s.complete = complete
+}
+
+func (s *replayEventSink) SessionReplay(_, _, _ string) ([]map[string]any, SessionCursor, bool) {
+	return s.messages, SessionCursor{Epoch: "epoch", Seq: 2, TurnActive: true}, s.complete
+}
+
+func TestLiveSessionAttachDoesNotReloadOrScopeRunningTurn(t *testing.T) {
+	h := NewHandler(dummyConfig(), nil, nil)
+	proc, client := h.processFor(DefaultAgentServerName, newGlspContext(nil, nil))
+	proc.configuration = &sessionConfigurationCache{}
+	proc.configuration.capture("running", []acpsdk.SessionConfigOption{}, nil)
+	sink := &replayEventSink{
+		complete: true,
+		messages: []map[string]any{
+			{"method": "session/update", "params": "first"},
+			{"method": "session/update", "params": "second"},
+		},
+	}
+	h.SetSessionEvents(sink)
+	turn, reserved := h.beginPromptInFlight(DefaultAgentServerName, "running", "turn")
+	require.True(t, reserved)
+	ctx := methods.WithClientOrigin(context.Background(), "primary")
+	response, attached, err := h.attachLiveSession(ctx, DefaultAgentServerName, acpsdk.LoadSessionRequest{
+		SessionId: "running", Meta: map[string]any{liveAttachMetaKey: true},
+	}, client)
+	require.NoError(t, err)
+	require.True(t, attached)
+	require.NotNil(t, response)
+	assert.Equal(t, true, response.Meta[liveAttachMetaKey])
+	require.NoError(t, client.waitForSessionUpdates(ctx))
+	_, direct := sink.snapshot()
+	require.Len(t, direct, 3)
+	first := direct[0].params.(map[string]any)["message"].(map[string]any)
+	assert.Equal(t, sessionReplayStartedMethod, first["method"])
+	for i, want := range sink.messages {
+		assert.Equal(t, want, direct[i+1].params.(map[string]any)["message"])
+		assert.Equal(t, "primary", direct[i+1].originID)
+	}
+	_, scoped := h.loadScopeFor(DefaultAgentServerName, "running")
+	assert.False(t, scoped)
+	assert.Same(t, turn, h.promptsInFlight[promptSessionKey{DefaultAgentServerName, "running"}])
+	// Subsequent live updates still fan out to all readers.
+	client.routeSessionEvent(ctx, "session/update", "running", "third")
+	published, _ := sink.snapshot()
+	require.Len(t, published, 1)
+	assert.Equal(t, "third", published[0].message["params"])
+}
+
+func TestActiveSessionLoadAndCloseFailSafely(t *testing.T) {
+	h := NewHandler(dummyConfig(), nil, nil)
+	_, client := h.processFor(DefaultAgentServerName, newGlspContext(nil, nil))
+	_, reserved := h.beginPromptInFlight(DefaultAgentServerName, "running", "turn")
+	require.True(t, reserved)
+	for _, meta := range []map[string]any{nil, {liveAttachMetaKey: true}} {
+		_, attached, err := h.attachLiveSession(context.Background(), DefaultAgentServerName,
+			acpsdk.LoadSessionRequest{SessionId: "running", Meta: meta}, client)
+		assert.True(t, attached)
+		require.ErrorContains(t, err, "still running")
+	}
+	// Even callers that raced the initial active check cannot reload the agent.
+	_, err := h.beginSessionLoad(context.Background(), DefaultAgentServerName, "running", "primary")
+	require.ErrorContains(t, err, "still running")
+	_, err = h.CloseSession(context.Background(), &methods.ACPCloseSessionParams{
+		ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: DefaultAgentServerName},
+		CloseSessionRequest:  acpsdk.CloseSessionRequest{SessionId: "running"},
+	}, newGlspContext(nil, nil))
+	require.ErrorContains(t, err, "busy")
+}
+
+func TestLiveSessionAttachRefusesIncompleteHistory(t *testing.T) {
+	h := NewHandler(dummyConfig(), nil, nil)
+	proc, client := h.processFor(DefaultAgentServerName, newGlspContext(nil, nil))
+	proc.configuration = &sessionConfigurationCache{}
+	proc.configuration.capture("running", []acpsdk.SessionConfigOption{}, nil)
+	sink := &replayEventSink{complete: false}
+	h.SetSessionEvents(sink)
+	_, reserved := h.beginPromptInFlight(DefaultAgentServerName, "running", "turn")
+	require.True(t, reserved)
+	_, attached, err := h.attachLiveSession(context.Background(), DefaultAgentServerName,
+		acpsdk.LoadSessionRequest{SessionId: "running", Meta: map[string]any{liveAttachMetaKey: true}}, client)
+	assert.True(t, attached)
+	require.ErrorContains(t, err, "still running")
+	_, direct := sink.snapshot()
+	assert.Empty(t, direct, "do not reset the UI before confirming replay is complete")
+}
+
+func TestLoadingSessionExcludesNewPrompt(t *testing.T) {
+	h := NewHandler(dummyConfig(), nil, nil)
+	release, err := h.beginSessionLoad(context.Background(), DefaultAgentServerName, "loading", "primary")
+	require.NoError(t, err)
+	_, reserved := h.beginPromptInFlight(DefaultAgentServerName, "loading", "turn")
+	assert.False(t, reserved)
+	release()
+	_, reserved = h.beginPromptInFlight(DefaultAgentServerName, "loading", "turn")
+	assert.True(t, reserved)
+}
+
+func TestPromptReservationRechecksCompletedRetry(t *testing.T) {
+	h := NewHandler(dummyConfig(), nil, nil)
+	first, reserved := h.beginPromptInFlight(DefaultAgentServerName, "session", "turn")
+	require.True(t, reserved)
+	h.completeTurn(DefaultAgentServerName, "session", first, &methods.ACPPromptOutput{StopReason: acpsdk.StopReasonEndTurn}, nil)
+	retry, reserved := h.beginPromptInFlight(DefaultAgentServerName, "session", "turn")
+	assert.False(t, reserved)
+	assert.Same(t, first, retry)
 }
 
 func (s *fakeEventSink) NotifyAll(method string, params any) {

@@ -15,6 +15,40 @@ func testMessage(i int) map[string]any {
 	return map[string]any{"jsonrpc": "2.0", "method": "session/update", "params": i}
 }
 
+func TestSessionReplayRequiresCompleteHistory(t *testing.T) {
+	log := NewSessionLog(NewHub())
+	log.Publish("claude", "child", "", false, testMessage(1))
+	_, _, ok := log.SessionReplay("claude", "child", PrimaryOrigin)
+	assert.False(t, ok, "unknown or previously loaded sessions are not complete transcripts")
+	log.MarkSessionHistory("claude", "child", true)
+	log.BeginTurn("claude", "child")
+	messages, cursor, ok := log.SessionReplay("claude", "child", PrimaryOrigin)
+	require.True(t, ok)
+	assert.Equal(t, []map[string]any{testMessage(1)}, messages)
+	assert.True(t, cursor.TurnActive)
+	assert.Equal(t, int64(1), cursor.Seq)
+	log.MarkSessionHistory("claude", "child", false)
+	_, _, ok = log.SessionReplay("claude", "child", PrimaryOrigin)
+	assert.False(t, ok, "agent-side replay invalidates our full-history claim")
+}
+
+func TestSessionReplayRefusesEvictionAndRemoteOverflow(t *testing.T) {
+	log := NewSessionLog(NewHub())
+	log.MarkSessionHistory("claude", "child", true)
+	for i := 0; i < sessionLogMaxReplay; i++ {
+		log.Publish("claude", "child", "", false, testMessage(i))
+	}
+	_, _, ok := log.SessionReplay("claude", "child", "remote:device/a")
+	assert.False(t, ok)
+	_, _, ok = log.SessionReplay("claude", "child", PrimaryOrigin)
+	assert.True(t, ok)
+	for i := sessionLogMaxReplay; i <= sessionLogBufferCap; i++ {
+		log.Publish("claude", "child", "", false, testMessage(i))
+	}
+	_, _, ok = log.SessionReplay("claude", "child", PrimaryOrigin)
+	assert.False(t, ok, "never present an evicted prefix as complete")
+}
+
 func eventSeq(t *testing.T, msg notifyMsg) int64 {
 	t.Helper()
 	params, ok := msg.params.(map[string]any)

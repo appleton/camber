@@ -2,7 +2,6 @@ package remoteaccess
 
 import (
 	"context"
-
 	"sync"
 
 	"github.com/google/uuid"
@@ -46,6 +45,10 @@ type loggedEvent struct {
 type sessionLogEntry struct {
 	seq    int64
 	events []loggedEvent
+	// True only for sessions created by this helper whose history has never
+	// been replaced by an agent-side load. A bounded log is not a transcript
+	// snapshot unless it still covers that session from its beginning.
+	completeHistory bool
 	// activeTurns counts BeginTurn calls not yet matched by EndTurn. A turn's
 	// EndTurn rides the per-client notification queue behind the turn's final
 	// publishes, so it can land after the next turn's synchronous BeginTurn;
@@ -162,6 +165,42 @@ func (l *SessionLog) Cursor(agentServer, sessionID string) SessionCursorInfo {
 		TurnActive:   entry.activeTurns > 0,
 		TurnStartSeq: entry.turnStartSeq,
 	}
+}
+
+// MarkSessionHistory records whether live events can reconstruct this session.
+// Loading persisted agent history invalidates this: replay is not in our log.
+func (l *SessionLog) MarkSessionHistory(agentServer, sessionID string, complete bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.entryLocked(agentServer, sessionID).completeHistory = complete
+}
+
+// SessionReplay returns a complete, ordered snapshot or refuses it. Callers
+// serialize this and its delivery with live publishes on the ACP event queue.
+// Remotes have a bounded delivery queue, so refuse an oversized replay before
+// sending anything rather than disconnecting the reader halfway through.
+func (l *SessionLog) SessionReplay(agentServer, sessionID, originID string) ([]map[string]any, SessionCursorInfo, bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	entry := l.sessions[sessionLogKey{agentServer: agentServer, sessionID: sessionID}]
+	if entry == nil || !entry.completeHistory ||
+		(entry.seq > 0 && (len(entry.events) == 0 || entry.events[0].seq != 1)) ||
+		(originID != PrimaryOrigin && len(entry.events) >= sessionLogMaxReplay) {
+		return nil, SessionCursorInfo{}, false
+	}
+	messages := make([]map[string]any, 0, len(entry.events))
+	for _, event := range entry.events {
+		envelope, ok := event.params.(map[string]any)
+		if !ok {
+			return nil, SessionCursorInfo{}, false
+		}
+		message, ok := envelope["message"].(map[string]any)
+		if !ok {
+			return nil, SessionCursorInfo{}, false
+		}
+		messages = append(messages, message)
+	}
+	return messages, SessionCursorInfo{Epoch: l.epoch, Seq: entry.seq, TurnActive: entry.activeTurns > 0}, true
 }
 
 // Resume replays buffered events after each cursor to the calling remote

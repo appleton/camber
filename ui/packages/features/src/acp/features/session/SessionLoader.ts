@@ -25,6 +25,7 @@ import {
   updateSessionModeValue,
   type ACPSessionConfigSnapshot,
 } from "./configOptions";
+import { isSessionActiveError } from "./errors";
 import type { ACPSession } from "./Session.svelte";
 import { loadPersistedSessionConfig } from "./SessionMetadata";
 import type { ACPSessionLoadState } from "./types";
@@ -55,11 +56,21 @@ export class ACPSessionLoader {
     mcpServers: McpServer[],
     seedInfo?: Partial<ACPResolvedSessionInfo>,
     fallbackCwds: string[] = [],
+    allowLiveAttach = true,
   ): Promise<void> {
     const s = this.session;
     if (gen !== s.generation || s.sessionId === null) return;
     const sessionId = s.sessionId;
     const agentServer = s.agentServer;
+    // A connector refresh (allowLiveAttach=false) can be refused because a
+    // turn started after the caller's status check; the pane is then restored
+    // to exactly this state.
+    const priorPane = {
+      loadState: s.loadState,
+      loadIntent: s.loadIntent,
+      loadingCwd: s.loadingCwd,
+      promptError: s.promptError,
+    };
     s.clearPromptSuggestion();
 
     const [storedConfig] = await Promise.all([
@@ -86,6 +97,7 @@ export class ACPSessionLoader {
 
     s.replayMaterializer = new TurnMaterializer();
     s.replaySessionInfo = mergeSeedSessionInfo(sessionId, cwd || "/", seedInfo);
+    if (!allowLiveAttach) s.connectorRefreshCapture = [];
 
     try {
       if (!s.env.agents.capabilitiesFor(agentServer)?.loadSession) {
@@ -93,11 +105,18 @@ export class ACPSessionLoader {
       }
 
       const localModelDefinitions = this.localModelDefinitions();
-      const res = await this.loadSessionWithFallbacks(gen, conn, sessionId, cwd, mcpServers, [
-        ...fallbackCwds,
-      ]);
+      const res = await this.loadSessionWithFallbacks(
+        gen,
+        conn,
+        sessionId,
+        cwd,
+        mcpServers,
+        [...fallbackCwds],
+        allowLiveAttach,
+      );
       if (gen !== s.generation) return;
-      s.replayMaterializer?.completeOpenToolCalls();
+      const liveAttach = res._meta?.["camber/liveAttach"] === true;
+      if (!liveAttach) s.replayMaterializer?.completeOpenToolCalls();
       s.materializer = s.replayMaterializer ?? new TurnMaterializer();
       s.sessionInfo = s.replaySessionInfo;
       s.publishTranscript();
@@ -110,13 +129,17 @@ export class ACPSessionLoader {
       s.availableCommands = s.env.agents.cachedAvailableCommands(agentServer);
       s.modes = res.modes ?? null;
       s.pendingConfigOptions = {};
-      await this.applyPersistedSessionConfig(gen, conn, storedConfig, reportedConfigOptions);
+      // A live attach reports the running agent's configuration. Reapplying
+      // an older UI snapshot here can restart the agent or change its model.
+      if (!liveAttach) {
+        await this.applyPersistedSessionConfig(gen, conn, storedConfig, reportedConfigOptions);
+      }
       if (gen !== s.generation) return;
       // Transport implementations may settle the load response independently
       // from replay delivery. Publish once more after persisted config is
       // restored so any replay updates accepted during that window cannot
       // remain materialized but invisible.
-      s.replayMaterializer?.completeOpenToolCalls();
+      if (!liveAttach) s.replayMaterializer?.completeOpenToolCalls();
       if (s.replayMaterializer) {
         s.titles.finalizeInlineTitle(s.replayMaterializer, { replay: true });
       }
@@ -146,13 +169,37 @@ export class ACPSessionLoader {
         availableCommands: s.availableCommands,
         modes: s.modes,
       });
+      // A real reload delivers the current connector set. A live-attach
+      // snapshot does not touch the agent session, so a deferred refresh
+      // must survive it.
+      if (!liveAttach) s.connectorRefreshDeferred = false;
       s.loadState = success(this.buildLoadState());
       s.env.publishLiveStatuses();
     } catch (e) {
       if (gen !== s.generation) return;
-      s.loadState = failure(normalizeACPError(e));
+      const error = normalizeACPError(e);
+      if (!allowLiveAttach && isSessionActiveError(error)) {
+        // A turn started between the connector refresh's status check and
+        // the helper's answer. Nothing changed agent-side: restore the pane as
+        // it was, put the live updates captured meanwhile back on the live
+        // transcript (synchronously, before clearReplay in finally, so later
+        // live updates cannot overtake them), and defer the refresh to
+        // turnEnded.
+        s.loadState = priorPane.loadState;
+        s.loadIntent = priorPane.loadIntent;
+        s.loadingCwd = priorPane.loadingCwd;
+        s.promptError = priorPane.promptError;
+        for (const update of s.connectorRefreshCapture ?? []) {
+          s.applySessionUpdate(update);
+        }
+        s.publishTranscript();
+        s.connectorRefreshDeferred = true;
+        return;
+      }
+      s.loadState = failure(error);
       s.loadingCwd = null;
     } finally {
+      s.connectorRefreshCapture = null;
       if (gen === s.generation) {
         s.transcript.clearReplay();
       }
@@ -164,9 +211,26 @@ export class ACPSessionLoader {
    * Prefer session/resume so the transcript stays untouched; older agents fall
    * back to the existing session/load replay path.
    */
-  async refreshMCPServers(gen: number): Promise<boolean> {
+  async refreshMCPServers(
+    gen: number,
+    { trustRemoteStatus = true }: { trustRemoteStatus?: boolean } = {},
+  ): Promise<boolean> {
     const s = this.session;
     if (gen !== s.generation || s.sessionId === null) return false;
+    // A running turn can take neither a resume nor a reload: the helper
+    // refuses both without interrupting the agent. Skip the wire entirely and
+    // retry once the turn ends (handleTurnEnded), so the live pane never flips
+    // into a load state and live updates are never captured by a replay
+    // materializer and discarded. The retry path distrusts the helper-pushed
+    // status, which can lag turnEnded, and lets the helper be the authority.
+    if (
+      s.isPromptActive ||
+      (trustRemoteStatus && s.env.isConversationWorking(s.sessionId, s.agentServer))
+    ) {
+      s.connectorRefreshDeferred = true;
+      return false;
+    }
+    s.connectorRefreshDeferred = false;
     s.clearPromptSuggestion();
 
     const sessionId = s.sessionId;
@@ -241,8 +305,13 @@ export class ACPSessionLoader {
       }
     }
 
-    await this.loadExisting(gen, cwd, [], s.sessionInfo ?? undefined);
-    return gen === s.generation && isSuccess(s.loadState);
+    // A snapshot cannot apply new connectors. Require an actual idle reload
+    // here; the helper rejects an active turn without interrupting it, and
+    // loadExisting restores the pane and defers the refresh in that case.
+    await this.loadExisting(gen, cwd, [], s.sessionInfo ?? undefined, [], false);
+    // A deferred refresh restores the previous (successful) load state; it is
+    // still not applied.
+    return gen === s.generation && isSuccess(s.loadState) && !s.connectorRefreshDeferred;
   }
 
   // Attempts session/load with each cwd in turn. Agents may reject a load when
@@ -257,6 +326,7 @@ export class ACPSessionLoader {
     cwd: string,
     mcpServers: McpServer[],
     fallbackCwds: string[],
+    allowLiveAttach: boolean,
   ): Promise<LoadSessionResponse> {
     const s = this.session;
     const cwds = [cwd, ...fallbackCwds].filter(
@@ -278,7 +348,7 @@ export class ACPSessionLoader {
           sessionId,
           cwd: candidate,
           mcpServers,
-          ...(_meta ? { _meta } : {}),
+          _meta: { ..._meta, "camber/liveAttach": allowLiveAttach },
         });
       } catch (error) {
         lastError = error;

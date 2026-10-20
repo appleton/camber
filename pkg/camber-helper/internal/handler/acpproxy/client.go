@@ -238,6 +238,17 @@ func (c *acpClient) enqueueTurnEnded(sessionID acpsdk.SessionId) {
 	})
 }
 
+func (c *acpClient) enqueueTurnEndedForTurn(sessionID acpsdk.SessionId, turn *activeTurn) {
+	c.asyncNotifications.enqueue(func(ctx context.Context, method string, params any) {
+		c.routeTurnEnded(ctx, method, params)
+		cursor := c.handler.events.Cursor(c.agentServer, string(sessionID))
+		c.handler.mu.Lock()
+		turn.endCursor = cursor
+		close(turn.eventsDone)
+		c.handler.mu.Unlock()
+	}, methods.ACPTurnEndedMethod, methods.ACPTurnEndedNotification{SessionID: sessionID})
+}
+
 func (c *acpClient) routeTurnEnded(ctx context.Context, method string, params any) {
 	notif, ok := params.(methods.ACPTurnEndedNotification)
 	if !ok {

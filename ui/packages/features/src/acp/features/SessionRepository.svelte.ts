@@ -40,6 +40,7 @@ import {
 } from "../localInferenceModelOptions";
 import { newConversationID, type ACPClosedSession } from "../navTypes";
 import { buildSessionInfo, type ACPResolvedSessionInfo } from "../sessionInfo";
+import { TurnMaterializer } from "../TurnMaterializer";
 import {
   ACPAgentRepository,
   type ACPAgentServerConfigurationChange,
@@ -137,6 +138,11 @@ export class ACPSessionRepositoryWriter {
     markUnread: (sessionId, agentServer) =>
       this.conversationStatus.markUnread(sessionId, agentServer),
     publishLiveStatuses: () => this.publishLiveStatuses(),
+    isConversationWorking: (sessionId, agentServer) =>
+      this.conversationStatus.getConversationStatus(
+        sessionId,
+        normalizeAgentServerName(agentServer),
+      ).working,
   };
 
   constructor(
@@ -1341,6 +1347,14 @@ export class ACPSessionRepositoryWriter {
     }
 
     session.applySessionUpdate(params);
+  }
+
+  handleSessionReplayStarted(agentServer: string, sessionId: string): void {
+    const session = this.sessionFor(sessionId, agentServer);
+    if (!session?.replayMaterializer) return;
+    // A helper-owned live snapshot starts here. Discard live updates that
+    // arrived while the request was in flight; the snapshot includes them.
+    session.replayMaterializer = new TurnMaterializer();
   }
 
   handleRequestPermission(
