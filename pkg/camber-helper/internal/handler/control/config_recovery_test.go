@@ -35,7 +35,7 @@ func TestConfigurationRecoveryBeforeDiscoveryUpdateAndSend(t *testing.T) {
 				assert.Equal(t, "high", values["reasoning_effort"])
 				assert.Equal(t, action != "chat.config.set", values["toggle"])
 				assert.Equal(t, "plan", out["modes"].(map[string]any)["currentModeId"])
-				out = invoke(t, s, "chat.send", Args{ConversationID: "parent", Text: "continue"})
+				invoke(t, s, "chat.send", Args{ConversationID: "parent", Text: "continue"})
 			}
 			select {
 			case <-base.started:
