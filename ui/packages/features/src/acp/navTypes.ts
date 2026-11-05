@@ -28,6 +28,10 @@ export type ACPConversationSummary = Omit<ACPResolvedSessionInfo, "sessionId"> &
   // session was not in it (the agent deleted or lost it). Undefined when
   // unknown (server unreachable, list unsupported, or list truncated).
   sessionAvailable?: boolean;
+  // Conversation that spawned this one (camber chat spawn), and the top-most
+  // ancestor. A conversation without a parent may carry rootId === id.
+  parentId?: string;
+  rootId?: string;
 };
 
 export function isACPChatConversation(
@@ -149,6 +153,8 @@ export interface ACPNavConversation {
   workingDirectories: string[];
   metadata?: unknown;
   liveStatus?: ACPConversationLiveStatus;
+  parentId?: string;
+  rootId?: string;
 }
 
 export interface ACPNavState {
@@ -247,6 +253,8 @@ export function conversationToNav(
     archived: false,
     workingDirectories: cloneWorkingDirectories(session.workingDirectories, cwd),
     metadata: normalizeACPSessionMetadata(session.metadata),
+    ...(session.parentId ? { parentId: session.parentId } : {}),
+    ...(session.rootId ? { rootId: session.rootId } : {}),
   };
 }
 
@@ -270,6 +278,8 @@ export function navToConversationSummary(conversation: ACPNavConversation): ACPC
     conversationKind: null,
     agentId: null,
     liveStatus: conversation.liveStatus,
+    ...(conversation.parentId ? { parentId: conversation.parentId } : {}),
+    ...(conversation.rootId ? { rootId: conversation.rootId } : {}),
     _meta: {},
   };
 }

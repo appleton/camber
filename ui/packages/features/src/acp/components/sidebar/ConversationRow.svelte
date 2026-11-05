@@ -23,6 +23,8 @@
     unread?: boolean;
     // ⌘1–9 hint shown in place of the time column while ⌘ is held.
     shortcutHint?: string;
+    // Small quiet label after the title, e.g. the worktree a nested sub-agent lives in.
+    badge?: string;
     onOpen: () => void | Promise<void>;
     onArchive?: (event: MouseEvent) => void | Promise<void>;
     onArchiveNow?: (event: MouseEvent) => void | Promise<void>;
@@ -43,6 +45,7 @@
     waitingForUser = false,
     unread = false,
     shortcutHint,
+    badge,
     onOpen,
     onArchive,
     onArchiveNow,
@@ -119,6 +122,12 @@
           <Icon name="pencil" size={12} class="shrink-0" aria-hidden="true" />
         {/if}
         <span class="min-w-0 truncate">{title}</span>
+        {#if badge}
+          <span
+            class="text-psx-foreground-tertiary border-psx-border max-w-[45%] shrink-0 truncate rounded-[4px] border px-1 text-[11px]/[14px]"
+            title={badge}>{badge}</span
+          >
+        {/if}
       </span>
     </button>
 

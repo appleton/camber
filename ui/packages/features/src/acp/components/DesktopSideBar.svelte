@@ -52,6 +52,11 @@
   import DesktopProjectSection from "./sidebar/DesktopProjectSection.svelte";
   import { suppressContextMenu } from "./sidebar/contextMenuHelpers";
   import ConversationGroup from "./sidebar/ConversationGroup.svelte";
+  import {
+    buildConversationTree,
+    hasAttentionDescendant,
+    sliceVisibleSessions,
+  } from "./sidebar/conversationTree";
   import ConversationPreview from "./sidebar/ConversationPreview.svelte";
   import ReorderDragPreview from "./sidebar/ReorderDragPreview.svelte";
   import { ReorderMotion } from "./sidebar/ReorderMotion.svelte";
@@ -137,6 +142,21 @@
 
   const DESKTOP_SIDEBAR_SECTION_ORDER_STORAGE_KEY = "camber.desktop.sidebarSectionOrder.v1";
   const DEFAULT_DESKTOP_SIDEBAR_SECTION_ORDER: DesktopSidebarSection[] = ["chats", "projects"];
+
+  const DESKTOP_SUB_AGENTS_EXPANDED_STORAGE_KEY = "camber.desktop.expandedSubAgents.v1";
+
+  // Sub-agent lists are collapsed by default, so only the expanded parents'
+  // conversation ids are stored.
+  function loadExpandedSubAgentParents(): Set<string> {
+    try {
+      const raw = globalThis.localStorage?.getItem(DESKTOP_SUB_AGENTS_EXPANDED_STORAGE_KEY);
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(parsed)) return new Set();
+      return new Set(parsed.filter((id): id is string => typeof id === "string"));
+    } catch {
+      return new Set();
+    }
+  }
 
   function loadDesktopSidebarSectionOrder(): DesktopSidebarSection[] {
     try {
@@ -239,6 +259,7 @@
   let chatsSectionCollapsed = $state(false);
   let projectsSectionCollapsed = $state(false);
   let expandedSessionGroups = $state(new Set<string>());
+  let expandedSubAgentParents = $state(loadExpandedSubAgentParents());
   let acpLogCaptureTarget = $state<ACPLogCaptureTarget | null>(null);
   let removeProjectTarget = $state<{ path: string; name: string } | null>(null);
   let deleteWorktreeTarget = $state<{ path: string; name: string } | null>(null);
@@ -267,10 +288,18 @@
   const CHATS_GROUP_KEY = "CHAT";
   let chatsSectionContentVisible = $derived(!chatsSectionCollapsed);
   let projectsSectionContentVisible = $derived(!projectsSectionCollapsed);
+  let searching = $derived(searchQuery.trim() !== "");
+  // Spawned conversations nest under their visible parent; search stays flat.
+  // A child only nests under a parent whose row container is on screen;
+  // otherwise it stays a normal row in its own section.
+  let conversationTree = $derived(
+    buildConversationTree(navSessions, { flat: searching, canNestUnder: isParentRowRendered }),
+  );
   let chatSessions = $derived(
     navSessions.filter(
       (session) =>
         !exitingConversationIds.has(session.id) &&
+        !conversationTree.isNested(session.id) &&
         isACPChatConversation(session) &&
         sessionMatchesSearch(session),
     ),
@@ -397,12 +426,11 @@
   // worktrees, collapsed worktrees hide their sessions, and each group is
   // truncated to SESSION_VISIBLE_LIMIT unless expanded (search expands all).
   let conversationShortcutSessions = $derived.by(() => {
-    const searching = searchQuery.trim() !== "";
     const ordered: ACPConversationSummary[] = [];
     const appendVisibleSessions = (workspacePath: string) => {
       const sessions = sessionsFor(workspacePath);
       const expanded = searching || isSessionGroupExpanded(workspacePath);
-      ordered.push(...(expanded ? sessions : sessions.slice(0, SESSION_VISIBLE_LIMIT)));
+      ordered.push(...withExpandedSubAgents(visibleTopLevelSessions(sessions, expanded)));
     };
 
     for (const section of sidebarSectionOrder) {
@@ -411,7 +439,7 @@
         if (chatsSectionContentVisible) {
           const chatsExpanded = searching || isSessionGroupExpanded(CHATS_GROUP_KEY);
           ordered.push(
-            ...(chatsExpanded ? chatSessions : chatSessions.slice(0, SESSION_VISIBLE_LIMIT)),
+            ...withExpandedSubAgents(visibleTopLevelSessions(chatSessions, chatsExpanded)),
           );
         }
       } else if (projectsSectionContentVisible) {
@@ -427,6 +455,45 @@
     }
     return ordered.slice(0, CONVERSATION_SHORTCUT_LIMIT);
   });
+
+  // Expanded parents are followed by their visible nested rows, as rendered.
+  function withExpandedSubAgents(sessions: ACPConversationSummary[]): ACPConversationSummary[] {
+    return sessions.flatMap((session) => [
+      session,
+      ...(isSubAgentsExpanded(session) ? visibleSubAgents(session) : []),
+    ]);
+  }
+
+  // Mirrors ConversationGroup's truncation: parents hiding a running, waiting,
+  // unread or open sub-agent stay visible past the limit.
+  function visibleTopLevelSessions(
+    sessions: ACPConversationSummary[],
+    expanded: boolean,
+  ): ACPConversationSummary[] {
+    if (expanded) return sessions;
+    return sliceVisibleSessions(sessions, SESSION_VISIBLE_LIMIT, (session) =>
+      hasAttentionDescendant(visibleSubAgents(session), (child) => sidebar.rowState(child)),
+    );
+  }
+
+  // Whether a conversation's own row is rendered right now, i.e. whether its
+  // sub-agents can nest beneath it. Reads only section/collapse state, never
+  // the tree, so it cannot cycle.
+  function isParentRowRendered(parent: ACPConversationSummary): boolean {
+    if (exitingConversationIds.has(parent.id)) return false;
+    if (isACPChatConversation(parent)) return chatsSectionContentVisible;
+    if (!projectsSectionContentVisible) return false;
+    const owner = navProjects.find((candidate) => candidate.path === parent.cwd);
+    if (!owner) return false;
+    if (!owner.isWorktree) {
+      return (
+        rootProjects.some((root) => root.path === owner.path) && shouldShowProjectContent(owner)
+      );
+    }
+    if (exitingWorktreePaths.has(owner.path)) return false;
+    const root = rootProjects.find((candidate) => candidate.path === owner.parentPath);
+    return !!root && shouldShowProjectContent(root) && (searching || owner.collapsed !== true);
+  }
 
   let conversationShortcutIndexByKey = $derived(
     new Map(
@@ -692,6 +759,7 @@
   function sessionsFor(workspacePath: string) {
     return navSessions.filter((session) => {
       if (exitingConversationIds.has(session.id)) return false;
+      if (conversationTree.isNested(session.id)) return false;
       if (session.cwd !== workspacePath) return false;
       return sessionMatchesSearch(session);
     });
@@ -734,13 +802,17 @@
       currentSession && isACPChatConversation(currentSession)
         ? navSessions.filter(
             (session) =>
-              (session.id === conversationId || !exitingConversationIds.has(session.id)) &&
+              (session.id === conversationId ||
+                (!exitingConversationIds.has(session.id) &&
+                  !conversationTree.isNested(session.id))) &&
               isACPChatConversation(session) &&
               sessionMatchesSearch(session),
           )
         : navSessions.filter(
             (session) =>
-              (session.id === conversationId || !exitingConversationIds.has(session.id)) &&
+              (session.id === conversationId ||
+                (!exitingConversationIds.has(session.id) &&
+                  !conversationTree.isNested(session.id))) &&
               session.cwd === workspacePath &&
               sessionMatchesSearch(session),
           );
@@ -1055,6 +1127,71 @@
     return expandedSessionGroups.has(workspacePath);
   }
 
+  function descendantsFor(session: ACPConversationSummary): readonly ACPConversationSummary[] {
+    return conversationTree.descendantsOf(session.id);
+  }
+
+  function visibleSubAgents(session: ACPConversationSummary): ACPConversationSummary[] {
+    return conversationTree
+      .descendantsOf(session.id)
+      .filter((child) => !exitingConversationIds.has(child.id));
+  }
+
+  // The open conversation, when it is a nested sub-agent: its top ancestor is
+  // shown expanded for this session (never persisted) so the selected row is
+  // visible. An explicit collapse sticks until the selection changes.
+  let activeNestedParentId = $derived.by(() => {
+    if (!activeConversationId || !conversationTree.isNested(activeConversationId)) return null;
+    const parentId = conversationTree.topAncestorOf(activeConversationId)?.id ?? null;
+    if (
+      parentId &&
+      sessionCollapsedParent?.conversationId === activeConversationId &&
+      sessionCollapsedParent.parentId === parentId
+    ) {
+      return null;
+    }
+    return parentId;
+  });
+  let sessionCollapsedParent = $state<{ conversationId: string; parentId: string } | null>(null);
+
+  function isSubAgentsExpanded(session: ACPConversationSummary): boolean {
+    return expandedSubAgentParents.has(session.id) || activeNestedParentId === session.id;
+  }
+
+  function toggleSubAgents(session: ACPConversationSummary) {
+    const wasExpanded = isSubAgentsExpanded(session);
+    if (wasExpanded && activeNestedParentId === session.id && activeConversationId) {
+      sessionCollapsedParent = { conversationId: activeConversationId, parentId: session.id };
+    } else if (!wasExpanded) {
+      sessionCollapsedParent = null;
+    }
+    const updated = new Set(expandedSubAgentParents);
+    if (wasExpanded) updated.delete(session.id);
+    else updated.add(session.id);
+    // Forget parents that no longer exist so the stored list cannot grow forever.
+    const known = new Set(navSessions.map((candidate) => candidate.id));
+    for (const id of updated) if (!known.has(id)) updated.delete(id);
+    expandedSubAgentParents = updated;
+    try {
+      globalThis.localStorage?.setItem(
+        DESKTOP_SUB_AGENTS_EXPANDED_STORAGE_KEY,
+        JSON.stringify([...updated]),
+      );
+    } catch {
+      // Persistence is best-effort.
+    }
+  }
+
+  // A sub-agent living in a different worktree/project than its parent says where.
+  function subAgentBadge(
+    child: ACPConversationSummary,
+    parent: ACPConversationSummary,
+  ): string | undefined {
+    if (child.cwd === parent.cwd) return undefined;
+    const project = navProjects.find((candidate) => candidate.path === child.cwd);
+    return project ? projectDisplayName(project) : undefined;
+  }
+
   function toggleChatsSectionCollapsed() {
     chatsSectionCollapsed = !chatsSectionCollapsed;
   }
@@ -1171,7 +1308,7 @@
     conversationId: string,
     sessionToCancel: ACPSession | null = null,
     selectionRollback?: SelectionRollback,
-  ) {
+  ): Promise<boolean> {
     conversationArchiveCountdown.cancel(conversationId);
     sidebarToasts.dismiss(conversationArchiveToastId(conversationId));
     setConversationExiting(conversationId, true);
@@ -1180,6 +1317,7 @@
         await sessionToCancel.cancel();
       }
       await conversations.archiveSession(workspacePath, sessionId, agentServer, conversationId);
+      return true;
     } catch (error) {
       rpc.showInfoMessage(
         formatError(error, {
@@ -1188,6 +1326,7 @@
         InfoMessageType.error,
       );
       await restoreSelectionIfUnchanged(selectionRollback);
+      return false;
     } finally {
       conversationSelectionRollbacks.delete(conversationId);
       setConversationExiting(conversationId, false);
@@ -1203,6 +1342,62 @@
     return { conversationId: session.id, replacementConversationId };
   }
 
+  // Sub-agents archived together with their parent, kept until the archive
+  // fires (or is undone) so undo can reveal them again.
+  const cascadedArchives = new Map<string, ACPConversationSummary[]>();
+
+  function beginCascade(session: ACPConversationSummary): ACPConversationSummary[] {
+    const descendants = visibleSubAgents(session);
+    if (descendants.length === 0) return descendants;
+    cascadedArchives.set(session.id, descendants);
+    for (const child of descendants) setConversationExiting(child.id, true);
+    return descendants;
+  }
+
+  async function archiveCascadedDescendants(descendants: ACPConversationSummary[]) {
+    await Promise.all(
+      descendants.map((child) => {
+        const agentServer = getSessionAgentServer(child);
+        const sessionToCancel = shouldInterruptSelectedSession(child.sessionId, agentServer)
+          ? activeSession
+          : null;
+        return performArchiveSession(
+          child.cwd,
+          child.sessionId,
+          agentServer,
+          child.id,
+          sessionToCancel,
+          switchToFreshDraftIfSelected(child),
+        );
+      }),
+    );
+  }
+
+  // Archives the parent first; its sub-agents follow only once that succeeded.
+  // On failure the parent is restored by performArchiveSession and the
+  // sub-agents are revealed again, so nothing is archived without an undo.
+  async function archiveWithDescendants(
+    session: ACPConversationSummary,
+    agentServer: string,
+    sessionToCancel: ACPSession | null,
+    selectionRollback: SelectionRollback | undefined,
+    cascaded: ACPConversationSummary[],
+  ) {
+    const archived = await performArchiveSession(
+      session.cwd,
+      session.sessionId,
+      agentServer,
+      session.id,
+      sessionToCancel,
+      selectionRollback,
+    );
+    if (archived) {
+      await archiveCascadedDescendants(cascaded);
+    } else {
+      for (const child of cascaded) setConversationExiting(child.id, false);
+    }
+  }
+
   function handleArchiveSession(session: ACPConversationSummary, event: MouseEvent) {
     event.preventDefault();
     event.stopPropagation();
@@ -1210,6 +1405,8 @@
     const sessionToCancel = shouldInterruptSelectedSession(session.sessionId, agentServer)
       ? activeSession
       : null;
+    // Before the parent starts exiting: an exiting parent no longer hosts nested rows.
+    const cascaded = beginCascade(session);
     setConversationExiting(session.id, true);
     const selectionRollback = switchToFreshDraftIfSelected(session);
     if (selectionRollback) {
@@ -1217,22 +1414,22 @@
     }
     sidebarToasts.addProgressToast(
       conversationArchiveToastId(session.id),
-      "Archiving conversation...",
+      cascaded.length > 0
+        ? `Archiving conversation and ${cascaded.length} sub-agent${cascaded.length === 1 ? "" : "s"}...`
+        : "Archiving conversation...",
       { kind: "countdown", durationMs: UNDO_COUNTDOWN_SECONDS * 1000 },
       { label: "Cancel", onClick: () => undoArchiveSession(session.id) },
     );
-    conversationArchiveCountdown.start(
-      session.id,
-      () =>
-        void performArchiveSession(
-          session.cwd,
-          session.sessionId,
-          agentServer,
-          session.id,
-          sessionToCancel,
-          selectionRollback,
-        ),
-    );
+    conversationArchiveCountdown.start(session.id, () => {
+      cascadedArchives.delete(session.id);
+      void archiveWithDescendants(
+        session,
+        agentServer,
+        sessionToCancel,
+        selectionRollback,
+        cascaded,
+      );
+    });
   }
 
   function handleArchiveSessionNow(session: ACPConversationSummary, event: MouseEvent) {
@@ -1242,21 +1439,20 @@
     const sessionToCancel = shouldInterruptSelectedSession(session.sessionId, agentServer)
       ? activeSession
       : null;
+    const cascaded = beginCascade(session);
+    cascadedArchives.delete(session.id);
     const selectionRollback = switchToFreshDraftIfSelected(session);
-    void performArchiveSession(
-      session.cwd,
-      session.sessionId,
-      agentServer,
-      session.id,
-      sessionToCancel,
-      selectionRollback,
-    );
+    void archiveWithDescendants(session, agentServer, sessionToCancel, selectionRollback, cascaded);
   }
 
   function undoArchiveSession(conversationId: string) {
     conversationArchiveCountdown.cancel(conversationId);
     sidebarToasts.dismiss(conversationArchiveToastId(conversationId));
     setConversationExiting(conversationId, false);
+    for (const child of cascadedArchives.get(conversationId) ?? []) {
+      setConversationExiting(child.id, false);
+    }
+    cascadedArchives.delete(conversationId);
     const selectionRollback = conversationSelectionRollbacks.get(conversationId);
     conversationSelectionRollbacks.delete(conversationId);
     void restoreSelectionIfUnchanged(selectionRollback);
@@ -1848,6 +2044,10 @@
                               onSessionContextMenu={openSessionContextMenu}
                               {isSessionExiting}
                               {sessionShortcutHint}
+                              {descendantsFor}
+                              {isSubAgentsExpanded}
+                              onToggleSubAgents={toggleSubAgents}
+                              {subAgentBadge}
                             />
                           </div>
                         {/if}
@@ -2050,6 +2250,10 @@
                                         {isSessionExiting}
                                         {rowExitAnimating}
                                         {sessionShortcutHint}
+                                        {descendantsFor}
+                                        {isSubAgentsExpanded}
+                                        onToggleSubAgents={toggleSubAgents}
+                                        {subAgentBadge}
                                         onReorderWorktrees={handleReorderWorktrees}
                                         onWorktreeDragActiveChange={(active) =>
                                           (worktreeDragActive = active)}

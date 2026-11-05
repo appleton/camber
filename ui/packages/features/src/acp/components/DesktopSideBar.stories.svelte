@@ -156,6 +156,40 @@
     },
   ];
 
+  const assistantPath = "/Users/poolie/code/assistant";
+  const acpSidebarPath = "/Users/poolie/code/assistant/.worktrees/acp-sidebar";
+  const subAgent = (
+    id: string,
+    cwd: string,
+    title: string,
+    parentId: string,
+    extra: Partial<ACPNavConversation> = {},
+  ): ACPNavConversation => ({
+    id,
+    workspacePath: cwd,
+    agentServer: "poolside",
+    sessionId: `session-${id}`,
+    cwd,
+    title,
+    updatedAt: minutesAgo(2),
+    active: true,
+    archived: false,
+    workingDirectories: [cwd],
+    parentId,
+    rootId: "conv-1",
+    ...extra,
+  });
+  // conv-1 spawned a same-worktree child (with its own grandchild) and a child
+  // that lives in another worktree.
+  const subAgentConversations: ACPNavConversation[] = [
+    ...conversations,
+    subAgent("conv-1-a", assistantPath, "Audit sidebar row states", "conv-1", {
+      liveStatus: { working: true, waitingForUser: false, unread: false },
+    }),
+    subAgent("conv-1-b", acpSidebarPath, "Draft storybook coverage", "conv-1"),
+    subAgent("conv-1-a-1", assistantPath, "Check unread dot contrast", "conv-1-a"),
+  ];
+
   const currentWorkspaceFolders: WorkspaceFolder[] = [
     { path: "/Users/poolie/code/assistant", name: "assistant", index: 0 },
   ];
@@ -218,6 +252,46 @@
   {#snippet template()}
     <div class="bg-psx-editor-background flex h-screen">
       <SidebarStoryHarness {projects} {conversations} capabilities={desktopCapabilities}>
+        <DesktopSideBar
+          collapsed={false}
+          currentView="chat"
+          {currentWorkspaceFolders}
+          {...handlers}
+        />
+      </SidebarStoryHarness>
+    </div>
+  {/snippet}
+</Story>
+
+<Story name="Sub-agents Collapsed">
+  {#snippet template()}
+    <div class="bg-psx-editor-background flex h-screen">
+      <SidebarStoryHarness
+        {projects}
+        expandedSubAgents={[]}
+        conversations={subAgentConversations}
+        capabilities={desktopCapabilities}
+      >
+        <DesktopSideBar
+          collapsed={false}
+          currentView="chat"
+          {currentWorkspaceFolders}
+          {...handlers}
+        />
+      </SidebarStoryHarness>
+    </div>
+  {/snippet}
+</Story>
+
+<Story name="Sub-agents Expanded">
+  {#snippet template()}
+    <div class="bg-psx-editor-background flex h-screen">
+      <SidebarStoryHarness
+        {projects}
+        expandedSubAgents={["conv-1"]}
+        conversations={subAgentConversations}
+        capabilities={desktopCapabilities}
+      >
         <DesktopSideBar
           collapsed={false}
           currentView="chat"
