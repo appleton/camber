@@ -186,7 +186,8 @@ func TestControlRecordSurvivesFrontendMetadataUpdate(t *testing.T) {
 	s, _ := fixture(t)
 	v, err := s.view(context.Background(), "parent", nil)
 	require.NoError(t, err)
-	v.Record = Record{ParentID: "root", RootID: "root"}
+	v.Record = Record{}
+	v.ParentID, v.RootID = "root", "root"
 	require.NoError(t, s.save(context.Background(), v))
 	v.Metadata = json.RawMessage(`{"client":"updated"}`)
 	_, err = s.nav.UpsertConversation(context.Background(), &methods.ACPNavUpsertConversationParams{Conversation: v.ACPNavConversation}, nil)
@@ -194,6 +195,17 @@ func TestControlRecordSurvivesFrontendMetadataUpdate(t *testing.T) {
 	loaded, err := s.view(context.Background(), "parent", nil)
 	require.NoError(t, err)
 	assert.Equal(t, "root", loaded.ParentID)
+	assert.Equal(t, "root", loaded.RootID)
+	var raw map[string]any
+	require.NoError(t, s.nav.ReadControlState(context.Background(), "conversation/parent", &raw))
+	assert.Equal(t, "root", raw["parentId"])
+	assert.Equal(t, "root", raw["rootId"])
+	wire, err := json.Marshal(loaded)
+	require.NoError(t, err)
+	var flat map[string]any
+	require.NoError(t, json.Unmarshal(wire, &flat))
+	assert.Equal(t, "root", flat["parentId"])
+	assert.Equal(t, "root", flat["rootId"])
 }
 
 func TestInheritanceExplicitOverridesAndCompatibility(t *testing.T) {

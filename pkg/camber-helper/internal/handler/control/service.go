@@ -71,8 +71,6 @@ type Record struct {
 	PreparationEpoch string                   `json:"preparationEpoch,omitempty"`
 	TurnRequestHash  string                   `json:"turnRequestHash,omitempty"`
 	EndCursor        string                   `json:"endCursor,omitempty"`
-	ParentID         string                   `json:"parentId,omitempty"`
-	RootID           string                   `json:"rootId,omitempty"`
 	Task             string                   `json:"task,omitempty"`
 	RequestHash      string                   `json:"requestHash,omitempty"`
 	Status           string                   `json:"status,omitempty"`
@@ -85,9 +83,20 @@ type Record struct {
 	OwnsWorktree     bool                     `json:"ownsWorktree,omitempty"`
 }
 
+// View merges the navigation row with the durable control record. The parent
+// and root links live only on the nav row (promoted as v.ParentID/v.RootID) so
+// the flat JSON has a single parentId/rootId; they are persisted via storedRecord.
 type View struct {
 	methods.ACPNavConversation
 	Record
+}
+
+// storedRecord is the persisted shape of "conversation/<id>" control state,
+// which carries top-level parentId/rootId alongside the Record fields.
+type storedRecord struct {
+	Record
+	ParentID string `json:"parentId,omitempty"`
+	RootID   string `json:"rootId,omitempty"`
 }
 
 var commands = []string{"actions.list", "actions.describe", "skill.show", "context", "status", "agents.list", "agents.inspect", "agents.config.options", "projects.list", "worktrees.list", "worktrees.inspect", "worktrees.create", "worktrees.remove", "chat.list", "chat.inspect", "chat.children", "chat.spawn", "chat.send", "chat.steer", "chat.stop", "chat.poll", "chat.output", "chat.snapshot", "chat.config.list", "chat.config.set"}
@@ -188,7 +197,15 @@ func (s *Service) view(ctx context.Context, id string, g *glsp.Context) (View, e
 
 func (s *Service) viewFrom(ctx context.Context, c methods.ACPNavConversation) (View, error) {
 	v := View{ACPNavConversation: c}
-	err := s.nav.ReadControlState(ctx, "conversation/"+c.ID, &v.Record)
+	var stored storedRecord
+	err := s.nav.ReadControlState(ctx, "conversation/"+c.ID, &stored)
+	v.Record = stored.Record
+	if v.ParentID == "" {
+		v.ParentID = stored.ParentID
+	}
+	if v.RootID == "" {
+		v.RootID = stored.RootID
+	}
 	if err == nil && v.Status == "preparing" && v.PreparationEpoch != "" && v.PreparationEpoch != s.log.ProcessEpoch() {
 		v.Status = "interrupted"
 		v.Error = "helper restarted during preparation; inspect owned resources before retrying"
@@ -256,7 +273,7 @@ func (s *Service) projects(ctx context.Context, command string, a Args, g *glsp.
 	return map[string]any{"projects": out}, nil
 }
 func (s *Service) save(ctx context.Context, v View) error {
-	return s.nav.WriteControlState(ctx, "conversation/"+v.ID, v.Record)
+	return s.nav.WriteControlState(ctx, "conversation/"+v.ID, storedRecord{Record: v.Record, ParentID: v.ParentID, RootID: v.RootID})
 }
 func captureConfig(value any) (json.RawMessage, json.RawMessage) {
 	raw, _ := json.Marshal(value)
@@ -379,7 +396,8 @@ func (s *Service) spawn(ctx context.Context, a Args, g *glsp.Context) (any, erro
 	if a.WorkspacePath == "" {
 		return nil, pkgerrors.Errorf("workspacePath or parentId is required")
 	}
-	v := View{ACPNavConversation: methods.ACPNavConversation{ID: id, WorkspacePath: a.WorkspacePath, Cwd: a.WorkspacePath, AgentServer: a.AgentServer, Title: compactText(a.Text, 256), WorkingDirectories: []string{a.WorkspacePath}}, Record: Record{ParentID: a.ParentID, RootID: parent.RootID, Task: compactText(a.Text, 4096), RequestHash: requestHash, Status: "preparing", PreparationEpoch: s.log.ProcessEpoch()}}
+	v := View{ACPNavConversation: methods.ACPNavConversation{ID: id, WorkspacePath: a.WorkspacePath, Cwd: a.WorkspacePath, AgentServer: a.AgentServer, Title: compactText(a.Text, 256), WorkingDirectories: []string{a.WorkspacePath}}, Record: Record{Task: compactText(a.Text, 4096), RequestHash: requestHash, Status: "preparing", PreparationEpoch: s.log.ProcessEpoch()}}
+	v.ParentID, v.RootID = a.ParentID, parent.RootID
 	if v.RootID == "" {
 		v.RootID = a.ParentID
 	}

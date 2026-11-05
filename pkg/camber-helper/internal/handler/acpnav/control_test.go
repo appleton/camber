@@ -76,3 +76,30 @@ func TestControlConversationIncludesLiveStatusAndHostFiltering(t *testing.T) {
 	_, err = server.ControlConversation(ctx, "wanted")
 	require.ErrorContains(t, err, "does not exist")
 }
+
+func TestListIncludesControlParentLinks(t *testing.T) {
+	ctx := context.Background()
+	store, err := Open(ctx, filepath.Join(t.TempDir(), "nav.db"))
+	require.NoError(t, err)
+	server := NewServer()
+	server.SetStore(store)
+	defer server.Close()
+	require.NoError(t, store.UpsertConversation(ctx, methods.ACPNavConversation{ID: "parent", AgentServer: "test", WorkspacePath: t.TempDir()}))
+	require.NoError(t, store.UpsertConversation(ctx, methods.ACPNavConversation{ID: "child", AgentServer: "test", WorkspacePath: t.TempDir()}))
+	require.NoError(t, server.WriteControlState(ctx, "conversation/child", map[string]string{"parentId": "parent", "rootId": "parent", "task": "x"}))
+
+	state, err := store.List(ctx)
+	require.NoError(t, err)
+	byID := map[string]methods.ACPNavConversation{}
+	for _, c := range state.Conversations {
+		byID[c.ID] = c
+	}
+	assert.Equal(t, "parent", byID["child"].ParentID)
+	assert.Equal(t, "parent", byID["child"].RootID)
+	assert.Empty(t, byID["parent"].ParentID)
+	assert.Empty(t, byID["parent"].RootID)
+
+	one, err := server.ControlConversation(ctx, "child")
+	require.NoError(t, err)
+	assert.Equal(t, "parent", one.ParentID)
+}

@@ -1741,7 +1741,53 @@ FROM conversations
 		c.Archived = archived != 0
 		conversations = append(conversations, c)
 	}
-	return conversations, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	return conversations, s.attachControlParents(ctx, id, conversations)
+}
+
+// attachControlParents fills ParentID/RootID from control state with one query.
+// The control package owns the record shape; only the link fields are decoded.
+func (s *Store) attachControlParents(ctx context.Context, id string, conversations []methods.ACPNavConversation) error {
+	if len(conversations) == 0 {
+		return nil
+	}
+	// A key range (not LIKE, which cannot use the BINARY primary key index)
+	// keeps this off the never-pruned control/turn/ records.
+	query, args := `SELECT key, value FROM metadata WHERE key >= ? AND key < ?`, []any{"control/conversation/", "control/conversation0"}
+	if id != "" {
+		query, args = `SELECT key, value FROM metadata WHERE key = ?`, []any{"control/conversation/" + id}
+	}
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("listing control state: %w", err)
+	}
+	defer rows.Close()
+	type link struct {
+		ParentID string `json:"parentId"`
+		RootID   string `json:"rootId"`
+	}
+	links := map[string]link{}
+	for rows.Next() {
+		var key, raw string
+		if err := rows.Scan(&key, &raw); err != nil {
+			return fmt.Errorf("scanning control state: %w", err)
+		}
+		var l link
+		if json.Unmarshal([]byte(raw), &l) == nil && (l.ParentID != "" || l.RootID != "") {
+			links[strings.TrimPrefix(key, "control/conversation/")] = l
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for i := range conversations {
+		l := links[conversations[i].ID]
+		conversations[i].ParentID, conversations[i].RootID = l.ParentID, l.RootID
+	}
+	return nil
 }
 
 func normalizeAgentServers(agentServers methods.ACPAgentServers) (methods.ACPAgentServers, error) {
