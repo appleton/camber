@@ -31,6 +31,7 @@ type fakeAgent struct {
 	finish  chan struct{}
 	log     *remoteaccess.SessionLog
 	next    int
+	modes   string
 }
 
 func (f *fakeAgent) NewSession(_ context.Context, _ *methods.ACPNewSessionParams, _ *glsp.Context) (*methods.ACPNewSessionOutput, error) {
@@ -39,7 +40,11 @@ func (f *fakeAgent) NewSession(_ context.Context, _ *methods.ACPNewSessionParams
 	f.next++
 	f.calls = append(f.calls, "new")
 	var out methods.ACPNewSessionOutput
-	_ = json.Unmarshal([]byte(`{"sessionId":"session","configOptions":`+string(f.options)+`}`), &out)
+	modes := ""
+	if f.modes != "" {
+		modes = `,"modes":` + f.modes
+	}
+	_ = json.Unmarshal([]byte(`{"sessionId":"session","configOptions":`+string(f.options)+modes+`}`), &out)
 	return &out, nil
 }
 func (f *fakeAgent) SetConfigOption(_ context.Context, p *methods.ACPSetConfigOptionParams, _ *glsp.Context) (*methods.ACPSetConfigOptionOutput, error) {
@@ -368,4 +373,60 @@ func TestSpawnRetryReportsInitialTurnFailure(t *testing.T) {
 	_, err := s.Dispatch(context.Background(), &methods.ControlDispatchParams{Command: "chat.spawn", Args: raw}, nil)
 	require.ErrorContains(t, err, "previous spawn")
 	require.ErrorContains(t, err, "followup failed")
+}
+
+const modeTestOptions = `[{"id":"model","type":"select","category":"model","currentValue":"small","options":[{"value":"small"},{"value":"large"}]},{"id":"mode","type":"select","category":"mode","currentValue":"default","options":[{"value":"default"},{"value":"plan"},{"value":"edit"}]}]`
+const modeTestModes = `{"currentModeId":"default","availableModes":[{"id":"default"},{"id":"plan"},{"id":"edit"}]}`
+
+func spawnWithParentMode(t *testing.T, args Args) (map[string]any, *fakeAgent) {
+	t.Helper()
+	s, agent := fixture(t)
+	agent.options = json.RawMessage(modeTestOptions)
+	agent.modes = modeTestModes
+	parent, err := s.view(context.Background(), "parent", nil)
+	require.NoError(t, err)
+	parent.Metadata = json.RawMessage(`{"sessionConfig":{"modeId":"edit","selections":{}}}`)
+	_, err = s.nav.UpsertConversation(context.Background(), &methods.ACPNavUpsertConversationParams{Conversation: parent.ACPNavConversation}, nil)
+	require.NoError(t, err)
+	args.ParentID, args.Text = "parent", "task"
+	out := invoke(t, s, "chat.spawn", args)
+	<-agent.started
+	close(agent.finish)
+	return out, agent
+}
+
+func TestSpawnModeInheritance(t *testing.T) {
+	t.Run("explicit config mode wins over inherited", func(t *testing.T) {
+		_, agent := spawnWithParentMode(t, Args{Config: map[string]any{"mode": "plan"}})
+		agent.mu.Lock()
+		defer agent.mu.Unlock()
+		assert.Equal(t, []string{"new", "set:mode", "prompt"}, agent.calls)
+		assert.JSONEq(t, `"plan"`, modeValue(t, agent.options))
+	})
+	t.Run("no mode inherits parent", func(t *testing.T) {
+		_, agent := spawnWithParentMode(t, Args{})
+		agent.mu.Lock()
+		defer agent.mu.Unlock()
+		assert.JSONEq(t, `"edit"`, modeValue(t, agent.options))
+	})
+	t.Run("mode flag wins", func(t *testing.T) {
+		_, agent := spawnWithParentMode(t, Args{Mode: "plan"})
+		agent.mu.Lock()
+		defer agent.mu.Unlock()
+		assert.JSONEq(t, `"plan"`, modeValue(t, agent.options))
+	})
+}
+
+func modeValue(t *testing.T, options json.RawMessage) string {
+	t.Helper()
+	var opts []map[string]any
+	require.NoError(t, json.Unmarshal(options, &opts))
+	for _, o := range opts {
+		if o["id"] == "mode" {
+			raw, _ := json.Marshal(o["currentValue"])
+			return string(raw)
+		}
+	}
+	require.FailNow(t, "no mode option")
+	return ""
 }

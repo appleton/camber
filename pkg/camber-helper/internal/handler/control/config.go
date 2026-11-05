@@ -37,8 +37,30 @@ func allowed(raw []json.RawMessage, value string) bool {
 	}
 	return false
 }
+
+// configSetsCategory reports whether config sets any option of the child
+// schema that belongs to category (by category, or by the conventional id).
+func configSetsCategory(child json.RawMessage, config map[string]any, category string) bool {
+	for _, o := range parseOptions(child) {
+		if _, ok := config[o.ID]; ok && optionInCategory(o, category) {
+			return true
+		}
+	}
+	return false
+}
+
+func optionInCategory(o option, category string) bool {
+	return o.Category == category || o.ID == category || (category == "thought_level" && (o.ID == "reasoning_effort" || o.ID == "effort"))
+}
+
 func inheritCompatible(parent, child json.RawMessage, a Args) map[string]any {
 	explicit := a.Config
+	skip := map[string]bool{}
+	for _, category := range []string{"model", "thought_level", "mode"} {
+		if configSetsCategory(child, explicit, category) {
+			skip[category] = true
+		}
+	}
 	out := map[string]any{}
 	byID := map[string]option{}
 	for _, o := range parseOptions(child) {
@@ -49,13 +71,13 @@ func inheritCompatible(parent, child json.RawMessage, a Args) map[string]any {
 		if !ok {
 			continue
 		}
-		if a.Model != "" && (o.Category == "model" || o.ID == "model") {
+		if (a.Model != "" || skip["model"]) && optionInCategory(o, "model") {
 			continue
 		}
-		if a.Effort != "" && (o.Category == "thought_level" || o.ID == "reasoning_effort" || o.ID == "effort") {
+		if (a.Effort != "" || skip["thought_level"]) && optionInCategory(o, "thought_level") {
 			continue
 		}
-		if a.Mode != "" && (o.Category == "mode" || o.ID == "mode") {
+		if (a.Mode != "" || skip["mode"]) && optionInCategory(o, "mode") {
 			continue
 		}
 		switch o.Type {

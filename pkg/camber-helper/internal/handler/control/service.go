@@ -532,8 +532,11 @@ func (s *Service) spawn(ctx context.Context, a Args, g *glsp.Context) (any, erro
 		}
 	}
 	if parent.AgentServer == v.AgentServer {
+		// Explicit settings win over inheritance, so only inherit the legacy
+		// mode when the caller did not set a mode option through the config map.
+		explicitMode := configSetsCategory(v.ConfigOptions, a.Config, "mode")
 		a.Config = inheritCompatible(parent.ConfigOptions, v.ConfigOptions, a)
-		if a.Mode == "" {
+		if a.Mode == "" && !explicitMode {
 			var current struct {
 				ID string `json:"currentModeId"`
 			}
