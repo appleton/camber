@@ -684,6 +684,9 @@
     }
   });
 
+  // Primitive so unrelated appState churn does not re-run effects reading it.
+  let editorFocusedForViewState = $derived($appState.isEditorFocused === true);
+
   // Viewing a parent also clears its spawned descendants' unread state. A
   // separate effect that reads descendants untracked: it re-runs only when this
   // conversation is activated or focused, never on a child's later status
@@ -693,7 +696,7 @@
     const agentServer = chatSession.sessionAgentServer;
     if (!sessionId || !agentServer) return;
     if (!markReadWhenVisible) return;
-    if (!$appState.isEditorFocused) return;
+    if (!editorFocusedForViewState) return;
     untrack(() => {
       const summary = conversations.getSession(sessionId, agentServer);
       if (summary) acp.clearDescendantUnread(summary.id, conversations.sessions);
@@ -706,7 +709,6 @@
   // switching away reports the conversation inactive via the effect cleanup.
   // The focus flag goes through a primitive $derived so unrelated appState
   // churn does not re-run the effect and emit redundant inactive/active pairs.
-  let editorFocusedForViewState = $derived($appState.isEditorFocused === true);
   $effect(() => {
     const sessionId = chatSession.sessionId;
     const agentServer = chatSession.sessionAgentServer;
