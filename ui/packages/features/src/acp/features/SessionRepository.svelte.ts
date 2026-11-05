@@ -48,6 +48,7 @@ import {
 import {
   ACPConversationStatusRepositoryWriter,
   type ACPConversationStatusRepository,
+  type DescendantCandidate,
 } from "./ConversationStatusRepository.svelte";
 import { supportsSessionList } from "./HistoryRepository.svelte";
 import { ACPPermissionCoordinator } from "./PermissionCoordinator";
@@ -427,6 +428,14 @@ export class ACPSessionRepositoryWriter {
 
   clearUnread(sessionId: SessionId, agentServer: string): void {
     this.conversationStatus.clearUnread(sessionId, normalizeAgentServerName(agentServer));
+  }
+
+  /** Clears unread for all descendants of a just-viewed parent; see the status repository. */
+  clearDescendantUnread(
+    conversationId: string,
+    conversations: readonly DescendantCandidate[],
+  ): void {
+    this.conversationStatus.clearDescendantUnread(conversationId, conversations);
   }
 
   /**

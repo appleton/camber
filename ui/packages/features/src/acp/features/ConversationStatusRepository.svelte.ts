@@ -16,6 +16,14 @@ type LiveSessionStatus = Pick<NotificationShowParams, "agentServer"> &
     sessionId: SessionId | null;
   };
 
+export interface DescendantCandidate {
+  id: string;
+  parentId?: string | null;
+  sessionId: string | null;
+  agentServer: string;
+  liveStatus?: ACPConversationLiveStatus;
+}
+
 const emptyConversationStatus: ACPConversationLiveStatus = {
   working: false,
   waitingForUser: false,
@@ -147,6 +155,40 @@ export class ACPConversationStatusRepositoryWriter {
   clearUnread(sessionId: SessionId, agentServer: string): void {
     this.patchSessionStatus(sessionId, agentServer, { unread: false });
     this.notifications?.dismiss(sessionId, agentServer);
+  }
+
+  /**
+   * Clears the turn-completed unread state (and its notification) of every
+   * descendant of `conversationId`, found by walking `parentId` over
+   * `conversations`. Descendants waiting for the user are left untouched. One-shot:
+   * call it when the parent becomes viewed; later completions mark unread as usual.
+   */
+  clearDescendantUnread(
+    conversationId: string,
+    conversations: readonly DescendantCandidate[],
+  ): void {
+    const childrenByParent = new Map<string, DescendantCandidate[]>();
+    for (const conversation of conversations) {
+      if (!conversation.parentId || conversation.parentId === conversation.id) continue;
+      const siblings = childrenByParent.get(conversation.parentId);
+      if (siblings) siblings.push(conversation);
+      else childrenByParent.set(conversation.parentId, [conversation]);
+    }
+    const seen = new Set<string>([conversationId]);
+    const queue = [conversationId];
+    while (queue.length > 0) {
+      for (const child of childrenByParent.get(queue.shift()!) ?? []) {
+        if (seen.has(child.id)) continue;
+        seen.add(child.id);
+        queue.push(child.id);
+        if (!child.sessionId) continue;
+        const agentServer = normalizeAgentServerName(child.agentServer);
+        const status = this.getConversationStatus(child.sessionId as SessionId, agentServer);
+        if (status.unread && !status.waitingForUser && !child.liveStatus?.waitingForUser) {
+          this.clearUnread(child.sessionId as SessionId, agentServer);
+        }
+      }
+    }
   }
 
   markWaitingForUser(params: NotificationShowParams): void {

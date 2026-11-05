@@ -582,6 +582,16 @@ func (s *Server) SetConversationViewState(ctx context.Context, req *methods.ACPN
 		return s.listWithLiveStatus(ctx)
 	}
 
+	// Resolved before taking s.mu: it reads the database. Best-effort: a
+	// failed lookup must not stop the conversation itself being marked viewed.
+	var descendantKeys []string
+	if hasKey && req.Active {
+		var err error
+		if descendantKeys, err = s.descendantLiveStatusKeys(ctx, key); err != nil {
+			slog.WarnContext(ctx, "acpnav: resolving descendant conversations failed", "error", err)
+		}
+	}
+
 	statusChanged := false
 	s.mu.Lock()
 	if req.Reset {
@@ -598,6 +608,17 @@ func (s *Server) SetConversationViewState(ctx context.Context, req *methods.ACPN
 				status.Unread = false
 				statusChanged = true
 				s.setLiveStatusLocked(key, status)
+			}
+			// Viewing a parent also reads its spawned descendants' completed
+			// turns. Ones still needing input keep their state.
+			for _, descendantKey := range descendantKeys {
+				status, ok := s.liveStatuses[descendantKey]
+				if !ok || !status.Unread || status.WaitingForUser {
+					continue
+				}
+				status.Unread = false
+				statusChanged = true
+				s.setLiveStatusLocked(descendantKey, status)
 			}
 		} else {
 			delete(s.activeSessions[origin], key)
@@ -616,6 +637,43 @@ func (s *Server) SetConversationViewState(ctx context.Context, req *methods.ACPN
 		s.notifyState(ctx, gCtx, state)
 	}
 	return state, nil
+}
+
+// descendantLiveStatusKeys returns the live status keys of every conversation
+// descended (via ParentID) from the conversation bound to key. Cycle-safe.
+func (s *Server) descendantLiveStatusKeys(ctx context.Context, key string) ([]string, error) {
+	state, err := s.store.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	children := map[string][]methods.ACPNavConversation{}
+	var queue []string
+	seen := map[string]bool{}
+	for _, conversation := range state.Conversations {
+		if conversationKey, ok := liveStatusKey(conversation.AgentServer, conversation.SessionID); ok && conversationKey == key && !seen[conversation.ID] {
+			seen[conversation.ID] = true
+			queue = append(queue, conversation.ID)
+		}
+		if conversation.ParentID != "" && conversation.ParentID != conversation.ID {
+			children[conversation.ParentID] = append(children[conversation.ParentID], conversation)
+		}
+	}
+	var keys []string
+	for len(queue) > 0 {
+		id := queue[0]
+		queue = queue[1:]
+		for _, child := range children[id] {
+			if seen[child.ID] {
+				continue
+			}
+			seen[child.ID] = true
+			queue = append(queue, child.ID)
+			if childKey, ok := liveStatusKey(child.AgentServer, child.SessionID); ok && childKey != key {
+				keys = append(keys, childKey)
+			}
+		}
+	}
+	return keys, nil
 }
 
 type ConversationLiveStatusPatch struct {
