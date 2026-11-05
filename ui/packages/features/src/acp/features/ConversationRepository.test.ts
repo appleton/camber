@@ -307,6 +307,7 @@ describe("ACPConversationRepositoryWriter", () => {
     expect(jsonrpcCall).toHaveBeenCalledWith("camber/acp/session/close", {
       agentServer: "echo",
       sessionId: "s-echo",
+      cancelInFlight: true,
     });
     expect(jsonrpcCall).toHaveBeenCalledWith(
       "camber/acpNav/archiveConversation",
@@ -357,6 +358,7 @@ describe("ACPConversationRepositoryWriter", () => {
     expect(jsonrpcCall).toHaveBeenCalledWith("camber/acp/session/close", {
       agentServer: "echo",
       sessionId: "s-echo",
+      cancelInFlight: true,
     });
   });
 

@@ -11,5 +11,6 @@ export interface ACPCloseSessionParams {
   readonly $schema?: string;
   _meta?: _ACPCloseSessionParamsMeta;
   agentServer?: string;
+  cancelInFlight?: boolean;
   sessionId: string;
 }

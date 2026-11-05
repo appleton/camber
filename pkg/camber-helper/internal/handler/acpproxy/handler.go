@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	acpsdk "github.com/coder/acp-go-sdk"
 	"github.com/google/uuid"
@@ -784,7 +785,15 @@ func (h *Handler) DeleteSession(ctx context.Context, params *methods.ACPDeleteSe
 // no-ops (success) when the agent does not advertise session/close, or
 // advertises no way to reopen a closed session — closing would strand the
 // conversation — so callers may invoke it unconditionally.
+//
+// With params.CancelInFlight a running prompt is cancelled first and awaited
+// (bounded by closeCancelTimeout); without it a running prompt fails as busy.
 func (h *Handler) CloseSession(ctx context.Context, params *methods.ACPCloseSessionParams, gCtx *glsp.Context) (*methods.ACPCloseSessionOutput, error) {
+	if params.CancelInFlight {
+		if err := h.cancelInFlightForClose(ctx, params, gCtx); err != nil {
+			return nil, err
+		}
+	}
 	releaseIdle, err := h.ReserveIdleSession(ctx, params.AgentServer, string(params.SessionId))
 	if err != nil {
 		return nil, err
@@ -821,6 +830,38 @@ func (h *Handler) CloseSession(ctx context.Context, params *methods.ACPCloseSess
 
 	proc.configurationForConn(conn).closeSession(string(params.SessionId))
 	return &resp, nil
+}
+
+// closeCancelTimeout bounds how long CloseSession waits for a cancelled prompt
+// to finish before giving up.
+const closeCancelTimeout = 5 * time.Second
+
+func (h *Handler) cancelInFlightForClose(ctx context.Context, params *methods.ACPCloseSessionParams, gCtx *glsp.Context) error {
+	key := promptSessionKey{agentServer: normalizeServerName(params.AgentServer), sessionID: string(params.SessionId)}
+	h.mu.Lock()
+	turn := h.promptsInFlight[key]
+	h.mu.Unlock()
+	if turn == nil {
+		return nil
+	}
+	if _, err := h.Cancel(ctx, &methods.ACPCancelParams{
+		ACPAgentServerParams: params.ACPAgentServerParams,
+		CancelNotification:   acpsdk.CancelNotification{SessionId: params.SessionId},
+	}, gCtx); err != nil {
+		return err
+	}
+	timer := time.NewTimer(closeCancelTimeout)
+	defer timer.Stop()
+	select {
+	case <-turn.done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		err := &jsonrpc2.WireError{Code: -32001, Message: "Timed out waiting for the running turn to stop before closing the conversation"}
+		err.SetError(map[string]any{"code": "CLOSE_CANCEL_TIMEOUT"})
+		return err
+	}
 }
 
 func (h *Handler) RenameSession(ctx context.Context, params *methods.ACPRenameSessionParams, gCtx *glsp.Context) (*methods.ACPRenameSessionOutput, error) {
