@@ -840,6 +840,16 @@ func newHandlerBaseState() *CamberHandler {
 
 	h.sessionLog = remoteaccess.NewSessionLog(h.remoteHub)
 	h.controlHandler = control.New(h.acpNavHandler, h.acpProxyHandler, h.sessionLog)
+	h.acpNavHandler.SetArchivedSessionCloser(func(ctx context.Context, agentServer, sessionID string) {
+		_, err := h.acpProxyHandler.CloseSession(ctx, &methods.ACPCloseSessionParams{
+			ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: agentServer},
+			CloseSessionRequest:  acpsdk.CloseSessionRequest{SessionId: acpsdk.SessionId(sessionID)},
+			CancelInFlight:       true,
+		}, nil)
+		if err != nil {
+			slog.WarnContext(ctx, "closing archived sub-agent session failed", "agentServer", agentServer, "sessionId", sessionID, "error", err)
+		}
+	})
 	h.acpProxyHandler.SetSessionEvents(&sessionEventSink{log: h.sessionLog, hub: h.remoteHub})
 
 	// Pending approvals are helper-owned state: every change pushes the full

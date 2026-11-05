@@ -29,7 +29,8 @@ type Server struct {
 	// then by live-status key. A conversation counts as watched — so a
 	// completing turn does not mark it unread — while ANY origin views it, and
 	// unread survives one surface closing a conversation another still shows.
-	activeSessions map[string]map[string]bool
+	activeSessions        map[string]map[string]bool
+	archivedSessionCloser ArchivedSessionCloser
 }
 
 type InstalledRegistryAgentServerStore interface {
@@ -48,9 +49,31 @@ func (s *Server) SetStore(store *Store) {
 		_ = s.store.Close()
 	}
 	s.store = store
+	s.applyArchivedSessionCloser()
 	if s.agentServerStore == nil {
 		s.agentServerStore = store
 	}
+}
+
+// SetArchivedSessionCloser installs the hook that cancels and closes the
+// sessions of sub-agent conversations archived by an ancestor's archive. It
+// runs best-effort in the background and never for the directly archived
+// conversation, whose close remains the client's responsibility.
+func (s *Server) SetArchivedSessionCloser(closer ArchivedSessionCloser) {
+	s.archivedSessionCloser = closer
+	s.applyArchivedSessionCloser()
+}
+
+func (s *Server) applyArchivedSessionCloser() {
+	if s.store == nil {
+		return
+	}
+	if s.archivedSessionCloser == nil {
+		s.store.archivedSessionCloser.Store(nil)
+		return
+	}
+	closer := s.archivedSessionCloser
+	s.store.archivedSessionCloser.Store(&closer)
 }
 
 func (s *Server) CreateChat(_ context.Context, req *methods.ACPNavCreateChatParams, _ *glsp.Context) (methods.ACPNavCreateChatOutput, error) {

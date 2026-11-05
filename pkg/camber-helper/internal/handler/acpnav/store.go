@@ -17,6 +17,7 @@ import (
 	"runtime/trace"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/appleton/camber/pkg/camber-helper/internal/dbmigrate"
@@ -51,6 +52,9 @@ type Store struct {
 	// trade-off is that pending reservations are lost on process restart,
 	// which is fine because the on-disk worktree does not exist yet either.
 	preparedWorktrees map[string]struct{}
+	// archivedSessionCloser closes sessions of descendants archived by the
+	// cascade; see Server.SetArchivedSessionCloser.
+	archivedSessionCloser atomic.Pointer[ArchivedSessionCloser]
 }
 
 func Open(ctx context.Context, dbPath string) (*Store, error) {
@@ -84,7 +88,12 @@ func Open(ctx context.Context, dbPath string) (*Store, error) {
 		return nil, fmt.Errorf("migrating acp nav db: %w", migrationErr)
 	}
 
-	return &Store{db: db, preparedWorktrees: map[string]struct{}{}, runGit: runGitCommand}, nil
+	store := &Store{db: db, preparedWorktrees: map[string]struct{}{}, runGit: runGitCommand}
+	if _, err := store.reconcileArchivedOrphans(ctx); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("reconciling archived sub-agents: %w", err)
+	}
+	return store, nil
 }
 
 func runGitCommand(ctx context.Context, args ...string) ([]byte, error) {
@@ -916,7 +925,10 @@ WHERE agent_server = ? AND session_id = ? AND title != ?
 // upsertConversationTx creates pending rows and enriches existing rows. Once a
 // row has a session, only the helper's BindConversationSession methods may
 // change its agent/session binding; client upserts can arrive late after a
-// handoff and therefore cannot be authoritative for those two fields.
+// handoff and therefore cannot be authoritative for those two fields. An
+// archived sub-agent stays archived: late saves from its still-finishing turn
+// (control turn records, client metadata) must not revive it after the parent
+// cascade archived it. RestoreConversation unarchives explicitly.
 func (s *Store) upsertConversationTx(ctx context.Context, db dbExecutor, c methods.ACPNavConversation, now string) error {
 	workingDirectoriesJSON, err := marshalJSONField(c.WorkingDirectories, []string{})
 	if err != nil {
@@ -940,7 +952,14 @@ ON CONFLICT(id) DO UPDATE SET
   nickname = CASE WHEN excluded.nickname != '' THEN excluded.nickname ELSE conversations.nickname END,
   updated_at = CASE WHEN excluded.updated_at != '' THEN excluded.updated_at ELSE conversations.updated_at END,
   active = 1,
-  archived = 0,
+  archived = CASE
+    WHEN conversations.archived != 0 AND EXISTS (
+      SELECT 1 FROM metadata
+      WHERE metadata.key = 'control/conversation/' || conversations.id
+        AND COALESCE(json_extract(metadata.value, '$.parentId'), '') != ''
+    ) THEN 1
+    ELSE 0
+  END,
   touched_at = CASE
     WHEN excluded.session_id IS NULL AND excluded.updated_at = '' THEN conversations.touched_at
     ELSE excluded.touched_at
@@ -1336,6 +1355,10 @@ func (s *Store) RestoreConversation(ctx context.Context, c methods.ACPNavConvers
 	if err := s.upsertConversationTx(ctx, tx, c, now); err != nil {
 		return err
 	}
+	// Upserts keep an archived sub-agent archived; restoring is explicit.
+	if _, err := tx.ExecContext(ctx, `UPDATE conversations SET archived = 0 WHERE id = ?`, c.ID); err != nil {
+		return fmt.Errorf("restoring conversation: %w", err)
+	}
 	return tx.Commit()
 }
 
@@ -1452,7 +1475,21 @@ func (s *Store) removeWorktree(ctx context.Context, path string, force bool) err
 	// whose session already exists under the parent would violate the
 	// (workspace_path, agent_server, session_id) unique index, so they are
 	// left behind for the DELETE below.
+	var archivedRoots []string
 	if parent.Valid && cleanPath(parent.String) != "" {
+		archivedRoots, err = queryIDs(ctx, tx, `
+SELECT id FROM conversations
+WHERE workspace_path = ?1 AND session_id != ''
+  AND NOT EXISTS (
+    SELECT 1 FROM conversations other
+    WHERE other.workspace_path = ?2
+      AND other.agent_server = conversations.agent_server
+      AND other.session_id = conversations.session_id
+  )
+`, path, cleanPath(parent.String))
+		if err != nil {
+			return err
+		}
 		if _, err := tx.ExecContext(ctx, `
 UPDATE conversations
 SET workspace_path = ?1, active = 0, archived = 1, touched_at = ?2
@@ -1467,54 +1504,67 @@ WHERE workspace_path = ?3 AND session_id != ''
 			return fmt.Errorf("archiving worktree conversations: %w", err)
 		}
 	}
+	cascaded, _, err := archiveDescendantsTx(ctx, tx, archivedRoots)
+	if err != nil {
+		return err
+	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM conversations WHERE workspace_path = ?`, path); err != nil {
 		return fmt.Errorf("deleting worktree conversations: %w", err)
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM projects WHERE path = ?`, path); err != nil {
 		return fmt.Errorf("deleting worktree: %w", err)
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	s.closeArchivedSessions(ctx, cascaded)
+	return nil
 }
 
 func (s *Store) ArchiveConversation(ctx context.Context, workspacePath, conversationID, agentServer, sessionID string) error {
 	workspacePath = cleanWorkspacePath(workspacePath)
 	conversationID = strings.TrimSpace(conversationID)
-	if conversationID != "" {
-		_, err := s.db.ExecContext(ctx, `
-UPDATE conversations
-SET active = 0, archived = 1, touched_at = ?
-WHERE id = ?
-`, nowString(), conversationID)
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("starting tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Archiving is idempotent: an already-archived conversation succeeds, so
+	// racing archive callers (UI cascade vs. helper cascade) never error.
+	var roots []string
+	archive := func(where string, args ...any) error {
+		ids, err := queryIDs(ctx, tx, `SELECT id FROM conversations WHERE `+where, args...)
 		if err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE conversations SET active = 0, archived = 1, touched_at = ? WHERE `+where, append([]any{nowString()}, args...)...); err != nil {
 			return fmt.Errorf("archiving conversation: %w", err)
 		}
+		roots = append(roots, ids...)
 		return nil
 	}
-
-	res, err := s.db.ExecContext(ctx, `
-UPDATE conversations
-SET active = 0, archived = 1, touched_at = ?
-WHERE agent_server = ? AND session_id = ? AND (workspace_path = ? OR cwd = ?)
-`, nowString(), agentServer, sessionID, workspacePath, workspacePath)
+	switch {
+	case conversationID != "":
+		err = archive(`id = ?`, conversationID)
+	default:
+		err = archive(`agent_server = ? AND session_id = ? AND (workspace_path = ? OR cwd = ?)`, agentServer, sessionID, workspacePath, workspacePath)
+		if err == nil && len(roots) == 0 && sessionID != "" {
+			err = archive(`agent_server = ? AND session_id = ?`, agentServer, sessionID)
+		}
+	}
 	if err != nil {
-		return fmt.Errorf("archiving conversation: %w", err)
+		return err
 	}
-	rowsAffected, err := res.RowsAffected()
+	cascaded, _, err := archiveDescendantsTx(ctx, tx, roots)
 	if err != nil {
-		return fmt.Errorf("checking archived conversation count: %w", err)
+		return err
 	}
-	if rowsAffected > 0 || sessionID == "" {
-		return nil
+	if err := tx.Commit(); err != nil {
+		return err
 	}
-
-	_, err = s.db.ExecContext(ctx, `
-UPDATE conversations
-SET active = 0, archived = 1, touched_at = ?
-WHERE agent_server = ? AND session_id = ?
-`, nowString(), agentServer, sessionID)
-	if err != nil {
-		return fmt.Errorf("archiving conversation: %w", err)
-	}
+	s.closeArchivedSessions(ctx, cascaded)
 	return nil
 }
 
