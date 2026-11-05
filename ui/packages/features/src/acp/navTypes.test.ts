@@ -120,6 +120,32 @@ describe("navTypes", () => {
     expect(countAttentionConversations(conversations)).toBe(2);
   });
 
+  it("ignores unread sub-agents but still counts ones waiting for the user", () => {
+    const conversations = [
+      navConversation({
+        id: "conversation:parent",
+        liveStatus: { working: false, waitingForUser: false, unread: false },
+      }),
+      navConversation({
+        id: "conversation:done-child",
+        parentId: "conversation:parent",
+        liveStatus: { working: false, waitingForUser: false, unread: true },
+      }),
+      navConversation({
+        id: "conversation:blocked-child",
+        parentId: "conversation:parent",
+        liveStatus: { working: true, waitingForUser: true, unread: true },
+      }),
+      navConversation({
+        id: "conversation:self-root",
+        parentId: "conversation:self-root",
+        liveStatus: { working: false, waitingForUser: false, unread: true },
+      }),
+    ];
+
+    expect(countAttentionConversations(conversations)).toBe(2);
+  });
+
   it("counts attention conversations with live status resolved externally", () => {
     const sessions = [
       conversationSummary({ id: "conversation:approval", sessionId: "session:approval" }),

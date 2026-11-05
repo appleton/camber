@@ -176,8 +176,12 @@ export interface ACPClosedSession {
   agentServer: string;
 }
 
+// Spawned sub-agents count only while they wait for the user: their completed
+// turns surface on the parent row, not as separate app-badge attention.
 export function countAttentionConversations<
   TConversation extends {
+    id?: string;
+    parentId?: string;
     active?: boolean;
     archived?: boolean;
     liveStatus?: ACPConversationLiveStatus;
@@ -190,7 +194,8 @@ export function countAttentionConversations<
   for (const conversation of conversations) {
     if (conversation.active === false || conversation.archived) continue;
     const liveStatus = getLiveStatus?.(conversation) ?? conversation.liveStatus;
-    if (liveStatus?.waitingForUser || liveStatus?.unread) {
+    const subAgent = !!conversation.parentId && conversation.parentId !== conversation.id;
+    if (liveStatus?.waitingForUser || (liveStatus?.unread && !subAgent)) {
       count += 1;
     }
   }
