@@ -174,3 +174,24 @@ func canonicalControlPath(path string) string {
 	}
 	return path
 }
+
+// checkRegisteredWorkspace requires a caller-supplied path to be, or lie
+// inside, a registered project or worktree (symlinks resolved).
+func (s *Service) checkRegisteredWorkspace(ctx context.Context, path string, g *glsp.Context) error {
+	if path == "" {
+		return nil
+	}
+	state, err := s.nav.List(ctx, &methods.ACPNavListParams{}, g)
+	if err != nil {
+		return err
+	}
+	target := canonicalControlPath(path)
+	for _, p := range state.Projects {
+		root := canonicalControlPath(p.Path)
+		rel, relErr := filepath.Rel(root, target)
+		if relErr == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel) {
+			return nil
+		}
+	}
+	return pkgerrors.Errorf("workspace %s is not a registered project or worktree (or a subdirectory of one)", path)
+}

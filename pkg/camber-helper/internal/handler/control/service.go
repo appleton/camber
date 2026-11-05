@@ -365,6 +365,24 @@ func (s *Service) spawn(ctx context.Context, a Args, g *glsp.Context) (any, erro
 		if err != nil {
 			return nil, err
 		}
+		if parent.Archived {
+			return nil, pkgerrors.Errorf("parent conversation %s is archived; restore it before spawning sub-agents", a.ParentID)
+		}
+	}
+	// Agent-origin calls may match their parent's permission mode, never exceed it.
+	var refs []View
+	if a.ParentID != "" {
+		refs = append(refs, parent)
+	}
+	if err := s.checkEscalation(a, "the parent conversation", refs); err != nil {
+		return nil, err
+	}
+	for _, requested := range []string{a.WorkspacePath, a.ProjectPath} {
+		if err := s.checkRegisteredWorkspace(ctx, requested, g); err != nil {
+			return nil, err
+		}
+	}
+	if a.ParentID != "" {
 		if a.WorkspacePath == "" {
 			a.WorkspacePath = parent.WorkspacePath
 		}
@@ -536,7 +554,7 @@ func (s *Service) spawn(ctx context.Context, a Args, g *glsp.Context) (any, erro
 		// mode when the caller did not set a mode option through the config map.
 		explicitMode := configSetsCategory(v.ConfigOptions, a.Config, "mode")
 		a.Config = inheritCompatible(parent.ConfigOptions, v.ConfigOptions, a)
-		if a.Mode == "" && !explicitMode {
+		if a.Mode == "" && !explicitMode && !configSetsCategory(v.ConfigOptions, a.Config, "mode") {
 			var current struct {
 				ID string `json:"currentModeId"`
 			}

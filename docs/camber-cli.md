@@ -137,6 +137,17 @@ then validates dependent choices; if a later choice fails, inspect
 `chat config list` for the effective settings. The task is never submitted with
 an unapplied requested configuration.
 
+Permission and workspace guardrails apply to every control call:
+
+- Permission-bypass modes (`bypassPermissions`, `agent-full-access`,
+  `full-access`, `always-allow`, `allow-all`, `yolo`, `bypass*`) cannot be
+  requested through `--mode`, `--input`, or `chat config set` unless the parent
+  conversation (or, for `config set`, the target or its parent) already uses
+  one. Failures return `PERMISSION_ESCALATION` before any agent change. Values
+  inherited from the parent or from the agent's configured defaults are allowed.
+- An explicit `--workspace`/`--project` must be a registered project or worktree
+  (symlinks resolved) or a subdirectory of one.
+
 After a session closes or the helper restarts, configuration discovery,
 updates, and continuations restore saved selections before proceeding.
 Same-agent children also inherit saved parent selections when the parent is

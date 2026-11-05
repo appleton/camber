@@ -119,7 +119,7 @@ Discover agent options before choosing model, reasoning effort, or mode:
   camber chat config list CHAT --json
   camber chat config set CHAT --input '{"OPTION_ID":"VALUE"}' --json
 
-Use the returned option IDs and allowed values exactly. --model, --effort, and --mode select discovered options by category. Invalid or unapplied settings stop spawning before the first prompt. Same-agent children inherit compatible parent settings; explicit settings take precedence.
+Use the returned option IDs and allowed values exactly. --model, --effort, and --mode select discovered options by category. Invalid or unapplied settings stop spawning before the first prompt. Same-agent children inherit compatible parent settings; explicit settings take precedence. Permission-bypass modes cannot be requested unless the parent already uses one (PERMISSION_ESCALATION), and explicit workspaces must be registered projects or worktrees.
 
 Spawn with a deliberate task brief and selected context:
   camber chat spawn PARENT --workspace /absolute/worktree --text @task.txt --request-id UNIQUE_REQUEST --json

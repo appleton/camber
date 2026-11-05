@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"sort"
+	"strconv"
+	"strings"
 
 	acpsdk "github.com/coder/acp-go-sdk"
 	pkgerrors "github.com/pkg/errors"
@@ -119,6 +121,17 @@ func (s *Service) configure(ctx context.Context, a Args, set bool, g *glsp.Conte
 			if !set {
 				return map[string]any{"conversationId": v.ID, "configOptions": options, "modes": modes}, nil
 			}
+		}
+	}
+	if set {
+		refs := []View{v}
+		if v.ParentID != "" {
+			if parent, perr := s.view(ctx, v.ParentID, g); perr == nil {
+				refs = append(refs, parent)
+			}
+		}
+		if err = s.checkEscalation(a, "the conversation or its parent", refs); err != nil {
+			return nil, err
 		}
 	}
 	if v.Status == "running" || s.log.Cursor(v.AgentServer, v.SessionID).TurnActive {
@@ -321,6 +334,7 @@ func (s *Service) applyConfigWithPersistence(ctx context.Context, v *View, a Arg
 			}
 		}
 	}
+	syncLegacyMode(v)
 	if modeLegacy {
 		_, err := s.agent.SetMode(ctx, &methods.ACPSetModeParams{ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: v.AgentServer}, SetSessionModeRequest: acpsdk.SetSessionModeRequest{SessionId: acpsdk.SessionId(v.SessionID), ModeId: acpsdk.SessionModeId(a.Mode)}}, g)
 		if err != nil {
@@ -357,6 +371,7 @@ func (s *Service) persistSessionConfig(ctx context.Context, v *View, g *glsp.Con
 			selections[o.ID] = value
 		}
 	}
+	syncLegacyMode(v)
 	var mode struct {
 		Current any `json:"currentModeId"`
 	}
@@ -431,6 +446,10 @@ func (s *Service) restoreSessionReserved(ctx context.Context, v *View, g *glsp.C
 		return err
 	}
 	v.ConfigOptions, v.Modes = captureConfig(resp)
+	if saved.Mode != "" && configSetsCategory(v.ConfigOptions, saved.Config, "mode") {
+		// The option is authoritative; never replay both representations.
+		saved.Mode = ""
+	}
 	if len(saved.Config) == 0 && saved.Mode == "" {
 		return nil
 	}
@@ -483,4 +502,142 @@ func useSavedParentConfiguration(parent *View) error {
 		return pkgerrors.WithStack(err)
 	}
 	return nil
+}
+
+// syncLegacyMode keeps the legacy modes state aligned with a mode-category
+// config option, which is authoritative when an agent exposes both.
+func syncLegacyMode(v *View) {
+	if len(v.Modes) == 0 {
+		return
+	}
+	for _, o := range parseOptions(v.ConfigOptions) {
+		if !optionInCategory(o, "mode") {
+			continue
+		}
+		value, ok := o.Current.(string)
+		if !ok {
+			continue
+		}
+		var modes map[string]any
+		if json.Unmarshal(v.Modes, &modes) != nil || modes == nil {
+			return
+		}
+		available, _ := modes["availableModes"].([]any)
+		for _, m := range available {
+			if entry, ok := m.(map[string]any); ok && entry["id"] == value {
+				modes["currentModeId"] = value
+				v.Modes, _ = json.Marshal(modes)
+				return
+			}
+		}
+		return
+	}
+}
+
+// isDangerousModeValue reports permission-bypass mode values (no approval
+// gates). Keep in sync with modeValueAppearance in
+// ui/packages/features/src/acp/components/chat/menus/config/configOptions.ts.
+func isDangerousModeValue(value string) bool {
+	var b strings.Builder
+	for _, r := range strings.ToLower(value) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
+	}
+	switch n := b.String(); n {
+	case "alwaysallow", "allowall", "fullaccess", "agentfullaccess", "yolo":
+		return true
+	default:
+		return strings.HasPrefix(n, "bypass")
+	}
+}
+
+func permissionEscalationError(value, who string) error {
+	return &methods.JSONRPCError{Code: methods.CamberErrorCodeEntityInvalid, Message: "PERMISSION_ESCALATION: permission-bypass mode " + strconv.Quote(value) + " cannot be selected through the control CLI unless " + who + " already uses one"}
+}
+
+// explicitDangerousValue returns a permission-bypass value the caller asked
+// for. It needs no schema, so it can run before any agent-side change.
+func explicitDangerousValue(a Args) string {
+	for _, v := range []string{a.Mode, a.Model, a.Effort} {
+		if isDangerousModeValue(v) {
+			return v
+		}
+	}
+	for _, v := range a.Config {
+		if text, ok := v.(string); ok && isDangerousModeValue(text) {
+			return text
+		}
+	}
+	return ""
+}
+
+// optionsDangerous reports whether the effective mode is a bypass mode. A
+// mode-category option is authoritative over legacy modes.
+func optionsDangerous(options, modes json.RawMessage) bool {
+	found := false
+	for _, o := range parseOptions(options) {
+		if !optionInCategory(o, "mode") {
+			continue
+		}
+		value, ok := o.Current.(string)
+		if !ok {
+			continue
+		}
+		found = true
+		if isDangerousModeValue(value) {
+			return true
+		}
+		for _, r := range o.Options {
+			var entry struct {
+				Value string `json:"value"`
+				Name  string `json:"name"`
+			}
+			if json.Unmarshal(r, &entry) == nil && entry.Value == value && isDangerousModeValue(entry.Name) {
+				return true
+			}
+		}
+	}
+	if found {
+		return false
+	}
+	var legacy struct {
+		Current string `json:"currentModeId"`
+	}
+	_ = json.Unmarshal(modes, &legacy)
+	return isDangerousModeValue(legacy.Current)
+}
+
+// conversationDangerous reports whether a conversation currently runs in a
+// permission-bypass mode, from live session state, else saved selections.
+func (s *Service) conversationDangerous(v View) bool {
+	if source, ok := s.agent.(interface {
+		SessionConfiguration(string, string) (json.RawMessage, json.RawMessage, bool)
+	}); ok && v.SessionID != "" {
+		if options, modes, found := source.SessionConfiguration(v.AgentServer, v.SessionID); found {
+			return optionsDangerous(options, modes)
+		}
+	}
+	if _, found, _ := savedConfiguration(v.Metadata); found {
+		saved := v
+		if useSavedParentConfiguration(&saved) == nil {
+			return optionsDangerous(saved.ConfigOptions, saved.Modes)
+		}
+	}
+	return optionsDangerous(v.ConfigOptions, v.Modes)
+}
+
+// checkEscalation rejects explicitly requested bypass modes unless one of the
+// reference conversations (target and/or parent) already uses one.
+func (s *Service) checkEscalation(a Args, who string, refs []View) error {
+	value := explicitDangerousValue(a)
+	if value == "" {
+		return nil
+	}
+	for _, ref := range refs {
+		if s.conversationDangerous(ref) {
+			return nil
+		}
+	}
+	return permissionEscalationError(value, who)
 }
