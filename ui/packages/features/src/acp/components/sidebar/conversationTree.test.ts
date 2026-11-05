@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildConversationTree,
+  collectDescendantIds,
   hasAttentionDescendant,
   sliceVisibleSessions,
   subAgentSummaryLabel,
@@ -164,5 +165,36 @@ describe("hasAttentionDescendant", () => {
     expect(hasAttentionDescendant([1], state({ waitingForUser: true }))).toBe(true);
     expect(hasAttentionDescendant([1], state({ unread: true }))).toBe(true);
     expect(hasAttentionDescendant([1], state({ selected: true }))).toBe(true);
+  });
+});
+
+describe("collectDescendantIds", () => {
+  const items = [node("p"), node("m", "p", "p"), node("g", "m", "p"), node("x"), node("y", "x")];
+
+  it("walks parent links transitively, independent of the rendered tree", () => {
+    expect(ids(collectDescendantIds(items, "p"))).toEqual(["m", "g"]);
+  });
+
+  it("finds grandchildren of a mid-level child that the flat tree would not nest", () => {
+    const tree = buildConversationTree(items, {});
+    expect(tree.descendantsOf("m")).toEqual([]);
+    expect(ids(collectDescendantIds(items, "m"))).toEqual(["g"]);
+  });
+
+  it("is unaffected by search-flattened trees", () => {
+    const tree = buildConversationTree(items, { flat: true });
+    expect(tree.descendantsOf("p")).toEqual([]);
+    expect(ids(collectDescendantIds(items, "p"))).toEqual(["m", "g"]);
+  });
+
+  it("returns nothing for leaves and unknown ids", () => {
+    expect(collectDescendantIds(items, "g")).toEqual([]);
+    expect(collectDescendantIds(items, "nope")).toEqual([]);
+  });
+
+  it("is cycle-safe and never returns the root", () => {
+    const cyclic = [node("a", "c"), node("b", "a"), node("c", "b"), node("s", "s")];
+    expect(ids(collectDescendantIds(cyclic, "a"))).toEqual(["b", "c"]);
+    expect(collectDescendantIds(cyclic, "s")).toEqual([]);
   });
 });

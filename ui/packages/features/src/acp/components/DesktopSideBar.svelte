@@ -54,6 +54,7 @@
   import ConversationGroup from "./sidebar/ConversationGroup.svelte";
   import {
     buildConversationTree,
+    collectDescendantIds,
     hasAttentionDescendant,
     sliceVisibleSessions,
   } from "./sidebar/conversationTree";
@@ -1347,7 +1348,12 @@
   const cascadedArchives = new Map<string, ACPConversationSummary[]>();
 
   function beginCascade(session: ACPConversationSummary): ACPConversationSummary[] {
-    const descendants = visibleSubAgents(session);
+    // Parent links over every current conversation, not the rendered tree:
+    // search, collapsed containers and flattened grandchildren must not hide any.
+    const descendants = collectDescendantIds(
+      navSessions.filter((item) => !exitingConversationIds.has(item.id)),
+      session.id,
+    );
     if (descendants.length === 0) return descendants;
     cascadedArchives.set(session.id, descendants);
     for (const child of descendants) setConversationExiting(child.id, true);

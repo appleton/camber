@@ -200,6 +200,24 @@ describe("DesktopSideBar sub-agent nesting", () => {
       await waitFor(() => expect(archivedIds(archiveSession)).toEqual(["p", "c"]));
     });
 
+    it("archives grandchildren when archiving a mid-level child", async () => {
+      const archiveSession = vi.fn(async () => {});
+      render(Harness, {
+        props: {
+          projects: [project("/repo")],
+          conversations: [
+            conv("p", "/repo"),
+            child("m", "/repo", "p", { age: 1 }),
+            child("g", "/repo", "m", { age: 2, rootId: "p" }),
+          ],
+          activeConversationId: "m",
+          archiveSession,
+        },
+      });
+      await middleClick("Title m");
+      await waitFor(() => expect(archivedIds(archiveSession)).toEqual(["m", "g"]));
+    });
+
     it("leaves sub-agents alone when the parent archive fails", async () => {
       const archiveSession = vi.fn(async (...args: unknown[]) => {
         if (args[3] === "p") throw new Error("boom");

@@ -4,6 +4,8 @@
 // result, one indent level deep.
 import type { ACPConversationLiveStatus } from "../../navTypes";
 
+export { collectDescendantIds } from "../../conversationDescendants";
+
 export interface ConversationTreeNode {
   id: string;
   parentId?: string | null;
