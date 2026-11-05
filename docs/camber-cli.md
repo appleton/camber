@@ -181,6 +181,13 @@ the session output that is still retained and a cursor for continuing from
 there; it cannot restore evicted output. Check the desktop transcript for
 earlier or missing content, and do not treat partial text as a completed
 answer. `--wait-ms` accepts values from 0 through 30000.
+
+Each page stays small enough for the CLI transport. An event larger than
+192 KiB is reduced in poll, watch, output and snapshot responses: bulky tool
+output, raw input/output, `_meta` and images become size placeholders, long
+text is truncated with a marker, and the event carries
+`_poolside: {"truncated": true, "originalBytes": N}`. The stored history and
+remote clients keep the full event.
 UI-started turns can also be read by their original turn ID after a later turn
 starts, while their turn records and output remain retained in the helper.
 

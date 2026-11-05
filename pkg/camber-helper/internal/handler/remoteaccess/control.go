@@ -3,6 +3,8 @@ package remoteaccess
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
+	"unicode/utf8"
 
 	pkgerrors "github.com/pkg/errors"
 )
@@ -20,6 +22,18 @@ type ControlPoll struct {
 	ResetRequired bool           `json:"resetRequired"`
 	HasMore       bool           `json:"hasMore"`
 }
+
+const (
+	// controlEventCap bounds one event's encoding in a control page. With the
+	// 256KB page budget, a page (plus the derived text field) stays well under
+	// the 1 MiB control frame limit.
+	controlEventCap = 192 * 1024
+	controlPageCap  = 256 * 1024
+	// Truncation limits used when reducing an oversized event.
+	controlTextCap   = 64 * 1024
+	controlStringCap = 2 * 1024
+)
+
 type controlCursor struct {
 	Agent, Session, Epoch string
 	Seq                   int64
@@ -95,9 +109,17 @@ func (l *SessionLog) PollBetween(agent, session, cursor, end string) (ControlPol
 			if err != nil {
 				return out, pkgerrors.WithStack(err)
 			}
+			if len(encoded) > controlEventCap {
+				// Reduce a copy for the control view; the stored log keeps the
+				// original for remote clients.
+				item.Params = reduceControlParams(event.params, len(encoded))
+				if encoded, err = json.Marshal(item); err != nil {
+					return out, pkgerrors.WithStack(err)
+				}
+			}
 			// A page always carries at least one event so an oversized event
-			// cannot stall pagination.
-			if len(out.Events) > 0 && size+len(encoded) > 256*1024 {
+			// cannot stall pagination; reduction keeps it under controlEventCap.
+			if len(out.Events) > 0 && size+len(encoded) > controlPageCap {
 				out.HasMore = true
 				break
 			}
@@ -161,3 +183,85 @@ func (l *SessionLog) CursorAt(agent, session, epoch string, seq int64) string {
 
 // ProcessEpoch identifies the helper lifetime that owns preparation work.
 func (l *SessionLog) ProcessEpoch() string { return l.epoch }
+
+// reduceControlParams returns a reduced copy of params for control output,
+// keeping identifying fields and agent message text while truncating bulky
+// payloads. The result is marked with _poolside.truncated.
+func reduceControlParams(params any, originalBytes int) any {
+	raw, err := json.Marshal(params)
+	var tree any
+	if err == nil {
+		err = json.Unmarshal(raw, &tree)
+	}
+	marker := map[string]any{"truncated": true, "originalBytes": originalBytes}
+	if err != nil {
+		return map[string]any{"_poolside": marker}
+	}
+	for _, level := range []struct{ text, str int }{{controlTextCap, controlStringCap}, {controlTextCap / 4, 256}, {1024, 64}} {
+		reduced := reduceNode(tree, level.text, level.str, "")
+		if m, ok := reduced.(map[string]any); ok {
+			m["_poolside"] = marker
+			if enc, e := json.Marshal(m); e == nil && len(enc) <= controlEventCap/2 {
+				return m
+			}
+		}
+	}
+	return map[string]any{"_poolside": marker, "note": "event too large for control output"}
+}
+
+func reduceNode(n any, textCap, strCap int, key string) any {
+	switch v := n.(type) {
+	case string:
+		limit := strCap
+		if key == "text" {
+			limit = textCap
+		}
+		return truncateMarked(v, limit)
+	case []any:
+		const maxItems = 16
+		out := make([]any, 0, min(len(v), maxItems)+1)
+		for i, item := range v {
+			if i == maxItems {
+				out = append(out, fmt.Sprintf("[%d more items omitted]", len(v)-maxItems))
+				break
+			}
+			out = append(out, reduceNode(item, textCap, strCap, key))
+		}
+		return out
+	case map[string]any:
+		if t, _ := v["type"].(string); t == "image" || t == "audio" {
+			data, _ := v["data"].(string)
+			mime, _ := v["mimeType"].(string)
+			return map[string]any{"type": t, "mimeType": mime, "omitted": true, "bytes": len(data)}
+		}
+		out := make(map[string]any, len(v))
+		for k, item := range v {
+			switch k {
+			case "_meta", "rawInput", "rawOutput", "toolResponse":
+				raw, _ := json.Marshal(item)
+				out[k] = fmt.Sprintf("[omitted %d bytes]", len(raw))
+			case "data", "blob":
+				if s, ok := item.(string); ok && len(s) > strCap {
+					out[k] = fmt.Sprintf("[omitted %d bytes]", len(s))
+					continue
+				}
+				out[k] = reduceNode(item, textCap, strCap, k)
+			default:
+				out[k] = reduceNode(item, textCap, strCap, k)
+			}
+		}
+		return out
+	}
+	return n
+}
+
+func truncateMarked(s string, limit int) string {
+	if len(s) <= limit {
+		return s
+	}
+	cut := limit
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return fmt.Sprintf("%s\n[truncated %d of %d bytes]", s[:cut], len(s)-cut, len(s))
+}
