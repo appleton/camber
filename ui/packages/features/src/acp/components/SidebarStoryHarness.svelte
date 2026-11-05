@@ -26,6 +26,8 @@
     expandedSubAgents?: string[];
     // Replaces the repository's archive call (tests).
     archiveSession?: (...args: unknown[]) => Promise<unknown>;
+    // Hands the conversation repository to tests so they can change nav state.
+    onConversationRepo?: (repo: ReturnType<typeof getACPConversationRepo>) => void;
   }
 
   let {
@@ -36,6 +38,7 @@
     localInference,
     expandedSubAgents,
     archiveSession,
+    onConversationRepo,
   }: Props = $props();
 
   const SUB_AGENTS_EXPANDED_KEY = "camber.desktop.expandedSubAgents.v1";
@@ -62,6 +65,7 @@
 
   projectRepo.replaceProjects(projects);
   conversationRepo.replaceConversations(conversations);
+  onConversationRepo?.(conversationRepo);
 
   // The sidebars call `refresh()` from onMount whenever the list arrives empty,
   // which would hit the real helper RPC and surface a failure banner.

@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
+import type { ComponentProps } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { initializeStatefulModule } from "../hostRpc";
 import type { ACPNavConversation, ACPNavProject } from "../navTypes";
@@ -198,6 +199,27 @@ describe("DesktopSideBar sub-agent nesting", () => {
       render(Harness, { props: props(archiveSession) });
       await middleClick("Title p");
       await waitFor(() => expect(archivedIds(archiveSession)).toEqual(["p", "c"]));
+    });
+
+    it("archives sub-agents spawned after the cascade began", async () => {
+      let repo: Parameters<NonNullable<ComponentProps<typeof Harness>["onConversationRepo"]>>[0];
+      const archiveSession = vi.fn(async (...args: unknown[]) => {
+        if (args[3] === "p") {
+          // Parent and child kept running meanwhile and spawned more work.
+          repo.replaceConversations([
+            conv("p", "/repo"),
+            child("c", "/repo", "p"),
+            child("n", "/repo", "p", { age: 1 }),
+            child("ng", "/repo", "c", { age: 2, rootId: "p" }),
+          ]);
+        }
+      });
+      render(Harness, {
+        props: { ...props(archiveSession), onConversationRepo: (r: typeof repo) => (repo = r) },
+      });
+      await middleClick("Title p");
+      await waitFor(() => expect(archiveSession).toHaveBeenCalledTimes(4));
+      expect(archivedIds(archiveSession).sort()).toEqual(["c", "n", "ng", "p"]);
     });
 
     it("archives grandchildren when archiving a mid-level child", async () => {

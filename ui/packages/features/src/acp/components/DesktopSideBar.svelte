@@ -1398,7 +1398,14 @@
       selectionRollback,
     );
     if (archived) {
-      await archiveCascadedDescendants(cascaded);
+      // The tree kept running during the undo countdown and the parent archive:
+      // pick up sub-agents spawned since the snapshot was taken.
+      const known = new Set(cascaded.map((child) => child.id));
+      const spawned = collectDescendantIds(navSessions, session.id).filter(
+        (child) => !known.has(child.id) && !exitingConversationIds.has(child.id),
+      );
+      for (const child of spawned) setConversationExiting(child.id, true);
+      await archiveCascadedDescendants([...cascaded, ...spawned]);
     } else {
       for (const child of cascaded) setConversationExiting(child.id, false);
     }
