@@ -95,10 +95,9 @@ func (l *SessionLog) PollBetween(agent, session, cursor, end string) (ControlPol
 			if err != nil {
 				return out, pkgerrors.WithStack(err)
 			}
-			if len(encoded) > 256*1024 {
-				return out, pkgerrors.Errorf("one output event exceeds the CLI page limit; inspect this conversation in the desktop")
-			}
-			if size+len(encoded) > 256*1024 {
+			// A page always carries at least one event so an oversized event
+			// cannot stall pagination.
+			if len(out.Events) > 0 && size+len(encoded) > 256*1024 {
 				out.HasMore = true
 				break
 			}

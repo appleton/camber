@@ -78,13 +78,16 @@ func (s *Service) poll(ctx context.Context, a Args, command string, g *glsp.Cont
 		if cursor == "" {
 			cursor = selected.Cursor
 		}
-		if command == "chat.output" {
+		// An explicit cursor (a previous page's nextCursor) always wins;
+		// otherwise output starts at the turn and snapshot at the oldest
+		// retained event.
+		if command == "chat.output" && a.Cursor == "" {
 			cursor = selected.Cursor
 			if cursor == "" {
 				cursor = s.log.TurnCursor(v.AgentServer, v.SessionID)
 			}
 		}
-		if command == "chat.snapshot" {
+		if command == "chat.snapshot" && a.Cursor == "" {
 			cursor = ""
 		}
 		page, err := s.log.PollBetween(v.AgentServer, v.SessionID, cursor, selected.EndCursor)
@@ -161,6 +164,8 @@ func (s *Service) poll(ctx context.Context, a Args, command string, g *glsp.Cont
 					b.WriteString(p.Message.Params.Update.Content.Text)
 				}
 			}
+			// text covers only this page's agent message chunks; concatenating
+			// it across pages (following nextCursor) yields the full message.
 			out["text"] = b.String()
 			out["complete"] = !page.ResetRequired && !page.HasMore && terminal
 			out["truncated"] = page.ResetRequired || page.HasMore

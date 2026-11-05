@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -429,4 +430,51 @@ func modeValue(t *testing.T, options json.RawMessage) string {
 	}
 	require.FailNow(t, "no mode option")
 	return ""
+}
+
+func TestOutputPagesWithNextCursorUntilExhausted(t *testing.T) {
+	for _, command := range []string{"chat.output", "chat.snapshot"} {
+		t.Run(command, func(t *testing.T) {
+			s, agent := fixture(t)
+			spawn := invoke(t, s, "chat.spawn", Args{ParentID: "parent", Text: "task"})
+			<-agent.started
+			id := spawn["conversation"].(map[string]any)["id"].(string)
+			turn := spawn["turnId"].(string)
+			var want strings.Builder
+			want.WriteString("answer")
+			for i := 0; i < 12; i++ {
+				chunk := fmt.Sprintf("[%02d]", i) + strings.Repeat("x", 100000)
+				want.WriteString(chunk)
+				s.log.Publish("test", "session", "", false, map[string]any{"method": "session/update", "params": map[string]any{"sessionId": "session", "update": map[string]any{"sessionUpdate": "agent_message_chunk", "content": map[string]any{"type": "text", "text": chunk}}}})
+			}
+			close(agent.finish)
+			require.Eventually(t, func() bool { v, e := s.view(context.Background(), id, nil); return e == nil && v.Status == "completed" }, time.Second, time.Millisecond*10)
+
+			args := Args{ConversationID: id, TurnID: turn}
+			seen := map[int64]int{}
+			var got strings.Builder
+			for pages := 0; pages < 50; pages++ {
+				out := invoke(t, s, command, args)
+				events, _ := out["events"].([]any)
+				for _, e := range events {
+					seen[int64(e.(map[string]any)["seq"].(float64))]++
+				}
+				got.WriteString(out["text"].(string))
+				next, _ := out["nextCursor"].(string)
+				if out["hasMore"] == false {
+					assert.Equal(t, true, out["complete"])
+					assert.Equal(t, got.String(), want.String())
+					for seq, n := range seen {
+						assert.Equal(t, 1, n, "seq %d", seq)
+					}
+					assert.GreaterOrEqual(t, len(seen), 12)
+					assert.Greater(t, pages, 0)
+					return
+				}
+				require.NotEqual(t, args.Cursor, next, "cursor must advance")
+				args.Cursor = next
+			}
+			require.FailNow(t, "pagination did not terminate")
+		})
+	}
 }
