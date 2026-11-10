@@ -513,6 +513,7 @@ func (s *Store) UpsertProject(ctx context.Context, p methods.ACPNavUpsertProject
 
 type dbExecutor interface {
 	ExecContext(context.Context, string, ...any) (sql.Result, error)
+	QueryRowContext(context.Context, string, ...any) *sql.Row
 }
 
 func (s *Store) upsertProjectTx(ctx context.Context, db dbExecutor, p methods.ACPNavUpsertProjectParams, now string) error {
@@ -893,7 +894,14 @@ func (s *Store) UpsertConversation(ctx context.Context, c methods.ACPNavConversa
 		}
 		c.ID = id
 	}
-	return s.upsertConversationTx(ctx, s.db, c, nowString())
+	insertedArchived, err := s.upsertConversationTx(ctx, s.db, c, nowString())
+	if err != nil {
+		return err
+	}
+	if insertedArchived && c.SessionID != "" {
+		s.closeArchivedSessions(ctx, []archivedSession{{AgentServer: c.AgentServer, SessionID: c.SessionID}})
+	}
+	return nil
 }
 
 // UpdateConversationTitle updates every nav record bound to the agent session.
@@ -929,15 +937,27 @@ WHERE agent_server = ? AND session_id = ? AND title != ?
 // archived sub-agent stays archived: late saves from its still-finishing turn
 // (control turn records, client metadata) must not revive it after the parent
 // cascade archived it. RestoreConversation unarchives explicitly.
-func (s *Store) upsertConversationTx(ctx context.Context, db dbExecutor, c methods.ACPNavConversation, now string) error {
+//
+// A NEW row whose control parent link points at an archived conversation is
+// inserted archived (the spawn can race the parent's archive cascade); the
+// returned bool reports that so the caller can close its session.
+func (s *Store) upsertConversationTx(ctx context.Context, db dbExecutor, c methods.ACPNavConversation, now string) (bool, error) {
 	workingDirectoriesJSON, err := marshalJSONField(c.WorkingDirectories, []string{})
 	if err != nil {
-		return fmt.Errorf("encoding conversation working directories: %w", err)
+		return false, fmt.Errorf("encoding conversation working directories: %w", err)
 	}
 	metadataJSON := strings.TrimSpace(rawJSONOrDefault(c.Metadata, ""))
+	var existing int
+	existed := true
+	if err := db.QueryRowContext(ctx, `SELECT 1 FROM conversations WHERE id = ?`, c.ID).Scan(&existing); err != nil {
+		if !stderrors.Is(err, sql.ErrNoRows) {
+			return false, fmt.Errorf("checking conversation: %w", err)
+		}
+		existed = false
+	}
 	_, err = db.ExecContext(ctx, `
 INSERT INTO conversations(id, workspace_path, agent_server, session_id, cwd, title, nickname, updated_at, active, archived, working_directories_json, metadata_json, created_at, touched_at)
-VALUES (?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, 1, 0, ?, ?, ?, ?)
+VALUES (?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, 1, `+parentArchivedSQL+`, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   workspace_path = excluded.workspace_path,
   agent_server = CASE
@@ -964,12 +984,27 @@ ON CONFLICT(id) DO UPDATE SET
     WHEN excluded.session_id IS NULL AND excluded.updated_at = '' THEN conversations.touched_at
     ELSE excluded.touched_at
   END
-`, c.ID, c.WorkspacePath, c.AgentServer, c.SessionID, c.Cwd, c.Title, c.Nickname, c.UpdatedAt, workingDirectoriesJSON, metadataJSON, now, now)
+`, c.ID, c.WorkspacePath, c.AgentServer, c.SessionID, c.Cwd, c.Title, c.Nickname, c.UpdatedAt, c.ID, workingDirectoriesJSON, metadataJSON, now, now)
 	if err != nil {
-		return fmt.Errorf("upserting conversation: %w", err)
+		return false, fmt.Errorf("upserting conversation: %w", err)
 	}
-	return nil
+	if existed {
+		return false, nil
+	}
+	var archived int
+	if err := db.QueryRowContext(ctx, `SELECT archived FROM conversations WHERE id = ?`, c.ID).Scan(&archived); err != nil {
+		return false, fmt.Errorf("reading inserted conversation: %w", err)
+	}
+	return archived != 0, nil
 }
+
+// parentArchivedSQL evaluates to 1 when the (bound) conversation id's control
+// state names a parent that is archived, else 0.
+const parentArchivedSQL = `CASE WHEN EXISTS (
+  SELECT 1 FROM conversations parent
+  WHERE parent.archived != 0
+    AND parent.id = (SELECT COALESCE(json_extract(m.value, '$.parentId'), '') FROM metadata m WHERE m.key = 'control/conversation/' || ?)
+) THEN 1 ELSE 0 END`
 
 // BindConversationSession records the session id the agent created for a
 // conversation. Called by the helper itself at session/new time (it proxies

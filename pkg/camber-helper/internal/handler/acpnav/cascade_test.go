@@ -168,3 +168,55 @@ func TestUpsertKeepsArchivedSubAgentArchivedUntilRestored(t *testing.T) {
 	require.NoError(t, store.RestoreConversation(ctx, conversation("c")))
 	assert.False(t, archivedSet(t, store)["c"])
 }
+
+func TestCloseSweepGivesEveryDescendantALiveContext(t *testing.T) {
+	ctx := context.Background()
+	server, store := cascadeFixture(t, filepath.Join(t.TempDir(), "nav.db"))
+	release := make(chan struct{})
+	var mu sync.Mutex
+	var called, expired []string
+	started := make(chan struct{}, 4)
+	server.SetArchivedSessionCloser(func(c context.Context, agent, session string) {
+		mu.Lock()
+		called = append(called, session)
+		if c.Err() != nil {
+			expired = append(expired, session)
+		}
+		mu.Unlock()
+		started <- struct{}{}
+		<-release // every close blocks until all have started
+	})
+	store.closeArchivedSessions(ctx, []archivedSession{{"agent", "a"}, {"agent", "b"}, {"agent", "c"}})
+	for range 3 {
+		select {
+		case <-started:
+		case <-time.After(5 * time.Second):
+			t.Fatal("closers were not run concurrently")
+		}
+	}
+	close(release)
+	mu.Lock()
+	defer mu.Unlock()
+	assert.ElementsMatch(t, []string{"a", "b", "c"}, called)
+	assert.Empty(t, expired)
+}
+
+func TestInsertUnderArchivedParentIsArchivedAndClosed(t *testing.T) {
+	ctx := context.Background()
+	server, store := cascadeFixture(t, filepath.Join(t.TempDir(), "nav.db"), "p")
+	closed := make(chan string, 1)
+	server.SetArchivedSessionCloser(func(_ context.Context, agent, session string) { closed <- agent + "/" + session })
+	link(t, server, "kid", "p")
+	_, err := server.ArchiveConversation(ctx, &methods.ACPNavArchiveConversationParams{ConversationID: "p"}, nil)
+	require.NoError(t, err)
+
+	require.NoError(t, store.UpsertConversation(ctx, methods.ACPNavConversation{ID: "kid", WorkspacePath: "/ws", Cwd: "/ws", AgentServer: "agent", SessionID: "s-kid", UpdatedAt: "2026-01-01T00:00:00Z"}))
+	require.NoError(t, store.UpsertConversation(ctx, methods.ACPNavConversation{ID: "free", WorkspacePath: "/ws", Cwd: "/ws", AgentServer: "agent", SessionID: "s-free", UpdatedAt: "2026-01-01T00:00:00Z"}))
+	assert.Equal(t, map[string]bool{"p": true, "kid": true, "free": false}, archivedSet(t, store))
+	select {
+	case got := <-closed:
+		assert.Equal(t, "agent/s-kid", got)
+	case <-time.After(5 * time.Second):
+		t.Fatal("closer not invoked for child inserted under archived parent")
+	}
+}

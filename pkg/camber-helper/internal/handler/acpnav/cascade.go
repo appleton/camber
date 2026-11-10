@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -16,7 +17,7 @@ import (
 // session. acpnav cannot import acpproxy, so the handler injects it.
 type ArchivedSessionCloser func(ctx context.Context, agentServer, sessionID string)
 
-// archivedSessionCloseTimeout bounds the whole background close sweep.
+// archivedSessionCloseTimeout bounds each session's close.
 const archivedSessionCloseTimeout = 30 * time.Second
 
 type archivedSession struct {
@@ -149,8 +150,13 @@ func queryIDs(ctx context.Context, q interface {
 	return ids, rows.Err()
 }
 
+// archivedSessionCloseConcurrency bounds the close sweep fan-out.
+const archivedSessionCloseConcurrency = 8
+
 // closeArchivedSessions hands cascaded sessions to the injected closer on a
-// background goroutine so the archive response never waits on agent I/O.
+// background goroutine so the archive response never waits on agent I/O. Each
+// session gets its own bounded context and sessions close concurrently, so a
+// slow close never starves later cancels of their deadline.
 func (s *Store) closeArchivedSessions(ctx context.Context, sessions []archivedSession) {
 	closer := s.archivedSessionCloser.Load()
 	if closer == nil || len(sessions) == 0 {
@@ -158,10 +164,21 @@ func (s *Store) closeArchivedSessions(ctx context.Context, sessions []archivedSe
 	}
 	bg := context.WithoutCancel(ctx)
 	go func() {
-		bg, cancel := context.WithTimeout(bg, archivedSessionCloseTimeout)
-		defer cancel()
+		sem := make(chan struct{}, archivedSessionCloseConcurrency)
+		var wg sync.WaitGroup
 		for _, session := range sessions {
-			(*closer)(bg, session.AgentServer, session.SessionID)
+			sem <- struct{}{}
+			wg.Add(1)
+			// Pass session explicitly: rules_go nogo's loopclosure flags the
+			// (legal since Go 1.22) per-iteration capture.
+			go func(session archivedSession) {
+				defer wg.Done()
+				defer func() { <-sem }()
+				sessionCtx, cancel := context.WithTimeout(bg, archivedSessionCloseTimeout)
+				defer cancel()
+				(*closer)(sessionCtx, session.AgentServer, session.SessionID)
+			}(session)
 		}
+		wg.Wait()
 	}()
 }
