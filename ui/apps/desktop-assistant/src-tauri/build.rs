@@ -16,17 +16,9 @@ fn ensure_debug_sidecar_placeholder() {
     };
 
     let binary_dir = std::path::Path::new(&manifest_dir).join("binaries");
-    let extension = if target.contains("windows") {
-        ".exe"
-    } else {
-        ""
-    };
     std::fs::create_dir_all(&binary_dir).expect("failed to create Tauri sidecar binary dir");
-    write_debug_sidecar_placeholder(&binary_dir, &format!("camber-helper-{target}{extension}"));
-    write_debug_sidecar_placeholder(
-        &binary_dir,
-        &format!("camber-mlx-sidecar-{target}{extension}"),
-    );
+    write_debug_sidecar_placeholder(&binary_dir, &format!("camber-helper-{target}"));
+    write_debug_sidecar_placeholder(&binary_dir, &format!("camber-mlx-sidecar-{target}"));
     write_debug_resource_placeholder(&binary_dir, "default.metallib");
     write_debug_resource_placeholder(&binary_dir, "mlx.metallib");
 }

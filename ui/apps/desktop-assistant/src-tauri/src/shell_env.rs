@@ -6,8 +6,7 @@
 //! launch provides all of them. That asymmetry makes features work in dev and
 //! silently break in the released bundle. Capturing the login shell's
 //! environment once at startup and folding it into the process closes the gap
-//! for this process and for everything it spawns (including camber-helper,
-//! which additionally repairs its own environment for IDE hosts).
+//! for this process and for everything it spawns, including camber-helper.
 
 use std::{
     env,
@@ -46,9 +45,6 @@ const CAPTURE_TIMEOUT: Duration = Duration::from_secs(5);
 /// keys missing from the inherited environment. Terminals are unaffected
 /// too; they source the rc files themselves.
 pub fn apply_user_shell_env() {
-    if cfg!(windows) {
-        return;
-    }
     let shell = login_shell();
     // launchd replays the $SHELL recorded when the login session started, so
     // a `chsh` since then (zsh → fish, say) leaves every GUI launch with a

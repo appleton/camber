@@ -1,5 +1,7 @@
 # Low-risk performance test build
 
+> Historical report: Camber now ships only the macOS desktop app. The IDE applications and their B4/L6 benchmark scripts have been removed; IDE findings and measurements below describe the audited checkout only.
+
 This build starts from `1a648b183` and includes the ten commits classified as lowest risk plus `b692acb0a` (L2), explicitly requested for earlier shell reveal. Evidence below is historical evidence from each original change; this combination receives separate build and smoke validation. Excluded findings are not implemented in this branch.
 
 ### B1 — connector logos and accidental Storybook dependency

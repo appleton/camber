@@ -123,9 +123,7 @@ async function installBinary({
   }
   rmSync(archivePath, { force: true });
 
-  if (process.platform !== "win32") {
-    execFileSync("chmod", ["+x", installedPath], { stdio: "inherit" });
-  }
+  execFileSync("chmod", ["+x", installedPath], { stdio: "inherit" });
 
   writeFileSync(versionPath, `${version}\n`);
   console.log(`Installed ${binary} as ${installedName} from ${version}`);
@@ -167,9 +165,7 @@ function installLocalBazelBinary({ binary, label, installedName }) {
   // second install would fail with EACCES without removing the old copy.
   rmSync(installedPath, { force: true });
   copyFileSync(join(repoRoot, builtPath), installedPath);
-  if (process.platform !== "win32") {
-    execFileSync("chmod", ["+x", installedPath], { stdio: "inherit" });
-  }
+  execFileSync("chmod", ["+x", installedPath], { stdio: "inherit" });
   writeFileSync(`${installedPath}.version`, "local\n");
   console.log(`Installed ${binary} as ${installedName} from local Bazel build`);
 }
@@ -303,9 +299,7 @@ async function installReleaseWhisperServer({ target, targetTriple }) {
 function installPlaceholderBinary({ installedName, version, reason }) {
   const installedPath = join(binaryDir, installedName);
   writeFileSync(installedPath, "");
-  if (process.platform !== "win32") {
-    execFileSync("chmod", ["+x", installedPath], { stdio: "inherit" });
-  }
+  execFileSync("chmod", ["+x", installedPath], { stdio: "inherit" });
   writeFileSync(`${installedPath}.version`, `${version}\n`);
   console.log(`Installed placeholder ${installedName}: ${reason}`);
 }

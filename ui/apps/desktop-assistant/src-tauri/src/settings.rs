@@ -628,9 +628,8 @@ fn default_config_home() -> Result<PathBuf, String> {
         }
     }
     // Must resolve the same file as the helper's userconfig.Directory(),
-    // which uses Go's os.UserHomeDir: USERPROFILE on Windows, HOME elsewhere.
-    let home_var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-    if let Ok(path) = env::var(home_var) {
+    // which uses Go's os.UserHomeDir and HOME on macOS.
+    if let Ok(path) = env::var("HOME") {
         if !path.is_empty() {
             return Ok(PathBuf::from(path).join(".config"));
         }
@@ -1893,13 +1892,6 @@ fn detect_code_font_families() -> Vec<String> {
         }
     }
 
-    #[cfg(target_os = "windows")]
-    {
-        for family in detect_code_font_families_from_windows_registry() {
-            add_code_font_family(&mut families, &family);
-        }
-    }
-
     for family in fallback_code_font_families() {
         if is_system_likely_to_have_font(family) {
             add_code_font_family(&mut families, family);
@@ -1932,40 +1924,6 @@ fn detect_code_font_families_with_fc_list() -> Vec<String> {
 #[cfg(target_os = "macos")]
 fn detect_code_font_families_with_atsutil() -> Vec<String> {
     let Ok(output) = Command::new("atsutil").args(["fonts", "-list"]).output() else {
-        return Vec::new();
-    };
-    if !output.status.success() {
-        return Vec::new();
-    }
-    String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .map(normalize_font_family_name)
-        .filter(|family| is_likely_code_font_family(family))
-        .collect()
-}
-
-#[cfg(target_os = "windows")]
-fn detect_code_font_families_from_windows_registry() -> Vec<String> {
-    let script = r#"
-$paths = @(
-  'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts',
-  'HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts'
-)
-foreach ($path in $paths) {
-  if (Test-Path $path) {
-    (Get-ItemProperty $path).PSObject.Properties | ForEach-Object { $_.Name }
-  }
-}
-"#;
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-Command", script])
-        .output()
-        .or_else(|_| {
-            Command::new("pwsh")
-                .args(["-NoProfile", "-Command", script])
-                .output()
-        });
-    let Ok(output) = output else {
         return Vec::new();
     };
     if !output.status.success() {
@@ -2149,13 +2107,6 @@ fn is_system_likely_to_have_font(family: &str) -> bool {
     {
         matches!(family, "Menlo" | "Monaco" | "Courier New" | "SF Mono")
     }
-    #[cfg(target_os = "windows")]
-    {
-        matches!(
-            family,
-            "Consolas" | "Cascadia Mono" | "Cascadia Code" | "Courier New"
-        )
-    }
     #[cfg(target_os = "linux")]
     {
         matches!(
@@ -2163,7 +2114,7 @@ fn is_system_likely_to_have_font(family: &str) -> bool {
             "DejaVu Sans Mono" | "Liberation Mono" | "Ubuntu Mono"
         )
     }
-    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     {
         let _ = family;
         false
@@ -3697,11 +3648,7 @@ mod tests {
     }
 
     fn home_env_var() -> &'static str {
-        if cfg!(windows) {
-            "USERPROFILE"
-        } else {
-            "HOME"
-        }
+        "HOME"
     }
 
     #[test]

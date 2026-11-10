@@ -351,15 +351,7 @@ export async function start({ onShellInteractive, onInitialScreenSettled }: Star
     environment: {
       assistantEnv: import.meta.env.DEV ? ("development" as const) : ("production" as const),
       assistantHost: "desktop",
-      // Node process.platform identifiers, matching what the IDE hosts report
-      // (VS Code passes process.platform; Visual Studio hard-codes "win32").
-      // Native-menu gating (supportsNativeMenus) requires "darwin". The Tauri
-      // webview has no process, so derive it from the engine's UA.
-      operatingSystem: navigator.userAgent.includes("Mac")
-        ? "darwin"
-        : navigator.userAgent.includes("Windows")
-          ? "win32"
-          : "linux",
+      operatingSystem: "darwin",
       assistantHostVersion: assistantVersion,
       assistantVersion,
       assistantProduct: "desktop-assistant",

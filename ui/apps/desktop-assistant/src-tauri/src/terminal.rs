@@ -740,52 +740,12 @@ struct ShellSpec {
 }
 
 /// Chooses the program and argv for a terminal tab. `login_shell` is the
-/// user's shell resolved from the user database (`shell_env::login_shell`);
-/// it is ignored on Windows, where cmd/PowerShell run commands natively.
+/// user's shell resolved from the user database (`shell_env::login_shell`).
 fn shell_for_terminal(
     login_shell: String,
     command: Option<&str>,
     command_mode: AssistantTerminalCommandMode,
 ) -> ShellSpec {
-    if cfg!(windows) {
-        if let Some(command) = command {
-            if let Ok(comspec) = env::var("COMSPEC") {
-                return ShellSpec {
-                    program: comspec,
-                    args: vec!["/Q".to_string(), "/C".to_string(), command.to_string()],
-                    write_startup_command: command_mode
-                        == AssistantTerminalCommandMode::Interactive,
-                    use_zsh_integration: false,
-                };
-            }
-            return ShellSpec {
-                program: "powershell.exe".to_string(),
-                args: vec![
-                    "-NoLogo".to_string(),
-                    "-NoProfile".to_string(),
-                    "-Command".to_string(),
-                    command.to_string(),
-                ],
-                write_startup_command: command_mode == AssistantTerminalCommandMode::Interactive,
-                use_zsh_integration: false,
-            };
-        }
-        if let Ok(comspec) = env::var("COMSPEC") {
-            return ShellSpec {
-                program: comspec,
-                args: vec!["/Q".to_string()],
-                write_startup_command: false,
-                use_zsh_integration: false,
-            };
-        }
-        return ShellSpec {
-            program: "powershell.exe".to_string(),
-            args: vec!["-NoLogo".to_string()],
-            write_startup_command: false,
-            use_zsh_integration: false,
-        };
-    }
-
     // Terminal commands are POSIX by cross-host contract: `runCommandAndWait`
     // wraps them in a POSIX done-marker (`commandWithDoneMarker` in
     // AssistantTerminalRepository.svelte.ts), and raw startup commands follow
@@ -805,10 +765,6 @@ fn shell_for_terminal(
         .unwrap_or_default();
     let use_zsh_integration = cfg!(target_os = "macos") && shell_name == "zsh";
 
-    // Keep this shell→argv mapping in sync with `assistantTerminalCommandLaunch`
-    // which implements the same `nonInteractive` contract for the VS Code host
-    // (with one intentional divergence: this host runs cmd/PowerShell commands
-    // natively above, while the VS Code host falls back to sendText for them).
     if command_mode == AssistantTerminalCommandMode::NonInteractive && command.is_some() {
         let command = command.unwrap_or_default();
         let args = if shell_name == "bash" || shell_name == "zsh" {
@@ -871,7 +827,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[cfg(not(windows))]
     fn command_terminals_start_interactive_shell() {
         let shell = shell_for_terminal(
             "/bin/zsh".to_string(),
@@ -886,7 +841,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(windows))]
     fn non_interactive_command_terminals_run_command_without_stdin_write() {
         let shell = shell_for_terminal(
             "/bin/zsh".to_string(),
@@ -904,7 +858,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(windows))]
     fn empty_command_terminals_remain_interactive() {
         let shell = shell_for_terminal(
             "/bin/zsh".to_string(),
@@ -919,7 +872,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(windows))]
     fn interactive_terminals_use_the_login_shell() {
         let shell = shell_for_terminal(
             "/opt/homebrew/bin/fish".to_string(),
@@ -934,7 +886,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(windows))]
     fn command_terminals_fall_back_to_a_posix_shell_for_non_posix_login_shells() {
         for mode in [
             AssistantTerminalCommandMode::Interactive,

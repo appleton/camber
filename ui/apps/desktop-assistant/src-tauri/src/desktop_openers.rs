@@ -309,17 +309,12 @@ fn default_file_opener_label() -> &'static str {
     "Default macOS app"
 }
 
-#[cfg(target_os = "windows")]
-fn default_file_opener_label() -> &'static str {
-    "Default Windows App"
-}
-
 #[cfg(target_os = "linux")]
 fn default_file_opener_label() -> &'static str {
     "Default Linux App"
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 fn default_file_opener_label() -> &'static str {
     "Default App"
 }
@@ -329,17 +324,12 @@ fn default_desktop_opener_label() -> &'static str {
     "Finder"
 }
 
-#[cfg(target_os = "windows")]
-fn default_desktop_opener_label() -> &'static str {
-    "Default Windows App"
-}
-
 #[cfg(target_os = "linux")]
 fn default_desktop_opener_label() -> &'static str {
     "Default Linux App"
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 fn default_desktop_opener_label() -> &'static str {
     "Default App"
 }
@@ -689,16 +679,7 @@ fn open_editor_command_in_terminal(editor_command: &str) -> Result<(), String> {
         .map_err(|err| err.to_string())
 }
 
-#[cfg(target_os = "windows")]
-fn open_editor_command_in_terminal(editor_command: &str) -> Result<(), String> {
-    Command::new("cmd")
-        .args(["/C", "start", "", "cmd", "/K", editor_command])
-        .spawn()
-        .map(|_| ())
-        .map_err(|err| err.to_string())
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 fn open_editor_command_in_terminal(editor_command: &str) -> Result<(), String> {
     Command::new("sh")
         .args(["-lc", editor_command])

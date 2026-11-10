@@ -247,17 +247,7 @@ fn copy_symlink(source: &Path, destination: &Path) -> Result<(), String> {
     std::os::unix::fs::symlink(target, destination).map_err(|err| err.to_string())
 }
 
-#[cfg(windows)]
-fn copy_symlink(source: &Path, destination: &Path) -> Result<(), String> {
-    let target = fs::read_link(source).map_err(|err| err.to_string())?;
-    if source.is_dir() {
-        std::os::windows::fs::symlink_dir(target, destination).map_err(|err| err.to_string())
-    } else {
-        std::os::windows::fs::symlink_file(target, destination).map_err(|err| err.to_string())
-    }
-}
-
-#[cfg(not(any(unix, windows)))]
+#[cfg(not(unix))]
 fn copy_symlink(_source: &Path, _destination: &Path) -> Result<(), String> {
     Err("Symlinks cannot be copied on this platform".to_string())
 }

@@ -1,5 +1,7 @@
 **Camber Assistant performance audit — 7 September 2026**
 
+> Historical report: Camber now ships only the macOS desktop app. The IDE applications and their B4/L6 benchmark scripts have been removed; IDE findings and measurements below describe the audited checkout only.
+
 Audited checkout: `1a648b18350ada8b6f8a8b7f362dbed70e7c5a07`. This is an audit and implementation proposal; application source has not been changed. The companion [measurements](performance-audit/measurements.json), [bundle experiments](performance-audit/bundle-experiments.mjs), and [CPU scaling probe](performance-audit/pure-function-bench.mjs) preserve the quantitative evidence and make the principal experiments repeatable.
 
 The largest opportunities are concrete: remove an accidentally bundled logo catalogue; restore the intended lightweight startup boundary; let the shell become interactive before agents and history finish loading; stop continuously laying out pane contents during panel animations; and make streaming work proportional to the changed tail rather than the accumulated conversation. On the backend, bound the complete notification pipeline, replace replay-buffer copying with a ring, move blocking native commands off the application thread, and consolidate repeated Git and navigation work.
