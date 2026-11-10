@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
   import Tooltip from "../../ui/Tooltip.svelte";
   import { rpc } from "../../../hostRpc";
   import ToolFooter from "../../shared/ToolFooter.svelte";
@@ -104,8 +104,8 @@
           class="max-h-80 max-w-full object-contain"
           {src}
           alt="Generated result"
-          data-poolside-image-path={openPath ?? undefined}
-          data-poolside-image-name={preview?.title}
+          data-camber-image-path={openPath ?? undefined}
+          data-camber-image-name={preview?.title}
         />
       </button>
     {:else if loadingPreview}

@@ -1,8 +1,4 @@
-import {
-  EnrichedContextKind,
-  EnrichedContextSource,
-  type PromptContextFacet,
-} from "@poolsideai/rpc";
+import { EnrichedContextKind, EnrichedContextSource, type PromptContextFacet } from "@camber/rpc";
 
 const MAX_LABEL = 72;
 

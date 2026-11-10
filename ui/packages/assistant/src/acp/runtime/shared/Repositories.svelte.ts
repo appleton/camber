@@ -27,11 +27,11 @@ import {
   terminalPlacementForWorktreeSetupSurface,
   type ACPConversationsState,
   type Notifier,
-} from "@poolsideai/features/acp";
-import { setContextRepoContext } from "@poolsideai/features/context";
-import { setElicitationContext } from "@poolsideai/features/elicitation";
-import { setSecretsContext } from "@poolsideai/features/secrets";
-import { initializeStatefulModule as initializeHelperApi } from "@poolsideai/helperapi";
+} from "@camber/features/acp";
+import { setContextRepoContext } from "@camber/features/context";
+import { setElicitationContext } from "@camber/features/elicitation";
+import { setSecretsContext } from "@camber/features/secrets";
+import { initializeStatefulModule as initializeHelperApi } from "@camber/helperapi";
 import { onDestroy } from "svelte";
 import { get } from "svelte/store";
 

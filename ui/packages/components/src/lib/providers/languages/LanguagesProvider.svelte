@@ -20,7 +20,7 @@
 </script>
 
 <script lang="ts">
-  import { extname } from "@poolsideai/lib/path";
+  import { extname } from "@camber/lib/path";
   import { createContext, type Snippet } from "svelte";
   import type { SetFieldType } from "type-fest";
 

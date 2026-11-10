@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Button } from "@poolsideai/components/button";
-  import { insideModalOverlay, isAppleUser } from "@poolsideai/components";
-  import Kbd from "@poolsideai/components/kbd";
+  import { Button } from "@camber/components/button";
+  import { insideModalOverlay, isAppleUser } from "@camber/components";
+  import Kbd from "@camber/components/kbd";
   import {
     getElicitationContext,
     FormModel,

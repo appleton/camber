@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AcpSidebarChrome } from "@poolsideai/features/acp";
+  import { AcpSidebarChrome } from "@camber/features/acp";
 
   import RuntimeProviders from "./RuntimeProviders.svelte";
   import { CoreRuntime, type TargetProps } from "./runtime/CoreRuntime.svelte";

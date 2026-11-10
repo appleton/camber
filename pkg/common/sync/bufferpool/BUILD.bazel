@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "bufferpool",
     srcs = ["bufferpool.go"],
-    importpath = "github.com/poolsideai/assistant/pkg/common/sync/bufferpool",
+    importpath = "github.com/appleton/camber/pkg/common/sync/bufferpool",
     visibility = ["//visibility:public"],
 )
 

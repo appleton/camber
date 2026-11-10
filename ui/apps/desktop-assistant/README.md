@@ -1,6 +1,6 @@
 # Desktop assistant
 
-Tauri v2 shell for the Poolside desktop assistant.
+Tauri v2 shell for the Camber desktop assistant.
 
 To install the prebuilt desktop app, see
 [Install the desktop app on macOS Apple Silicon](../../../INSTALL.md#desktop-app-on-macos-apple-silicon).
@@ -16,10 +16,10 @@ HTTP(S) and mailto links through the explicit `open_external_url` command. Keep 
 handler installed when adding another document window.
 
 ```sh
-pnpm -F @poolsideai/desktop-assistant dev
-pnpm -F @poolsideai/desktop-assistant build:web
-pnpm -F @poolsideai/desktop-assistant check:types
-pnpm -F @poolsideai/desktop-assistant test:unit
+pnpm -F @camber/desktop-assistant dev
+pnpm -F @camber/desktop-assistant build:web
+pnpm -F @camber/desktop-assistant check:types
+pnpm -F @camber/desktop-assistant test:unit
 ```
 
 ## Rust build cache
@@ -36,7 +36,7 @@ to move the worktree onto the managed store.
 To build without it, pass the runner explicitly:
 
 ```sh
-pnpm -F @poolsideai/desktop-assistant tauri build --runner cargo
+pnpm -F @camber/desktop-assistant tauri build --runner cargo
 ```
 
 CI release builds do this on purpose — published artifacts must not come out
@@ -45,17 +45,17 @@ still work; they just skip the cache unless you prefix them with `mbx`.
 
 `download:binaries` installs the highest published `helper/v*` runtime on a
 fresh checkout and then reuses its local `.version` stamps without a GitHub API
-call. Run `pnpm -F @poolsideai/desktop-assistant download:binaries:refresh` to
+call. Run `pnpm -F @camber/desktop-assistant download:binaries:refresh` to
 check for a newer runtime, or set
-`POOLSIDE_HELPER_VERSION=helper/vM.m.p` to install an exact release.
+`CAMBER_HELPER_VERSION=helper/vM.m.p` to install an exact release.
 
 The macOS app icon source is `src-tauri/icons/icon.icon`. After editing it in
 Icon Composer, export its default 1024 px PNG to `src-tauri/icons/icon-source.png`,
 then regenerate the legacy Tauri icons and the adaptive macOS asset:
 
 ```sh
-pnpm -F @poolsideai/desktop-assistant tauri icon src-tauri/icons/icon-source.png
-pnpm -F @poolsideai/desktop-assistant icons:macos
+pnpm -F @camber/desktop-assistant tauri icon src-tauri/icons/icon-source.png
+pnpm -F @camber/desktop-assistant icons:macos
 ```
 
 Keep Icon Composer sources under `src-tauri/icons`, outside `public`: Vite copies

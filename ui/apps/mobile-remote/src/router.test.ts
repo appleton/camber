@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { MobileNavigation, MobileRoute } from "@poolsideai/assistant";
+import type { MobileNavigation, MobileRoute } from "@camber/assistant";
 import { createMobileRouter, hashForRoute, routeFromLocation } from "./router";
 
 const LIST: MobileRoute = { view: "list", conversationId: null, filePath: null };

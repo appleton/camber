@@ -24,8 +24,8 @@ jobs:
         run: |
           unformatted=$(gofmt -l $(find . -name '*.go' \
             -not -path './third_party/*' \
-            -not -path './pkg/poolside-helper/gopls/*' \
-            -not -path './pkg/poolside-helper/internal/gopls/*'))
+            -not -path './pkg/camber-helper/gopls/*' \
+            -not -path './pkg/camber-helper/internal/gopls/*'))
           if [ -n "$unformatted" ]; then
             echo "The following files are not gofmt'd:"
             echo "$unformatted"
@@ -33,8 +33,8 @@ jobs:
             # print expected edits
             gofmt -w $(find . -name '*.go' \
               -not -path './third_party/*' \
-              -not -path './pkg/poolside-helper/gopls/*' \
-              -not -path './pkg/poolside-helper/internal/gopls/*')
+              -not -path './pkg/camber-helper/gopls/*' \
+              -not -path './pkg/camber-helper/internal/gopls/*')
             git diff
             echo "Run 'make go-fmt-fix' and commit the result."
             exit 1

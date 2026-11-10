@@ -1,8 +1,8 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { ZigZagError } from "@poolsideai/components/zigzag-error";
+  import Icon from "@camber/components/icon";
+  import { ZigZagError } from "@camber/components/zigzag-error";
   import { appState } from "../../hostAdapter";
-  import Button from "../ui/PoolsideButton.svelte";
+  import Button from "../ui/CamberButton.svelte";
 
   interface Props {
     onRetry?: () => void;

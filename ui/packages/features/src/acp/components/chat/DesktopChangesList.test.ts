@@ -1,11 +1,11 @@
 import {
-  poolsideGitCommit,
-  poolsideGitDiscard,
-  poolsideGitStage,
-  poolsideGitStatus,
-  poolsideGitUnstage,
+  camberGitCommit,
+  camberGitDiscard,
+  camberGitStage,
+  camberGitStatus,
+  camberGitUnstage,
   type GitStatusOutput,
-} from "@poolsideai/helperapi";
+} from "@camber/helperapi";
 import { fireEvent, render, waitFor } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import DesktopChangesList from "./DesktopChangesList.svelte";
@@ -15,16 +15,16 @@ import {
   type DesktopOpenDiffTabEventDetail,
 } from "./desktopCommandPicker";
 
-vi.mock("@poolsideai/helperapi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@poolsideai/helperapi")>()),
-  poolsideGitCommit: vi.fn(),
-  poolsideGitDiscard: vi.fn(),
-  poolsideGitStage: vi.fn(),
-  poolsideGitStatus: vi.fn(),
-  poolsideGitUnstage: vi.fn(),
+vi.mock("@camber/helperapi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@camber/helperapi")>()),
+  camberGitCommit: vi.fn(),
+  camberGitDiscard: vi.fn(),
+  camberGitStage: vi.fn(),
+  camberGitStatus: vi.fn(),
+  camberGitUnstage: vi.fn(),
 }));
 
-const statusMock = vi.mocked(poolsideGitStatus);
+const statusMock = vi.mocked(camberGitStatus);
 
 function gitStatus(): GitStatusOutput {
   return {
@@ -45,10 +45,10 @@ function gitStatus(): GitStatusOutput {
 beforeEach(() => {
   vi.clearAllMocks();
   statusMock.mockResolvedValue(gitStatus());
-  vi.mocked(poolsideGitCommit).mockResolvedValue(gitStatus());
-  vi.mocked(poolsideGitDiscard).mockResolvedValue(gitStatus());
-  vi.mocked(poolsideGitStage).mockResolvedValue(gitStatus());
-  vi.mocked(poolsideGitUnstage).mockResolvedValue(gitStatus());
+  vi.mocked(camberGitCommit).mockResolvedValue(gitStatus());
+  vi.mocked(camberGitDiscard).mockResolvedValue(gitStatus());
+  vi.mocked(camberGitStage).mockResolvedValue(gitStatus());
+  vi.mocked(camberGitUnstage).mockResolvedValue(gitStatus());
 });
 
 describe("DesktopChangesList row clicks", () => {

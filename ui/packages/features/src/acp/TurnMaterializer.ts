@@ -9,7 +9,7 @@ import type { AgentMessage, AgentThought, SessionEvent, ToolCall, UserMessage } 
 export type { SessionEvent } from "./types";
 
 type MessageKind = "user_message" | "agent_message" | "agent_thought";
-const STEP_ID_META_KEY = "poolside/step_id";
+const STEP_ID_META_KEY = "camber/step_id";
 const CLAUDE_PARENT_TOOL_USE_ID_META_KEY = "parentToolUseId";
 
 // Reasoning can stream indefinitely. Keep enough recent context to remain

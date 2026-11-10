@@ -11,14 +11,14 @@ import {
   resolveSessionCwd,
   acpHostRpc as rpc,
   type ACPDebugDumpLoadedEventDetail,
-} from "@poolsideai/features/acp";
+} from "@camber/features/acp";
 import { onDestroy, onMount } from "svelte";
 import { get } from "svelte/store";
 
 import { PendingSessionBootstrap } from "./shared/PendingSessionBootstrap.svelte";
 import type { Runtime } from "./shared/types";
 
-const POOLSIDE_AGENT_SERVER = "poolside";
+const CAMBER_AGENT_SERVER = "poolside";
 
 type PanelMetadata = {
   agentServer: string;
@@ -32,7 +32,7 @@ type PanelMetadata = {
 // state, with panel-metadata and custom-MCP reporting, layered on top of an CoreRuntime.
 export class ChatOnlyRuntime {
   #core: Runtime;
-  #initialChatState: typeof POOLSIDE_INITIAL_ACP_CHAT_STATE;
+  #initialChatState: typeof CAMBER_INITIAL_ACP_CHAT_STATE;
   #vscode = acquireVsCodeApi<
     | {
         conversationId: string;
@@ -58,7 +58,7 @@ export class ChatOnlyRuntime {
   #lastMcpSettingsKey: string | null = null;
   #addingProject = $state(false);
 
-  constructor(core: Runtime, initialChatState = window.POOLSIDE_INITIAL_ACP_CHAT_STATE) {
+  constructor(core: Runtime, initialChatState = window.CAMBER_INITIAL_ACP_CHAT_STATE) {
     this.#core = core;
     this.#initialChatState = initialChatState;
 
@@ -124,7 +124,7 @@ export class ChatOnlyRuntime {
     });
 
     // Keep #activeAllowCustomMcp in sync with the host's per-session "allow custom MCP" setting.
-    // Only Poolside sessions have it; #lastMcpSettingsKey dedupes so we refetch only when the
+    // Only Camber sessions have it; #lastMcpSettingsKey dedupes so we refetch only when the
     // server/session/config actually changes, and the late-result guard drops stale responses.
     $effect(() => {
       const agentServer = this.#activeAgentServer();
@@ -133,7 +133,7 @@ export class ChatOnlyRuntime {
         .map((o) => `${o.id}=${(o as { currentValue?: string }).currentValue ?? ""}`)
         .join("&");
 
-      if (agentServer !== POOLSIDE_AGENT_SERVER || !sessionId) {
+      if (agentServer !== CAMBER_AGENT_SERVER || !sessionId) {
         this.#activeAllowCustomMcp = null;
         this.#lastMcpSettingsKey = null;
         return;
@@ -261,7 +261,7 @@ export class ChatOnlyRuntime {
   };
 
   handleShowAgentSettings = () => {
-    rpc.openSettings("poolside.agentServers");
+    rpc.openSettings("camber.agentServers");
   };
 
   #pendingConversationCwd(): string {

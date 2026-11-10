@@ -1,5 +1,5 @@
-import { appState, initializeACPHostRpc, type ACPNavProject } from "@poolsideai/features/acp";
-import { initializeStatefulModule as initializeHelperApi } from "@poolsideai/helperapi";
+import { appState, initializeACPHostRpc, type ACPNavProject } from "@camber/features/acp";
+import { initializeStatefulModule as initializeHelperApi } from "@camber/helperapi";
 import { get } from "svelte/store";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DesktopRuntime } from "./DesktopRuntime.svelte";
@@ -20,7 +20,7 @@ describe("DesktopRuntime", () => {
     });
     initializeACPHostRpc(vi.fn().mockResolvedValue(undefined));
     initializeHelperApi({
-      jsonrpcCall: vi.fn().mockResolvedValue({ path: "/state/poolside/chat" }),
+      jsonrpcCall: vi.fn().mockResolvedValue({ path: "/state/camber/chat" }),
       jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
     });
   });
@@ -75,7 +75,7 @@ describe("DesktopRuntime", () => {
   });
 
   it("creates a standalone chat in helper-managed state storage", async () => {
-    const jsonrpcCall = vi.fn().mockResolvedValue({ path: "/state/poolside/chat-1" });
+    const jsonrpcCall = vi.fn().mockResolvedValue({ path: "/state/camber/chat-1" });
     initializeHelperApi({
       jsonrpcCall,
       jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
@@ -86,11 +86,11 @@ describe("DesktopRuntime", () => {
     const conversationId = await runtime.handleNewChat();
 
     expect(conversationId).toMatch(/^conversation:/);
-    expect(jsonrpcCall).toHaveBeenCalledWith("poolside/acpNav/createChat", {
+    expect(jsonrpcCall).toHaveBeenCalledWith("camber/acpNav/createChat", {
       sessionId: conversationId,
     });
     expect(core.acpRepo.createSession).toHaveBeenCalledWith(
-      "/state/poolside/chat-1",
+      "/state/camber/chat-1",
       "codex",
       conversationId,
       { isChat: true },
@@ -146,7 +146,7 @@ describe("DesktopRuntime", () => {
       if (destination === "conversation") runtime.openConversation("selected-later");
       else runtime.showSettings();
       onNavigationChange.mockClear();
-      directory.resolve({ path: "/state/poolside/stale-chat" });
+      directory.resolve({ path: "/state/camber/stale-chat" });
 
       expect(await pending).toBeNull();
       expect(runtime.view).toBe(destination === "settings" ? "settings" : "chat");
@@ -198,7 +198,7 @@ describe("DesktopRuntime", () => {
     runtime.showProjectSettings("/repo");
     const pending = runtime.handleNewChat();
     runtime.showProjectSettings("/other");
-    directory.resolve({ path: "/state/poolside/stale-chat" });
+    directory.resolve({ path: "/state/camber/stale-chat" });
 
     expect(await pending).toBeNull();
     expect(runtime.view).toBe("project-settings");
@@ -221,21 +221,21 @@ describe("DesktopRuntime", () => {
       const second = runtime.handleNewChat();
 
       if (order === "older first") {
-        older.resolve({ path: "/state/poolside/older" });
+        older.resolve({ path: "/state/camber/older" });
         expect(await first).toBeNull();
         expect(core.acpRepo.createSession).not.toHaveBeenCalled();
       }
-      newer.resolve({ path: "/state/poolside/newer" });
+      newer.resolve({ path: "/state/camber/newer" });
       const selected = await second;
       if (order === "newer first") {
-        older.resolve({ path: "/state/poolside/older" });
+        older.resolve({ path: "/state/camber/older" });
         expect(await first).toBeNull();
       }
 
       expect(selected).not.toBeNull();
       expect(core.activeConversationId).toBe(selected);
       expect(core.acpRepo.createSession).toHaveBeenCalledTimes(1);
-      expect(core.acpRepo.getSessionByConversationId(selected)!.cwd).toBe("/state/poolside/newer");
+      expect(core.acpRepo.getSessionByConversationId(selected)!.cwd).toBe("/state/camber/newer");
     },
   );
 
@@ -286,7 +286,7 @@ describe("DesktopRuntime", () => {
     const runtime = new DesktopRuntime(core);
     runtime.showSettings();
     const pending = runtime.handleNewChat();
-    directory.resolve({ path: "/state/poolside/requested" });
+    directory.resolve({ path: "/state/camber/requested" });
     await vi.waitFor(() => expect(core.acpAgentServers.refresh).toHaveBeenCalledTimes(1));
     core.acpAgentServers.state = { status: "success", value: {} };
     discovery.resolve();
@@ -296,7 +296,7 @@ describe("DesktopRuntime", () => {
     expect(runtime.view).toBe("chat");
     expect(core.activeConversationId).toBe(selected);
     const session = core.acpRepo.getSessionByConversationId(selected)!;
-    expect(session.cwd).toBe("/state/poolside/requested");
+    expect(session.cwd).toBe("/state/camber/requested");
     expect(session.persistPendingConversation).toHaveBeenCalledTimes(1);
     expect(session.requestPromptFocus).toHaveBeenCalledTimes(1);
   });

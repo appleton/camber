@@ -1,4 +1,4 @@
-# @poolsideai/splits
+# @camber/splits
 
 Svelte split-pane tabs for JavaScript and Svelte.
 
@@ -6,7 +6,7 @@ Svelte split-pane tabs for JavaScript and Svelte.
 
 ```svelte
 <script lang="ts">
-  import { SplitsController, SplitsView } from "@poolsideai/splits";
+  import { SplitsController, SplitsView } from "@camber/splits";
 
   const controller = new SplitsController();
 

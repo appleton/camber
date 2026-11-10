@@ -1,4 +1,4 @@
-import type { GitHubPRStatus } from "@poolsideai/helperapi";
+import type { GitHubPRStatus } from "@camber/helperapi";
 
 export type {
   GitHubCheckRun,
@@ -8,7 +8,7 @@ export type {
   GitHubPRStatus,
   GitHubReview,
   GitHubWorktreeStatus,
-} from "@poolsideai/helperapi";
+} from "@camber/helperapi";
 
 // GitHubStatusCategory collapses PR state + CI rollup + review decision into a
 // single signal that drives the worktree icon color. Priority order is encoded

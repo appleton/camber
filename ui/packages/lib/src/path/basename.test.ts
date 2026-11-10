@@ -2,7 +2,7 @@ import { basename } from "./basename.js";
 
 describe("unix", () => {
   it("should extract basename from absolute path", () => {
-    expect(basename("/Users/poolie/poolside/file.ts")).toBe("file.ts");
+    expect(basename("/Users/poolie/camber/file.ts")).toBe("file.ts");
   });
 
   it("should extract basename from root directory", () => {
@@ -10,11 +10,11 @@ describe("unix", () => {
   });
 
   it("should handle paths with trailing slashes", () => {
-    expect(basename("/Users/poolie/poolside/")).toBe("poolside");
+    expect(basename("/Users/poolie/camber/")).toBe("camber");
   });
 
   it("should handle paths with dots", () => {
-    expect(basename("/Users/poolie/../poolside/file.ts")).toBe("file.ts");
+    expect(basename("/Users/poolie/../camber/file.ts")).toBe("file.ts");
   });
 
   it("should handle dotfiles", () => {
@@ -28,7 +28,7 @@ describe("unix", () => {
 
 describe("windows", () => {
   it("should extract basename from absolute path", () => {
-    expect(basename("C:\\Users\\poolie\\poolside\\file.ts")).toBe("file.ts");
+    expect(basename("C:\\Users\\poolie\\camber\\file.ts")).toBe("file.ts");
   });
 
   it("should extract basename from drive root", () => {
@@ -40,7 +40,7 @@ describe("windows", () => {
   });
 
   it("should handle paths with trailing backslashes", () => {
-    expect(basename("C:\\Users\\poolie\\poolside\\")).toBe("poolside");
+    expect(basename("C:\\Users\\poolie\\camber\\")).toBe("camber");
   });
 });
 

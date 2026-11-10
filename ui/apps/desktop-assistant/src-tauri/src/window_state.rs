@@ -85,7 +85,7 @@ fn save_bounds<R: Runtime>(app_handle: &tauri::AppHandle<R>) {
 }
 
 fn filename_from_env() -> String {
-    filename_for_slot(std::env::var("POOLSIDE_WORKTREE_SLOT").ok().as_deref())
+    filename_for_slot(std::env::var("CAMBER_WORKTREE_SLOT").ok().as_deref())
 }
 
 fn filename_for_slot(slot: Option<&str>) -> String {
@@ -93,7 +93,7 @@ fn filename_for_slot(slot: Option<&str>) -> String {
         return DEFAULT_WINDOW_STATE_FILENAME.to_string();
     };
 
-    format!(".window-state-spoolside-s{slot}.json")
+    format!(".window-state-camberqa-s{slot}.json")
 }
 
 #[cfg(test)]
@@ -102,7 +102,7 @@ mod tests {
     use std::sync::{Arc, Mutex};
 
     #[test]
-    fn uses_default_filename_without_spoolside_slot() {
+    fn uses_default_filename_without_camberqa_slot() {
         assert_eq!(filename_for_slot(None), DEFAULT_WINDOW_STATE_FILENAME);
         assert_eq!(filename_for_slot(Some("")), DEFAULT_WINDOW_STATE_FILENAME);
         assert_eq!(
@@ -112,14 +112,14 @@ mod tests {
     }
 
     #[test]
-    fn scopes_window_state_to_spoolside_slot() {
+    fn scopes_window_state_to_camberqa_slot() {
         assert_eq!(
             filename_for_slot(Some("0")),
-            ".window-state-spoolside-s0.json"
+            ".window-state-camberqa-s0.json"
         );
         assert_eq!(
             filename_for_slot(Some("3")),
-            ".window-state-spoolside-s3.json"
+            ".window-state-camberqa-s3.json"
         );
     }
 
@@ -127,7 +127,7 @@ mod tests {
     fn trims_slot_env_value() {
         assert_eq!(
             filename_for_slot(Some(" 2\n")),
-            ".window-state-spoolside-s2.json"
+            ".window-state-camberqa-s2.json"
         );
     }
 

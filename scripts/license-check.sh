@@ -104,13 +104,12 @@ NPM_OVERRIDES="${TMP_DIR}/npm-overrides.json"
 cat >"$NPM_OVERRIDES" <<'JSON'
 {
   "cmdk-sv@0.0.19": "MIT",
-  "config-chain@1.1.13": "MIT",
   "khroma@2.1.0": "MIT",
   "svelte-toolbelt@0.10.6": "MIT"
 }
 JSON
 
-# Swift Package Manager pins (cmd/poolside-mlx-sidecar/Package.resolved) carry
+# Swift Package Manager pins (cmd/camber-mlx-sidecar/Package.resolved) carry
 # no license metadata Syft can use, so record the licenses declared by each
 # upstream repository. Keyed by package identity; applies to any pinned version.
 SWIFT_OVERRIDES="${TMP_DIR}/swift-overrides.json"
@@ -158,9 +157,9 @@ JSON
 FIRST_PARTY_PACKAGES="${TMP_DIR}/first-party-packages.json"
 cat >"$FIRST_PARTY_PACKAGES" <<'JSON'
 [
+  "github.com/appleton/camber",
   "desktop-assistant",
   "./.github/actions/sign-darwin-binary",
-  "./.github/actions/sign-windows-binary",
   "./.github/actions/ui-setup",
   "./.github/workflows/helper-build.yml",
   "./.github/workflows/helper-release.yml",

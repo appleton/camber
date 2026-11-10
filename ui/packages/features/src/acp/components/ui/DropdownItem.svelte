@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { DropdownItem as SharedDropdownItem } from "@poolsideai/components/assistant-ui";
-  import type { IconName } from "@poolsideai/components/icon";
+  import { DropdownItem as SharedDropdownItem } from "@camber/components/assistant-ui";
+  import type { IconName } from "@camber/components/icon";
   import type { Snippet } from "svelte";
 
   interface Props {

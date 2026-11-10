@@ -1,0 +1,17 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "servertest",
+    testonly = True,
+    srcs = ["servertest.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2/servertest",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2"],
+)
+
+go_test(
+    name = "servertest_test",
+    srcs = ["servertest_test.go"],
+    embed = [":servertest"],
+    deps = ["//pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2"],
+)

@@ -1,12 +1,12 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
   import type {
     MCPServerEntry,
     LocalInferenceDownloadState,
     LocalInferenceModel,
-  } from "@poolsideai/helperapi/schemas";
-  import { getUnknownErrorMessage } from "@poolsideai/lib/errors";
+  } from "@camber/helperapi/schemas";
+  import { getUnknownErrorMessage } from "@camber/lib/errors";
   import { onDestroy, onMount } from "svelte";
   import { getLocalInferenceRepo } from "../features/LocalInferenceRepository.svelte";
   import {
@@ -77,7 +77,7 @@
 
   let inferenceState = $derived(repo.state);
   let models = $derived(inferenceState?.catalog ?? []);
-  let poolsideModels = $derived(models.filter((model) => model.recommended));
+  let camberModels = $derived(models.filter((model) => model.recommended));
   let installedHuggingFaceModels = $derived(
     models.filter((model) => !model.recommended && !isPinnedSearchModel(model)),
   );
@@ -593,7 +593,7 @@
 {/snippet}
 
 {#snippet recommendedModelsSubtitle()}
-  Local {@render mlxTerm()} models tested by Poolside.
+  Local {@render mlxTerm()} models tested by Camber.
 {/snippet}
 
 {#snippet runEstimateTooltip(estimate: RunEstimate)}
@@ -835,9 +835,9 @@
       <div class="text-psx-foreground-secondary py-10 text-center text-xs">
         No local model catalog available
       </div>
-    {:else if poolsideModels.length > 0}
+    {:else if camberModels.length > 0}
       <div class="model-catalog-grid">
-        {#each poolsideModels as model (model.id)}
+        {#each camberModels as model (model.id)}
           {@render modelCard(model)}
         {/each}
       </div>

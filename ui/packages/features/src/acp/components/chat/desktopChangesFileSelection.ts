@@ -8,7 +8,7 @@
  * already-mounted panels.
  */
 
-export const DESKTOP_CHANGES_SELECT_FILE_EVENT = "poolside:desktop-changes-select-file";
+export const DESKTOP_CHANGES_SELECT_FILE_EVENT = "camber:desktop-changes-select-file";
 
 export interface DesktopChangesSelectFileEventDetail {
   /** Repo-relative path of the file to select, using forward slashes. */

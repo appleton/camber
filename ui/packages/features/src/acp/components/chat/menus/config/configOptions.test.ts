@@ -90,7 +90,7 @@ describe("promptConfigKind", () => {
   });
 
   it("keeps the collaboration mode apart from the approval mode", () => {
-    // Codex and Poolside give the option different ids, and both names carry
+    // Codex and Camber give the option different ids, and both names carry
     // the "mode" token — only the category tells the two selectors apart.
     expect(promptConfigKind(select("collaboration_mode", "collaboration_mode"))).toBe(
       "collaboration",
@@ -143,7 +143,7 @@ describe("valueDescription", () => {
   });
 
   it("drops a description that only repeats the name", () => {
-    // Poolside publishes every model with its own name as the description;
+    // Camber publishes every model with its own name as the description;
     // rendering it as subtext would print the same string twice.
     expect(
       valueDescription({
@@ -265,7 +265,7 @@ describe("configIcon", () => {
 
 describe("modeAppearance", () => {
   const modes = [
-    // Poolside
+    // Camber
     { name: "Always ask", value: "read-only", category: "normal", icon: "ask" },
     { name: "Accept edits", value: "acceptEdits", category: "normal", icon: "apply" },
     { name: "Plan", value: "plan", category: "plan", icon: "plan" },
@@ -303,7 +303,7 @@ describe("modeAppearance", () => {
     },
   ] as const;
 
-  it("maps every Poolside, Claude, and Codex mode to the approved category and icon", () => {
+  it("maps every Camber, Claude, and Codex mode to the approved category and icon", () => {
     for (const mode of modes) {
       const option = selectWith("mode", "mode", mode.value, [
         { value: mode.value, name: mode.name },
@@ -326,14 +326,14 @@ describe("modeAppearance", () => {
   });
 
   it("uses display names to distinguish agents that reuse the same wire value", () => {
-    const poolside = selectWith("mode", "mode", "read-only", [
+    const camber = selectWith("mode", "mode", "read-only", [
       { value: "read-only", name: "Always ask" },
     ]);
     const codex = selectWith("mode", "mode", "read-only", [
       { value: "read-only", name: "Read-only" },
     ]);
 
-    expect(modeAppearance(poolside)).toMatchObject({ category: "normal", icon: "ask" });
+    expect(modeAppearance(camber)).toMatchObject({ category: "normal", icon: "ask" });
     expect(modeAppearance(codex)).toMatchObject({ category: "restricted", icon: "block" });
   });
 
@@ -354,7 +354,7 @@ describe("configValueAppearance", () => {
   });
 
   it("pairs the collaboration modes' plan and build glyphs", () => {
-    const poolside = selectWith("agent_mode", "collaboration_mode", "build", [
+    const camber = selectWith("agent_mode", "collaboration_mode", "build", [
       { value: "build", name: "Build" },
       { value: "plan", name: "Plan" },
     ]);
@@ -363,8 +363,8 @@ describe("configValueAppearance", () => {
       { value: "plan", name: "Plan" },
     ]);
 
-    expect(configValueAppearance(poolside, "build")).toEqual({ category: null, icon: "code" });
-    expect(configValueAppearance(poolside, "plan")).toEqual({ category: "plan", icon: "plan" });
+    expect(configValueAppearance(camber, "build")).toEqual({ category: null, icon: "code" });
+    expect(configValueAppearance(camber, "plan")).toEqual({ category: "plan", icon: "plan" });
     // Codex's non-plan value shares the permission taxonomy's "default" wire
     // value but means "carry out the work", not "prompt on first use".
     expect(configValueAppearance(codex, "default")).toEqual({ category: null, icon: "code" });

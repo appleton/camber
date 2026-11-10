@@ -1,0 +1,30 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "remoteterminal",
+    srcs = [
+        "manager.go",
+        "termios_darwin.go",
+        "termios_linux.go",
+        "termios_other.go",
+        "termios_unix.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/handler/remoteterminal",
+    visibility = ["//pkg/camber-helper:__subpackages__"],
+    deps = [
+        "//pkg/camber-helper/methods",
+        "@com_github_creack_pty//:pty",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "remoteterminal_test",
+    srcs = ["manager_test.go"],
+    embed = [":remoteterminal"],
+    deps = [
+        "//pkg/camber-helper/methods",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)

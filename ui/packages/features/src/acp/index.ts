@@ -4,6 +4,8 @@ export {
   canOpenAssistantConfigFile,
   openAssistantConfigFile,
 } from "./assistantConfig";
+export { camberqaSlotForWorktree, camberqaSlotMobileUrl } from "./camberqaMobile";
+export type { MobileCamberQAInstance, MobileCamberQASlot } from "./camberqaMobile";
 export { createACPChatWorkingDirectory } from "./chatWorkspaces";
 export { ACPClient } from "./Client";
 export { default as AcpAgentConfigurationView } from "./components/AgentConfigurationView.svelte";
@@ -297,7 +299,7 @@ export {
   initializeStatefulModule as initializeACPHostRpc,
 } from "./hostRpc";
 export type { HelperAPIClient, HostMessageSender, RPCClient } from "./hostRpc";
-export { POOLSIDE_ROUNDEL_ICON_URL } from "./localAgentIcon";
+export { CAMBER_ROUNDEL_ICON_URL } from "./localAgentIcon";
 export { markdownHost } from "./markdownHost";
 export {
   ACP_DESKTOP_CONVERSATIONS_EVENT,
@@ -314,8 +316,6 @@ export type {
 } from "./navTypes";
 export type { ACPTransport } from "./RPCTransport";
 export type { ACPResolvedSessionInfo } from "./sessionInfo";
-export { spoolsideSlotForWorktree, spoolsideSlotMobileUrl } from "./spoolsideMobile";
-export type { MobileSpoolsideInstance, MobileSpoolsideSlot } from "./spoolsideMobile";
 export { wireACPHistorySync } from "./wireACPHistorySync";
 export { wireACPSessionSync } from "./wireACPSessionSync";
 export {

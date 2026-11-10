@@ -9,7 +9,7 @@
 </script>
 
 <script lang="ts">
-  // Test stand-in for @poolsideai/components/file-diff DiffCodeView: jsdom
+  // Test stand-in for @camber/components/file-diff DiffCodeView: jsdom
   // cannot host @pierre/diffs' shadow-DOM CodeView, so render each item's
   // patch as text (plus its custom header) so assertions can see content,
   // order, and collapse state.

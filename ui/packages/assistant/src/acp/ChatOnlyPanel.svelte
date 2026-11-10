@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { AcpChatPane } from "@poolsideai/features/acp";
+  import { AcpChatPane } from "@camber/features/acp";
   import { onDestroy } from "svelte";
 
   import ACPAgentUpdateBanner from "./AgentUpdateBanner.svelte";
@@ -10,7 +10,7 @@
   import { CoreRuntime, type TargetProps } from "./runtime/CoreRuntime.svelte";
 
   interface Props extends TargetProps {
-    initialChatState?: typeof POOLSIDE_INITIAL_ACP_CHAT_STATE;
+    initialChatState?: typeof CAMBER_INITIAL_ACP_CHAT_STATE;
   }
 
   const { initialChatState, ...runtimeProps }: Props = $props();

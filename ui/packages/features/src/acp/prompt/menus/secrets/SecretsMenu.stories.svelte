@@ -1,6 +1,6 @@
 <script module lang="ts">
   import { defineMeta, type StoryContext } from "@storybook/addon-svelte-csf";
-  import type { SecretSummary } from "@poolsideai/helperapi/schemas";
+  import type { SecretSummary } from "@camber/helperapi/schemas";
   import type { ComponentProps } from "svelte";
   import SecretsMenu from "./SecretsMenu.svelte";
   import SecretsMenuTestWrapper from "./SecretsMenuTestWrapper.svelte";

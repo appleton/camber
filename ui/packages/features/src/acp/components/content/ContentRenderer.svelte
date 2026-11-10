@@ -4,7 +4,7 @@
   import ResourceBlock from "./ResourceBlock.svelte";
   import ResourceLinkBlock from "./ResourceLinkBlock.svelte";
   import TextBlock from "./TextBlock.svelte";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import type { WorkspaceFolder } from "@camber/rpc";
 
   interface Props {
     content?: ContentBlock[];

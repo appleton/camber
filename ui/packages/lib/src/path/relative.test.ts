@@ -2,19 +2,19 @@ import { relative } from "./relative.js";
 
 describe("unix", () => {
   it("should calculate relative path between directories", () => {
-    expect(relative("/Users/poolie/poolside", "/Users/poolie/projects")).toBe("../projects");
+    expect(relative("/Users/poolie/camber", "/Users/poolie/projects")).toBe("../projects");
   });
 
   it("should calculate relative path from parent to child", () => {
-    expect(relative("/Users/poolie", "/Users/poolie/poolside/file.ts")).toBe("poolside/file.ts");
+    expect(relative("/Users/poolie", "/Users/poolie/camber/file.ts")).toBe("camber/file.ts");
   });
 
   it("should calculate relative path from child to parent", () => {
-    expect(relative("/Users/poolie/poolside/src", "/Users/poolie")).toBe("../..");
+    expect(relative("/Users/poolie/camber/src", "/Users/poolie")).toBe("../..");
   });
 
   it("should return empty string for same paths", () => {
-    expect(relative("/Users/poolie/poolside", "/Users/poolie/poolside")).toBe("");
+    expect(relative("/Users/poolie/camber", "/Users/poolie/camber")).toBe("");
   });
 
   it("should calculate relative path between deeply nested paths", () => {
@@ -30,15 +30,15 @@ describe("unix", () => {
   });
 
   it("should handle trailing slashes in from", () => {
-    expect(relative("/Users/poolie/poolside/", "/Users/poolie/projects")).toBe("../projects");
+    expect(relative("/Users/poolie/camber/", "/Users/poolie/projects")).toBe("../projects");
   });
 
   it("should handle trailing slashes in to", () => {
-    expect(relative("/Users/poolie/poolside", "/Users/poolie/projects/")).toBe("../projects");
+    expect(relative("/Users/poolie/camber", "/Users/poolie/projects/")).toBe("../projects");
   });
 
   it("should handle paths with dots", () => {
-    expect(relative("/Users/poolie/../poolie/poolside", "/Users/poolie/projects")).toBe(
+    expect(relative("/Users/poolie/../poolie/camber", "/Users/poolie/projects")).toBe(
       "../projects",
     );
   });
@@ -46,23 +46,23 @@ describe("unix", () => {
 
 describe("windows", () => {
   it("should calculate relative path between directories", () => {
-    expect(relative("C:\\Users\\poolie\\poolside", "C:\\Users\\poolie\\projects")).toBe(
+    expect(relative("C:\\Users\\poolie\\camber", "C:\\Users\\poolie\\projects")).toBe(
       "../projects",
     );
   });
 
   it("should calculate relative path from parent to child", () => {
-    expect(relative("C:\\Users\\poolie", "C:\\Users\\poolie\\poolside\\file.ts")).toBe(
-      "poolside/file.ts",
+    expect(relative("C:\\Users\\poolie", "C:\\Users\\poolie\\camber\\file.ts")).toBe(
+      "camber/file.ts",
     );
   });
 
   it("should calculate relative path from child to parent", () => {
-    expect(relative("C:\\Users\\poolie\\poolside\\src", "C:\\Users\\poolie")).toBe("../..");
+    expect(relative("C:\\Users\\poolie\\camber\\src", "C:\\Users\\poolie")).toBe("../..");
   });
 
   it("should return empty string for same paths", () => {
-    expect(relative("C:\\Users\\poolie\\poolside", "C:\\Users\\poolie\\poolside")).toBe("");
+    expect(relative("C:\\Users\\poolie\\camber", "C:\\Users\\poolie\\camber")).toBe("");
   });
 
   it("should return absolute path for different drives", () => {

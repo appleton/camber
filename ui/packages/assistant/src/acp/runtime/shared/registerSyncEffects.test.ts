@@ -7,8 +7,8 @@ const refreshACPNavState = vi.hoisted(() => vi.fn().mockResolvedValue(undefined)
 const wireACPHistorySync = vi.hoisted(() => vi.fn(() => vi.fn()));
 const wireACPSessionSync = vi.hoisted(() => vi.fn(() => vi.fn()));
 
-vi.mock("@poolsideai/features/acp", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@poolsideai/features/acp")>()),
+vi.mock("@camber/features/acp", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@camber/features/acp")>()),
   refreshACPNavState,
   wireACPHistorySync,
   wireACPSessionSync,

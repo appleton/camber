@@ -26,27 +26,30 @@ describe("desktop external links", () => {
     return event;
   }
 
-  it.each(["https://poolside.ai/docs", "http://example.com/", "mailto:hello@poolside.ai"])(
-    "opens an external link through the explicit host callback: %s",
-    (href) => {
-      cleanup = installExternalLinkHandler(openExternal);
-      expect(click(href).defaultPrevented).toBe(true);
-      expect(openExternal).toHaveBeenCalledExactlyOnceWith(href);
-    },
-  );
+  it.each([
+    "https://github.com/appleton/camber/docs",
+    "http://example.com/",
+    "mailto:hello@example.com",
+  ])("opens an external link through the explicit host callback: %s", (href) => {
+    cleanup = installExternalLinkHandler(openExternal);
+    expect(click(href).defaultPrevented).toBe(true);
+    expect(openExternal).toHaveBeenCalledExactlyOnceWith(href);
+  });
 
   it("supports middle-click without handling right-clicks", () => {
     cleanup = installExternalLinkHandler(openExternal);
-    expect(click("https://poolside.ai/", "auxclick", 1).defaultPrevented).toBe(true);
-    expect(click("https://poolside.ai/", "auxclick", 2).defaultPrevented).toBe(false);
+    expect(click("https://github.com/appleton/camber/", "auxclick", 1).defaultPrevented).toBe(true);
+    expect(click("https://github.com/appleton/camber/", "auxclick", 2).defaultPrevented).toBe(
+      false,
+    );
     expect(openExternal).toHaveBeenCalledTimes(1);
   });
 
   it("uses the native open command by default in secondary document windows", () => {
     cleanup = installExternalLinkHandler();
-    expect(click("https://poolside.ai/").defaultPrevented).toBe(true);
+    expect(click("https://github.com/appleton/camber/").defaultPrevented).toBe(true);
     expect(invoke).toHaveBeenCalledExactlyOnceWith("open_external_url", {
-      url: "https://poolside.ai/",
+      url: "https://github.com/appleton/camber/",
     });
   });
 
@@ -64,7 +67,7 @@ describe("desktop external links", () => {
     document.addEventListener("click", prevent, { capture: true });
     cleanup = installExternalLinkHandler(openExternal);
     try {
-      click("https://poolside.ai/");
+      click("https://github.com/appleton/camber/");
       expect(openExternal).not.toHaveBeenCalled();
     } finally {
       document.removeEventListener("click", prevent, { capture: true });

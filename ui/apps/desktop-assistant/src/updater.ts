@@ -163,7 +163,7 @@ export async function runManualUpdateCheck(host: UpdaterHost): Promise<void> {
     return;
   }
   if (await refreshBundleReplacedStatus()) {
-    host.showInfoMessage("Poolside has already been updated on disk — restart to finish updating.");
+    host.showInfoMessage("Camber has already been updated on disk — restart to finish updating.");
     return;
   }
   if (inFlightStage) {

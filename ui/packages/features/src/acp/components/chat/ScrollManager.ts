@@ -1,4 +1,4 @@
-import { ScrollManager as SharedScrollManager } from "@poolsideai/components/assistant-ui";
+import { ScrollManager as SharedScrollManager } from "@camber/components/assistant-ui";
 import { AT_BOTTOM_THRESHOLD_PX } from "./threadVirtualization";
 
 /**

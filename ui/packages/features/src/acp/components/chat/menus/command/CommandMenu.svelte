@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { AvailableCommand, SessionConfigOption } from "@agentclientprotocol/sdk";
-  import * as Prompt from "@poolsideai/components/prompt";
-  import Kbd from "@poolsideai/components/kbd";
+  import * as Prompt from "@camber/components/prompt";
+  import Kbd from "@camber/components/kbd";
   import { shortcutHint } from "../../../../../keybindings";
   import { getACPChatSessionScope } from "../../../../features/ChatSessionScope.svelte";
   import { menus } from "../../../../prompt/menus/menus";
@@ -109,7 +109,7 @@
     ),
   );
   const visibleCommandEntries = $derived(visibleServerCommandEntries(otherCommands, $search));
-  const isPoolsideServer = $derived(selectedAgentServer(chatSession) === DEFAULT_AGENT_SERVER);
+  const isCamberServer = $derived(selectedAgentServer(chatSession) === DEFAULT_AGENT_SERVER);
 
   // When the agent publishes its own "plan" command it shows up in the
   // Commands section, so the local plan/build toggle would list "plan" twice.
@@ -239,7 +239,7 @@
         </Prompt.Menu.Popup.Item>
       {/each}
 
-      {#if isPoolsideServer}
+      {#if isCamberServer}
         <Prompt.Menu.Popup.Item
           title="secrets"
           subtitle="Create or delete secrets, and control which the agent can use"

@@ -48,7 +48,7 @@ import (
 
 	"github.com/spf13/afero"
 
-	"github.com/poolsideai/assistant/pkg/common/sync/bufferpool"
+	"github.com/appleton/camber/pkg/common/sync/bufferpool"
 )
 
 // DefaultBinaryCheckBufSize is the default size of the buffer used to read file content

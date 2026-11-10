@@ -1,12 +1,12 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import Button from "../lib/ui/PoolsideButton.svelte";
+  import Icon from "@camber/components/icon";
+  import Button from "../lib/ui/CamberButton.svelte";
   import {
     extractErrorMessage,
     getACPAgentUpdateRepo,
     getACPChatSessionScope,
     normalizeAgentServerName,
-  } from "@poolsideai/features/acp";
+  } from "@camber/features/acp";
 
   const updates = getACPAgentUpdateRepo();
   const chatSession = getACPChatSessionScope();
@@ -79,7 +79,7 @@
               ? "Wait for this agent’s running conversations to finish, then restart to use it."
               : "Restart the agent to use it and refresh available models."}
           {:else}
-            This updates the local ACP agent used for chats, not the Poolside Assistant app.
+            This updates the local ACP agent used for chats, not the Camber Assistant app.
           {/if}
         </div>
       {/if}
@@ -98,7 +98,7 @@
             {:else if isRestart}
               Restarting the agent and refreshing available models.
             {:else}
-              Updating the local ACP agent used for chats, not the Poolside Assistant app.
+              Updating the local ACP agent used for chats, not the Camber Assistant app.
             {/if}
           </div>
           <div class="h-1.5 overflow-hidden rounded-full bg-psx-chrome-hover">

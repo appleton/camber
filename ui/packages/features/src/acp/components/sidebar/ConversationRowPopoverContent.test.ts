@@ -46,7 +46,7 @@ describe("ConversationRowPopoverContent", () => {
   });
 
   it("breaks long edited file names", async () => {
-    const fileName = "poolside-whisper-server-aarch64-apple-darwin";
+    const fileName = "camber-whisper-server-aarch64-apple-darwin";
 
     render(ConversationRowPopoverContent, {
       props: {
@@ -58,7 +58,7 @@ describe("ConversationRowPopoverContent", () => {
             edited: [{ fileName, filePath: `src/${fileName}` }],
           },
         },
-        agentName: "Poolside",
+        agentName: "Camber",
       },
     });
 
@@ -78,7 +78,7 @@ describe("ConversationRowPopoverContent", () => {
             edited: [],
           },
         },
-        agentName: "Poolside",
+        agentName: "Camber",
       },
     });
 
@@ -97,7 +97,7 @@ describe("ConversationRowPopoverContent", () => {
     } as never);
 
     render(ConversationRowPopoverContent, {
-      props: { session, agentName: "Poolside" },
+      props: { session, agentName: "Camber" },
     });
 
     expect(getPromptContext).not.toHaveBeenCalled();

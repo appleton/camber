@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { Badge } from "@poolsideai/components/badge";
-  import Icon from "@poolsideai/components/icon";
-  import { formatError } from "@poolsideai/lib/errors";
-  import { InfoMessageType } from "@poolsideai/rpc";
+  import { Badge } from "@camber/components/badge";
+  import Icon from "@camber/components/icon";
+  import { formatError } from "@camber/lib/errors";
+  import { InfoMessageType } from "@camber/rpc";
   import { onDestroy, onMount, tick } from "svelte";
   import { appState } from "../hostAdapter";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
-  import { poolsideRemoteAccessStatus } from "@poolsideai/helperapi";
+  import type { WorkspaceFolder } from "@camber/rpc";
+  import { camberRemoteAccessStatus } from "@camber/helperapi";
   import { rpc } from "../hostRpc";
   import {
     activeBinding,
@@ -16,7 +16,7 @@
     type CommandId,
   } from "../../keybindings";
   import { chordToNativeAccelerator } from "../../keybindings/nativeAccelerator";
-  import { moveItem, reorderable } from "@poolsideai/dnd";
+  import { moveItem, reorderable } from "@camber/dnd";
   import {
     ACP_DESKTOP_CONVERSATIONS_EVENT,
     ACP_DESKTOP_PROJECTS_EVENT,
@@ -135,7 +135,7 @@
 
   type DesktopSidebarView = "main" | "settings";
 
-  const DESKTOP_SIDEBAR_SECTION_ORDER_STORAGE_KEY = "poolside.desktop.sidebarSectionOrder.v1";
+  const DESKTOP_SIDEBAR_SECTION_ORDER_STORAGE_KEY = "camber.desktop.sidebarSectionOrder.v1";
   const DEFAULT_DESKTOP_SIDEBAR_SECTION_ORDER: DesktopSidebarSection[] = ["chats", "projects"];
 
   function loadDesktopSidebarSectionOrder(): DesktopSidebarSection[] {
@@ -313,7 +313,7 @@
   let activeWorkspaceLabel = $derived.by(() => {
     const desktopWorktreeName = $appState.environment.desktopInstance?.worktreeName?.trim();
     if (!desktopWorktreeName) return null;
-    const activeProject = spoolsideWorktreeProject(desktopWorktreeName);
+    const activeProject = camberqaWorktreeProject(desktopWorktreeName);
     return activeProject ? projectDisplayName(activeProject) : desktopWorktreeName;
   });
   let activeWorkspaceColor = $derived(
@@ -538,7 +538,7 @@
     let cancelled = false;
     const poll = async () => {
       try {
-        const status = await poolsideRemoteAccessStatus();
+        const status = await camberRemoteAccessStatus();
         if (!cancelled) {
           connectedRemoteDevices = (status.devices ?? []).filter((d) => d.connected).length;
         }
@@ -674,7 +674,7 @@
     return project.nickname || project.name;
   }
 
-  function spoolsideWorktreeProject(worktreeName: string): ACPNavProject | null {
+  function camberqaWorktreeProject(worktreeName: string): ACPNavProject | null {
     let match: ACPNavProject | null = null;
     for (const project of navProjects) {
       if (!project.isWorktree || project.name !== worktreeName) continue;
@@ -2192,7 +2192,7 @@
   <ConfirmationDialog
     destructive
     title="Delete project?"
-    description={`Delete ${removeProjectTarget.name} from Poolside. Existing files on disk will not be deleted.`}
+    description={`Delete ${removeProjectTarget.name} from Camber. Existing files on disk will not be deleted.`}
     confirmLabel="Delete Project"
     onCancel={() => (removeProjectTarget = null)}
     onConfirm={async () => {

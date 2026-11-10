@@ -1,4 +1,4 @@
-import type { LocalInferenceModel, LocalInferenceState } from "@poolsideai/helperapi/schemas";
+import type { LocalInferenceModel, LocalInferenceState } from "@camber/helperapi/schemas";
 import { describe, expect, it } from "vitest";
 import {
   localInferenceModelMissing,

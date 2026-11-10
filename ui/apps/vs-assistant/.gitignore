@@ -1,7 +1,0 @@
-.vs/
-bin/
-obj/
-# Downloaded by scripts/copy_helper.sh; never committed.
-helper/
-*.csproj.user
-.idea/

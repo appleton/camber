@@ -1,5 +1,5 @@
 {
-  "extends": "@poolsideai/tsconfig/svelte",
+  "extends": "@camber/tsconfig/svelte",
   "compilerOptions": {
     "allowImportingTsExtensions": true
   },

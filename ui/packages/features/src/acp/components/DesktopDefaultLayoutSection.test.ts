@@ -6,7 +6,7 @@ import {
 } from "./chat/desktopLayoutPersistence";
 import DesktopDefaultLayoutSection from "./DesktopDefaultLayoutSection.svelte";
 
-const DESKTOP_LAYOUT_STORAGE_KEY = "poolside.desktop.layouts.v1";
+const DESKTOP_LAYOUT_STORAGE_KEY = "camber.desktop.layouts.v1";
 
 function savedDefaultLayout(): PersistedDesktopLayout {
   return {

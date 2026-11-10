@@ -9,13 +9,13 @@ export const ACP_SESSION_STEERING_METHOD = "_session/steering";
 // Keep in sync with methods.ACPUserMessageSteerMetaKey. The helper stamps
 // relayed steer messages with this so every connected surface can keep them
 // inside the active turn instead of treating them as a new prompt.
-export const ACP_USER_MESSAGE_STEER_META_KEY = "poolside/steer";
+export const ACP_USER_MESSAGE_STEER_META_KEY = "camber/steer";
 // Keep in sync with methods.ACPSteerFallbackMetaKey. Marks a session/prompt
 // that re-delivers a steer message the agent declined to inject (outcome
 // "promptRequired"). The helper mirrored that user message to the other
 // surfaces when the steer was attempted, so it must not mirror this prompt's
 // copy again.
-export const ACP_STEER_FALLBACK_META_KEY = "poolside/steer_fallback";
+export const ACP_STEER_FALLBACK_META_KEY = "camber/steer_fallback";
 
 // "injected" delivers into the running turn. When no turn is running, agents
 // that honor the idleBehavior opt-in below return "promptRequired" and leave

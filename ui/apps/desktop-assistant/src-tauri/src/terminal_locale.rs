@@ -1,4 +1,4 @@
-//! Derives a UTF-8 locale for Poolside-spawned terminals.
+//! Derives a UTF-8 locale for Camber-spawned terminals.
 //!
 //! launchd gives GUI apps no locale variables, and shell profiles rarely
 //! export one because a terminal emulator normally provides it. A

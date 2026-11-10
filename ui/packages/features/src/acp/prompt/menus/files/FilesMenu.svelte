@@ -3,12 +3,12 @@
   import { get } from "svelte/store";
   import { appState } from "../../../hostAdapter";
   import { rpc } from "../../../hostRpc";
-  import type { SearchFileMenuControl, SearchFilesOutput } from "@poolsideai/helperapi/schemas";
-  import { InfoMessageType, type SearchFile } from "@poolsideai/rpc";
-  import * as Prompt from "@poolsideai/components/prompt";
-  import { getItems, getMenus, getPrompt } from "@poolsideai/components/prompt";
-  import { closeMatch, getMatchDecorationState, type Command } from "@poolsideai/components/editor";
-  import { basename, joinPath, type ClassifiedQuery } from "@poolsideai/lib/path-query";
+  import type { SearchFileMenuControl, SearchFilesOutput } from "@camber/helperapi/schemas";
+  import { InfoMessageType, type SearchFile } from "@camber/rpc";
+  import * as Prompt from "@camber/components/prompt";
+  import { getItems, getMenus, getPrompt } from "@camber/components/prompt";
+  import { closeMatch, getMatchDecorationState, type Command } from "@camber/components/editor";
+  import { basename, joinPath, type ClassifiedQuery } from "@camber/lib/path-query";
   import {
     navigationTarget,
     parentQuery,

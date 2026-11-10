@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Selection } from "@poolsideai/rpc";
+  import type { Selection } from "@camber/rpc";
 
   interface Props {
     selection: Selection;

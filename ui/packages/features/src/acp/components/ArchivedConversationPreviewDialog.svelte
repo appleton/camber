@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Button } from "@poolsideai/components/button";
-  import Icon from "@poolsideai/components/icon";
+  import { Button } from "@camber/components/button";
+  import Icon from "@camber/components/icon";
   import { onMount, tick } from "svelte";
   import AcpChatPane from "./chat/ChatPane.svelte";
   import SidebarIconButton from "./sidebar/SidebarIconButton.svelte";

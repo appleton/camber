@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/poolsideai/assistant/pkg/workspace/path"
+	"github.com/appleton/camber/pkg/workspace/path"
 )
 
 func TestLRUCache(t *testing.T) {

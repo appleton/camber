@@ -13,8 +13,8 @@ import {
   type ACPGithubRepository,
   type ACPWorktreeRepository,
   type DesktopOpenerInfo,
-} from "@poolsideai/features/acp";
-import { auditUnwiredCommands } from "@poolsideai/features/keybindings";
+} from "@camber/features/acp";
+import { auditUnwiredCommands } from "@camber/features/keybindings";
 import { onMount } from "svelte";
 import { get } from "svelte/store";
 
@@ -41,9 +41,9 @@ import {
 import { PendingSessionBootstrap } from "./shared/PendingSessionBootstrap.svelte";
 import type { Runtime } from "./shared/types";
 
-const DESKTOP_OPEN_SETTINGS_PANEL_EVENT = "poolside:desktop-open-settings-panel";
-const DESKTOP_OPEN_TARGET_OPENER_STORAGE_KEY = "poolside:desktop-open-target-opener-id";
-const DESKTOP_CONVERSATION_PANEL_STATE_STORAGE_KEY = "poolside.desktop.conversationPanelState.v1";
+const DESKTOP_OPEN_SETTINGS_PANEL_EVENT = "camber:desktop-open-settings-panel";
+const DESKTOP_OPEN_TARGET_OPENER_STORAGE_KEY = "camber:desktop-open-target-opener-id";
+const DESKTOP_CONVERSATION_PANEL_STATE_STORAGE_KEY = "camber.desktop.conversationPanelState.v1";
 
 interface DesktopConversationPanelState {
   rightSidebarVisible: boolean;

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { formatError } from "@poolsideai/lib/errors";
-  import { InfoMessageType } from "@poolsideai/rpc";
+  import Icon from "@camber/components/icon";
+  import { formatError } from "@camber/lib/errors";
+  import { InfoMessageType } from "@camber/rpc";
   import { LOCAL_AGENT_SERVER } from "../../agentServers";
   import { getLocalInferenceRepo } from "../../features/LocalInferenceRepository.svelte";
   import { getACPSessionRepo } from "../../features/SessionRepository.svelte";

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Dev/E2E driver for the mobile remote surface: builds and spawns
-// poolside-helper, initializes it against a workspace, enables remote access,
+// camber-helper, initializes it against a workspace, enables remote access,
 // and prints a pairing code. The mobile UI (vite dev server or the built
 // bundle served by the helper itself) can then connect.
 //
@@ -8,17 +8,17 @@
 //   node scripts/dev-helper.mjs [workspacePath]
 //
 // Env:
-//   POOLSIDE_HELPER_BIN              path to a prebuilt helper (skips go build)
-//   POOLSIDE_REMOTE_BIND             loopback | tailscale | all   (default loopback)
-//   POOLSIDE_DEV_HELPER_REMOTE_PORT  port. Defaults to the worktree slot's
+//   CAMBER_HELPER_BIN              path to a prebuilt helper (skips go build)
+//   CAMBER_REMOTE_BIND             loopback | tailscale | all   (default loopback)
+//   CAMBER_DEV_HELPER_REMOTE_PORT  port. Defaults to the worktree slot's
 //                                    remote port + 1 so a test helper never
 //                                    squats the port the worktree's desktop
-//                                    instance uses (POOLSIDE_REMOTE_PORT is
-//                                    exported by `spoolside worktree env` and
+//                                    instance uses (CAMBER_REMOTE_PORT is
+//                                    exported by `camberqa worktree env` and
 //                                    points at the desktop's server, so it is
 //                                    deliberately NOT used here).
-//   POOLSIDE_REMOTE_STATIC           path to built mobile UI (default ../dist if built)
-//   POOLSIDE_REMOTE_DEV_SERVER       vite dev server URL to proxy UI traffic to
+//   CAMBER_REMOTE_STATIC           path to built mobile UI (default ../dist if built)
+//   CAMBER_REMOTE_DEV_SERVER       vite dev server URL to proxy UI traffic to
 
 import { execFileSync, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -32,18 +32,18 @@ const appDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const repoRoot = path.resolve(appDir, "../../..");
 const workspace = path.resolve(process.argv[2] ?? repoRoot);
 
-let helperBin = process.env.POOLSIDE_HELPER_BIN;
+let helperBin = process.env.CAMBER_HELPER_BIN;
 if (!helperBin) {
-  helperBin = path.join(os.tmpdir(), "poolside-helper-mobile-dev");
-  console.log("building poolside-helper (go build)…");
-  execFileSync("go", ["build", "-o", helperBin, "./cmd/poolside-helper"], {
+  helperBin = path.join(os.tmpdir(), "camber-helper-mobile-dev");
+  console.log("building camber-helper (go build)…");
+  execFileSync("go", ["build", "-o", helperBin, "./cmd/camber-helper"], {
     cwd: repoRoot,
     stdio: "inherit",
   });
 }
 
 const staticDir =
-  process.env.POOLSIDE_REMOTE_STATIC ??
+  process.env.CAMBER_REMOTE_STATIC ??
   (existsSync(path.join(appDir, "dist", "index.html")) ? path.join(appDir, "dist") : "");
 
 const helper = spawn(helperBin, ["--stdin"], { stdio: ["pipe", "pipe", "inherit"] });
@@ -117,12 +117,12 @@ function handleMessage(msg) {
 
 // ---- Boot sequence ----
 
-const bind = process.env.POOLSIDE_REMOTE_BIND ?? "loopback";
-const slot = Number(process.env.POOLSIDE_WORKTREE_SLOT ?? "0") || 0;
-const port = Number(process.env.POOLSIDE_DEV_HELPER_REMOTE_PORT ?? 8737 + slot * 10 + 1);
+const bind = process.env.CAMBER_REMOTE_BIND ?? "loopback";
+const slot = Number(process.env.CAMBER_WORKTREE_SLOT ?? "0") || 0;
+const port = Number(process.env.CAMBER_DEV_HELPER_REMOTE_PORT ?? 8737 + slot * 10 + 1);
 
 async function newPairingCode() {
-  const pairing = await call("poolside/remoteAccess/createPairingCode", {});
+  const pairing = await call("camber/remoteAccess/createPairingCode", {});
   console.log("\n──────────────────────────────────────────");
   console.log(`  Pairing link expires ${pairing.expiresAt}`);
   for (const url of pairing.urls ?? []) {
@@ -141,11 +141,11 @@ try {
   });
   send({ jsonrpc: "2.0", method: "initialized", params: {} });
 
-  const status = await call("poolside/remoteAccess/enable", {
+  const status = await call("camber/remoteAccess/enable", {
     bind,
     port,
     staticDir,
-    plainHttp: process.env.POOLSIDE_REMOTE_PLAIN_HTTP === "1",
+    plainHttp: process.env.CAMBER_REMOTE_PLAIN_HTTP === "1",
   });
   console.log("remote access enabled:", JSON.stringify(status, null, 2));
   if (!staticDir) {

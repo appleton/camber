@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createSection } from "../context/section.js";
-  import { generateId } from "@poolsideai/lib/string";
+  import { generateId } from "@camber/lib/string";
   import { getItems } from "../context/prompt.js";
   import type { Snippet } from "svelte";
   import type { Except } from "type-fest";

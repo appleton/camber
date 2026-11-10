@@ -4,7 +4,7 @@ const (
 	// MetaKeyPermissionOverrideRules is set on a RequestPermissionOutcomeSelected's
 	// _meta to override the suggested rules with user-edited ones. When absent,
 	// the agent persists the original suggested rules.
-	MetaKeyPermissionOverrideRules = "poolside/permission_override_rules"
+	MetaKeyPermissionOverrideRules = "camber/permission_override_rules"
 )
 
 // EncodeOverrideRules returns the _meta payload that user-edited rules ride

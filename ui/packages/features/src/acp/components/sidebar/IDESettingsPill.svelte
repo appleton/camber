@@ -1,6 +1,6 @@
 <script lang="ts">
   import { melt, type PopoverElements } from "@melt-ui/svelte";
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { suppressContextMenu } from "./contextMenuHelpers";
 
   type Trigger = PopoverElements["trigger"] extends import("svelte/store").Readable<infer T>

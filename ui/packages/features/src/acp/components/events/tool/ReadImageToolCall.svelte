@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
   import Tooltip from "../../ui/Tooltip.svelte";
   import { rpc } from "../../../hostRpc";
   import ToolFooter from "../../shared/ToolFooter.svelte";

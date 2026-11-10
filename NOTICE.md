@@ -1,4 +1,4 @@
-Poolside Assistant
+Camber Assistant
 
 Copyright 2026 Poolside, Inc.
 
@@ -27,14 +27,6 @@ Copyright 2020 The JetBrains Mono Project Authors.
 Copyright (c) 2014, Ryan L McIntyre.
 
 Licensed under the SIL Open Font License, Version 1.1.
-
----
-
-This product includes Visual Studio Code declaration copies.
-
-Copyright (c) Microsoft Corporation. All rights reserved.
-
-Licensed under the MIT License.
 
 ---
 

@@ -2,4 +2,4 @@ export {
   imageFilePathFromUri,
   isPreviewableImagePath,
   isPreviewableImageUrl,
-} from "@poolsideai/components/assistant-ui";
+} from "@camber/components/assistant-ui";

@@ -13,7 +13,7 @@
 // beneath it seeded so each back lands one level up instead of leaving the
 // app.
 
-import type { MobileNavigation, MobileRoute, MobileView } from "@poolsideai/assistant";
+import type { MobileNavigation, MobileRoute, MobileView } from "@camber/assistant";
 
 const ROOT_HASH = "#/";
 const CONVERSATION_PREFIX = "#/c/";

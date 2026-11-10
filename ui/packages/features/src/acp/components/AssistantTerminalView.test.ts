@@ -1,4 +1,4 @@
-import type { AssistantTerminalTab } from "@poolsideai/rpc";
+import type { AssistantTerminalTab } from "@camber/rpc";
 import { render, waitFor } from "@testing-library/svelte";
 import { Terminal } from "@xterm/xterm";
 import { tick, type ComponentProps } from "svelte";

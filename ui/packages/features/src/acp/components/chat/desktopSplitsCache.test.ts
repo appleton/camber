@@ -1,4 +1,4 @@
-import { SplitsController, type TabID } from "@poolsideai/splits";
+import { SplitsController, type TabID } from "@camber/splits";
 import { describe, expect, it, vi } from "vitest";
 import {
   DESKTOP_SPLITS_CACHE_LIMIT,
@@ -99,14 +99,14 @@ describe("DesktopSplitsCache", () => {
   it("renames a draft entry without evicting it", () => {
     const evictEntry = vi.fn();
     const cache = new DesktopSplitsCache({ onEvictEntry: evictEntry });
-    const draft = cache.getOrCreate("new:poolside:/workspace", (key) =>
+    const draft = cache.getOrCreate("new:camber:/workspace", (key) =>
       createEntry(key, "terminal-draft"),
     );
 
-    const renamed = cache.rename("new:poolside:/workspace", "conversation-id");
+    const renamed = cache.rename("new:camber:/workspace", "conversation-id");
 
     expect(renamed).toBe(draft);
-    expect(cache.get("new:poolside:/workspace")).toBeUndefined();
+    expect(cache.get("new:camber:/workspace")).toBeUndefined();
     expect(cache.get("conversation-id")).toBe(draft);
     expect(draft.cacheKey).toBe("conversation-id");
     expect(evictEntry).not.toHaveBeenCalled();

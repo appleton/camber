@@ -1,5 +1,5 @@
+import type { FileIconTheme } from "@camber/rpc";
 import vscodeIconsUrl from "@iconify-json/vscode-icons/icons.json?url";
-import type { FileIconTheme } from "@poolsideai/rpc";
 import iconThemeData from "vscode-icons-js/data/generated/icons.json";
 import languageData from "vscode-icons-js/data/static/languages-vscode.json";
 

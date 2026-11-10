@@ -27,51 +27,52 @@ use tauri::{
 use crate::updater::DesktopUpdaterState;
 
 const ASSISTANT_CONFIG_FILE_NAME: &str = "assistant.json";
-const ASSISTANT_CONFIG_SCHEMA_URL: &str = "https://poolside.ai/assets/schemas/assistant/v1.json";
-pub const SETTINGS_CHANGED_EVENT: &str = "poolside:desktop-settings-changed";
-pub const OPEN_SETTINGS_PANEL_EVENT: &str = "poolside:desktop-open-settings-panel";
-pub const NEW_CONVERSATION_EVENT: &str = "poolside:desktop-new-conversation";
-pub const NEW_PROJECT_EVENT: &str = "poolside:desktop-new-project";
-pub const OPEN_IN_IDE_EVENT: &str = "poolside:desktop-open-in-ide";
-pub const DEEP_LINK_EVENT: &str = "poolside:desktop-deep-link";
-pub const NEW_TAB_EVENT: &str = "poolside:desktop-new-tab";
-pub const CLOSE_TAB_EVENT: &str = "poolside:desktop-close-tab";
-pub const REOPEN_CLOSED_TAB_EVENT: &str = "poolside:desktop-reopen-closed-tab";
-pub const OPEN_FILE_TAB_EVENT: &str = "poolside:desktop-open-file-tab";
-pub const SELECT_PREVIOUS_TAB_EVENT: &str = "poolside:desktop-select-previous-tab";
-pub const SELECT_NEXT_TAB_EVENT: &str = "poolside:desktop-select-next-tab";
-pub const SPLIT_RIGHT_EVENT: &str = "poolside:desktop-split-right";
-pub const SPLIT_DOWN_EVENT: &str = "poolside:desktop-split-down";
-pub const TOGGLE_LEFT_SIDEBAR_EVENT: &str = "poolside:desktop-toggle-left-sidebar";
-pub const TOGGLE_RIGHT_SIDEBAR_EVENT: &str = "poolside:desktop-toggle-right-sidebar";
-pub const TOGGLE_BOTTOM_PANEL_EVENT: &str = "poolside:desktop-toggle-bottom-panel";
-pub const SAVE_LAYOUT_AS_DEFAULT_EVENT: &str = "poolside:desktop-save-layout-as-default";
-pub const CHECK_FOR_UPDATES_EVENT: &str = "poolside:desktop-check-for-updates";
-pub const NAVIGATE_BACK_EVENT: &str = "poolside:desktop-navigate-back";
-pub const NAVIGATE_FORWARD_EVENT: &str = "poolside:desktop-navigate-forward";
-pub const OPEN_SETTINGS_MENU_ID: &str = "poolside-open-settings";
-pub const CHECK_FOR_UPDATES_MENU_ID: &str = "poolside-check-for-updates";
-pub const CHANGELOG_MENU_ID: &str = "poolside-changelog";
-pub const OPEN_HELPER_LOGS_MENU_ID: &str = "poolside-open-helper-logs";
-pub const SET_SYSTEM_THEME_MENU_ID: &str = "poolside-set-system-theme";
-pub const SET_LIGHT_THEME_MENU_ID: &str = "poolside-set-light-theme";
-pub const SET_DARK_THEME_MENU_ID: &str = "poolside-set-dark-theme";
-pub const NEW_CONVERSATION_MENU_ID: &str = "poolside-new-conversation";
-pub const NEW_PROJECT_MENU_ID: &str = "poolside-new-project";
-pub const OPEN_IN_IDE_MENU_ID: &str = "poolside-open-in-ide";
-pub const NEW_TAB_MENU_ID: &str = "poolside-new-tab";
-pub const CLOSE_TAB_MENU_ID: &str = "poolside-close-tab";
-pub const REOPEN_CLOSED_TAB_MENU_ID: &str = "poolside-reopen-closed-tab";
-pub const SELECT_PREVIOUS_TAB_MENU_ID: &str = "poolside-select-previous-tab";
-pub const SELECT_NEXT_TAB_MENU_ID: &str = "poolside-select-next-tab";
-pub const SPLIT_RIGHT_MENU_ID: &str = "poolside-split-right";
-pub const SPLIT_DOWN_MENU_ID: &str = "poolside-split-down";
-pub const TOGGLE_LEFT_SIDEBAR_MENU_ID: &str = "poolside-toggle-left-sidebar";
-pub const TOGGLE_RIGHT_SIDEBAR_MENU_ID: &str = "poolside-toggle-right-sidebar";
-pub const TOGGLE_BOTTOM_PANEL_MENU_ID: &str = "poolside-toggle-bottom-panel";
-pub const SAVE_LAYOUT_AS_DEFAULT_MENU_ID: &str = "poolside-save-layout-as-default";
-pub const NAVIGATE_BACK_MENU_ID: &str = "poolside-navigate-back";
-pub const NAVIGATE_FORWARD_MENU_ID: &str = "poolside-navigate-forward";
+const ASSISTANT_CONFIG_SCHEMA_URL: &str =
+    "https://raw.githubusercontent.com/appleton/camber/main/schemas/assistant/v1.json";
+pub const SETTINGS_CHANGED_EVENT: &str = "camber:desktop-settings-changed";
+pub const OPEN_SETTINGS_PANEL_EVENT: &str = "camber:desktop-open-settings-panel";
+pub const NEW_CONVERSATION_EVENT: &str = "camber:desktop-new-conversation";
+pub const NEW_PROJECT_EVENT: &str = "camber:desktop-new-project";
+pub const OPEN_IN_IDE_EVENT: &str = "camber:desktop-open-in-ide";
+pub const DEEP_LINK_EVENT: &str = "camber:desktop-deep-link";
+pub const NEW_TAB_EVENT: &str = "camber:desktop-new-tab";
+pub const CLOSE_TAB_EVENT: &str = "camber:desktop-close-tab";
+pub const REOPEN_CLOSED_TAB_EVENT: &str = "camber:desktop-reopen-closed-tab";
+pub const OPEN_FILE_TAB_EVENT: &str = "camber:desktop-open-file-tab";
+pub const SELECT_PREVIOUS_TAB_EVENT: &str = "camber:desktop-select-previous-tab";
+pub const SELECT_NEXT_TAB_EVENT: &str = "camber:desktop-select-next-tab";
+pub const SPLIT_RIGHT_EVENT: &str = "camber:desktop-split-right";
+pub const SPLIT_DOWN_EVENT: &str = "camber:desktop-split-down";
+pub const TOGGLE_LEFT_SIDEBAR_EVENT: &str = "camber:desktop-toggle-left-sidebar";
+pub const TOGGLE_RIGHT_SIDEBAR_EVENT: &str = "camber:desktop-toggle-right-sidebar";
+pub const TOGGLE_BOTTOM_PANEL_EVENT: &str = "camber:desktop-toggle-bottom-panel";
+pub const SAVE_LAYOUT_AS_DEFAULT_EVENT: &str = "camber:desktop-save-layout-as-default";
+pub const CHECK_FOR_UPDATES_EVENT: &str = "camber:desktop-check-for-updates";
+pub const NAVIGATE_BACK_EVENT: &str = "camber:desktop-navigate-back";
+pub const NAVIGATE_FORWARD_EVENT: &str = "camber:desktop-navigate-forward";
+pub const OPEN_SETTINGS_MENU_ID: &str = "camber-open-settings";
+pub const CHECK_FOR_UPDATES_MENU_ID: &str = "camber-check-for-updates";
+pub const CHANGELOG_MENU_ID: &str = "camber-changelog";
+pub const OPEN_HELPER_LOGS_MENU_ID: &str = "camber-open-helper-logs";
+pub const SET_SYSTEM_THEME_MENU_ID: &str = "camber-set-system-theme";
+pub const SET_LIGHT_THEME_MENU_ID: &str = "camber-set-light-theme";
+pub const SET_DARK_THEME_MENU_ID: &str = "camber-set-dark-theme";
+pub const NEW_CONVERSATION_MENU_ID: &str = "camber-new-conversation";
+pub const NEW_PROJECT_MENU_ID: &str = "camber-new-project";
+pub const OPEN_IN_IDE_MENU_ID: &str = "camber-open-in-ide";
+pub const NEW_TAB_MENU_ID: &str = "camber-new-tab";
+pub const CLOSE_TAB_MENU_ID: &str = "camber-close-tab";
+pub const REOPEN_CLOSED_TAB_MENU_ID: &str = "camber-reopen-closed-tab";
+pub const SELECT_PREVIOUS_TAB_MENU_ID: &str = "camber-select-previous-tab";
+pub const SELECT_NEXT_TAB_MENU_ID: &str = "camber-select-next-tab";
+pub const SPLIT_RIGHT_MENU_ID: &str = "camber-split-right";
+pub const SPLIT_DOWN_MENU_ID: &str = "camber-split-down";
+pub const TOGGLE_LEFT_SIDEBAR_MENU_ID: &str = "camber-toggle-left-sidebar";
+pub const TOGGLE_RIGHT_SIDEBAR_MENU_ID: &str = "camber-toggle-right-sidebar";
+pub const TOGGLE_BOTTOM_PANEL_MENU_ID: &str = "camber-toggle-bottom-panel";
+pub const SAVE_LAYOUT_AS_DEFAULT_MENU_ID: &str = "camber-save-layout-as-default";
+pub const NAVIGATE_BACK_MENU_ID: &str = "camber-navigate-back";
+pub const NAVIGATE_FORWARD_MENU_ID: &str = "camber-navigate-forward";
 
 const SETTINGS_FILE_NAME: &str = "settings.json";
 const MAX_TEXT_FILE_BYTES: u64 = 5 * 1024 * 1024;
@@ -92,15 +93,15 @@ const MIN_TERMINAL_FONT_SIZE: u16 = 8;
 const MAX_TERMINAL_FONT_SIZE: u16 = 24;
 const MAX_TERMINAL_FONT_FAMILY_LEN: usize = 200;
 
-const ACP_NAV_GET_FILE_OPENER_METHOD: &str = "poolside/acpNav/getFileOpener";
-const ACP_NAV_SET_FILE_OPENER_METHOD: &str = "poolside/acpNav/setFileOpener";
+const ACP_NAV_GET_FILE_OPENER_METHOD: &str = "camber/acpNav/getFileOpener";
+const ACP_NAV_SET_FILE_OPENER_METHOD: &str = "camber/acpNav/setFileOpener";
 static CODE_FONT_FAMILIES: OnceLock<Vec<String>> = OnceLock::new();
 
 // Upper bound on how long a file-opener read may wait on the helper before
 // falling back to the default, so the UI is never gated on helper readiness.
 const FILE_OPENER_HELPER_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(3);
 // The user's preferred file opener is no longer stored here; it lives in the
-// ACP database owned by poolside-helper (see resolve_file_opener_id). A legacy
+// ACP database owned by camber-helper (see resolve_file_opener_id). A legacy
 // `fileOpenerId` key may still exist in older settings.json files and is
 // migrated on first read, then ignored.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -608,7 +609,7 @@ pub fn open_path_with_opener(
 }
 
 fn assistant_config_path() -> Result<PathBuf, String> {
-    if let Ok(path) = env::var("POOLSIDE_ASSISTANT_CONFIG_PATH") {
+    if let Ok(path) = env::var("CAMBER_ASSISTANT_CONFIG_PATH") {
         if !path.is_empty() {
             return Ok(PathBuf::from(path));
         }
@@ -627,9 +628,8 @@ fn default_config_home() -> Result<PathBuf, String> {
         }
     }
     // Must resolve the same file as the helper's userconfig.Directory(),
-    // which uses Go's os.UserHomeDir: USERPROFILE on Windows, HOME elsewhere.
-    let home_var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
-    if let Ok(path) = env::var(home_var) {
+    // which uses Go's os.UserHomeDir and HOME on macOS.
+    if let Ok(path) = env::var("HOME") {
         if !path.is_empty() {
             return Ok(PathBuf::from(path).join(".config"));
         }
@@ -689,18 +689,18 @@ pub fn read_text_file(path: String) -> Result<DesktopTextFile, String> {
     let metadata = fs::metadata(&file_path).map_err(|err| err.to_string())?;
     if metadata.len() > MAX_TEXT_FILE_BYTES {
         return Err(format!(
-            "File is too large to open in Poolside (max {} MiB).",
+            "File is too large to open in Camber (max {} MiB).",
             MAX_TEXT_FILE_BYTES / 1024 / 1024
         ));
     }
 
     let bytes = fs::read(&file_path).map_err(|err| err.to_string())?;
     if bytes[..bytes.len().min(BINARY_SNIFF_BYTES)].contains(&0) {
-        return Err("Binary files cannot be opened in Poolside.".to_string());
+        return Err("Binary files cannot be opened in Camber.".to_string());
     }
 
     let contents = String::from_utf8(bytes)
-        .map_err(|_| "Only UTF-8 text files can be opened in Poolside.".to_string())?;
+        .map_err(|_| "Only UTF-8 text files can be opened in Camber.".to_string())?;
 
     Ok(DesktopTextFile { path, contents })
 }
@@ -756,7 +756,7 @@ pub fn build_menu<R: Runtime>(app_handle: &AppHandle<R>) -> tauri::Result<Menu<R
     let helper_logs = MenuItem::with_id(
         app_handle,
         OPEN_HELPER_LOGS_MENU_ID,
-        "Poolside Helper Logs",
+        "Camber Helper Logs",
         true,
         None::<&str>,
     )?;
@@ -1383,7 +1383,7 @@ async fn write_and_emit_settings(
 }
 
 /// Restore the saved icon tint at launch. Called from both `setup` and
-/// `RunEvent::Ready` (like the spoolside dock icon) so it survives the
+/// `RunEvent::Ready` (like the camberqa dock icon) so it survives the
 /// platform's own icon setup during launch.
 pub fn apply_app_icon_tint_from_settings(app_handle: &AppHandle) {
     match read_settings(app_handle) {
@@ -1892,13 +1892,6 @@ fn detect_code_font_families() -> Vec<String> {
         }
     }
 
-    #[cfg(target_os = "windows")]
-    {
-        for family in detect_code_font_families_from_windows_registry() {
-            add_code_font_family(&mut families, &family);
-        }
-    }
-
     for family in fallback_code_font_families() {
         if is_system_likely_to_have_font(family) {
             add_code_font_family(&mut families, family);
@@ -1931,40 +1924,6 @@ fn detect_code_font_families_with_fc_list() -> Vec<String> {
 #[cfg(target_os = "macos")]
 fn detect_code_font_families_with_atsutil() -> Vec<String> {
     let Ok(output) = Command::new("atsutil").args(["fonts", "-list"]).output() else {
-        return Vec::new();
-    };
-    if !output.status.success() {
-        return Vec::new();
-    }
-    String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .map(normalize_font_family_name)
-        .filter(|family| is_likely_code_font_family(family))
-        .collect()
-}
-
-#[cfg(target_os = "windows")]
-fn detect_code_font_families_from_windows_registry() -> Vec<String> {
-    let script = r#"
-$paths = @(
-  'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts',
-  'HKCU:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts'
-)
-foreach ($path in $paths) {
-  if (Test-Path $path) {
-    (Get-ItemProperty $path).PSObject.Properties | ForEach-Object { $_.Name }
-  }
-}
-"#;
-    let output = Command::new("powershell")
-        .args(["-NoProfile", "-Command", script])
-        .output()
-        .or_else(|_| {
-            Command::new("pwsh")
-                .args(["-NoProfile", "-Command", script])
-                .output()
-        });
-    let Ok(output) = output else {
         return Vec::new();
     };
     if !output.status.success() {
@@ -2148,13 +2107,6 @@ fn is_system_likely_to_have_font(family: &str) -> bool {
     {
         matches!(family, "Menlo" | "Monaco" | "Courier New" | "SF Mono")
     }
-    #[cfg(target_os = "windows")]
-    {
-        matches!(
-            family,
-            "Consolas" | "Cascadia Mono" | "Cascadia Code" | "Courier New"
-        )
-    }
     #[cfg(target_os = "linux")]
     {
         matches!(
@@ -2162,7 +2114,7 @@ fn is_system_likely_to_have_font(family: &str) -> bool {
             "DejaVu Sans Mono" | "Liberation Mono" | "Ubuntu Mono"
         )
     }
-    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     {
         let _ = family;
         false
@@ -2766,7 +2718,7 @@ mod tests {
 
     fn unique_temp_root(name: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
-            "poolside-{name}-{}-{}",
+            "camber-{name}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -2786,9 +2738,9 @@ mod tests {
             .arg("-c")
             .arg("commit.gpgsign=false")
             .arg("-c")
-            .arg("user.name=Poolside Test")
+            .arg("user.name=Camber Test")
             .arg("-c")
-            .arg("user.email=test@poolside.local")
+            .arg("user.email=test@camber.local")
             .args(args)
             .output()
             .unwrap();
@@ -2812,48 +2764,48 @@ mod tests {
     #[test]
     fn accepts_browser_external_urls() {
         assert!(validate_external_url("https://api.poolsi.de/auth/login").is_ok());
-        assert!(validate_external_url("mailto:hello@poolside.ai").is_ok());
+        assert!(validate_external_url("mailto:hello@example.com").is_ok());
     }
 
     #[test]
     fn rejects_non_browser_external_urls() {
         assert!(validate_external_url("file:///etc/passwd").is_err());
-        assert!(validate_external_url("poolside://auth/callback").is_err());
+        assert!(validate_external_url("camber://auth/callback").is_err());
     }
 
     #[test]
     fn accepts_file_paths() {
         assert_eq!(
-            validate_file_path("/tmp/poolside.txt").unwrap(),
-            PathBuf::from("/tmp/poolside.txt")
+            validate_file_path("/tmp/camber.txt").unwrap(),
+            PathBuf::from("/tmp/camber.txt")
         );
     }
 
     #[test]
     fn accepts_file_urls() {
         assert_eq!(
-            validate_file_path("file:///tmp/poolside.txt").unwrap(),
-            PathBuf::from("/tmp/poolside.txt")
+            validate_file_path("file:///tmp/camber.txt").unwrap(),
+            PathBuf::from("/tmp/camber.txt")
         );
     }
 
     #[test]
     fn detects_image_mime_types() {
-        assert_eq!(image_mime_type("/tmp/poolside.PNG"), Some("image/png"));
+        assert_eq!(image_mime_type("/tmp/camber.PNG"), Some("image/png"));
         assert_eq!(
-            image_mime_type("file:///tmp/poolside.svg"),
+            image_mime_type("file:///tmp/camber.svg"),
             Some("image/svg+xml")
         );
-        assert_eq!(image_mime_type("/tmp/poolside.txt"), None);
+        assert_eq!(image_mime_type("/tmp/camber.txt"), None);
     }
 
     #[test]
     fn opens_media_files_with_default_app() {
         for path in [
-            "/tmp/poolside.PNG",
-            "/tmp/poolside.pdf",
-            "/tmp/poolside.MP3",
-            "/tmp/poolside.mov",
+            "/tmp/camber.PNG",
+            "/tmp/camber.pdf",
+            "/tmp/camber.MP3",
+            "/tmp/camber.mov",
         ] {
             assert!(should_open_with_default_app(&PathBuf::from(path)), "{path}");
         }
@@ -2862,9 +2814,9 @@ mod tests {
     #[test]
     fn keeps_source_files_on_configured_opener() {
         for path in [
-            "/tmp/poolside.ts",
-            "/tmp/poolside.rs",
-            "/tmp/poolside.md",
+            "/tmp/camber.ts",
+            "/tmp/camber.rs",
+            "/tmp/camber.md",
             "/tmp/Makefile",
         ] {
             assert!(
@@ -2877,7 +2829,7 @@ mod tests {
     #[test]
     fn text_file_command_reads_existing_utf8_file() {
         let path = std::env::temp_dir().join(format!(
-            "poolside-text-file-command-{}.txt",
+            "camber-text-file-command-{}.txt",
             std::process::id()
         ));
         fs::write(&path, "before").unwrap();
@@ -2891,7 +2843,7 @@ mod tests {
     #[test]
     fn text_file_command_rejects_binary_file() {
         let path = std::env::temp_dir().join(format!(
-            "poolside-text-file-command-{}.bin",
+            "camber-text-file-command-{}.bin",
             std::process::id()
         ));
         fs::write(&path, [0, 1, 2, 3]).unwrap();
@@ -2905,7 +2857,7 @@ mod tests {
     #[test]
     fn text_file_command_reads_utf8_file_with_late_nul_byte() {
         let path = std::env::temp_dir().join(format!(
-            "poolside-text-file-command-{}-late-nul.ts",
+            "camber-text-file-command-{}-late-nul.ts",
             std::process::id()
         ));
         let mut contents = "a".repeat(BINARY_SNIFF_BYTES);
@@ -3108,7 +3060,7 @@ mod tests {
             theme_preference_for_menu_id(SET_DARK_THEME_MENU_ID),
             Some(DesktopThemePreference::Dark)
         );
-        assert_eq!(theme_preference_for_menu_id("poolside-other"), None);
+        assert_eq!(theme_preference_for_menu_id("camber-other"), None);
     }
 
     #[test]
@@ -3366,8 +3318,14 @@ mod tests {
     fn strip_opener_icons_clears_both_lists_and_nothing_else() {
         use crate::desktop_openers::test_opener_with_icon;
         let openers = DetectedOpeners {
-            file_openers: vec![test_opener_with_icon("editor", "data:image/png;base64,AAAA")],
-            desktop_openers: vec![test_opener_with_icon("default", "data:image/png;base64,BBBB")],
+            file_openers: vec![test_opener_with_icon(
+                "editor",
+                "data:image/png;base64,AAAA",
+            )],
+            desktop_openers: vec![test_opener_with_icon(
+                "default",
+                "data:image/png;base64,BBBB",
+            )],
         };
         let full = settings_response_with_openers(
             DesktopSettings::default(),
@@ -3433,13 +3391,13 @@ mod tests {
 
     #[test]
     fn rejects_non_directory_paths_for_directory_openers() {
-        assert!(validate_existing_directory_path("/definitely/not/a/poolside/dir").is_err());
+        assert!(validate_existing_directory_path("/definitely/not/a/camber/dir").is_err());
     }
 
     #[test]
     fn open_path_validation_accepts_existing_files_and_directories() {
         let temp_root = std::env::temp_dir().join(format!(
-            "poolside-open-path-validation-{}",
+            "camber-open-path-validation-{}",
             std::process::id()
         ));
         let dir_path = temp_root.join("project");
@@ -3462,7 +3420,7 @@ mod tests {
     #[test]
     fn desktop_file_tree_lists_sorted_relative_paths() {
         let temp_root = std::env::temp_dir().join(format!(
-            "poolside-file-tree-{}-{}",
+            "camber-file-tree-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -3508,7 +3466,7 @@ mod tests {
     #[test]
     fn desktop_file_tree_hides_git_internals() {
         let temp_root = std::env::temp_dir().join(format!(
-            "poolside-file-tree-git-{}-{}",
+            "camber-file-tree-git-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -3549,7 +3507,7 @@ mod tests {
     #[test]
     fn desktop_file_tree_loads_one_directory_level_at_a_time() {
         let temp_root = std::env::temp_dir().join(format!(
-            "poolside-file-tree-deferred-{}-{}",
+            "camber-file-tree-deferred-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -3654,7 +3612,7 @@ mod tests {
     static CONFIG_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     const CONFIG_ENV_VARS: [&str; 4] = [
-        "POOLSIDE_ASSISTANT_CONFIG_PATH",
+        "CAMBER_ASSISTANT_CONFIG_PATH",
         "XDG_CONFIG_HOME",
         "HOME",
         "USERPROFILE",
@@ -3690,11 +3648,7 @@ mod tests {
     }
 
     fn home_env_var() -> &'static str {
-        if cfg!(windows) {
-            "USERPROFILE"
-        } else {
-            "HOME"
-        }
+        "HOME"
     }
 
     #[test]
@@ -3704,7 +3658,7 @@ mod tests {
             .unwrap_or_else(|err| err.into_inner());
         let _guard = ConfigEnvGuard::clear();
 
-        env::set_var("POOLSIDE_ASSISTANT_CONFIG_PATH", "/custom/assistant.json");
+        env::set_var("CAMBER_ASSISTANT_CONFIG_PATH", "/custom/assistant.json");
         env::set_var("XDG_CONFIG_HOME", "/ignored");
         assert_eq!(
             assistant_config_path().unwrap(),
@@ -3712,7 +3666,7 @@ mod tests {
         );
 
         // An empty override falls through to the regular resolution.
-        env::set_var("POOLSIDE_ASSISTANT_CONFIG_PATH", "");
+        env::set_var("CAMBER_ASSISTANT_CONFIG_PATH", "");
         assert_eq!(
             assistant_config_path().unwrap(),
             PathBuf::from("/ignored")
@@ -3809,7 +3763,7 @@ mod tests {
     #[test]
     fn desktop_file_tree_parses_git_status_entries() {
         let context = DesktopFileTreeGitContext {
-            files_root: PathBuf::from("/tmp/poolside-files-root"),
+            files_root: PathBuf::from("/tmp/camber-files-root"),
             worktree_relative_prefix: "project/".to_string(),
         };
         let output = b" M project/modified.txt\0A  project/added.txt\0 D project/deleted.txt\0R  project/renamed.txt\0project/old.txt\0?? project/untracked.txt\0!! project/ignored.log\0 M other/outside.txt\0";
@@ -3923,7 +3877,7 @@ mod tests {
         }
 
         let temp_root = std::env::temp_dir().join(format!(
-            "poolside-file-tree-ignored-{}-{}",
+            "camber-file-tree-ignored-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

@@ -9,7 +9,7 @@ describe("FormModel.fieldGroups", () => {
     return new FormModel(
       { type: "object", properties } as unknown as FormSchema,
       {
-        "poolside/field_order": order,
+        "camber/field_order": order,
       } as never,
     );
   }

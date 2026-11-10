@@ -22,7 +22,7 @@ export type KeybindingHost = "desktop" | "vscode";
 export interface CommandDef {
   /**
    * Stable id. For VS Code this is also the command suffix — the contributed
-   * command is `poolside.<id>` — so ids must match package.json. The union is
+   * command is `camber.<id>` — so ids must match package.json. The union is
    * derived from the registry below (`CommandId`).
    */
   id: CommandId;
@@ -226,7 +226,7 @@ export const COMMAND_BY_ID: ReadonlyMap<CommandId, CommandDef> = new Map(
 
 /** The contributed VS Code command name for a registry id. */
 export function vscodeCommandId(id: CommandId): string {
-  return `poolside.${id}`;
+  return `camber.${id}`;
 }
 
 /** Resolve the default chord for a command on a host, or null when unbound. */

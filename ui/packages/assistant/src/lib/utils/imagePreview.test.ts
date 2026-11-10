@@ -1,4 +1,4 @@
-import { imageFilePathFromUri } from "@poolsideai/components/assistant-ui";
+import { imageFilePathFromUri } from "@camber/components/assistant-ui";
 import { describe, expect, it } from "vitest";
 
 describe("image preview utilities", () => {

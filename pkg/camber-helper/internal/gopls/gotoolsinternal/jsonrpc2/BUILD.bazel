@@ -1,0 +1,38 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "jsonrpc2",
+    srcs = [
+        "conn.go",
+        "handler.go",
+        "jsonrpc2.go",
+        "labels.go",
+        "messages.go",
+        "serve.go",
+        "stream.go",
+        "wire.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/keys",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/label",
+        "@com_github_sourcegraph_jsonrpc2//:jsonrpc2",
+    ],
+)
+
+go_test(
+    name = "jsonrpc2_test",
+    srcs = [
+        "jsonrpc2_test.go",
+        "serve_test.go",
+        "wire_test.go",
+    ],
+    embed = [":jsonrpc2"],
+    deps = [
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/export/eventtest",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/stack/stacktest",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/testenv",
+    ],
+)

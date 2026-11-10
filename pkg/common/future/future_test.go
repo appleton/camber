@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/poolsideai/assistant/pkg/common/future"
+	"github.com/appleton/camber/pkg/common/future"
 )
 
 func TestBasicResolveAndRead(t *testing.T) {

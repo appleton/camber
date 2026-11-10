@@ -1,12 +1,12 @@
 import type { SessionId, SessionInfo, SessionInfoUpdate } from "@agentclientprotocol/sdk";
 
-const SOURCE_META_KEY = "poolside/source";
-const READ_ONLY_META_KEY = "poolside/read_only";
-const CONVERSATION_ID_META_KEY = "poolside/conversation_id";
-const CONVERSATION_KIND_META_KEY = "poolside/conversation_kind";
-const ERROR_MESSAGE_META_KEY = "poolside/error_message";
-const CANCELLATION_REASON_META_KEY = "poolside/cancellation_reason";
-const AGENT_ID_META_KEY = "poolside/agent_id";
+const SOURCE_META_KEY = "camber/source";
+const READ_ONLY_META_KEY = "camber/read_only";
+const CONVERSATION_ID_META_KEY = "camber/conversation_id";
+const CONVERSATION_KIND_META_KEY = "camber/conversation_kind";
+const ERROR_MESSAGE_META_KEY = "camber/error_message";
+const CANCELLATION_REASON_META_KEY = "camber/cancellation_reason";
+const AGENT_ID_META_KEY = "camber/agent_id";
 
 export type ACPSessionSource = "native_session" | "conversation" | "unknown";
 

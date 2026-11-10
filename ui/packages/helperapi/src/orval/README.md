@@ -7,5 +7,5 @@ in `clientHelpers.ts`.
 Regenerate the bindings from the repository root:
 
 ```sh
-pnpm -F @poolsideai/helperapi codegen
+pnpm -F @camber/helperapi codegen
 ```

@@ -1,5 +1,5 @@
 import type { ContentBlock } from "@agentclientprotocol/sdk";
-import { waiting } from "@poolsideai/lib/async-state";
+import { waiting } from "@camber/lib/async-state";
 import { createContext } from "svelte";
 import { DEFAULT_AGENT_SERVER } from "../agentServers";
 import { SessionEventsState, type ToolActivityMode } from "../components/SessionEventsState.svelte";
@@ -159,7 +159,7 @@ export class ACPChatSessionScopeWriter {
   // desktop watches, or vice versa) is invisible to the local prompt
   // lifecycle: isPrompting only tracks prompts sent from this surface. The
   // helper marks the conversation working for the whole turn and broadcasts
-  // it to every surface via poolside/acpNav/didChange, so that pushed live
+  // it to every surface via camber/acpNav/didChange, so that pushed live
   // status is the only signal that a remote-origin turn is in flight.
   get isRemoteWorking() {
     if (this.isPrompting || this.isSending) return false;

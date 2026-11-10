@@ -143,7 +143,7 @@ describe("desktop service", () => {
 
 describe("delegated (vscode) service", () => {
   it("returns no binding dispatch and prefers host-resolved hints", () => {
-    const hints: Record<string, string | undefined> = { "poolside.togglePlanMode": "⇧⇥" };
+    const hints: Record<string, string | undefined> = { "camber.togglePlanMode": "⇧⇥" };
     const kb = createDelegatedKeybindingService({ platform: "mac", getHostHints: () => hints });
 
     const handler = vi.fn();

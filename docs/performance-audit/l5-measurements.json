@@ -14,7 +14,7 @@
     "The upgrade starts at schema 20260518120000 with 10,000 conversations and verifies all survive.",
     "The first after trial overlapped a race build and was discarded. Final reported trials run without parallel verification work.",
     "Install repair was already asynchronous in the original audited source. No speedup or new readiness stage is claimed.",
-    "Temporary paths/configuration isolate fixtures; a custom poolside agent entry prevents registry/network repair or agent launches.",
+    "Temporary paths/configuration isolate fixtures; a custom camber agent entry prevents registry/network repair or agent launches.",
     "Final results use three alternating before/after pairs, 20 iterations per sample, with both original production files restored to the final implementation in a finally block. Earlier sequential samples remain as preliminaryRows and are not used to estimate instrumentation overhead."
   ],
   "preliminaryRows": [

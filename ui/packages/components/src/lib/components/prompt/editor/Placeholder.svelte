@@ -2,7 +2,7 @@
   import type { HTMLAttributes } from "svelte/elements";
   import { getPrompt } from "../context/prompt.js";
   import type { Snippet } from "svelte";
-  import { cn } from "@poolsideai/tailwind-config/tv";
+  import { cn } from "@camber/tailwind-config/tv";
 
   interface Props extends HTMLAttributes<HTMLParagraphElement> {
     children?: Snippet;

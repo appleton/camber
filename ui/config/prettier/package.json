@@ -1,5 +1,5 @@
 {
-  "name": "@poolsideai/prettier-config",
+  "name": "@camber/prettier-config",
   "version": "2.3.53",
   "private": true,
   "description": "Common prettier configuration",
@@ -16,7 +16,7 @@
       "prettier --ignore-unknown --write"
     ]
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "dependencies": {
     "prettier-plugin-organize-imports": "^4.1.0",
     "prettier-plugin-packagejson": "^2.5.19",

@@ -7,7 +7,7 @@
 
 export type DiffLayout = "unified" | "split";
 
-const STORAGE_KEY = "poolside.diffLayout";
+const STORAGE_KEY = "camber.diffLayout";
 
 function loadInitial(): DiffLayout {
   try {

@@ -161,7 +161,7 @@
     <div class="flex items-start gap-2">
       <Button {...args}>
         {#snippet child({ props })}
-          <a href="https://poolside.ai" {...props}>Link</a>
+          <a href="https://github.com/appleton/camber" {...props}>Link</a>
         {/snippet}
       </Button>
     </div>

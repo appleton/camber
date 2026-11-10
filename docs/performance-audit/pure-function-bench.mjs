@@ -1,5 +1,5 @@
 // Synthetic CPU scaling probe; these are Node/V8 timings, not UI frame timings.
-// Build @poolsideai/components first, then run with node from any directory.
+// Build @camber/components first, then run with node from any directory.
 import {
   chunkSettledMarkdown,
   segmentStreamingMarkdown,

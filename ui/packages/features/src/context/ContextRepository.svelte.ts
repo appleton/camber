@@ -1,6 +1,6 @@
 import type { ContentBlock } from "@agentclientprotocol/sdk";
-import { basename } from "@poolsideai/lib/path";
-import type { AttachedFile, AttachedUrl } from "@poolsideai/rpc";
+import { basename } from "@camber/lib/path";
+import type { AttachedFile, AttachedUrl } from "@camber/rpc";
 import { chain, concat } from "lodash";
 
 interface AttachedUrlState extends AttachedUrl {

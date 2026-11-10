@@ -95,13 +95,13 @@ describe("withClaudeAppendSystemPrompt", () => {
           },
           other: true,
         },
-        "Poolside context",
+        "Camber context",
       ),
     ).toEqual({
       claudeCode: {
         options: {
           effort: "high",
-          appendSystemPrompt: "Existing context\n\nPoolside context",
+          appendSystemPrompt: "Existing context\n\nCamber context",
         },
       },
       other: true,

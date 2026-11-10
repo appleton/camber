@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
-  import type { VSCodeMcpServer } from "@poolsideai/rpc";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
+  import type { VSCodeMcpServer } from "@camber/rpc";
   import { rpc } from "../hostRpc";
   import { getUserMCPServersRepo } from "../features/UserMCPServersRepository.svelte";
   import { getACPMCPSettingsRepo } from "../features/MCPSettingsRepository.context";
@@ -62,9 +62,9 @@
   // The pool injects MCP servers per-session. We must spin up (or reuse) a
   // settings-capable session and fetch its servers, otherwise this list is
   // empty. Mirrors the trigger logic the old prompt menu used.
-  // Only relevant when the active agent is the Poolside agent.
+  // Only relevant when the active agent is the Camber agent.
   let isPoolAgent = $derived(sessionRepo?.isActiveAgentPool() ?? false);
-  // Whether the active Poolside model allows user/custom MCP servers. This is
+  // Whether the active Camber model allows user/custom MCP servers. This is
   // per-model, and the live chat session is the only place that knows it. IDE
   // sidebars receive the authoritative value broadcast by their chat panel;
   // desktop can read it from the active session-backed settings repository.
@@ -92,7 +92,7 @@
     if (customMcpBlocked) {
       return {
         title: "Custom connectors are off for this agent",
-        body: "This Poolside agent has custom MCP servers disabled, so your connectors won't run here. Ask an admin to enable it, or switch agents.",
+        body: "This Camber agent has custom MCP servers disabled, so your connectors won't run here. Ask an admin to enable it, or switch agents.",
       };
     }
     if (agentMcpUnsupported) {
@@ -241,18 +241,18 @@
       onPick={(form) => openAddForm(form)}
     />
 
-    <!-- Poolside connectors (only when the active agent is Poolside) -->
+    <!-- Camber connectors (only when the active agent is Camber) -->
     {#if sessionRepo && isPoolAgent}
       <div class="flex flex-col gap-1.5">
         <div class="flex items-center justify-between px-0.5">
           <div class="flex items-center gap-1">
             <h3 class="text-psx-foreground-primary text-xs font-semibold uppercase tracking-wide">
-              Poolside connectors
+              Camber connectors
             </h3>
             <HintTooltip
-              text="MCP servers the Poolside agent provides. Enabling or disabling one applies globally, across all your Poolside chats."
+              text="MCP servers the Camber agent provides. Enabling or disabling one applies globally, across all your Camber chats."
             >
-              <span class="text-psx-icon flex items-center" aria-label="About Poolside connectors">
+              <span class="text-psx-icon flex items-center" aria-label="About Camber connectors">
                 <Icon name="info" size={12} />
               </span>
             </HintTooltip>
@@ -279,7 +279,7 @@
           <div
             class="border-psx-border bg-psx-panel text-psx-foreground-secondary rounded-lg border px-3 py-3 text-[13px]/[18px]"
           >
-            No connectors from the Poolside agent.
+            No connectors from the Camber agent.
           </div>
         {:else}
           {#if remotePool.length > 0}

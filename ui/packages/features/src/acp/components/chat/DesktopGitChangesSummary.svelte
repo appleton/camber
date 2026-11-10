@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { slide } from "svelte/transition";
   import { cubicInOut } from "svelte/easing";
   import DiffLineCount from "./DiffLineCount.svelte";

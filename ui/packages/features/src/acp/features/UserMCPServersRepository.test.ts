@@ -1,4 +1,4 @@
-import { initializeStatefulModule as initializeHelperApi } from "@poolsideai/helperapi";
+import { initializeStatefulModule as initializeHelperApi } from "@camber/helperapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UserMCPServersRepository } from "./UserMCPServersRepository.svelte";
 
@@ -16,7 +16,7 @@ function deferred<T>() {
 
 beforeEach(() => {
   helperJsonrpcCall = vi.fn(async (method: string) => {
-    if (method === "poolside/mcpServers/list") return { servers: [] };
+    if (method === "camber/mcpServers/list") return { servers: [] };
     return {};
   });
   initializeHelperApi({
@@ -58,7 +58,7 @@ describe("UserMCPServersRepository", () => {
     const secondSave = deferred<Record<string, never>>();
     const writes: boolean[] = [];
     helperJsonrpcCall.mockImplementation(async (method: string, params?: unknown) => {
-      if (method === "poolside/mcpServers/setEnabled") {
+      if (method === "camber/mcpServers/setEnabled") {
         writes.push((params as { enabled: boolean }).enabled);
         return await (writes.length === 1 ? firstSave.promise : secondSave.promise);
       }
@@ -89,7 +89,7 @@ describe("UserMCPServersRepository", () => {
     const secondSave = deferred<Record<string, never>>();
     const writes: boolean[] = [];
     helperJsonrpcCall.mockImplementation(async (method: string, params?: unknown) => {
-      if (method === "poolside/mcpServers/setEnabled") {
+      if (method === "camber/mcpServers/setEnabled") {
         writes.push((params as { enabled: boolean }).enabled);
         return await (writes.length === 1 ? firstSave.promise : secondSave.promise);
       }
@@ -115,7 +115,7 @@ describe("UserMCPServersRepository", () => {
   it("reconciles local OAuth state when the helper invalidates a credential", async () => {
     let oauthAuthenticated = true;
     helperJsonrpcCall.mockImplementation(async (method: string) => {
-      if (method === "poolside/mcpServers/list") {
+      if (method === "camber/mcpServers/list") {
         return {
           servers: [
             {
@@ -144,8 +144,8 @@ describe("UserMCPServersRepository", () => {
 
   it("records a readable error when a late OAuth callback rejects authenticate()", async () => {
     helperJsonrpcCall.mockImplementation(async (method: string) => {
-      if (method === "poolside/mcpServers/list") return { servers: [] };
-      if (method === "poolside/mcpServers/authenticate") {
+      if (method === "camber/mcpServers/list") return { servers: [] };
+      if (method === "camber/mcpServers/authenticate") {
         throw new Error("no pending OAuth flow matches the callback state");
       }
       return {};

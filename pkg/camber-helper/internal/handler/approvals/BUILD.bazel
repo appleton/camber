@@ -1,0 +1,25 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "approvals",
+    srcs = ["store.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/handler/approvals",
+    visibility = ["//pkg/camber-helper:__subpackages__"],
+    deps = [
+        "//pkg/acp",
+        "//pkg/camber-helper/methods",
+        "@com_github_coder_acp_go_sdk//:acp-go-sdk",
+    ],
+)
+
+go_test(
+    name = "approvals_test",
+    srcs = ["store_test.go"],
+    embed = [":approvals"],
+    deps = [
+        "//pkg/camber-helper/methods",
+        "@com_github_coder_acp_go_sdk//:acp-go-sdk",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)

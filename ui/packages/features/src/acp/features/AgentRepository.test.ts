@@ -1,6 +1,6 @@
 import type { SessionConfigOption, SessionNotification } from "@agentclientprotocol/sdk";
-import type { LocalInferenceModel, LocalInferenceState } from "@poolsideai/helperapi/schemas";
-import type { ACPAgentServers } from "@poolsideai/rpc";
+import type { LocalInferenceModel, LocalInferenceState } from "@camber/helperapi/schemas";
+import type { ACPAgentServers } from "@camber/rpc";
 import { get } from "svelte/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACP_AUTH_REQUIRED_ERROR_CODE } from "../authMethods";
@@ -9,13 +9,13 @@ import { appState, type AppState } from "../hostAdapter";
 import { ACPAgentRepository } from "./AgentRepository.svelte";
 import { applyDefaultConfigOptions } from "./session/configOptions";
 
-vi.mock("@poolsideai/helperapi", () => ({
+vi.mock("@camber/helperapi", () => ({
   initializeStatefulModule: vi.fn(),
-  poolsideAcpNavGetConfigCache: vi.fn(),
-  poolsideAcpNavListAgentServers: vi.fn(),
-  poolsideAcpNavSetAgentServers: vi.fn(),
-  poolsideAcpNavUpsertConfigCache: vi.fn(async () => ({ entry: null })),
-  poolsideAcpSessionClose: vi.fn(async () => ({})),
+  camberAcpNavGetConfigCache: vi.fn(),
+  camberAcpNavListAgentServers: vi.fn(),
+  camberAcpNavSetAgentServers: vi.fn(),
+  camberAcpNavUpsertConfigCache: vi.fn(async () => ({ entry: null })),
+  camberAcpSessionClose: vi.fn(async () => ({})),
 }));
 
 describe("ACPAgentRepository", () => {
@@ -46,8 +46,8 @@ describe("ACPAgentRepository", () => {
   });
 
   it("mirrors a last-used selection into the defaults before the store write lands, then keeps the saved state", async () => {
-    const { poolsideAcpNavListAgentServers, poolsideAcpNavSetAgentServers } = await import(
-      "@poolsideai/helperapi"
+    const { camberAcpNavListAgentServers, camberAcpNavSetAgentServers } = await import(
+      "@camber/helperapi"
     );
     const initialAgentServers = {
       poolside: { default_config_options: { approvalMode: "agent" } },
@@ -56,11 +56,11 @@ describe("ACPAgentRepository", () => {
       ...state,
       userSettings: { ...state.userSettings, acpAgentServers: initialAgentServers },
     }));
-    vi.mocked(poolsideAcpNavListAgentServers).mockResolvedValue({
+    vi.mocked(camberAcpNavListAgentServers).mockResolvedValue({
       agentServers: initialAgentServers,
     });
     let save: (value: { agentServers: typeof initialAgentServers }) => void = () => {};
-    vi.mocked(poolsideAcpNavSetAgentServers).mockImplementation(
+    vi.mocked(camberAcpNavSetAgentServers).mockImplementation(
       () =>
         new Promise((resolve) => {
           save = resolve;
@@ -76,7 +76,7 @@ describe("ACPAgentRepository", () => {
     await vi.waitFor(() =>
       expect(repo.defaultConfigOptionsFor("poolside")).toEqual({ approvalMode: "read-only" }),
     );
-    await vi.waitFor(() => expect(poolsideAcpNavSetAgentServers).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(camberAcpNavSetAgentServers).toHaveBeenCalledOnce());
 
     const savedAgentServers = {
       poolside: { default_config_options: { approvalMode: "read-only" } },
@@ -90,8 +90,8 @@ describe("ACPAgentRepository", () => {
   });
 
   it("restores the previous default when a last-used persist fails", async () => {
-    const { poolsideAcpNavListAgentServers, poolsideAcpNavSetAgentServers } = await import(
-      "@poolsideai/helperapi"
+    const { camberAcpNavListAgentServers, camberAcpNavSetAgentServers } = await import(
+      "@camber/helperapi"
     );
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
@@ -102,10 +102,10 @@ describe("ACPAgentRepository", () => {
         ...state,
         userSettings: { ...state.userSettings, acpAgentServers: initialAgentServers },
       }));
-      vi.mocked(poolsideAcpNavListAgentServers).mockResolvedValue({
+      vi.mocked(camberAcpNavListAgentServers).mockResolvedValue({
         agentServers: initialAgentServers,
       });
-      vi.mocked(poolsideAcpNavSetAgentServers).mockRejectedValue(new Error("save failed"));
+      vi.mocked(camberAcpNavSetAgentServers).mockRejectedValue(new Error("save failed"));
       const repo = new ACPAgentRepository();
       repo.configureAgentServers(["poolside"], "poolside");
 
@@ -121,8 +121,8 @@ describe("ACPAgentRepository", () => {
   });
 
   it("persists explicit selections as the agent's last-used values, serialized in order", async () => {
-    const { poolsideAcpNavListAgentServers, poolsideAcpNavSetAgentServers } = await import(
-      "@poolsideai/helperapi"
+    const { camberAcpNavListAgentServers, camberAcpNavSetAgentServers } = await import(
+      "@camber/helperapi"
     );
     // Stateful store double: each list read reflects the previous write, as
     // the helper's does. The persist queue serializes list-then-set round
@@ -130,10 +130,10 @@ describe("ACPAgentRepository", () => {
     let stored: Record<string, { default_config_options?: Record<string, string> }> = {
       poolside: {},
     };
-    vi.mocked(poolsideAcpNavListAgentServers).mockImplementation(async () => ({
+    vi.mocked(camberAcpNavListAgentServers).mockImplementation(async () => ({
       agentServers: stored,
     }));
-    vi.mocked(poolsideAcpNavSetAgentServers).mockImplementation(async (params) => {
+    vi.mocked(camberAcpNavSetAgentServers).mockImplementation(async (params) => {
       stored = params.agentServers as typeof stored;
       return { agentServers: stored };
     });
@@ -164,21 +164,21 @@ describe("ACPAgentRepository", () => {
   }
 
   async function mockInterleavedStore(): Promise<InterleaveStore> {
-    const { poolsideAcpNavListAgentServers, poolsideAcpNavSetAgentServers } = await import(
-      "@poolsideai/helperapi"
+    const { camberAcpNavListAgentServers, camberAcpNavSetAgentServers } = await import(
+      "@camber/helperapi"
     );
     const store: InterleaveStore = {
       stored: { poolside: {}, "claude-acp": {} },
       storedDefault: undefined,
       releases: [],
     };
-    vi.mocked(poolsideAcpNavListAgentServers).mockImplementation(async () => ({
+    vi.mocked(camberAcpNavListAgentServers).mockImplementation(async () => ({
       agentServers: store.stored,
       defaultAgentServer: store.storedDefault,
     }));
     // Each set blocks until the test releases it, committing to the store
     // only then — so the test controls exactly when each write lands.
-    vi.mocked(poolsideAcpNavSetAgentServers).mockImplementation(
+    vi.mocked(camberAcpNavSetAgentServers).mockImplementation(
       (params) =>
         new Promise((resolve) => {
           store.releases.push(() => {
@@ -251,7 +251,7 @@ describe("ACPAgentRepository", () => {
     repo.recordUserConfigSelection("poolside", "model", "opus");
     // ...while the settings panel saves from a snapshot taken before that
     // landed: it removes claude-acp, adds codex-acp, and its stale copy of
-    // poolside still carries the old defaults.
+    // camber still carries the old defaults.
     const hostSet = vi.fn(async (agentServers: ACPAgentServers) => {
       store.stored = agentServers as InterleaveStore["stored"];
     });
@@ -285,7 +285,7 @@ describe("ACPAgentRepository", () => {
   });
 
   it("skips the last-used persist when the stored value already matches", async () => {
-    const { poolsideAcpNavSetAgentServers } = await import("@poolsideai/helperapi");
+    const { camberAcpNavSetAgentServers } = await import("@camber/helperapi");
     const repo = new ACPAgentRepository();
     repo.defaultConfigOptionsByAgentServer = { poolside: { model: "opus" } };
 
@@ -293,13 +293,13 @@ describe("ACPAgentRepository", () => {
 
     // Let the persist queue drain before asserting nothing was written.
     await flushMicrotasks();
-    expect(poolsideAcpNavSetAgentServers).not.toHaveBeenCalled();
+    expect(camberAcpNavSetAgentServers).not.toHaveBeenCalled();
     expect(repo.userConfigSelectionsFor("poolside").get("model")).toBe("opus");
   });
 
   it("records but never persists selections flagged persist: false", async () => {
-    const { poolsideAcpNavListAgentServers, poolsideAcpNavSetAgentServers } = await import(
-      "@poolsideai/helperapi"
+    const { camberAcpNavListAgentServers, camberAcpNavSetAgentServers } = await import(
+      "@camber/helperapi"
     );
     const repo = new ACPAgentRepository();
     repo.configureAgentServers(["poolside"], "poolside");
@@ -309,21 +309,21 @@ describe("ACPAgentRepository", () => {
     repo.recordUserConfigSelection("poolside", "permission_mode", "yolo", { persist: false });
 
     await flushMicrotasks();
-    expect(poolsideAcpNavListAgentServers).not.toHaveBeenCalled();
-    expect(poolsideAcpNavSetAgentServers).not.toHaveBeenCalled();
+    expect(camberAcpNavListAgentServers).not.toHaveBeenCalled();
+    expect(camberAcpNavSetAgentServers).not.toHaveBeenCalled();
     expect(repo.userConfigSelectionsFor("poolside").get("permission_mode")).toBe("yolo");
   });
 
   it("logs and keeps going when a last-used persist fails", async () => {
-    const { poolsideAcpNavListAgentServers, poolsideAcpNavSetAgentServers } = await import(
-      "@poolsideai/helperapi"
+    const { camberAcpNavListAgentServers, camberAcpNavSetAgentServers } = await import(
+      "@camber/helperapi"
     );
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
-      vi.mocked(poolsideAcpNavListAgentServers).mockResolvedValue({
+      vi.mocked(camberAcpNavListAgentServers).mockResolvedValue({
         agentServers: { poolside: {} },
       });
-      vi.mocked(poolsideAcpNavSetAgentServers)
+      vi.mocked(camberAcpNavSetAgentServers)
         .mockRejectedValueOnce(new Error("save failed"))
         .mockImplementation(async (params) => ({ agentServers: params.agentServers }));
       const repo = new ACPAgentRepository();
@@ -360,8 +360,8 @@ describe("ACPAgentRepository", () => {
   // Stateful store double with pin support: each list read reflects the
   // previous write, and the pin flag serializes Go-style (omitted when false).
   async function mockPinnedStore(initial: PinnedStore["stored"]): Promise<PinnedStore> {
-    const { poolsideAcpNavListAgentServers, poolsideAcpNavSetAgentServers } = await import(
-      "@poolsideai/helperapi"
+    const { camberAcpNavListAgentServers, camberAcpNavSetAgentServers } = await import(
+      "@camber/helperapi"
     );
     const store: PinnedStore = { stored: initial, storedDefault: undefined, storedPinned: false };
     const state = () => ({
@@ -369,8 +369,8 @@ describe("ACPAgentRepository", () => {
       defaultAgentServer: store.storedDefault,
       default_agent_server_pinned: store.storedPinned ? true : undefined,
     });
-    vi.mocked(poolsideAcpNavListAgentServers).mockImplementation(async () => state());
-    vi.mocked(poolsideAcpNavSetAgentServers).mockImplementation(async (params) => {
+    vi.mocked(camberAcpNavListAgentServers).mockImplementation(async () => state());
+    vi.mocked(camberAcpNavSetAgentServers).mockImplementation(async (params) => {
       store.stored = params.agentServers as PinnedStore["stored"];
       if (params.defaultAgentServer !== undefined) {
         store.storedDefault = params.defaultAgentServer;
@@ -384,7 +384,7 @@ describe("ACPAgentRepository", () => {
   }
 
   it("pins a config option: one queued write carries the default value and the pin", async () => {
-    const { poolsideAcpNavSetAgentServers } = await import("@poolsideai/helperapi");
+    const { camberAcpNavSetAgentServers } = await import("@camber/helperapi");
     const store = await mockPinnedStore({
       poolside: { default_config_options: { model: "haiku" } },
     });
@@ -401,7 +401,7 @@ describe("ACPAgentRepository", () => {
     expect(store.stored.poolside.default_config_options).toEqual({ model: "opus" });
     expect(store.stored.poolside.pinned_config_options).toEqual(["model"]);
     // The value and the membership landed in ONE set, not two round trips.
-    expect(poolsideAcpNavSetAgentServers).toHaveBeenCalledTimes(1);
+    expect(camberAcpNavSetAgentServers).toHaveBeenCalledTimes(1);
     expect(repo.isPinnedConfigOption("poolside", "model")).toBe(true);
   });
 
@@ -508,13 +508,13 @@ describe("ACPAgentRepository", () => {
   });
 
   it("restores the optimistic pin mirrors when the persist fails", async () => {
-    const { poolsideAcpNavListAgentServers, poolsideAcpNavSetAgentServers } = await import(
-      "@poolsideai/helperapi"
+    const { camberAcpNavListAgentServers, camberAcpNavSetAgentServers } = await import(
+      "@camber/helperapi"
     );
-    vi.mocked(poolsideAcpNavListAgentServers).mockResolvedValue({
+    vi.mocked(camberAcpNavListAgentServers).mockResolvedValue({
       agentServers: { poolside: {} },
     });
-    vi.mocked(poolsideAcpNavSetAgentServers).mockRejectedValue(new Error("save failed"));
+    vi.mocked(camberAcpNavSetAgentServers).mockRejectedValue(new Error("save failed"));
     const repo = new ACPAgentRepository();
     repo.configureAgentServers(["poolside"], "poolside");
 
@@ -527,7 +527,7 @@ describe("ACPAgentRepository", () => {
   });
 
   it("skips the last-used follow for a pinned key, read fresh from the store at dequeue", async () => {
-    const { poolsideAcpNavSetAgentServers } = await import("@poolsideai/helperapi");
+    const { camberAcpNavSetAgentServers } = await import("@camber/helperapi");
     const store = await mockPinnedStore({
       poolside: { default_config_options: { model: "opus" }, pinned_config_options: ["model"] },
     });
@@ -548,7 +548,7 @@ describe("ACPAgentRepository", () => {
     await flushMicrotasks();
 
     // Nothing was written: the pinned key keeps its value on disk...
-    expect(poolsideAcpNavSetAgentServers).not.toHaveBeenCalled();
+    expect(camberAcpNavSetAgentServers).not.toHaveBeenCalled();
     expect(store.stored.poolside.default_config_options).toEqual({ model: "opus" });
     // ...while the in-memory per-run selection still recorded.
     expect(repo.userConfigSelectionsFor("poolside").get("model")).toBe("sonnet");
@@ -628,7 +628,7 @@ describe("ACPAgentRepository", () => {
   });
 
   it("skips a queued last-used agent write when the store's pin was set behind the mirror's back", async () => {
-    const { poolsideAcpNavSetAgentServers } = await import("@poolsideai/helperapi");
+    const { camberAcpNavSetAgentServers } = await import("@camber/helperapi");
     const store = await mockPinnedStore({ poolside: {}, "claude-acp": {} });
     // Another window pinned claude-acp; this repository's mirror never saw
     // it, so the caller-side gate (rememberLastUsedAgent) cannot help.
@@ -641,7 +641,7 @@ describe("ACPAgentRepository", () => {
     const res = await repo.setDefaultAgentServer("poolside");
 
     // Nothing was written: the pinned default stays put on disk...
-    expect(poolsideAcpNavSetAgentServers).not.toHaveBeenCalled();
+    expect(camberAcpNavSetAgentServers).not.toHaveBeenCalled();
     expect(store.storedDefault).toBe("claude-acp");
     // ...and the stale mirrors heal to the store's fresh state.
     expect(repo.defaultAgentServer).toBe("claude-acp");
@@ -659,13 +659,13 @@ describe("ACPAgentRepository", () => {
   });
 
   it("restores the default-agent mirrors when the pin persist fails", async () => {
-    const { poolsideAcpNavListAgentServers, poolsideAcpNavSetAgentServers } = await import(
-      "@poolsideai/helperapi"
+    const { camberAcpNavListAgentServers, camberAcpNavSetAgentServers } = await import(
+      "@camber/helperapi"
     );
-    vi.mocked(poolsideAcpNavListAgentServers).mockResolvedValue({
+    vi.mocked(camberAcpNavListAgentServers).mockResolvedValue({
       agentServers: { poolside: {}, "claude-acp": {} },
     });
-    vi.mocked(poolsideAcpNavSetAgentServers).mockRejectedValue(new Error("save failed"));
+    vi.mocked(camberAcpNavSetAgentServers).mockRejectedValue(new Error("save failed"));
     const repo = new ACPAgentRepository();
     repo.configureAgentServers(["poolside", "claude-acp"], "poolside");
 
@@ -849,7 +849,7 @@ describe("ACPAgentRepository", () => {
           protocolVersion: 1,
           agentCapabilities: {},
           authMethods: [],
-          agentInfo: { name: "pool", title: "Poolside", version: "0.3.20" },
+          agentInfo: { name: "pool", title: "Camber", version: "0.3.20" },
         },
       }),
     });
@@ -876,8 +876,8 @@ describe("ACPAgentRepository", () => {
   });
 
   it("persists agentInfo on refresh and serves it from the store in a fresh repository", async () => {
-    const { poolsideAcpNavGetConfigCache, poolsideAcpNavUpsertConfigCache } = await import(
-      "@poolsideai/helperapi"
+    const { camberAcpNavGetConfigCache, camberAcpNavUpsertConfigCache } = await import(
+      "@camber/helperapi"
     );
     const repo = new ACPAgentRepository();
     repo.setConnectionPool({
@@ -889,25 +889,25 @@ describe("ACPAgentRepository", () => {
           protocolVersion: 1,
           agentCapabilities: {},
           authMethods: [],
-          agentInfo: { name: "pool", title: "Poolside", version: "0.3.20" },
+          agentInfo: { name: "pool", title: "Camber", version: "0.3.20" },
         },
       }),
     });
-    vi.mocked(poolsideAcpNavUpsertConfigCache).mockImplementationOnce(async (params) => ({
+    vi.mocked(camberAcpNavUpsertConfigCache).mockImplementationOnce(async (params) => ({
       entry: { ...params, cachedAt: "2026-07-10T00:00:00.000Z" },
     }));
 
     await repo.refreshCachedConfig("poolside", "/");
 
-    expect(poolsideAcpNavUpsertConfigCache).toHaveBeenCalledWith(
+    expect(camberAcpNavUpsertConfigCache).toHaveBeenCalledWith(
       expect.objectContaining({
         agentServer: "poolside",
-        agentInfo: { name: "pool", title: "Poolside", version: "0.3.20" },
+        agentInfo: { name: "pool", title: "Camber", version: "0.3.20" },
       }),
     );
 
-    const persisted = vi.mocked(poolsideAcpNavUpsertConfigCache).mock.calls[0][0];
-    vi.mocked(poolsideAcpNavGetConfigCache).mockResolvedValueOnce({
+    const persisted = vi.mocked(camberAcpNavUpsertConfigCache).mock.calls[0][0];
+    vi.mocked(camberAcpNavGetConfigCache).mockResolvedValueOnce({
       entry: { ...persisted, cachedAt: "2026-07-10T00:00:00.000Z" },
     });
 
@@ -919,7 +919,7 @@ describe("ACPAgentRepository", () => {
   it("re-probes a stale config probe and closes the superseded probe session after a drain delay", async () => {
     vi.useFakeTimers({ toFake: ["Date", "setTimeout"] });
     try {
-      const { poolsideAcpSessionClose } = await import("@poolsideai/helperapi");
+      const { camberAcpSessionClose } = await import("@camber/helperapi");
       const newSession = vi
         .fn()
         .mockResolvedValueOnce({ sessionId: "probe-1", configOptions: [] })
@@ -939,16 +939,16 @@ describe("ACPAgentRepository", () => {
       await repo.ensureConfigProbe("poolside", "/");
       await repo.ensureConfigProbe("poolside", "/");
       expect(newSession).toHaveBeenCalledTimes(1);
-      expect(poolsideAcpSessionClose).not.toHaveBeenCalled();
+      expect(camberAcpSessionClose).not.toHaveBeenCalled();
 
       vi.setSystemTime(Date.now() + 11 * 60 * 1000);
       await repo.ensureConfigProbe("poolside", "/");
       expect(newSession).toHaveBeenCalledTimes(2);
       expect(repo.configProbeSessionIdsByAgentServer.poolside).toBe("probe-2");
       // The close waits out the drain window for in-flight probe-bound RPCs.
-      expect(poolsideAcpSessionClose).not.toHaveBeenCalled();
+      expect(camberAcpSessionClose).not.toHaveBeenCalled();
       vi.advanceTimersByTime(60 * 1000);
-      expect(poolsideAcpSessionClose).toHaveBeenCalledWith({
+      expect(camberAcpSessionClose).toHaveBeenCalledWith({
         agentServer: "poolside",
         sessionId: "probe-1",
       });
@@ -1039,7 +1039,7 @@ describe("ACPAgentRepository", () => {
   it("closes a forgotten probe session so a raced recovery cannot leak it", async () => {
     vi.useFakeTimers({ toFake: ["Date", "setTimeout"] });
     try {
-      const { poolsideAcpSessionClose } = await import("@poolsideai/helperapi");
+      const { camberAcpSessionClose } = await import("@camber/helperapi");
       const newSession = vi.fn().mockResolvedValue({ sessionId: "probe-1", configOptions: [] });
       const repo = new ACPAgentRepository();
       repo.setConnectionPool({
@@ -1054,9 +1054,9 @@ describe("ACPAgentRepository", () => {
       expect(repo.configProbeSessionIdsByAgentServer.poolside).toBeUndefined();
 
       // Drained first: another surface may still be mid-RPC on this id.
-      expect(poolsideAcpSessionClose).not.toHaveBeenCalled();
+      expect(camberAcpSessionClose).not.toHaveBeenCalled();
       vi.advanceTimersByTime(60 * 1000);
-      expect(poolsideAcpSessionClose).toHaveBeenCalledWith({
+      expect(camberAcpSessionClose).toHaveBeenCalledWith({
         agentServer: "poolside",
         sessionId: "probe-1",
       });
@@ -1082,9 +1082,9 @@ describe("ACPAgentRepository", () => {
   });
 
   it("keeps a concurrent cache write instead of clobbering it with a stale upsert echo", async () => {
-    const { poolsideAcpNavUpsertConfigCache } = await import("@poolsideai/helperapi");
+    const { camberAcpNavUpsertConfigCache } = await import("@camber/helperapi");
     let releaseEcho = () => {};
-    vi.mocked(poolsideAcpNavUpsertConfigCache).mockImplementationOnce(
+    vi.mocked(camberAcpNavUpsertConfigCache).mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           releaseEcho = () => resolve({});
@@ -1114,7 +1114,7 @@ describe("ACPAgentRepository", () => {
   });
 
   it("keeps freshly probed definitions when a picker write lands mid-persist", async () => {
-    const { poolsideAcpNavUpsertConfigCache } = await import("@poolsideai/helperapi");
+    const { camberAcpNavUpsertConfigCache } = await import("@camber/helperapi");
     const modelOption = (currentValue: string, values: string[]) => ({
       id: "model",
       type: "select" as const,
@@ -1124,7 +1124,7 @@ describe("ACPAgentRepository", () => {
       currentValue,
     });
     let releaseEcho = () => {};
-    vi.mocked(poolsideAcpNavUpsertConfigCache).mockImplementationOnce(
+    vi.mocked(camberAcpNavUpsertConfigCache).mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           releaseEcho = () => resolve({});
@@ -1170,7 +1170,7 @@ describe("ACPAgentRepository", () => {
   });
 
   it("keeps a concurrent picker selection when reasserting probed definitions", async () => {
-    const { poolsideAcpNavUpsertConfigCache } = await import("@poolsideai/helperapi");
+    const { camberAcpNavUpsertConfigCache } = await import("@camber/helperapi");
     const modelOption = (currentValue: string, values: string[]) => ({
       id: "model",
       type: "select" as const,
@@ -1180,7 +1180,7 @@ describe("ACPAgentRepository", () => {
       currentValue,
     });
     let releaseEcho = () => {};
-    vi.mocked(poolsideAcpNavUpsertConfigCache).mockImplementationOnce(
+    vi.mocked(camberAcpNavUpsertConfigCache).mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           releaseEcho = () => resolve({});
@@ -1541,7 +1541,7 @@ describe("ACPAgentRepository", () => {
   });
 
   it("merges downloaded local inference models into the cached model config option", async () => {
-    const { poolsideAcpNavUpsertConfigCache } = await import("@poolsideai/helperapi");
+    const { camberAcpNavUpsertConfigCache } = await import("@camber/helperapi");
     const repo = new ACPAgentRepository();
     repo.configCacheByAgentServer = {
       local: {
@@ -1636,7 +1636,7 @@ describe("ACPAgentRepository", () => {
         ],
       },
     ]);
-    expect(poolsideAcpNavUpsertConfigCache).toHaveBeenCalledWith(
+    expect(camberAcpNavUpsertConfigCache).toHaveBeenCalledWith(
       expect.objectContaining({
         agentServer: "local",
         configOptions: [
@@ -1698,7 +1698,7 @@ describe("ACPAgentRepository", () => {
   });
 
   it("syncs config-probe mode updates into cached mode config options", async () => {
-    const { poolsideAcpNavUpsertConfigCache } = await import("@poolsideai/helperapi");
+    const { camberAcpNavUpsertConfigCache } = await import("@camber/helperapi");
     const repo = new ACPAgentRepository();
     repo.configProbeSessionIds.set("poolside", "probe-session");
     repo.configCacheByAgentServer = {
@@ -1738,7 +1738,7 @@ describe("ACPAgentRepository", () => {
       currentModeId: "plan",
       availableModes: [],
     });
-    expect(poolsideAcpNavUpsertConfigCache).toHaveBeenCalledWith(
+    expect(camberAcpNavUpsertConfigCache).toHaveBeenCalledWith(
       expect.objectContaining({
         agentServer: "poolside",
         configOptions: [expect.objectContaining({ id: "mode", currentValue: "plan" })],

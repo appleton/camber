@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { CollapsibleContent } from "@poolsideai/components/collapsible";
+  import { CollapsibleContent } from "@camber/components/collapsible";
   import { getToolContext } from "./ToolRoot.svelte";
   import { isPermissionDeniedToolCall } from "./toolStatus";
 

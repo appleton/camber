@@ -67,7 +67,7 @@ export class PendingSessionBootstrap {
         agentServer,
         inputs.pendingConversationId(),
       ).conversationId;
-      (globalThis as { __poolsideStartupDiag?: (event: string) => void }).__poolsideStartupDiag?.(
+      (globalThis as { __camberStartupDiag?: (event: string) => void }).__camberStartupDiag?.(
         "boot.draftSessionCreated",
       );
     });

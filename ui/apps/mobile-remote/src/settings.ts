@@ -2,13 +2,13 @@
 // they stay independent from the desktop app's settings: the phone can run a
 // light theme while the desktop stays dark.
 
-import type { MobileThemePreference } from "@poolsideai/assistant";
+import type { MobileThemePreference } from "@camber/assistant";
 
 export interface MobileSettings {
   theme: MobileThemePreference;
 }
 
-const STORAGE_KEY = "poolside.mobile.settings.v1";
+const STORAGE_KEY = "camber.mobile.settings.v1";
 
 const DEFAULT_SETTINGS: MobileSettings = { theme: "system" };
 

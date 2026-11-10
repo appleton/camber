@@ -2,7 +2,7 @@ import type { SessionConfigOption } from "@agentclientprotocol/sdk";
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { appState } from "../../../../hostAdapter";
-import { POOLSIDE_ROUNDEL_ICON_URL } from "../../../../localAgentIcon";
+import { CAMBER_ROUNDEL_ICON_URL } from "../../../../localAgentIcon";
 import { presentNativeMenu, type MenuSpecItem } from "../../../ui/menuSpec";
 import Harness from "./PromptConfigControls.test.svelte";
 
@@ -12,7 +12,7 @@ vi.mock("../../../ui/menuSpec", async (importOriginal) => ({
 }));
 
 // Deterministic brand-tint resolution: raw colors pass through, var()
-// references (Poolside's vibrant) resolve to a fixed marker color rather than
+// references (Camber's vibrant) resolve to a fixed marker color rather than
 // whatever jsdom's style engine computes.
 vi.mock("../../nativeMenuTheme", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../nativeMenuTheme")>()),
@@ -244,10 +244,10 @@ describe("PromptConfigControls native menu", () => {
         kind: "submenu",
         label: "Agent",
         // The DOM row's dimmed current-selection text rides along as detail.
-        detail: "Poolside",
-        // Brand-tinted like the DOM rows: Poolside masks in the vibrant token
+        detail: "Camber",
+        // Brand-tinted like the DOM rows: Camber masks in the vibrant token
         // (resolved to hex), Claude in its orange.
-        icon: { url: POOLSIDE_ROUNDEL_ICON_URL, color: "#00ffcc" },
+        icon: { url: CAMBER_ROUNDEL_ICON_URL, color: "#00ffcc" },
         // The DOM sub-panel's fixed 390px width rides on every submenu so its
         // sublabels wrap natively instead of stretching the submenu.
         minWidth: 390,
@@ -255,8 +255,8 @@ describe("PromptConfigControls native menu", () => {
           {
             kind: "action",
             id: "agent:poolside",
-            label: "Poolside",
-            icon: { url: POOLSIDE_ROUNDEL_ICON_URL, color: "#00ffcc" },
+            label: "Camber",
+            icon: { url: CAMBER_ROUNDEL_ICON_URL, color: "#00ffcc" },
             checked: true,
             enabled: true,
             // Star rows everywhere a DOM row carries the star; nothing is
@@ -454,7 +454,7 @@ describe("PromptConfigControls native menu", () => {
     // The DOM sub-panel's fixed width, so model descriptions wrap natively.
     expect(modelMenu.minWidth).toBe(390);
     // Single-agent install: the header separator names whose models these are.
-    expect(modelMenu.items[0]).toEqual({ kind: "separator", label: "Poolside models" });
+    expect(modelMenu.items[0]).toEqual({ kind: "separator", label: "Camber models" });
     expect(modelMenu.items).toHaveLength(17);
     expect(modelMenu.items[1]).toMatchObject({ id: "model:m3", checked: true });
     expect(modelMenu.items[2]).toMatchObject({ id: "model:m1", checked: false });
@@ -470,7 +470,7 @@ describe("PromptConfigControls native menu", () => {
       {
         kind: "action",
         id: "status:loading",
-        label: "Loading Poolside options...",
+        label: "Loading Camber options...",
         sublabel:
           "Getting available models and settings from the agent. The first launch can take a few seconds while the agent starts up.",
         enabled: false,
@@ -488,7 +488,7 @@ describe("PromptConfigControls native menu", () => {
       {
         kind: "action",
         id: "status:needs-auth",
-        label: "Log in to Poolside to load its models and options.",
+        label: "Log in to Camber to load its models and options.",
         enabled: false,
       },
     ]);
@@ -529,7 +529,7 @@ describe("PromptConfigControls native menu", () => {
     await fireEvent.click(trigger());
 
     expect(lastSpec()).toEqual([
-      { kind: "separator", label: "Poolside Local models" },
+      { kind: "separator", label: "Camber Local models" },
       {
         kind: "action",
         id: "model:org/model-a",
@@ -677,7 +677,7 @@ describe("PromptConfigControls native menu", () => {
       configOptions: [modelOption(), fastOption(), effortOption()],
       // Sonnet is pinned while Opus is the CURRENT value: the checkmark and
       // the filled star sit on different rows. The agent default is pinned to
-      // the app-wide default (poolside).
+      // the app-wide default (camber).
       pinnedConfigOptions: { model: "sonnet" },
       defaultAgentServerPinned: true,
     });

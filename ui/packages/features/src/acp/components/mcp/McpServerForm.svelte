@@ -49,9 +49,9 @@
 </script>
 
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { Button } from "@poolsideai/components/button";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import Icon from "@camber/components/icon";
+  import { Button } from "@camber/components/button";
+  import { Spinner } from "@camber/components/spinner";
   import type { MCPServerEntry } from "../../features/UserMCPServersRepository.svelte";
   import { getUserMCPServersRepo } from "../../features/UserMCPServersRepository.svelte";
   import { extractErrorMessage } from "../../errors";
@@ -252,7 +252,7 @@
     if (/registration_endpoint|dynamic client registration/i.test(message)) {
       return (
         "This server's OAuth provider doesn't let apps register automatically " +
-        "(no Dynamic Client Registration), so Poolside can't sign in to it. " +
+        "(no Dynamic Client Registration), so Camber can't sign in to it. " +
         "Connect with a bearer token instead, or use a proxy that supports it."
       );
     }

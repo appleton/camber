@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { CopyToClipboard as SharedCopyToClipboard } from "@poolsideai/components/assistant-ui";
-  import { InfoMessageType } from "@poolsideai/rpc";
+  import { CopyToClipboard as SharedCopyToClipboard } from "@camber/components/assistant-ui";
+  import { InfoMessageType } from "@camber/rpc";
   import { appState, trackClick } from "../../hostAdapter";
   import { rpc } from "../../hostRpc";
 

@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 
 import type { ReleaseProduct } from "./release-plan.js";
 
-export const RELEASE_LINEAGE_KIND = "poolside-release-lineage";
+export const RELEASE_LINEAGE_KIND = "camber-release-lineage";
 export const RELEASE_LINEAGE_SCHEMA = 1;
 
 const NUMERIC_VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;
@@ -66,11 +66,7 @@ function validateMetadata(value: unknown): ReleaseTagMetadata {
   if (metadata.kind !== RELEASE_LINEAGE_KIND || metadata.schema !== RELEASE_LINEAGE_SCHEMA) {
     throw new Error("Unsupported release-lineage metadata kind or schema");
   }
-  if (
-    metadata.product !== "vscode" &&
-    metadata.product !== "desktop" &&
-    metadata.product !== "vs"
-  ) {
+  if (metadata.product !== "desktop") {
     throw new Error(`Unsupported release product in tag metadata: ${metadata.product}`);
   }
   if (typeof metadata.tagPrefix !== "string") {

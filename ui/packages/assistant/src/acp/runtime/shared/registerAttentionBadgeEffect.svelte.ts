@@ -1,4 +1,4 @@
-import { countAttentionConversations } from "@poolsideai/features/acp";
+import { countAttentionConversations } from "@camber/features/acp";
 
 import type { Repositories } from "./Repositories.svelte";
 import type { RuntimeProps } from "./types";

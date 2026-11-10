@@ -1,4 +1,4 @@
-import type { SecretSummary } from "@poolsideai/helperapi/schemas";
+import type { SecretSummary } from "@camber/helperapi/schemas";
 
 type SecretsMenuState = {
   /** The secret being edited, or null when creating a new secret */

@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@poolsideai/tailwind-config";
+@import "@camber/tailwind-config";
 @import "./theme.css";
 
 @source "../../components";

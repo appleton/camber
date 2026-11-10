@@ -20,10 +20,10 @@ export function selectedAgentServer(scope: ACPChatSessionScope): string {
 
 export function agentName(registry: AcpAgentRegistryRepository, agentServer: string): string {
   if (agentServer === DEFAULT_AGENT_SERVER) {
-    return "Poolside";
+    return "Camber";
   }
   if (agentServer === LOCAL_AGENT_SERVER) {
-    return "Poolside Local";
+    return "Camber Local";
   }
   return registry.getAgent(agentServer)?.name ?? agentServer;
 }

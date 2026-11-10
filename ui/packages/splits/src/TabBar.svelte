@@ -18,7 +18,7 @@
     type TabTransferData,
   } from "./internal/drag.js";
   import type { PaneID, PaneState, SplitOrientation, Tab, TabID } from "./types.js";
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
 
   type TabRenderItem =
     | {

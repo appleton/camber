@@ -5,11 +5,11 @@ import type {
   SessionId,
 } from "@agentclientprotocol/sdk";
 import {
-  poolsideAcpNavAbortConversationHandoff,
-  poolsideAcpNavGetProjectSettings,
-  poolsideAcpNavPrepareConversationHandoff,
-} from "@poolsideai/helperapi";
-import { failure, loading, success, waiting } from "@poolsideai/lib/async-state";
+  camberAcpNavAbortConversationHandoff,
+  camberAcpNavGetProjectSettings,
+  camberAcpNavPrepareConversationHandoff,
+} from "@camber/helperapi";
+import { failure, loading, success, waiting } from "@camber/lib/async-state";
 import { get } from "svelte/store";
 import {
   withClaudeAppendSystemPrompt,
@@ -439,7 +439,7 @@ export class ACPSessionPrompting {
         // Agents do not currently emit a terminal compaction phase when the
         // summarizer fails or the turn is cancelled. Never let that transient
         // state survive the turn and keep the conversation permanently active.
-        s.extensions.poolside?.endTurn();
+        s.extensions.camber?.endTurn();
         // Flush any batched streaming events synchronously so the transcript is
         // current the instant isPrompting flips. The success/cancel branches
         // already do this; without it the error path would show idle/error one
@@ -461,7 +461,7 @@ export class ACPSessionPrompting {
   // (see isUnresumableSessionError). Only reached when the restore replayed no
   // transcript, so nothing is thrown away: the dead session id is dropped and
   // the same nav conversation is rebound to a fresh session — the helper
-  // rebinds it from the `poolside/conversation_id` meta that sendCore sends —
+  // rebinds it from the `camber/conversation_id` meta that sendCore sends —
   // keeping the sidebar entry and this conversation's config selections, and
   // letting the user's message land instead of dead-ending on an error that
   // would fail identically forever.
@@ -555,7 +555,7 @@ export class ACPSessionPrompting {
         const pendingConfigOptions = currentConfigSelections(s.configOptions);
         if (pendingHandoff) {
           try {
-            await poolsideAcpNavPrepareConversationHandoff(pendingHandoff.prepareParams);
+            await camberAcpNavPrepareConversationHandoff(pendingHandoff.prepareParams);
             preparedHandoffId = pendingHandoff.handoffId;
           } catch (error) {
             if (gen !== s.generation) return null;
@@ -582,18 +582,18 @@ export class ACPSessionPrompting {
                 ...newSessionMeta,
                 ...(pendingHandoff
                   ? {
-                      "poolside/handoff": {
+                      "camber/handoff": {
                         sourceAgentServer: pendingHandoff.sourceAgentServer,
                         sourceSessionId: pendingHandoff.sourceSessionId,
                       },
-                      "poolside/handoff_id": pendingHandoff.handoffId,
+                      "camber/handoff_id": pendingHandoff.handoffId,
                     }
                   : {}),
                 // The helper binds the nav conversation row to the new session id
                 // synchronously at session/new (live status is keyed by session id
                 // and silently unattachable until the binding lands); the client's
                 // later history upsert only enriches metadata.
-                "poolside/conversation_id": s.conversationId,
+                "camber/conversation_id": s.conversationId,
                 ...(sandboxDefinitionId
                   ? { sandbox_definition_id: sandboxDefinitionId }
                   : preserveAgentToolDefaults
@@ -690,7 +690,7 @@ export class ACPSessionPrompting {
     } finally {
       if (preparedHandoffId !== null && !handoffCommitted) {
         try {
-          await poolsideAcpNavAbortConversationHandoff({ handoffId: preparedHandoffId });
+          await camberAcpNavAbortConversationHandoff({ handoffId: preparedHandoffId });
         } catch (error) {
           console.warn("Unable to abort prepared ACP conversation handoff", error);
         }
@@ -754,7 +754,7 @@ export class ACPSessionPrompting {
     if (!projectPath || projectPath === ACP_IDE_WORKSPACE_PATH) return undefined;
 
     try {
-      const response = await poolsideAcpNavGetProjectSettings({ path: projectPath });
+      const response = await camberAcpNavGetProjectSettings({ path: projectPath });
       return response.settings.userPrompt?.trim() || undefined;
     } catch (e) {
       console.debug("Unable to load ACP project guidelines for agent", e);

@@ -67,7 +67,7 @@ describe("deviceTokenHandoffHash", () => {
 
   it("encodes the stored token into a fragment", () => {
     localStorage.setItem(DEVICE_TOKEN_STORAGE_KEY, "tok/en+1");
-    expect(deviceTokenHandoffHash()).toBe("#poolsideDeviceToken=tok%2Fen%2B1");
+    expect(deviceTokenHandoffHash()).toBe("#camberDeviceToken=tok%2Fen%2B1");
   });
 
   it("returns empty when no token is stored", () => {
@@ -89,7 +89,7 @@ describe("adoptHandoffDeviceToken", () => {
   it("stores the token and scrubs it from the URL", () => {
     const history = fakeHistory();
     const adopted = adoptHandoffDeviceToken(
-      { hash: "#poolsideDeviceToken=tok%2Fen%2B1", pathname: "/", search: "" },
+      { hash: "#camberDeviceToken=tok%2Fen%2B1", pathname: "/", search: "" },
       history,
     );
     expect(adopted).toBe(true);
@@ -100,7 +100,7 @@ describe("adoptHandoffDeviceToken", () => {
   it("overwrites an existing token (the handoff is newer intent)", () => {
     localStorage.setItem(DEVICE_TOKEN_STORAGE_KEY, "old");
     adoptHandoffDeviceToken(
-      { hash: "#poolsideDeviceToken=new", pathname: "/", search: "" },
+      { hash: "#camberDeviceToken=new", pathname: "/", search: "" },
       fakeHistory(),
     );
     expect(localStorage.getItem(DEVICE_TOKEN_STORAGE_KEY)).toBe("new");

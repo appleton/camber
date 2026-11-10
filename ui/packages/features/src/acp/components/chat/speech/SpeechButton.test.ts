@@ -1,4 +1,4 @@
-import type { VoiceInputState } from "@poolsideai/helperapi";
+import type { VoiceInputState } from "@camber/helperapi";
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,10 +8,10 @@ const helperApi = vi.hoisted(() => ({
   transcribe: vi.fn(),
 }));
 
-vi.mock("@poolsideai/helperapi", () => ({
-  poolsideVoiceInputGetState: helperApi.getState,
-  poolsideVoiceInputDownloadModel: helperApi.downloadModel,
-  poolsideVoiceInputTranscribe: helperApi.transcribe,
+vi.mock("@camber/helperapi", () => ({
+  camberVoiceInputGetState: helperApi.getState,
+  camberVoiceInputDownloadModel: helperApi.downloadModel,
+  camberVoiceInputTranscribe: helperApi.transcribe,
 }));
 
 vi.mock("./wav", () => ({

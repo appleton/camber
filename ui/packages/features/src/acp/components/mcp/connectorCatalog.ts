@@ -67,7 +67,7 @@ function remoteConnector(options: {
   };
 }
 
-// Curated catalog of hosted MCP endpoints that Poolside can connect to
+// Curated catalog of hosted MCP endpoints that Camber can connect to
 // directly, plus a small set of useful local stdio servers. OAuth entries use
 // either Dynamic Client Registration or a pre-registered public PKCE client.
 export const CONNECTOR_CATALOG: ConnectorCatalogEntry[] = [
@@ -92,21 +92,21 @@ export const CONNECTOR_CATALOG: ConnectorCatalogEntry[] = [
     label: "Slack",
     blurb: "Search messages, read threads, and send updates",
     category: "productivity",
-    // Poolside's Slack app is still pending Slack's approval, so the OAuth
-    // flow only completes for Poolside-workspace members. Until approval
+    // Camber's Slack app is still pending Slack's approval, so the OAuth
+    // flow only completes for Camber-workspace members. Until approval
     // lands, keep the entry out of the browsed catalog (staff are told to
     // search "slack" to reveal it) and flag the limitation on the card.
     searchOnly: true,
-    note: "Pending approval — only works for Poolside staff for now",
+    note: "Pending approval — only works for Camber staff for now",
     url: "https://mcp.slack.com/mcp",
     authMode: "oauth",
     oauthScopes:
       "search:read.public search:read.private search:read.mpim search:read.im channels:history groups:history mpim:history im:history chat:write",
     oauthClientID: SLACK_OAUTH_CLIENT_ID,
-    // Slack signs in via the poolside://oauth/callback deep link only. Slack's
+    // Slack signs in via the camber://oauth/callback deep link only. Slack's
     // public-distribution HTTPS gate rejects http loopback redirect URLs (both
     // 127.0.0.1 and localhost were refused), but custom URI schemes are always
-    // accepted, so poolside:// is the sole registered redirect. There is no
+    // accepted, so camber:// is the sole registered redirect. There is no
     // loopback fallback: Slack sign-in requires a deep-link-capable host (the
     // release desktop app). Other OAuth connectors keep the loopback flow.
     oauthDeepLink: true,

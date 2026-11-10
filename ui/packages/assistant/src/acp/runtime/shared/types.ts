@@ -6,11 +6,11 @@ import type {
   Notifier,
   setACPAgentRegistryContext,
   setACPAgentServersContext,
-} from "@poolsideai/features/acp";
-import type { KeybindingService } from "@poolsideai/features/keybindings";
+} from "@camber/features/acp";
+import type { KeybindingService } from "@camber/features/keybindings";
 import type { HostMessageSender } from "../../../lib/rpc/client";
 import type { WebviewRPCListener, WebViewRPCResponseSender } from "../../../lib/rpc/server";
-import type { PoolsideInitialState } from "../../../lib/store";
+import type { CamberInitialState } from "../../../lib/store";
 import type { Repositories } from "./Repositories.svelte";
 
 export type Target = "sidebar-only" | "chat-only" | "desktop";
@@ -20,7 +20,7 @@ export interface RuntimeProps {
   rpcWebViewResponseHandler: WebViewRPCResponseSender;
   rpcHostRequestHandler: HostMessageSender;
   webviewRpcListener?: WebviewRPCListener;
-  initialState?: PoolsideInitialState;
+  initialState?: CamberInitialState;
   notifier?: Notifier;
   onACPConnectionPoolReady?: (pool: ACPConnectionPoolType) => void;
   onACPAttentionCountChange?: (count: number) => void;

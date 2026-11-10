@@ -27,7 +27,7 @@ const OPENERS_CACHE_VERSION: u32 = 4;
 // displays at a few KB per icon instead of up to ~1MB for a full app icon.
 #[cfg(target_os = "macos")]
 const ICON_MAX_DIMENSION: &str = "64";
-const POOLSIDE_DESKTOP_APP_ICON: &[u8] = include_bytes!("../icons/32x32.png");
+const CAMBER_DESKTOP_APP_ICON: &[u8] = include_bytes!("../icons/32x32.png");
 static DETECTED_OPENERS: OnceLock<RwLock<DetectedOpeners>> = OnceLock::new();
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -84,14 +84,14 @@ pub fn in_app_file_opener() -> DesktopFileOpener {
         kind: DesktopFileOpenerKind::InApp,
         app_path: None,
         bundle_id: None,
-        icon_data_uri: Some(poolside_desktop_app_icon_data_uri()),
+        icon_data_uri: Some(camber_desktop_app_icon_data_uri()),
     }
 }
 
-fn poolside_desktop_app_icon_data_uri() -> String {
+fn camber_desktop_app_icon_data_uri() -> String {
     format!(
         "data:image/png;base64,{}",
-        STANDARD.encode(POOLSIDE_DESKTOP_APP_ICON)
+        STANDARD.encode(CAMBER_DESKTOP_APP_ICON)
     )
 }
 
@@ -309,17 +309,12 @@ fn default_file_opener_label() -> &'static str {
     "Default macOS app"
 }
 
-#[cfg(target_os = "windows")]
-fn default_file_opener_label() -> &'static str {
-    "Default Windows App"
-}
-
 #[cfg(target_os = "linux")]
 fn default_file_opener_label() -> &'static str {
     "Default Linux App"
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 fn default_file_opener_label() -> &'static str {
     "Default App"
 }
@@ -329,17 +324,12 @@ fn default_desktop_opener_label() -> &'static str {
     "Finder"
 }
 
-#[cfg(target_os = "windows")]
-fn default_desktop_opener_label() -> &'static str {
-    "Default Windows App"
-}
-
 #[cfg(target_os = "linux")]
 fn default_desktop_opener_label() -> &'static str {
     "Default Linux App"
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 fn default_desktop_opener_label() -> &'static str {
     "Default App"
 }
@@ -649,7 +639,7 @@ fn open_macos_terminal_command_file(editor_command: &str) -> Result<(), String> 
 #[cfg(target_os = "macos")]
 fn macos_terminal_command_file_path() -> PathBuf {
     std::env::temp_dir().join(format!(
-        "poolside-editor-{}-{}",
+        "camber-editor-{}-{}",
         std::process::id(),
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -689,16 +679,7 @@ fn open_editor_command_in_terminal(editor_command: &str) -> Result<(), String> {
         .map_err(|err| err.to_string())
 }
 
-#[cfg(target_os = "windows")]
-fn open_editor_command_in_terminal(editor_command: &str) -> Result<(), String> {
-    Command::new("cmd")
-        .args(["/C", "start", "", "cmd", "/K", editor_command])
-        .spawn()
-        .map(|_| ())
-        .map_err(|err| err.to_string())
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 fn open_editor_command_in_terminal(editor_command: &str) -> Result<(), String> {
     Command::new("sh")
         .args(["-lc", editor_command])
@@ -945,7 +926,7 @@ fn icon_file_data_uri(icon_path: &Path) -> Option<String> {
         return None;
     }
     let output_path = std::env::temp_dir().join(format!(
-        "poolside-app-icon-{}-{}-{}.png",
+        "camber-app-icon-{}-{}-{}.png",
         std::process::id(),
         SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -999,7 +980,7 @@ mod tests {
         );
         assert_eq!(
             openers.file_openers[0].icon_data_uri,
-            Some(poolside_desktop_app_icon_data_uri())
+            Some(camber_desktop_app_icon_data_uri())
         );
         assert_eq!(openers.file_openers[1].icon_data_uri, None);
         assert_eq!(openers.desktop_openers[0].icon_data_uri, None);
@@ -1070,11 +1051,11 @@ mod tests {
     #[cfg(target_os = "macos")]
     #[test]
     fn terminal_command_file_removes_itself_and_runs_editor_in_a_login_shell() {
-        let path = Path::new("/tmp/poolside-editor");
+        let path = Path::new("/tmp/camber-editor");
         let script = macos_terminal_command_file("vim '/tmp/file name.ts'", path);
 
         assert!(script.starts_with("#!/bin/sh\n"));
-        assert!(script.contains("rm -f -- '/tmp/poolside-editor'"));
+        assert!(script.contains("rm -f -- '/tmp/camber-editor'"));
         assert!(script.contains("-lic 'vim '\"'\"'/tmp/file name.ts'\"'\"''"));
     }
 

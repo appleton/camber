@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { PatchDiff } from "@poolsideai/components/file-diff";
-  import Icon from "@poolsideai/components/icon";
+  import { PatchDiff } from "@camber/components/file-diff";
+  import Icon from "@camber/components/icon";
   import type { ToolCallDiffContent } from "../../types";
   import Tooltip from "../ui/Tooltip.svelte";
   import CopyToClipboard from "../ui/CopyToClipboard.svelte";

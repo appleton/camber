@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { withShortcut } from "../../../keybindings";
   import { appState } from "../../hostAdapter";
   import type { DesktopOpenerInfo } from "../../desktopOpeners";

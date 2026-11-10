@@ -184,16 +184,16 @@ export class AcpSidebarController {
 
   getAgentName(agentServer: string): string {
     if (agentServer === DEFAULT_AGENT_SERVER) {
-      return "Poolside";
+      return "Camber";
     }
     if (agentServer === LOCAL_AGENT_SERVER) {
-      return "Poolside Local";
+      return "Camber Local";
     }
     return this.registry.getAgent(agentServer)?.name ?? agentServer;
   }
 
   // Brand tint for an agent's roundel in the row hover preview, reusing the
-  // agent-picker palette (Poolside / Poolside Local purple, Claude orange).
+  // agent-picker palette (Camber / Camber Local purple, Claude orange).
   // Agents without a brand colour fall back to the neutral icon token.
   agentIconColorClass(agentServer: string): string {
     return agentPickerIconProps(this.registry, agentServer).class || "text-psx-icon";

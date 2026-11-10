@@ -1,3 +1,0 @@
-{
-  "extends": ["./tsconfig.json", "@poolsideai/tsconfig/check"]
-}

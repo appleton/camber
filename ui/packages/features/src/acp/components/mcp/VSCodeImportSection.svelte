@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Badge } from "@poolsideai/components/badge";
-  import { Button } from "@poolsideai/components/button";
-  import type { VSCodeMcpServer } from "@poolsideai/rpc";
+  import { Badge } from "@camber/components/badge";
+  import { Button } from "@camber/components/button";
+  import type { VSCodeMcpServer } from "@camber/rpc";
   import { type McpFormState } from "./McpServerForm.svelte";
   import HintTooltip from "./HintTooltip.svelte";
 

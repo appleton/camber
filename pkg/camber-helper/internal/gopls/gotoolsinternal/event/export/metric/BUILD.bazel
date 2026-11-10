@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "metric",
+    srcs = [
+        "data.go",
+        "exporter.go",
+        "info.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/event/export/metric",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/core",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/keys",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/label",
+    ],
+)

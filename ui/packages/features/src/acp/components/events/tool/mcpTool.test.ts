@@ -15,8 +15,8 @@ function tool(meta: Record<string, unknown> | undefined, title = "tool"): ToolCa
 
 describe("getMcpToolInfo", () => {
   it("splits Pool-format names into server and tool", () => {
-    const info = getMcpToolInfo(tool({ tool_name: "poolside-github__get_me" }));
-    expect(info).toMatchObject({ serverName: "poolside-github", toolName: "get_me" });
+    const info = getMcpToolInfo(tool({ tool_name: "camber-github__get_me" }));
+    expect(info).toMatchObject({ serverName: "camber-github", toolName: "get_me" });
     // Pool built-in servers are not catalog connectors.
     expect(info?.connector).toBeUndefined();
   });
@@ -27,9 +27,7 @@ describe("getMcpToolInfo", () => {
   });
 
   it("strips the Pool agent's namespace for client-injected connectors", () => {
-    const info = getMcpToolInfo(
-      tool({ tool_name: "poolside__agent__slack__slack_search_channels" }),
-    );
+    const info = getMcpToolInfo(tool({ tool_name: "camber__agent__slack__slack_search_channels" }));
     expect(info).toMatchObject({ serverName: "slack", toolName: "slack_search_channels" });
     expect(info?.connector?.label).toBe("Slack");
   });

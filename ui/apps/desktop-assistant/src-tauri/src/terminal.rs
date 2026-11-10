@@ -17,11 +17,11 @@ use tauri::{async_runtime, AppHandle, Emitter, Manager, State};
 
 use crate::terminal_shell_integration::zsh_terminal_env;
 
-const TERMINAL_DID_OPEN_EVENT: &str = "poolside:assistant-terminal-did-open";
-const TERMINAL_DID_UPDATE_EVENT: &str = "poolside:assistant-terminal-did-update";
-const TERMINAL_DID_WRITE_EVENT: &str = "poolside:assistant-terminal-did-write";
-const TERMINAL_DID_EXIT_EVENT: &str = "poolside:assistant-terminal-did-exit";
-const TERMINAL_DID_CLOSE_EVENT: &str = "poolside:assistant-terminal-did-close";
+const TERMINAL_DID_OPEN_EVENT: &str = "camber:assistant-terminal-did-open";
+const TERMINAL_DID_UPDATE_EVENT: &str = "camber:assistant-terminal-did-update";
+const TERMINAL_DID_WRITE_EVENT: &str = "camber:assistant-terminal-did-write";
+const TERMINAL_DID_EXIT_EVENT: &str = "camber:assistant-terminal-did-exit";
+const TERMINAL_DID_CLOSE_EVENT: &str = "camber:assistant-terminal-did-close";
 const MAX_TERMINAL_BUFFER_BYTES: usize = 200_000;
 const MAX_TERMINAL_METADATA_TEXT_BYTES: usize = 512;
 const MAX_PENDING_OSC_BYTES: usize = 4096;
@@ -740,52 +740,12 @@ struct ShellSpec {
 }
 
 /// Chooses the program and argv for a terminal tab. `login_shell` is the
-/// user's shell resolved from the user database (`shell_env::login_shell`);
-/// it is ignored on Windows, where cmd/PowerShell run commands natively.
+/// user's shell resolved from the user database (`shell_env::login_shell`).
 fn shell_for_terminal(
     login_shell: String,
     command: Option<&str>,
     command_mode: AssistantTerminalCommandMode,
 ) -> ShellSpec {
-    if cfg!(windows) {
-        if let Some(command) = command {
-            if let Ok(comspec) = env::var("COMSPEC") {
-                return ShellSpec {
-                    program: comspec,
-                    args: vec!["/Q".to_string(), "/C".to_string(), command.to_string()],
-                    write_startup_command: command_mode
-                        == AssistantTerminalCommandMode::Interactive,
-                    use_zsh_integration: false,
-                };
-            }
-            return ShellSpec {
-                program: "powershell.exe".to_string(),
-                args: vec![
-                    "-NoLogo".to_string(),
-                    "-NoProfile".to_string(),
-                    "-Command".to_string(),
-                    command.to_string(),
-                ],
-                write_startup_command: command_mode == AssistantTerminalCommandMode::Interactive,
-                use_zsh_integration: false,
-            };
-        }
-        if let Ok(comspec) = env::var("COMSPEC") {
-            return ShellSpec {
-                program: comspec,
-                args: vec!["/Q".to_string()],
-                write_startup_command: false,
-                use_zsh_integration: false,
-            };
-        }
-        return ShellSpec {
-            program: "powershell.exe".to_string(),
-            args: vec!["-NoLogo".to_string()],
-            write_startup_command: false,
-            use_zsh_integration: false,
-        };
-    }
-
     // Terminal commands are POSIX by cross-host contract: `runCommandAndWait`
     // wraps them in a POSIX done-marker (`commandWithDoneMarker` in
     // AssistantTerminalRepository.svelte.ts), and raw startup commands follow
@@ -805,11 +765,6 @@ fn shell_for_terminal(
         .unwrap_or_default();
     let use_zsh_integration = cfg!(target_os = "macos") && shell_name == "zsh";
 
-    // Keep this shell→argv mapping in sync with `assistantTerminalCommandLaunch`
-    // in ui/apps/vscode-assistant/src/extension/rpc/assistantTerminalCommand.ts,
-    // which implements the same `nonInteractive` contract for the VS Code host
-    // (with one intentional divergence: this host runs cmd/PowerShell commands
-    // natively above, while the VS Code host falls back to sendText for them).
     if command_mode == AssistantTerminalCommandMode::NonInteractive && command.is_some() {
         let command = command.unwrap_or_default();
         let args = if shell_name == "bash" || shell_name == "zsh" {
@@ -842,7 +797,6 @@ fn shell_for_terminal(
 
 /// Shells known to parse the POSIX done-marker wrapper delivered with
 /// command terminals. Keep in sync with `POSIX_SHELLS` in
-/// ui/apps/vscode-assistant/src/extension/rpc/assistantTerminalCommand.ts.
 fn is_posix_shell(shell: &str) -> bool {
     let name = Path::new(shell)
         .file_name()
@@ -873,7 +827,6 @@ mod tests {
     use super::*;
 
     #[test]
-    #[cfg(not(windows))]
     fn command_terminals_start_interactive_shell() {
         let shell = shell_for_terminal(
             "/bin/zsh".to_string(),
@@ -888,7 +841,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(windows))]
     fn non_interactive_command_terminals_run_command_without_stdin_write() {
         let shell = shell_for_terminal(
             "/bin/zsh".to_string(),
@@ -906,7 +858,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(windows))]
     fn empty_command_terminals_remain_interactive() {
         let shell = shell_for_terminal(
             "/bin/zsh".to_string(),
@@ -921,7 +872,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(windows))]
     fn interactive_terminals_use_the_login_shell() {
         let shell = shell_for_terminal(
             "/opt/homebrew/bin/fish".to_string(),
@@ -936,7 +886,6 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(windows))]
     fn command_terminals_fall_back_to_a_posix_shell_for_non_posix_login_shells() {
         for mode in [
             AssistantTerminalCommandMode::Interactive,
@@ -957,14 +906,14 @@ mod tests {
         let mut parser = TerminalMetadataParser::default();
 
         let update = parser
-            .process("\x1b]2;pnpm test\x07\x1b]7;file://host/Users/poolie/poolside%20assistant\x07")
+            .process("\x1b]2;pnpm test\x07\x1b]7;file://host/Users/poolie/camber%20assistant\x07")
             .expect("metadata update");
 
         assert_eq!(
             update,
             TerminalMetadataUpdate {
                 title: Some("pnpm test".to_string()),
-                cwd: Some("/Users/poolie/poolside assistant".to_string()),
+                cwd: Some("/Users/poolie/camber assistant".to_string()),
             },
         );
     }

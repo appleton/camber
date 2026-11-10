@@ -1,9 +1,9 @@
 # ACP types and extensions
 
-Poolside Assistant talks to agents over the
+Camber Assistant talks to agents over the
 [Agent Client Protocol](https://agentclientprotocol.com/) (ACP). The protocol
 itself — session lifecycle, prompts, tool calls, permissions — is documented
-upstream; this package only holds what Poolside adds on top of the
+upstream; this package only holds what Camber adds on top of the
 [`acp-go-sdk`](https://github.com/coder/acp-go-sdk).
 
 What lives here:
@@ -21,10 +21,10 @@ claude-agent-acp) use the standard unstable `elicitation/create` /
 `elicitation` client capability (form mode only — surfaces do not render url
 mode yet). Both converge on the helper's approval store.
 - `permission.go` — helpers for ACP permission requests and options.
-- `sessionmeta.go` — Poolside session metadata carried in ACP `_meta`
+- `sessionmeta.go` — Camber session metadata carried in ACP `_meta`
   fields.
 
 Consumers: the helper's ACP proxy
-(`pkg/poolside-helper/internal/handler/acpproxy/`) speaks these methods to
+(`pkg/camber-helper/internal/handler/acpproxy/`) speaks these methods to
 agents; the shared UI state in `ui/packages/features/src/acp/` renders their
 client side.

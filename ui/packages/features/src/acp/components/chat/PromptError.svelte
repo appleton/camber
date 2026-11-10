@@ -1,9 +1,9 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { ZigZagError } from "@poolsideai/components/zigzag-error";
+  import Icon from "@camber/components/icon";
+  import { ZigZagError } from "@camber/components/zigzag-error";
   import truncate from "lodash/truncate";
   import { appState } from "../../hostAdapter";
-  import Button from "../ui/PoolsideButton.svelte";
+  import Button from "../ui/CamberButton.svelte";
   import { formatACPError, formatACPErrorSummary, type ACPRequestError } from "../../errors";
 
   interface Props {

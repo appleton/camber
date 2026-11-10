@@ -6,8 +6,8 @@ import type {
   SessionNotification,
   SessionUpdate,
 } from "@agentclientprotocol/sdk";
-import { initializeStatefulModule as initializeHelperApi } from "@poolsideai/helperapi";
-import { isLoading, isSuccess } from "@poolsideai/lib/async-state";
+import { initializeStatefulModule as initializeHelperApi } from "@camber/helperapi";
+import { isLoading, isSuccess } from "@camber/lib/async-state";
 import { render, screen } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { get } from "svelte/store";
@@ -297,7 +297,7 @@ describe("ACPSessionRepositoryWriter", () => {
     ]);
     expect(conn.newSession).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        _meta: expect.objectContaining({ "poolside/conversation_id": "conv-handoff" }),
+        _meta: expect.objectContaining({ "camber/conversation_id": "conv-handoff" }),
       }),
     );
     expect(conn.prompt).not.toHaveBeenCalled();
@@ -330,12 +330,12 @@ describe("ACPSessionRepositoryWriter", () => {
       cwd: "/repo",
       mcpServers: [],
       _meta: {
-        "poolside/conversation_id": "conv-handoff",
-        "poolside/handoff": {
+        "camber/conversation_id": "conv-handoff",
+        "camber/handoff": {
           sourceAgentServer: DEFAULT_AGENT_SERVER,
           sourceSessionId: "source-session",
         },
-        "poolside/handoff_id": expect.stringMatching(/^handoff:/),
+        "camber/handoff_id": expect.stringMatching(/^handoff:/),
         enabled_tools: [],
       },
     });
@@ -609,7 +609,7 @@ describe("ACPSessionRepositoryWriter", () => {
 
     expect(conn.newSession).not.toHaveBeenCalledWith(
       expect.objectContaining({
-        _meta: expect.objectContaining({ "poolside/conversation_id": "conv-handoff" }),
+        _meta: expect.objectContaining({ "camber/conversation_id": "conv-handoff" }),
       }),
     );
     await target.serialize((gen) =>
@@ -1178,12 +1178,12 @@ describe("ACPSessionRepositoryWriter", () => {
     await loadNamedSession(repo, "inactive-4");
 
     expect(repo.getSessionByConversationId(evicted.conversationId)).toBeNull();
-    expect(helperJsonrpcCall).toHaveBeenCalledWith("poolside/acp/session/close", {
+    expect(helperJsonrpcCall).toHaveBeenCalledWith("camber/acp/session/close", {
       agentServer: DEFAULT_AGENT_SERVER,
       sessionId: evicted.sessionId,
     });
     expect(helperJsonrpcCall).not.toHaveBeenCalledWith(
-      "poolside/acp/session/close",
+      "camber/acp/session/close",
       expect.objectContaining({ sessionId: visible.sessionId }),
     );
   });
@@ -1217,12 +1217,12 @@ describe("ACPSessionRepositoryWriter", () => {
     expect(visible.suspended).toBe(false);
     // The warm record stays in memory — only the agent side is released.
     expect(repo.getSessionByConversationId(idle.conversationId)).toBe(idle);
-    expect(helperJsonrpcCall).toHaveBeenCalledWith("poolside/acp/session/close", {
+    expect(helperJsonrpcCall).toHaveBeenCalledWith("camber/acp/session/close", {
       agentServer: DEFAULT_AGENT_SERVER,
       sessionId: idle.sessionId,
     });
     expect(helperJsonrpcCall).not.toHaveBeenCalledWith(
-      "poolside/acp/session/close",
+      "camber/acp/session/close",
       expect.objectContaining({ sessionId: visible.sessionId }),
     );
   });
@@ -1247,7 +1247,7 @@ describe("ACPSessionRepositoryWriter", () => {
     repo.closeIdleSessions(IDLE_SWEEP_LATER);
     expect(working.suspended).toBe(false);
     expect(helperJsonrpcCall).not.toHaveBeenCalledWith(
-      "poolside/acp/session/close",
+      "camber/acp/session/close",
       expect.anything(),
     );
   });
@@ -1301,7 +1301,7 @@ describe("ACPSessionRepositoryWriter", () => {
 
   it("reverts the suspended flag when the close RPC fails", async () => {
     const jsonrpcCall = vi.fn().mockImplementation((method: string) => {
-      if (method === "poolside/acp/session/close") {
+      if (method === "camber/acp/session/close") {
         return Promise.reject(new Error("helper unavailable"));
       }
       return Promise.resolve({ entry: null });
@@ -1324,7 +1324,7 @@ describe("ACPSessionRepositoryWriter", () => {
     repo.closeIdleSessions(IDLE_SWEEP_LATER + 11 * 60 * 1000);
     expect(idle.suspended).toBe(true);
     expect(
-      jsonrpcCall.mock.calls.filter(([method]) => method === "poolside/acp/session/close"),
+      jsonrpcCall.mock.calls.filter(([method]) => method === "camber/acp/session/close"),
     ).toHaveLength(2);
   });
 
@@ -1346,7 +1346,7 @@ describe("ACPSessionRepositoryWriter", () => {
     expect(repo.getSessionByConversationId(idle.conversationId)).toBeNull();
     // A reattach could be in flight when the record is dropped; re-closing an
     // already-gone session is a helper-level no-op, so evict always closes.
-    expect(helperJsonrpcCall).toHaveBeenCalledWith("poolside/acp/session/close", {
+    expect(helperJsonrpcCall).toHaveBeenCalledWith("camber/acp/session/close", {
       agentServer: DEFAULT_AGENT_SERVER,
       sessionId: idle.sessionId,
     });
@@ -1476,7 +1476,7 @@ describe("ACPSessionRepositoryWriter", () => {
 
     expect(conn.newSession).toHaveBeenCalledWith(
       expect.objectContaining({
-        _meta: expect.objectContaining({ "poolside/conversation_id": "lost" }),
+        _meta: expect.objectContaining({ "camber/conversation_id": "lost" }),
       }),
     );
     expect(session.sessionId).toBe("s-fresh");
@@ -1640,7 +1640,7 @@ describe("ACPSessionRepositoryWriter", () => {
 
     expect(refreshing.suspended).toBe(false);
     expect(repo.getSessionByConversationId(refreshing.conversationId)).toBe(refreshing);
-    expect(helperJsonrpcCall).not.toHaveBeenCalledWith("poolside/acp/session/close", {
+    expect(helperJsonrpcCall).not.toHaveBeenCalledWith("camber/acp/session/close", {
       agentServer: DEFAULT_AGENT_SERVER,
       sessionId: refreshing.sessionId,
     });
@@ -1770,7 +1770,7 @@ describe("ACPSessionRepositoryWriter", () => {
   it("waits for an in-flight close before reattaching", async () => {
     let resolveClose: (() => void) | undefined;
     const jsonrpcCall = vi.fn().mockImplementation((method: string) => {
-      if (method === "poolside/acp/session/close") {
+      if (method === "camber/acp/session/close") {
         return new Promise<object>((resolve) => {
           resolveClose = () => resolve({});
         });
@@ -2631,7 +2631,7 @@ describe("ACPSessionRepositoryWriter", () => {
     const listener = vi.fn();
     repo.emitter.addEventListener(ACP_PENDING_CONVERSATION_AGENT_EVENT, listener);
 
-    repo.createSession("/state/poolside/chat-1", DEFAULT_AGENT_SERVER, "chat-1", {
+    repo.createSession("/state/camber/chat-1", DEFAULT_AGENT_SERVER, "chat-1", {
       isChat: true,
       isPendingConversationPersisted: true,
     });
@@ -2640,7 +2640,7 @@ describe("ACPSessionRepositoryWriter", () => {
       expect.objectContaining({
         detail: expect.objectContaining({
           conversationId: "chat-1",
-          cwd: "/state/poolside/chat-1",
+          cwd: "/state/camber/chat-1",
           workspacePath: "CHAT",
         }),
       }),
@@ -3121,7 +3121,7 @@ describe("ACPSessionRepositoryWriter", () => {
       _meta: {
         // Carried so the helper can bind the nav row to the new session id
         // synchronously at session/new.
-        "poolside/conversation_id": "conv-1",
+        "camber/conversation_id": "conv-1",
         enabled_tools: [],
       },
     });
@@ -3155,7 +3155,7 @@ describe("ACPSessionRepositoryWriter", () => {
           options: { promptSuggestions: true },
           emitRawSDKMessages: [{ type: "prompt_suggestion" }, { type: "active_goal" }],
         },
-        "poolside/conversation_id": "conv-claude",
+        "camber/conversation_id": "conv-claude",
         enabled_tools: [],
       },
     });
@@ -3714,7 +3714,7 @@ describe("ACPSessionRepositoryWriter", () => {
       currentValue,
     });
     const newSession = vi.fn(async (params: { _meta?: Record<string, unknown> | null }) =>
-      params._meta?.["poolside/configProbe"]
+      params._meta?.["camber/configProbe"]
         ? { sessionId: "s-probe", configOptions: [modelOption(gemma, [gemma])] }
         : { sessionId: "s-new", configOptions: [modelOption(gemma, [gemma])] },
     );
@@ -3740,7 +3740,7 @@ describe("ACPSessionRepositoryWriter", () => {
     const session = repo.createSession("/repo", "local", "conv-1");
     await vi.waitFor(() =>
       expect(newSession).toHaveBeenCalledWith(
-        expect.objectContaining({ _meta: { "poolside/configProbe": true } }),
+        expect.objectContaining({ _meta: { "camber/configProbe": true } }),
       ),
     );
     await vi.waitFor(() =>
@@ -3817,7 +3817,7 @@ describe("ACPSessionRepositoryWriter", () => {
     let failedRealSessionOnce = false;
     const conn = mockConnection({
       newSession: vi.fn(async (params: { _meta?: Record<string, unknown> | null }) => {
-        if (params._meta?.["poolside/configProbe"]) return { sessionId: "s-probe" };
+        if (params._meta?.["camber/configProbe"]) return { sessionId: "s-probe" };
         if (!failedRealSessionOnce) {
           failedRealSessionOnce = true;
           throw new Error("agent failed to start");
@@ -3932,7 +3932,7 @@ describe("ACPSessionRepositoryWriter", () => {
     const repo = new ACPSessionRepositoryWriter();
     const conn = mockConnection();
     helperJsonrpcCall.mockImplementation(async (method: string) => {
-      if (method === "poolside/acpNav/getProjectSettings") {
+      if (method === "camber/acpNav/getProjectSettings") {
         return {
           settings: {
             path: "/repo",
@@ -3965,7 +3965,7 @@ describe("ACPSessionRepositoryWriter", () => {
 
       await session.serialize((gen) => session.sendCore(gen, "hello", undefined));
 
-      expect(helperJsonrpcCall).toHaveBeenCalledWith("poolside/acpNav/getProjectSettings", {
+      expect(helperJsonrpcCall).toHaveBeenCalledWith("camber/acpNav/getProjectSettings", {
         path: "/repo",
       });
       expect(conn.prompt).toHaveBeenCalledWith({
@@ -3977,14 +3977,14 @@ describe("ACPSessionRepositoryWriter", () => {
             resource: expect.objectContaining({
               uri: HOST_CONTEXT_RESOURCE_URI,
               mimeType: "text/markdown",
-              text: expect.stringContaining("Poolside Assistant version: 4.3.8"),
+              text: expect.stringContaining("Camber Assistant version: 4.3.8"),
             }),
           }),
         ],
       });
       const prompt = vi.mocked(conn.prompt).mock.calls[0]?.[0].prompt ?? [];
       const hostContext = prompt[1] as { resource?: { text?: string } };
-      expect(hostContext.resource?.text).toContain("<poolside-system-instructions>");
+      expect(hostContext.resource?.text).toContain("<camber-system-instructions>");
       expect(hostContext.resource?.text).toContain(
         "<project-instructions>\nAlways reply like a pirate.\n</project-instructions>",
       );
@@ -4004,7 +4004,7 @@ describe("ACPSessionRepositoryWriter", () => {
     const repo = new ACPSessionRepositoryWriter();
     const conn = mockConnection();
     helperJsonrpcCall.mockImplementation(async (method: string) => {
-      if (method === "poolside/acpNav/getProjectSettings") {
+      if (method === "camber/acpNav/getProjectSettings") {
         return {
           settings: {
             path: "/repo",
@@ -4054,7 +4054,7 @@ describe("ACPSessionRepositoryWriter", () => {
             claudeCode: expect.objectContaining({
               options: expect.objectContaining({
                 promptSuggestions: true,
-                appendSystemPrompt: expect.stringContaining("Poolside Assistant version: 4.3.8"),
+                appendSystemPrompt: expect.stringContaining("Camber Assistant version: 4.3.8"),
               }),
             }),
           }),
@@ -4109,7 +4109,7 @@ describe("ACPSessionRepositoryWriter", () => {
       sessionId: "s-new",
       prompt: [textBlock("hello")],
     });
-    expect(helperJsonrpcCall).not.toHaveBeenCalledWith("poolside/acpNav/getProjectSettings", {
+    expect(helperJsonrpcCall).not.toHaveBeenCalledWith("camber/acpNav/getProjectSettings", {
       path: "/repo",
     });
   });
@@ -4776,7 +4776,7 @@ describe("ACPSessionRepositoryWriter", () => {
     expect(prompt).toHaveBeenNthCalledWith(1, {
       sessionId: "s-existing",
       prompt: [textBlock("focus on tests")],
-      _meta: { "poolside/steer_fallback": true },
+      _meta: { "camber/steer_fallback": true },
     });
     expect(prompt).toHaveBeenNthCalledWith(2, {
       sessionId: "s-existing",
@@ -5111,7 +5111,7 @@ describe("ACPSessionRepositoryWriter", () => {
     expect(request).not.toHaveBeenCalled();
   });
 
-  it("uses prompt fallback titles for Poolside ACP sessions", async () => {
+  it("uses prompt fallback titles for Camber ACP sessions", async () => {
     const repo = new ACPSessionRepositoryWriter();
     const conn = mockConnection();
     await connectRepo(repo, conn);
@@ -5553,7 +5553,7 @@ describe("ACPSessionRepositoryWriter", () => {
     await vi.waitFor(() => {
       expect(session!.pendingPermissionRequests).toHaveLength(0);
     });
-    expect(helperJsonrpcCall).toHaveBeenCalledWith("poolside/acp/approvals/respond", {
+    expect(helperJsonrpcCall).toHaveBeenCalledWith("camber/acp/approvals/respond", {
       agentServer: DEFAULT_AGENT_SERVER,
       sessionId: "s-loaded",
       kind: "permission",
@@ -5593,7 +5593,7 @@ describe("ACPSessionRepositoryWriter", () => {
       const consoleError =
         failure === "rejected" ? vi.spyOn(console, "error").mockImplementation(() => {}) : null;
       helperJsonrpcCall.mockImplementation(async (method: string) => {
-        if (method === "poolside/acp/approvals/respond") {
+        if (method === "camber/acp/approvals/respond") {
           if (failure === "rejected") throw new Error("transport closed");
           return { outcome: "invalid" };
         }
@@ -5606,7 +5606,7 @@ describe("ACPSessionRepositoryWriter", () => {
         await vi.waitFor(() => {
           expect(session!.pendingPermissionRequests).toHaveLength(1);
         });
-        expect(helperJsonrpcCall).not.toHaveBeenCalledWith("poolside/acp/approvals/list", {});
+        expect(helperJsonrpcCall).not.toHaveBeenCalledWith("camber/acp/approvals/list", {});
       } finally {
         consoleError?.mockRestore();
       }
@@ -5733,7 +5733,7 @@ describe("ACPSessionRepositoryWriter", () => {
     elicitation.decline("e-1");
     expect(elicitation.isElicitationPending("e-1")).toBe(false);
     expect(helperJsonrpcCall).toHaveBeenCalledWith(
-      "poolside/acp/approvals/respond",
+      "camber/acp/approvals/respond",
       expect.objectContaining({ kind: "elicitation", id: "e-1", action: "decline" }),
     );
 

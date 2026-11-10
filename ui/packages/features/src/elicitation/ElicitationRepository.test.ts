@@ -1,4 +1,4 @@
-import { initializeStatefulModule as initializeHelperApi } from "@poolsideai/helperapi";
+import { initializeStatefulModule as initializeHelperApi } from "@camber/helperapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ACPConversationStatusRepository } from "../acp";
 import { ElicitationRepository } from "./ElicitationRepository.svelte";
@@ -159,7 +159,7 @@ describe("ElicitationRepository", () => {
     repo.accept("tc-store", {});
 
     await vi.waitFor(() => expect(repo.isElicitationPending("tc-store")).toBe(true));
-    expect(helperJsonrpcCall).not.toHaveBeenCalledWith("poolside/acp/approvals/list", {});
+    expect(helperJsonrpcCall).not.toHaveBeenCalledWith("camber/acp/approvals/list", {});
   });
 
   // A store-backed answer is removed optimistically and only put back if the

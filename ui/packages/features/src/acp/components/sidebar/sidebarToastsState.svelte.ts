@@ -1,4 +1,4 @@
-import { INFO_MESSAGE_EVENT, InfoMessageType } from "@poolsideai/rpc";
+import { INFO_MESSAGE_EVENT, InfoMessageType } from "@camber/rpc";
 
 export type SidebarToast = {
   id: string;

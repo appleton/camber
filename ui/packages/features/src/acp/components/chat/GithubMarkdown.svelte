@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { MarkdownBlock } from "@poolsideai/components/markdown";
+  import { MarkdownBlock } from "@camber/components/markdown";
   import { getACPGithubRepo } from "../../features/GithubRepository.svelte";
   import { markdownHost } from "../../markdownHost";
 

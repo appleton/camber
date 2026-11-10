@@ -1,11 +1,11 @@
-import { poolsideGetUserConfig } from "@poolsideai/helperapi";
+import { camberGetUserConfig } from "@camber/helperapi";
 import type {
   GetSecretOutput,
   ListSecretsOutput,
   SecretSummary,
   UpsertSecretParams,
-} from "@poolsideai/helperapi/schemas";
-import type { HostClient } from "@poolsideai/rpc";
+} from "@camber/helperapi/schemas";
+import type { HostClient } from "@camber/rpc";
 import { PersistedState } from "runed";
 
 type SecretsRPCClient = Pick<
@@ -88,7 +88,7 @@ export class SecretsRepository {
   }
 
   private async requiredSecrets(): Promise<string[]> {
-    const config = await poolsideGetUserConfig({});
+    const config = await camberGetUserConfig({});
     const secrets = config.sandboxConfig?.secrets;
     return Array.isArray(secrets)
       ? secrets.filter((secret): secret is string => typeof secret === "string")

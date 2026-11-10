@@ -7,10 +7,10 @@
 // the webview startup diagnostics (startupDiagnostics.ts, helper log).
 //
 // Build the binary it measures with:
-//   pnpm exec turbo build --filter='@poolsideai/desktop-assistant^...'  # from repo root
+//   pnpm exec turbo build --filter='@camber/desktop-assistant^...'  # from repo root
 //   pnpm tauri build --no-bundle --config scripts/perf-tauri-config.json
 // The turbo step is NOT optional: the production build resolves workspace
-// packages (@poolsideai/assistant and friends) through their built dist, so
+// packages (@camber/assistant and friends) through their built dist, so
 // skipping it silently measures stale package code. When in doubt, grep the
 // built main chunk for a string from the change being measured.
 // The perf identifier keeps the instance's single-instance socket and config
@@ -41,10 +41,10 @@ if (!/^[A-Za-z0-9._-]+$/.test(label) || label === "." || label === "..") {
   console.error(`invalid --label ${JSON.stringify(label)}: use letters, digits, ., _, -`);
   process.exit(1);
 }
-const binary = opt("binary", path.join(appDir, "src-tauri/target/release/Poolside"));
+const binary = opt("binary", path.join(appDir, "src-tauri/target/release/Camber"));
 const revealTimeoutMs = 90_000;
 
-const perfRoot = "/tmp/poolside-perf";
+const perfRoot = "/tmp/camber-perf";
 const templateDir = path.join(perfRoot, "template");
 const labelDir = path.join(perfRoot, label);
 
@@ -114,9 +114,9 @@ function prepareTemplate() {
   fs.mkdirSync(templateDir, { recursive: true, mode: 0o700 });
   fs.chmodSync(templateDir, 0o700);
   if (fs.existsSync(path.join(templateDir, "acp-nav.db"))) return;
-  const liveDb = path.join(os.homedir(), "Library/Caches/poolside/acp-nav-v1.db");
+  const liveDb = path.join(os.homedir(), "Library/Caches/camber/acp-nav-v1.db");
   execFileSync("sqlite3", [liveDb, `.backup ${path.join(templateDir, "acp-nav.db")}`]);
-  const liveConfig = path.join(os.homedir(), ".config/poolside/assistant.json");
+  const liveConfig = path.join(os.homedir(), ".config/camber/assistant.json");
   fs.copyFileSync(liveConfig, path.join(templateDir, "assistant-config.json"));
   console.log(`template prepared at ${templateDir}`);
 }
@@ -147,14 +147,14 @@ async function measureOnce(runDir) {
       LOGNAME: os.userInfo().username,
       SHELL: process.env.SHELL ?? "/bin/zsh",
       LANG: "en_US.UTF-8",
-      POOLSIDE_STARTUP_TIMING: "1",
+      CAMBER_STARTUP_TIMING: "1",
       // Per-label, not per-run: the first run captures cold and later runs
       // exercise the cache-hit path, mirroring real consecutive launches.
-      POOLSIDE_SHELL_ENV_CACHE_PATH: path.join(labelDir, "shell-env.json"),
-      POOLSIDE_DESKTOP_HELPER_LOG_FILE: helperLog,
-      POOLSIDE_ACP_NAV_DB_PATH: path.join(runDir, "acp-nav.db"),
-      POOLSIDE_ASSISTANT_CONFIG_PATH: path.join(runDir, "assistant-config.json"),
-      POOLSIDE_LOCAL_INFERENCE_MODELS_DIR: path.join(runDir, "models"),
+      CAMBER_SHELL_ENV_CACHE_PATH: path.join(labelDir, "shell-env.json"),
+      CAMBER_DESKTOP_HELPER_LOG_FILE: helperLog,
+      CAMBER_ACP_NAV_DB_PATH: path.join(runDir, "acp-nav.db"),
+      CAMBER_ASSISTANT_CONFIG_PATH: path.join(runDir, "assistant-config.json"),
+      CAMBER_LOCAL_INFERENCE_MODELS_DIR: path.join(runDir, "models"),
     },
   });
   child.on("error", (err) => console.error("spawn failed:", err));

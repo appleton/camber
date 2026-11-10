@@ -1,9 +1,9 @@
 {
-  "name": "@poolsideai/helperapi",
+  "name": "@camber/helperapi",
   "version": "2.3.53",
   "private": true,
   "repository": {
-    "url": "https://github.com/poolsideai/assistants"
+    "url": "https://github.com/appleton/camber"
   },
   "type": "module",
   "imports": {
@@ -48,15 +48,15 @@
       "prettier --ignore-unknown --write"
     ]
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "dependencies": {
     "vscode-languageserver-protocol": "^3.17.5"
   },
   "devDependencies": {
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
-    "@poolsideai/vite-config": "workspace:*",
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
+    "@camber/vite-config": "workspace:*",
     "@total-typescript/ts-reset": "catalog:",
     "eslint": "catalog:",
     "glob": "catalog:",

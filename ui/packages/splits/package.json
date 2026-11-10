@@ -1,5 +1,5 @@
 {
-  "name": "@poolsideai/splits",
+  "name": "@camber/splits",
   "version": "2.3.53",
   "private": true,
   "description": "Svelte split-pane tab controller and view components.",
@@ -22,7 +22,7 @@
     "!dist/**/*.test.*"
   ],
   "scripts": {
-    "build": "POOLSIDE_SKIP_STORYBOOK_VITE=1 svelte-package --input src --tsconfig tsconfig.build.json",
+    "build": "CAMBER_SKIP_STORYBOOK_VITE=1 svelte-package --input src --tsconfig tsconfig.build.json",
     "build:storybook": "storybook build --stats-json",
     "check:format": "prettier . --check --cache --ignore-path ../../.gitignore",
     "check:lint": "eslint --no-error-on-unmatched-pattern './src/**/*.{js,mjs,cjs,ts,tsx,svelte}'",
@@ -31,9 +31,9 @@
     "fix:lint": "eslint --no-error-on-unmatched-pattern './src/**/*.{js,mjs,cjs,ts,tsx,svelte}' --fix",
     "prepublishOnly": "turbo build",
     "storybook": "storybook dev -p 6009",
-    "test": "POOLSIDE_SKIP_STORYBOOK_VITE=1 vitest run",
-    "test:unit": "POOLSIDE_SKIP_STORYBOOK_VITE=1 vitest run --project unit",
-    "test:unit:watch": "POOLSIDE_SKIP_STORYBOOK_VITE=1 vitest --project unit",
+    "test": "CAMBER_SKIP_STORYBOOK_VITE=1 vitest run",
+    "test:unit": "CAMBER_SKIP_STORYBOOK_VITE=1 vitest run --project unit",
+    "test:unit:watch": "CAMBER_SKIP_STORYBOOK_VITE=1 vitest --project unit",
     "test:watch": "vitest"
   },
   "lint-staged": {
@@ -42,17 +42,17 @@
     ]
   },
   "dependencies": {
-    "@poolsideai/components": "workspace:*"
+    "@camber/components": "workspace:*"
   },
   "devDependencies": {
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/storybook-config": "workspace:*",
+    "@camber/svelte-config": "workspace:*",
+    "@camber/tailwind-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
+    "@camber/vite-config": "workspace:*",
     "@chromatic-com/storybook": "catalog:",
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/storybook-config": "workspace:*",
-    "@poolsideai/svelte-config": "workspace:*",
-    "@poolsideai/tailwind-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
-    "@poolsideai/vite-config": "workspace:*",
     "@storybook/addon-a11y": "catalog:",
     "@storybook/addon-svelte-csf": "catalog:",
     "@storybook/addon-vitest": "catalog:",

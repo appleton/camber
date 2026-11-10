@@ -21,9 +21,9 @@
     LogProvider,
     EnvironmentProvider,
     FilesystemProvider,
-  } from "@poolsideai/components/providers";
+  } from "@camber/components/providers";
   import { serializeError } from "serialize-error";
-  import { InfoMessageType } from "@poolsideai/rpc";
+  import { InfoMessageType } from "@camber/rpc";
 
   interface Props {
     children: Snippet;

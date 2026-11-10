@@ -1,7 +1,7 @@
 {
-  "name": "Poolside Remote",
-  "short_name": "Poolside",
-  "description": "Remote control for the Poolside desktop assistant.",
+  "name": "Camber Remote",
+  "short_name": "Camber",
+  "description": "Remote control for the Camber desktop assistant.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

@@ -1,5 +1,5 @@
-export const DEBUG_RPC_REQUEST_EVENT = "poolside:debug-rpc-request";
-export const DEBUG_RPC_RESPONSE_EVENT = "poolside:debug-rpc-response";
+export const DEBUG_RPC_REQUEST_EVENT = "camber:debug-rpc-request";
+export const DEBUG_RPC_RESPONSE_EVENT = "camber:debug-rpc-response";
 
 export type DebugRPCEvents = {
   requestEvent: string;
@@ -42,9 +42,9 @@ export type DebugRPCWindowRequest = {
  * Minimal in-webview debug RPC server for automation-only app APIs.
  *
  * This is intentionally separate from the host/webview RPC channel: some
- * automation targets, currently Spoolside's VS Code target, can evaluate code
- * inside the Poolside webview frame but cannot call the app's internal Svelte
- * contexts directly. The current caller is Spoolside, which invokes
+ * automation targets, currently CamberQA's VS Code target, can evaluate code
+ * inside the Camber webview frame but cannot call the app's internal Svelte
+ * contexts directly. The current caller is CamberQA, which invokes
  * `requestDebugRPCInWindow` through Playwright's raw frame evaluation.
  */
 export function installDebugRPC(

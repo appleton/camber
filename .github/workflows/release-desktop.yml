@@ -10,7 +10,7 @@ on:
         default: preview
         type: string
       sync_versions:
-        description: "Align with the highest VS Code/Desktop version"
+        description: "Use the desktop release version history"
         required: false
         default: true
         type: boolean
@@ -80,7 +80,7 @@ env:
 jobs:
   plan:
     name: Plan
-    if: github.repository == 'poolsideai/assistants'
+    if: github.repository == 'appleton/camber' && vars.CAMBER_RELEASES_ENABLED == 'true'
     runs-on: ubuntu-latest
     outputs:
       needs_release: ${{ steps.plan.outputs.needs_release || 'false' }}
@@ -260,7 +260,7 @@ jobs:
           if [[ "${SCHEDULED}" == "true" ]]; then
             args+=(--scheduled --skip-if-no-changes)
           fi
-          pnpm -s -F @poolsideai/release-helper find-version "${args[@]}" > "$RUNNER_TEMP/release-plan.json"
+          pnpm -s -F @camber/release-helper find-version "${args[@]}" > "$RUNNER_TEMP/release-plan.json"
 
       - name: Refuse to overtake an incomplete release
         if: steps.gate.outputs.proceed == 'true' && steps.gate.outputs.dry_run != 'true'
@@ -338,7 +338,7 @@ jobs:
     name: Build and validate macOS arm64
     needs: plan
     if: needs.plan.outputs.needs_release == 'true'
-    runs-on: macos-15-xlarge
+    runs-on: macos-15
     environment:
       name: ${{ needs.plan.outputs.can_sign == 'true' && format('desktop-{0}-release', needs.plan.outputs.channel) || 'desktop-dry-run' }}
     outputs:
@@ -365,7 +365,7 @@ jobs:
         if: needs.plan.outputs.dry_run == 'true'
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
-          pattern: artifact-poolside-*
+          pattern: artifact-camber-*
           path: ${{ runner.temp }}/release-runtime
           merge-multiple: true
 
@@ -553,21 +553,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          pnpm -s -F @poolsideai/release-helper find-version render-changelog desktop \
+          pnpm -s -F @camber/release-helper find-version render-changelog desktop \
             --head "${RELEASE_SHA}" --version "${VERSION}"
 
       - name: Download bundled binaries
         env:
-          POOLSIDE_RUNTIME_ARTIFACT_DIR: ${{ runner.temp }}/release-runtime
-          POOLSIDE_RUNTIME_VERSION: ${{ inputs.helper_version }}
-        run: pnpm -F @poolsideai/desktop-assistant download:binaries aarch64-apple-darwin
+          CAMBER_RUNTIME_ARTIFACT_DIR: ${{ runner.temp }}/release-runtime
+          CAMBER_RUNTIME_VERSION: ${{ inputs.helper_version }}
+        run: pnpm -F @camber/desktop-assistant download:binaries aarch64-apple-darwin
 
       - name: Build workspace dependencies
-        run: pnpm turbo build:web -F @poolsideai/desktop-assistant
+        run: pnpm turbo build:web -F @camber/desktop-assistant
 
       - name: Test release source
         run: |
-          pnpm -F @poolsideai/desktop-assistant check:types
+          pnpm -F @camber/desktop-assistant check:types
           cargo test --manifest-path ui/apps/desktop-assistant/src-tauri/Cargo.toml
 
       - name: Import Developer ID certificate
@@ -601,7 +601,7 @@ jobs:
           APPLE_SIGNING_IDENTITY: Developer ID Application
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: pnpm -F @poolsideai/desktop-assistant tauri build --runner cargo --target aarch64-apple-darwin
+        run: pnpm -F @camber/desktop-assistant tauri build --runner cargo --target aarch64-apple-darwin
 
       - name: Verify notarized app and notarize disk image
         if: needs.plan.outputs.can_sign == 'true'
@@ -633,7 +633,7 @@ jobs:
       - name: Build unsigned dry-run app
         if: needs.plan.outputs.can_sign != 'true'
         run: >-
-          pnpm -F @poolsideai/desktop-assistant tauri build
+          pnpm -F @camber/desktop-assistant tauri build
           --runner cargo
           --target aarch64-apple-darwin
           --config '{"bundle":{"createUpdaterArtifacts":false}}'
@@ -660,13 +660,13 @@ jobs:
           mkdir -p release-artifacts
           args=(changelog desktop --head "${RELEASE_SHA}")
           [[ -n "${CHANGELOG_TAG}" ]] && args+=(--prev "${CHANGELOG_TAG}")
-          pnpm -s -F @poolsideai/release-helper find-version "${args[@]}" > release-artifacts/notes.md
+          pnpm -s -F @camber/release-helper find-version "${args[@]}" > release-artifacts/notes.md
           {
             command cat release-artifacts/notes.md
             echo
             echo "Release source: ${TAG}@${RELEASE_SHA}"
           } > release-artifacts/crabnebula-notes.txt
-          pnpm -s -F @poolsideai/release-helper find-version "${args[@]}" --slack > release-artifacts/slack.txt
+          pnpm -s -F @camber/release-helper find-version "${args[@]}" --slack > release-artifacts/slack.txt
           find "${BUNDLE_DIR}" -type f \( -name '*.dmg' -o -name '*.tar.gz' \) -print0 \
             | xargs -0 shasum -a 256 > release-artifacts/checksums.txt
 
@@ -694,7 +694,7 @@ jobs:
       needs.plan.result == 'success' &&
       needs.plan.outputs.dry_run != 'true' &&
       needs.build.result == 'success'
-    runs-on: macos-15-xlarge
+    runs-on: macos-15
     environment: desktop-${{ needs.plan.outputs.channel }}-release
     permissions:
       contents: write
@@ -1152,7 +1152,7 @@ jobs:
     needs: [plan, build, publish, finalize]
     if: >-
       always() &&
-      github.repository == 'poolsideai/assistants'
+      github.repository == 'appleton/camber'
     runs-on: ubuntu-latest
     steps:
       - name: Determine terminal outcome

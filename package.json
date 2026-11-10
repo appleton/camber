@@ -1,8 +1,8 @@
 {
-  "name": "poolside",
+  "name": "camber",
   "version": "1.0.0",
   "private": true,
-  "description": "The pnpm root for the poolside UI monorepo",
+  "description": "The pnpm root for the camber UI monorepo",
   "type": "module",
   "scripts": {
     "build": "turbo build --affected",
@@ -30,9 +30,9 @@
       "prettier --ignore-unknown --write"
     ]
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "devDependencies": {
-    "@poolsideai/prettier-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
     "@testing-library/jest-dom": "catalog:",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.0",

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { MarkdownBlock } from "@poolsideai/components/markdown";
+  import { MarkdownBlock } from "@camber/components/markdown";
   import dependencyLicenses from "../../../../THIRD-PARTY-DEPENDENCIES.md?raw";
   import thirdPartyLicenses from "../../../../THIRD-PARTY-LICENSES.md?raw";
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { UserMessageBubble as SharedUserMessageBubble } from "@poolsideai/components/assistant-ui";
+  import { UserMessageBubble as SharedUserMessageBubble } from "@camber/components/assistant-ui";
   import type { Snippet } from "svelte";
 
   interface Props {

@@ -8,13 +8,13 @@ import {
   type ACPWorktreeCommandRunner,
 } from "./WorktreeRepository";
 
-vi.mock("@poolsideai/helperapi", () => ({
-  poolsideAcpNavCreateWorktree: vi.fn(),
-  poolsideAcpNavGetProjectSettings: vi.fn(),
-  poolsideAcpNavList: vi.fn(),
-  poolsideAcpNavPrepareWorktree: vi.fn(),
-  poolsideAcpNavReleasePreparedWorktree: vi.fn(),
-  poolsideAcpNavRemoveWorktree: vi.fn(),
+vi.mock("@camber/helperapi", () => ({
+  camberAcpNavCreateWorktree: vi.fn(),
+  camberAcpNavGetProjectSettings: vi.fn(),
+  camberAcpNavList: vi.fn(),
+  camberAcpNavPrepareWorktree: vi.fn(),
+  camberAcpNavReleasePreparedWorktree: vi.fn(),
+  camberAcpNavRemoveWorktree: vi.fn(),
 }));
 
 function commandRunner(): ACPWorktreeCommandRunner {
@@ -44,22 +44,22 @@ describe("ACPWorktreeRepositoryWriter", () => {
   });
 
   it("prepares a worktree name before creation", async () => {
-    const { poolsideAcpNavPrepareWorktree } = await import("@poolsideai/helperapi");
-    vi.mocked(poolsideAcpNavPrepareWorktree).mockResolvedValue(prepared);
+    const { camberAcpNavPrepareWorktree } = await import("@camber/helperapi");
+    vi.mocked(camberAcpNavPrepareWorktree).mockResolvedValue(prepared);
     const repo = createACPWorktreeRepository(commandRunner());
 
     const result = await repo.prepareWorktree("/repo");
 
-    expect(poolsideAcpNavPrepareWorktree).toHaveBeenCalledWith({ projectPath: "/repo" });
+    expect(camberAcpNavPrepareWorktree).toHaveBeenCalledWith({ projectPath: "/repo" });
     expect(result?.name).toBe("feature");
   });
 
   it("creates a worktree with the prepared name and runs the parent setup script", async () => {
-    const { poolsideAcpNavCreateWorktree, poolsideAcpNavGetProjectSettings } = await import(
-      "@poolsideai/helperapi"
+    const { camberAcpNavCreateWorktree, camberAcpNavGetProjectSettings } = await import(
+      "@camber/helperapi"
     );
-    vi.mocked(poolsideAcpNavCreateWorktree).mockResolvedValue(prepared);
-    vi.mocked(poolsideAcpNavGetProjectSettings).mockResolvedValue({
+    vi.mocked(camberAcpNavCreateWorktree).mockResolvedValue(prepared);
+    vi.mocked(camberAcpNavGetProjectSettings).mockResolvedValue({
       settings: {
         path: "/repo",
         setupScript: "pnpm install\n",
@@ -73,11 +73,11 @@ describe("ACPWorktreeRepositoryWriter", () => {
 
     const created = await repo.createWorktree("/repo", prepared, (kind) => kinds.push(kind));
 
-    expect(poolsideAcpNavCreateWorktree).toHaveBeenCalledWith({
+    expect(camberAcpNavCreateWorktree).toHaveBeenCalledWith({
       projectPath: "/repo",
       worktreeName: "feature",
     });
-    expect(poolsideAcpNavGetProjectSettings).toHaveBeenCalledWith({ path: "/repo" });
+    expect(camberAcpNavGetProjectSettings).toHaveBeenCalledWith({ path: "/repo" });
     expect(kinds).toEqual(["running_setup"]);
     expect(runner.runSetup).toHaveBeenCalledWith(
       "/repo/worktrees/feature",
@@ -88,7 +88,7 @@ describe("ACPWorktreeRepositoryWriter", () => {
   });
 
   it("does not create when the delete signal is already aborted", async () => {
-    const { poolsideAcpNavCreateWorktree } = await import("@poolsideai/helperapi");
+    const { camberAcpNavCreateWorktree } = await import("@camber/helperapi");
     const runner = commandRunner();
     const repo = createACPWorktreeRepository(runner);
     const controller = new AbortController();
@@ -97,25 +97,25 @@ describe("ACPWorktreeRepositoryWriter", () => {
     const created = await repo.createWorktree("/repo", prepared, undefined, controller.signal);
 
     expect(created).toBeUndefined();
-    expect(poolsideAcpNavCreateWorktree).not.toHaveBeenCalled();
+    expect(camberAcpNavCreateWorktree).not.toHaveBeenCalled();
     expect(runner.runSetup).not.toHaveBeenCalled();
   });
 
   it("removes the worktree when delete is requested while git create is running", async () => {
     const {
-      poolsideAcpNavCreateWorktree,
-      poolsideAcpNavGetProjectSettings,
-      poolsideAcpNavList,
-      poolsideAcpNavRemoveWorktree,
-    } = await import("@poolsideai/helperapi");
+      camberAcpNavCreateWorktree,
+      camberAcpNavGetProjectSettings,
+      camberAcpNavList,
+      camberAcpNavRemoveWorktree,
+    } = await import("@camber/helperapi");
     const controller = new AbortController();
     let finishCreate: (project: ACPNavProject) => void = () => {};
-    vi.mocked(poolsideAcpNavCreateWorktree).mockReturnValue(
+    vi.mocked(camberAcpNavCreateWorktree).mockReturnValue(
       new Promise<ACPNavProject>((resolve) => {
         finishCreate = resolve;
       }),
     );
-    vi.mocked(poolsideAcpNavList).mockResolvedValue({ conversations: [], projects: [] });
+    vi.mocked(camberAcpNavList).mockResolvedValue({ conversations: [], projects: [] });
     const runner = commandRunner();
     const repo = createACPWorktreeRepository(runner);
 
@@ -124,50 +124,50 @@ describe("ACPWorktreeRepositoryWriter", () => {
     finishCreate(prepared);
 
     await expect(created).resolves.toBeUndefined();
-    expect(poolsideAcpNavGetProjectSettings).not.toHaveBeenCalled();
+    expect(camberAcpNavGetProjectSettings).not.toHaveBeenCalled();
     expect(runner.closeWorktree).toHaveBeenCalledWith("/repo/worktrees/feature");
-    expect(poolsideAcpNavRemoveWorktree).toHaveBeenCalledWith({
+    expect(camberAcpNavRemoveWorktree).toHaveBeenCalledWith({
       path: "/repo/worktrees/feature",
     });
   });
 
   it("skips setup and removes the worktree when delete arrives after git create", async () => {
     const {
-      poolsideAcpNavCreateWorktree,
-      poolsideAcpNavGetProjectSettings,
-      poolsideAcpNavList,
-      poolsideAcpNavRemoveWorktree,
-    } = await import("@poolsideai/helperapi");
+      camberAcpNavCreateWorktree,
+      camberAcpNavGetProjectSettings,
+      camberAcpNavList,
+      camberAcpNavRemoveWorktree,
+    } = await import("@camber/helperapi");
     const controller = new AbortController();
-    vi.mocked(poolsideAcpNavCreateWorktree).mockImplementation(async () => {
+    vi.mocked(camberAcpNavCreateWorktree).mockImplementation(async () => {
       controller.abort();
       return prepared;
     });
-    vi.mocked(poolsideAcpNavList).mockResolvedValue({ conversations: [], projects: [] });
+    vi.mocked(camberAcpNavList).mockResolvedValue({ conversations: [], projects: [] });
     const runner = commandRunner();
     const repo = createACPWorktreeRepository(runner);
 
     const created = await repo.createWorktree("/repo", prepared, undefined, controller.signal);
 
     expect(created).toBeUndefined();
-    expect(poolsideAcpNavGetProjectSettings).not.toHaveBeenCalled();
+    expect(camberAcpNavGetProjectSettings).not.toHaveBeenCalled();
     expect(runner.runSetup).not.toHaveBeenCalled();
-    expect(poolsideAcpNavRemoveWorktree).toHaveBeenCalledWith({
+    expect(camberAcpNavRemoveWorktree).toHaveBeenCalledWith({
       path: "/repo/worktrees/feature",
     });
   });
 
   it("removes the worktree when delete arrives while fetching an empty setup script", async () => {
     const {
-      poolsideAcpNavCreateWorktree,
-      poolsideAcpNavGetProjectSettings,
-      poolsideAcpNavList,
-      poolsideAcpNavRemoveWorktree,
-    } = await import("@poolsideai/helperapi");
+      camberAcpNavCreateWorktree,
+      camberAcpNavGetProjectSettings,
+      camberAcpNavList,
+      camberAcpNavRemoveWorktree,
+    } = await import("@camber/helperapi");
     const controller = new AbortController();
     let finishSettings: () => void = () => {};
-    vi.mocked(poolsideAcpNavCreateWorktree).mockResolvedValue(prepared);
-    vi.mocked(poolsideAcpNavGetProjectSettings).mockReturnValue(
+    vi.mocked(camberAcpNavCreateWorktree).mockResolvedValue(prepared);
+    vi.mocked(camberAcpNavGetProjectSettings).mockReturnValue(
       new Promise((resolve) => {
         finishSettings = () =>
           resolve({
@@ -180,27 +180,27 @@ describe("ACPWorktreeRepositoryWriter", () => {
           });
       }),
     );
-    vi.mocked(poolsideAcpNavList).mockResolvedValue({ conversations: [], projects: [] });
+    vi.mocked(camberAcpNavList).mockResolvedValue({ conversations: [], projects: [] });
     const runner = commandRunner();
     const repo = createACPWorktreeRepository(runner);
 
     const created = repo.createWorktree("/repo", prepared, undefined, controller.signal);
-    await vi.waitFor(() => expect(poolsideAcpNavGetProjectSettings).toHaveBeenCalled());
+    await vi.waitFor(() => expect(camberAcpNavGetProjectSettings).toHaveBeenCalled());
     controller.abort();
     finishSettings();
 
     await expect(created).resolves.toBeUndefined();
     expect(runner.runSetup).not.toHaveBeenCalled();
-    expect(poolsideAcpNavRemoveWorktree).toHaveBeenCalledWith({
+    expect(camberAcpNavRemoveWorktree).toHaveBeenCalledWith({
       path: "/repo/worktrees/feature",
     });
   });
 
   it("aborts setup and removes the created worktree", async () => {
-    const { poolsideAcpNavCreateWorktree, poolsideAcpNavGetProjectSettings, poolsideAcpNavList } =
-      await import("@poolsideai/helperapi");
-    vi.mocked(poolsideAcpNavCreateWorktree).mockResolvedValue(prepared);
-    vi.mocked(poolsideAcpNavGetProjectSettings).mockResolvedValue({
+    const { camberAcpNavCreateWorktree, camberAcpNavGetProjectSettings, camberAcpNavList } =
+      await import("@camber/helperapi");
+    vi.mocked(camberAcpNavCreateWorktree).mockResolvedValue(prepared);
+    vi.mocked(camberAcpNavGetProjectSettings).mockResolvedValue({
       settings: {
         path: "/repo",
         setupScript: "pnpm install",
@@ -208,7 +208,7 @@ describe("ACPWorktreeRepositoryWriter", () => {
         userPrompt: "",
       },
     });
-    vi.mocked(poolsideAcpNavList).mockResolvedValue({ conversations: [], projects: [] });
+    vi.mocked(camberAcpNavList).mockResolvedValue({ conversations: [], projects: [] });
     const controller = new AbortController();
     const runner = commandRunner();
     vi.mocked(runner.runSetup).mockImplementation(
@@ -228,27 +228,23 @@ describe("ACPWorktreeRepositoryWriter", () => {
   });
 
   it("does not run setup when worktree creation returns no project", async () => {
-    const { poolsideAcpNavCreateWorktree, poolsideAcpNavGetProjectSettings } = await import(
-      "@poolsideai/helperapi"
+    const { camberAcpNavCreateWorktree, camberAcpNavGetProjectSettings } = await import(
+      "@camber/helperapi"
     );
-    vi.mocked(poolsideAcpNavCreateWorktree).mockResolvedValue(
-      undefined as unknown as ACPNavProject,
-    );
+    vi.mocked(camberAcpNavCreateWorktree).mockResolvedValue(undefined as unknown as ACPNavProject);
     const runner = commandRunner();
     const repo = createACPWorktreeRepository(runner);
 
     const created = await repo.createWorktree("/repo", prepared);
 
     expect(created).toBeUndefined();
-    expect(poolsideAcpNavGetProjectSettings).not.toHaveBeenCalled();
+    expect(camberAcpNavGetProjectSettings).not.toHaveBeenCalled();
     expect(runner.runSetup).not.toHaveBeenCalled();
   });
 
   it("closes, tears down, removes, and closes the worktree again", async () => {
-    const { poolsideAcpNavList, poolsideAcpNavRemoveWorktree } = await import(
-      "@poolsideai/helperapi"
-    );
-    vi.mocked(poolsideAcpNavList).mockResolvedValue({
+    const { camberAcpNavList, camberAcpNavRemoveWorktree } = await import("@camber/helperapi");
+    vi.mocked(camberAcpNavList).mockResolvedValue({
       conversations: [],
       projects: [
         {
@@ -282,28 +278,28 @@ describe("ACPWorktreeRepositoryWriter", () => {
     expect(kinds).toEqual(["tearing_down", "deleting"]);
     expect(runner.closeWorktree).toHaveBeenNthCalledWith(1, "/repo/worktrees/feature");
     expect(vi.mocked(runner.closeWorktree).mock.invocationCallOrder[0]).toBeLessThan(
-      vi.mocked(poolsideAcpNavList).mock.invocationCallOrder[0],
+      vi.mocked(camberAcpNavList).mock.invocationCallOrder[0],
     );
     expect(runner.runTeardown).toHaveBeenCalledWith("/repo/worktrees/feature", "pnpm clean");
-    expect(poolsideAcpNavRemoveWorktree).toHaveBeenCalledWith({
+    expect(camberAcpNavRemoveWorktree).toHaveBeenCalledWith({
       path: "/repo/worktrees/feature",
     });
     expect(runner.closeWorktree).toHaveBeenNthCalledWith(2, "/repo/worktrees/feature");
   });
 
   it("discardPreparedWorktree releases the reservation and does not call removeWorktree", async () => {
-    const { poolsideAcpNavReleasePreparedWorktree, poolsideAcpNavRemoveWorktree } = await import(
-      "@poolsideai/helperapi"
+    const { camberAcpNavReleasePreparedWorktree, camberAcpNavRemoveWorktree } = await import(
+      "@camber/helperapi"
     );
     const runner = commandRunner();
     const repo = createACPWorktreeRepository(runner);
 
     await repo.discardPreparedWorktree("/repo/worktrees/feature");
 
-    expect(poolsideAcpNavReleasePreparedWorktree).toHaveBeenCalledWith({
+    expect(camberAcpNavReleasePreparedWorktree).toHaveBeenCalledWith({
       path: "/repo/worktrees/feature",
     });
-    expect(poolsideAcpNavRemoveWorktree).not.toHaveBeenCalled();
+    expect(camberAcpNavRemoveWorktree).not.toHaveBeenCalled();
     expect(runner.closeWorktree).toHaveBeenCalledWith("/repo/worktrees/feature");
   });
 
@@ -371,7 +367,7 @@ describe("ACPWorktreeRepositoryWriter", () => {
       closeProject: vi.fn().mockResolvedValue(undefined),
       closeWorktree: vi.fn().mockResolvedValue(undefined),
       runCommandAndWait: vi.fn().mockImplementation(async (_path, _command, _signal, options) => {
-        options?.onOutput?.("stopping services\ncommand not found: spoolside\n");
+        options?.onOutput?.("stopping services\ncommand not found: camberqa\n");
         return 1;
       }),
     };
@@ -380,7 +376,7 @@ describe("ACPWorktreeRepositoryWriter", () => {
     );
 
     await expect(runner.runTeardown("/repo/worktrees/feature", "cleanup")).rejects.toThrow(
-      "Teardown script exited with code 1: cleanup\nstopping services\ncommand not found: spoolside",
+      "Teardown script exited with code 1: cleanup\nstopping services\ncommand not found: camberqa",
     );
   });
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ContentBlock } from "@agentclientprotocol/sdk";
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
   import { getACPAgentRegistryRepo } from "../../features/AgentRegistryRepository.svelte";
   import { getACPChatSessionScope } from "../../features/ChatSessionScope.svelte";
   import {

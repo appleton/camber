@@ -18,7 +18,7 @@
       {
         name: "piano-composer",
         description: "Compose a piano piece",
-        _meta: { "poolside/slash_command_category": "skill" },
+        _meta: { "camber/slash_command_category": "skill" },
       },
     ]}
   >

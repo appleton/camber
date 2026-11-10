@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { isFailure, isLoading } from "@poolsideai/lib/async-state";
+  import { isFailure, isLoading } from "@camber/lib/async-state";
   import {
-    poolsideAcpNavCheckAgentRuntimes,
-    poolsideAcpNavInstallAgentServer,
-  } from "@poolsideai/helperapi";
-  import { type ACPAgentServerConfig, type ACPAgentServers } from "@poolsideai/rpc";
+    camberAcpNavCheckAgentRuntimes,
+    camberAcpNavInstallAgentServer,
+  } from "@camber/helperapi";
+  import { type ACPAgentServerConfig, type ACPAgentServers } from "@camber/rpc";
   import { ASSISTANT_CONFIG_DISPLAY_PATH, openAssistantConfigFile } from "../assistantConfig";
   import { appState } from "../hostAdapter";
   import { rpc } from "../hostRpc";
@@ -34,7 +34,7 @@
   import { LOCAL_AGENT_ROUNDEL_ICON_URL, LOCAL_AGENT_SYSTEM_ICON_URL } from "../localAgentIcon";
   import { agentPickerIconProps } from "./chat/menus/config/agentConfig";
   import RegistryAgentIcon from "./RegistryAgentIcon.svelte";
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { catalogCardClass } from "./settings/catalogCardStyles";
   import SearchField from "./sidebar/SearchField.svelte";
   import { primaryPillButtonClass, updatePillButtonClass } from "./settings/pillButtonStyles";
@@ -45,7 +45,7 @@
 
   const ACP_PROTOCOL_URL = "https://agentclientprotocol.com";
   const CUSTOM_AGENT_CONFIGURATION_URL =
-    "https://docs.poolside.ai/tools/poolside-assistant-desktop";
+    "https://github.com/appleton/camber/blob/main/docs/getting-started.md";
 
   const registry = getACPAgentRegistryRepo();
   const agentUpdates = getACPAgentUpdateRepo();
@@ -109,12 +109,12 @@
       configurableRegistryAgents.filter((agent) => registryAgentCategory(agent) === "third-party"),
     ),
   );
-  let bundledPoolsideAgent = $derived(registry.getAgent(DEFAULT_AGENT_SERVER));
-  let poolsideProgress = $derived(agentUpdates.progressFor(DEFAULT_AGENT_SERVER));
-  let poolsideReleaseUrl = $derived(
-    bundledPoolsideAgent ? registryAgentReleaseUrl(bundledPoolsideAgent) : undefined,
+  let bundledCamberAgent = $derived(registry.getAgent(DEFAULT_AGENT_SERVER));
+  let camberProgress = $derived(agentUpdates.progressFor(DEFAULT_AGENT_SERVER));
+  let camberReleaseUrl = $derived(
+    bundledCamberAgent ? registryAgentReleaseUrl(bundledCamberAgent) : undefined,
   );
-  let poolsideUpdate = $derived(agentUpdates.updateFor(DEFAULT_AGENT_SERVER));
+  let camberUpdate = $derived(agentUpdates.updateFor(DEFAULT_AGENT_SERVER));
   let isDesktop = $derived($appState.environment.assistantHost === "desktop");
   let isBusy = $derived(busyAgentId != null || agentUpdates.busyAgentServer != null);
   let visibleSaveError = $derived(saveError ?? agentUpdates.error);
@@ -179,7 +179,7 @@
 
   async function loadAgentRuntimes(): Promise<void> {
     try {
-      const runtimes = await poolsideAcpNavCheckAgentRuntimes({});
+      const runtimes = await camberAcpNavCheckAgentRuntimes({});
       npxAvailable = runtimes.npx.available;
     } catch {
       // Leave availability unknown; the install path reports its own errors.
@@ -309,7 +309,7 @@
     return update?.kind === "install" ? "Install" : "Update";
   }
 
-  async function updatePoolsideAgent(): Promise<void> {
+  async function updateCamberAgent(): Promise<void> {
     saveError = null;
     try {
       await agentUpdates.update(DEFAULT_AGENT_SERVER);
@@ -364,7 +364,7 @@
       await Promise.all([
         // Snapshot to strip the Svelte $state proxy so the VS Code postMessage
         // boundary can structured-clone the binary config.
-        poolsideAcpNavInstallAgentServer({
+        camberAcpNavInstallAgentServer({
           agentServer: agent.id,
           config: $state.snapshot(config) as ACPAgentServerConfig,
         }),
@@ -465,7 +465,7 @@
   </p>
 {/snippet}
 
-<SettingsSection title="Made by Poolside" subtitle="Poolside's own first party agent harness.">
+<SettingsSection title="Upstream agent" subtitle="The original Poolside agent integration.">
   <div class="agent-catalog px-3 pb-4 pt-3">
     <div class="agent-catalog-grid">
       <article class={`${catalogCardClass} flex min-w-0 cursor-default flex-col rounded-xl p-4`}>
@@ -475,7 +475,7 @@
             aria-hidden="true"
           >
             <RegistryAgentIcon
-              iconUrl={bundledPoolsideAgent ? registryIconUrl(bundledPoolsideAgent) : undefined}
+              iconUrl={bundledCamberAgent ? registryIconUrl(bundledCamberAgent) : undefined}
               fallback="lab"
               size={20}
               class="text-psx-vibrant shrink-0"
@@ -484,90 +484,90 @@
           <h3 class="text-psx-foreground-primary truncate text-[13px]/[18px] font-medium">
             Poolside Agent
           </h3>
-          {#if bundledPoolsideAgent}
-            {#if poolsideReleaseUrl}
+          {#if bundledCamberAgent}
+            {#if camberReleaseUrl}
               <button
                 type="button"
                 class="bg-psx-chrome text-psx-foreground-secondary hover:text-psx-foreground-primary outline-hidden focus-visible:outline-psx-focus shrink-0 cursor-pointer rounded-full px-1.5 py-0.5 text-xs underline-offset-2 hover:underline focus-visible:outline-2"
                 aria-label="View Poolside Agent releases"
-                onclick={() => openReleaseUrl(bundledPoolsideAgent)}
+                onclick={() => openReleaseUrl(bundledCamberAgent)}
               >
-                {agentCurrentVersionLabel(bundledPoolsideAgent)}
+                {agentCurrentVersionLabel(bundledCamberAgent)}
               </button>
             {:else}
               <span
                 class="bg-psx-chrome text-psx-foreground-secondary shrink-0 rounded-full px-1.5 py-0.5 text-xs"
               >
-                {agentCurrentVersionLabel(bundledPoolsideAgent)}
+                {agentCurrentVersionLabel(bundledCamberAgent)}
               </span>
             {/if}
-            {#if agentNextVersionLabel(bundledPoolsideAgent)}
+            {#if agentNextVersionLabel(bundledCamberAgent)}
               <span class="text-psx-foreground-secondary shrink-0 text-xs">→</span>
               <span class="text-psx-vibrant shrink-0 text-sm">
-                {agentNextVersionLabel(bundledPoolsideAgent)}
+                {agentNextVersionLabel(bundledCamberAgent)}
               </span>
             {/if}
             <span
               class="bg-psx-chrome text-psx-foreground-secondary shrink-0 rounded-full px-1.5 py-0.5 text-xs"
             >
-              {registryAgentDistributionLabel(bundledPoolsideAgent)}
+              {registryAgentDistributionLabel(bundledCamberAgent)}
             </span>
           {/if}
         </div>
         <p class="text-psx-foreground-secondary leading-4.5 mt-2 text-sm">
-          Poolside Assistant uses this local ACP agent to talk with Poolside models and unlock
-          Poolside-only features such as secret management. The agent is installed and updated
+          Camber Assistant uses this local ACP agent to talk with Poolside models and unlock
+          agent-specific features such as secret management. The agent is installed and updated
           separately from the desktop app and separately from any <code>pool</code> CLI on this machine.
         </p>
         {@render likelyRequirements(["Poolside account, OpenRouter, or local model endpoint"])}
-        {#if poolsideUpdate}
+        {#if camberUpdate}
           <div
             class="bg-psx-chrome-hover/40 text-psx-foreground-secondary mt-3 rounded-lg px-3 py-2 text-[13px]/[18px]"
           >
-            {#if poolsideUpdate.kind === "install"}
+            {#if camberUpdate.kind === "install"}
               The Poolside agent is configured but the local agent package is not installed yet.
-              Install it to use Poolside chats on this machine.
-            {:else if poolsideUpdate.kind === "restart"}
+              Install it to use agent chats on this machine.
+            {:else if camberUpdate.kind === "restart"}
               The updated Poolside agent is installed. Restart the agent after its running
               conversations finish to use it.
             {:else}
               A newer Poolside agent is available. Updating here updates the agent used for chats,
-              not the Poolside Assistant desktop app.
+              not the Camber Assistant desktop app.
             {/if}
           </div>
         {/if}
-        {#if poolsideProgress}
+        {#if camberProgress}
           <div class="mt-3">
             <div class="bg-psx-chrome h-1.5 overflow-hidden rounded-full">
               <div
                 class="bg-psx-vibrant h-full rounded-full transition-all duration-300 ease-out"
-                style:width={poolsideProgress.width}
+                style:width={camberProgress.width}
               ></div>
             </div>
             <div class="text-psx-foreground-secondary mt-1 text-[13px]/[18px]">
-              {poolsideProgress.label}
+              {camberProgress.label}
             </div>
           </div>
         {/if}
-        {#if bundledPoolsideAgent && poolsideUpdate}
+        {#if bundledCamberAgent && camberUpdate}
           <div class="mt-auto flex items-center justify-end gap-2 pt-3">
-            {#if bundledPoolsideAgent && poolsideUpdate?.kind !== "install"}
+            {#if bundledCamberAgent && camberUpdate?.kind !== "install"}
               <button
                 type="button"
                 disabled={isBusy ||
-                  (poolsideUpdate.kind === "restart" &&
+                  (camberUpdate.kind === "restart" &&
                     agentUpdates.restartBlockedFor(DEFAULT_AGENT_SERVER))}
-                onclick={updatePoolsideAgent}
+                onclick={updateCamberAgent}
                 class={updatePillButtonClass}
               >
                 {agentUpdateLabel(DEFAULT_AGENT_SERVER)}
               </button>
             {/if}
-            {#if bundledPoolsideAgent && poolsideUpdate?.kind === "install"}
+            {#if bundledCamberAgent && camberUpdate?.kind === "install"}
               <button
                 type="button"
                 disabled={isBusy}
-                onclick={updatePoolsideAgent}
+                onclick={updateCamberAgent}
                 class={primaryPillButtonClass}
               >
                 {agentUpdateLabel(DEFAULT_AGENT_SERVER)}
@@ -594,7 +594,7 @@
               />
             </span>
             <h3 class="text-psx-foreground-primary truncate text-[13px]/[18px] font-medium">
-              Poolside Local
+              Camber Local
             </h3>
             <span
               class="bg-psx-info-foreground/10 text-psx-info-foreground shrink-0 rounded-full px-1.5 py-0.5 text-xs"
@@ -636,8 +636,8 @@
 {:else}
   {#if testedAgents.length > 0}
     <SettingsSection
-      title="Tested by Poolside"
-      subtitle="Third-party agent harnesses tested by Poolside."
+      title="Tested by Camber"
+      subtitle="Third-party agent harnesses tested by Camber."
     >
       <div class="agent-catalog px-3 pb-4 pt-3">
         <div class="agent-catalog-grid">

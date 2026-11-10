@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import Kbd from "@poolsideai/components/kbd";
+  import Icon from "@camber/components/icon";
+  import Kbd from "@camber/components/kbd";
   import { formatRelativeTimeWithoutAgo } from "../../shared/time";
   import type { ACPConversationSummary } from "../../navTypes";
   import RegistryAgentIcon from "../RegistryAgentIcon.svelte";

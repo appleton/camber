@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { InfoMessageType } from "@poolsideai/rpc";
-  import * as Prompt from "@poolsideai/components/prompt";
-  import { getItems } from "@poolsideai/components/prompt";
-  import type { InsertChipActionProps } from "@poolsideai/components/prompt";
+  import { InfoMessageType } from "@camber/rpc";
+  import * as Prompt from "@camber/components/prompt";
+  import { getItems } from "@camber/components/prompt";
+  import type { InsertChipActionProps } from "@camber/components/prompt";
   import { tick } from "svelte";
   import { getContextRepoContext } from "../../../../context";
   import { rpc } from "../../../hostRpc";

@@ -4,7 +4,7 @@
     DisplayProvider,
     EnvironmentProvider,
     LogProvider,
-  } from "@poolsideai/components/providers";
+  } from "@camber/components/providers";
   import { vi } from "vitest";
   import { setACPAgentRegistryContext } from "../../features/AgentRegistryRepository.svelte";
   import { setACPChatSessionScope } from "../../features/ChatSessionScope.svelte";

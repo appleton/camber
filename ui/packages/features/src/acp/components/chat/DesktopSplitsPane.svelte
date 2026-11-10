@@ -1,8 +1,8 @@
 <script lang="ts">
-  import Icon, { type IconName } from "@poolsideai/components/icon";
-  import { getUnknownErrorMessage } from "@poolsideai/lib/errors";
-  import { basename } from "@poolsideai/lib/path";
-  import { InfoMessageType, type AssistantTerminalTab, type AttachedFile } from "@poolsideai/rpc";
+  import Icon, { type IconName } from "@camber/components/icon";
+  import { getUnknownErrorMessage } from "@camber/lib/errors";
+  import { basename } from "@camber/lib/path";
+  import { InfoMessageType, type AssistantTerminalTab, type AttachedFile } from "@camber/rpc";
   import {
     SplitsController,
     SplitsView,
@@ -13,7 +13,7 @@
     type SplitsDelegate,
     type Tab,
     type TabID,
-  } from "@poolsideai/splits";
+  } from "@camber/splits";
   import { onDestroy, tick, untrack, type Component, type Snippet } from "svelte";
   import { DEFAULT_AGENT_SERVER, LOCAL_AGENT_SERVER } from "../../agentServers";
   import { agentPickerIconProps, agentPickerIconUrl } from "./menus/config/agentConfig";
@@ -120,14 +120,14 @@
     matchingDesktopSubagentTabId,
   } from "./desktopSubagentTabs";
 
-  const DESKTOP_CLOSE_TAB_EVENT = "poolside:desktop-close-tab";
-  const DESKTOP_REOPEN_CLOSED_TAB_EVENT = "poolside:desktop-reopen-closed-tab";
-  const DESKTOP_SELECT_PREVIOUS_TAB_EVENT = "poolside:desktop-select-previous-tab";
-  const DESKTOP_SELECT_NEXT_TAB_EVENT = "poolside:desktop-select-next-tab";
-  const DESKTOP_SPLIT_RIGHT_EVENT = "poolside:desktop-split-right";
-  const DESKTOP_SPLIT_DOWN_EVENT = "poolside:desktop-split-down";
-  const DESKTOP_CLOSE_WINDOW_EVENT = "poolside:desktop-close-window";
-  const DESKTOP_SAVE_LAYOUT_AS_DEFAULT_EVENT = "poolside:desktop-save-layout-as-default";
+  const DESKTOP_CLOSE_TAB_EVENT = "camber:desktop-close-tab";
+  const DESKTOP_REOPEN_CLOSED_TAB_EVENT = "camber:desktop-reopen-closed-tab";
+  const DESKTOP_SELECT_PREVIOUS_TAB_EVENT = "camber:desktop-select-previous-tab";
+  const DESKTOP_SELECT_NEXT_TAB_EVENT = "camber:desktop-select-next-tab";
+  const DESKTOP_SPLIT_RIGHT_EVENT = "camber:desktop-split-right";
+  const DESKTOP_SPLIT_DOWN_EVENT = "camber:desktop-split-down";
+  const DESKTOP_CLOSE_WINDOW_EVENT = "camber:desktop-close-window";
+  const DESKTOP_SAVE_LAYOUT_AS_DEFAULT_EVENT = "camber:desktop-save-layout-as-default";
   const DESKTOP_LAYOUT_PERSIST_DELAY_MS = 150;
 
   interface Props {
@@ -580,9 +580,9 @@
   let agent = $derived(registry.getAgent(agentServer) ?? null);
   let agentName = $derived(
     agentServer === DEFAULT_AGENT_SERVER
-      ? "Poolside"
+      ? "Camber"
       : agentServer === LOCAL_AGENT_SERVER
-        ? "Poolside Local"
+        ? "Camber Local"
         : (agent?.name ?? agentServer),
   );
   let chatTabTitle = $derived(`Chatting with ${agentName}`);

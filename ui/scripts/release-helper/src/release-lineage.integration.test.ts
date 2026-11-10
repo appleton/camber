@@ -26,8 +26,8 @@ interface Plan {
 
 const script = resolve(dirname(fileURLToPath(import.meta.url)), "find-version.ts");
 const tsx = resolve(dirname(fileURLToPath(import.meta.url)), "../node_modules/.bin/tsx");
-const destination = "poolside-ai.assistant-release-test";
-const displayName = "Poolside Assistant Release Test";
+const destination = "appleton.assistant-release-test";
+const displayName = "Camber Assistant Release Test";
 
 function git(repo: string, ...args: string[]): string {
   return execFileSync("git", args, { cwd: repo, encoding: "utf8" }).trim();
@@ -39,7 +39,7 @@ function plan(repo: string, ...args: string[]): Plan {
     [
       script,
       "plan",
-      "vscode",
+      "desktop",
       "--ref",
       "HEAD",
       "--main-ref",
@@ -61,7 +61,7 @@ function plan(repo: string, ...args: string[]): Plan {
 function renderChangelog(repo: string, ...args: string[]): string {
   const result = spawnSync(
     tsx,
-    [script, "render-changelog", "vscode", "--head", "HEAD", "--out", "-", ...args],
+    [script, "render-changelog", "desktop", "--head", "HEAD", "--out", "-", ...args],
     { cwd: repo, encoding: "utf8", env: { ...process.env, FORCE_COLOR: "0" } },
   );
   if (result.status !== 0) {
@@ -89,7 +89,7 @@ describe("managed release lineages", () => {
     mkdirSync(resolve(repo, "app"));
     writeFileSync(
       resolve(repo, "projects.yml"),
-      "projects:\n  - name: vscode\n    tag: vscode-assistant\n    dirs:\n      - app\n  - name: desktop\n    tag: desktop\n    dirs:\n      - desktop\n",
+      "projects:\n  - name: desktop\n    tag: desktop\n    dirs:\n      - app\n",
     );
     commit(repo, "first");
   });
@@ -99,9 +99,9 @@ describe("managed release lineages", () => {
   });
 
   it("starts changelog history at 1.0.0", { timeout: 20_000 }, () => {
-    git(repo, "tag", "vscode-assistant/v0.14.1");
+    git(repo, "tag", "desktop/v0.14.1");
     commit(repo, "Add the initial release");
-    git(repo, "tag", "vscode-assistant/v1.0.0");
+    git(repo, "tag", "desktop/v1.0.0");
     commit(repo, "Add a post-1.0 improvement");
 
     const changelog = renderChangelog(repo, "--version", "1.1.0");
@@ -116,11 +116,11 @@ describe("managed release lineages", () => {
 
   it("itemizes each earlier release in a nightly changelog", { timeout: 20_000 }, () => {
     commit(repo, "Add the initial release");
-    git(repo, "tag", "vscode-assistant/v1.0.0");
+    git(repo, "tag", "desktop/v1.0.0");
     commit(repo, "Add the first nightly change");
-    git(repo, "tag", "vscode-assistant/v1.1.0");
+    git(repo, "tag", "desktop/v1.1.0");
     commit(repo, "Add the second nightly change");
-    git(repo, "tag", "vscode-assistant/v1.1.1");
+    git(repo, "tag", "desktop/v1.1.1");
     commit(repo, "Add the third nightly change");
 
     const changelog = renderChangelog(repo, "--version", "1.1.2");
@@ -142,11 +142,11 @@ describe("managed release lineages", () => {
 
   it("rolls nightly releases up into a stable changelog", { timeout: 20_000 }, () => {
     commit(repo, "Add the initial release");
-    git(repo, "tag", "vscode-assistant/v1.0.0");
+    git(repo, "tag", "desktop/v1.0.0");
     commit(repo, "Add the first nightly change");
-    git(repo, "tag", "vscode-assistant/v1.1.0");
+    git(repo, "tag", "desktop/v1.1.0");
     commit(repo, "Add the second nightly change");
-    git(repo, "tag", "vscode-assistant/v1.1.1");
+    git(repo, "tag", "desktop/v1.1.1");
 
     const changelog = renderChangelog(repo, "--version", "1.2.0");
 
@@ -158,7 +158,7 @@ describe("managed release lineages", () => {
   });
 
   it("bootstraps, resumes, and bumps only inside a custom prefix", { timeout: 20_000 }, () => {
-    git(repo, "tag", "vscode-assistant/v9.8.0");
+    git(repo, "tag", "retired-desktop/v9.8.0");
     const bootstrap = plan(
       repo,
       "--channel",
@@ -166,14 +166,14 @@ describe("managed release lineages", () => {
       "--version",
       "0.1.0",
       "--tag-prefix",
-      "vscode-shadow",
+      "desktop-shadow",
       "--create-lineage",
       "--sync-versions",
     );
     expect(bootstrap).toMatchObject({
       action: "release",
       version: "0.1.0",
-      tag: "vscode-shadow/v0.1.0",
+      tag: "desktop-shadow/v0.1.0",
       previousTag: null,
       changelogTag: null,
       latestTag: null,
@@ -183,7 +183,7 @@ describe("managed release lineages", () => {
 
     git(repo, "tag", "--annotate", bootstrap.tag, "--message", bootstrap.tagAnnotation);
     expect(
-      plan(repo, "--channel", "nightly", "--tag-prefix", "vscode-shadow", "--create-lineage"),
+      plan(repo, "--channel", "nightly", "--tag-prefix", "desktop-shadow", "--create-lineage"),
     ).toMatchObject({
       action: "resume",
       version: "0.1.0",
@@ -191,79 +191,32 @@ describe("managed release lineages", () => {
     });
 
     commit(repo, "second");
-    expect(plan(repo, "--channel", "nightly", "--tag-prefix", "vscode-shadow")).toMatchObject({
+    expect(plan(repo, "--channel", "nightly", "--tag-prefix", "desktop-shadow")).toMatchObject({
       action: "release",
       version: "0.1.1",
-      tag: "vscode-shadow/v0.1.1",
-      previousTag: "vscode-shadow/v0.1.0",
-      latestTag: "vscode-shadow/v0.1.0",
+      tag: "desktop-shadow/v0.1.1",
+      previousTag: "desktop-shadow/v0.1.0",
+      latestTag: "desktop-shadow/v0.1.0",
     });
-    expect(plan(repo, "--channel", "stable", "--tag-prefix", "vscode-shadow")).toMatchObject({
+    expect(plan(repo, "--channel", "stable", "--tag-prefix", "desktop-shadow")).toMatchObject({
       version: "0.2.0",
-      tag: "vscode-shadow/v0.2.0",
+      tag: "desktop-shadow/v0.2.0",
       previousTag: null,
-      changelogTag: "vscode-shadow/v0.1.0",
+      changelogTag: "desktop-shadow/v0.1.0",
     });
   });
 
   it("requires explicit creation for the first release", { timeout: 20_000 }, () => {
     expect(() =>
-      plan(repo, "--channel", "nightly", "--version", "0.1.0", "--tag-prefix", "vscode-shadow"),
+      plan(repo, "--channel", "nightly", "--version", "0.1.0", "--tag-prefix", "desktop-shadow"),
     ).toThrow("--create-lineage");
     expect(() =>
-      plan(repo, "--channel", "nightly", "--tag-prefix", "vscode-shadow", "--create-lineage"),
+      plan(repo, "--channel", "nightly", "--tag-prefix", "desktop-shadow", "--create-lineage"),
     ).toThrow("requires an exact --version");
   });
 
-  it("aligns a new exact bootstrap but not a reserved-tag recovery", { timeout: 20_000 }, () => {
-    git(repo, "tag", "desktop/v1.4.3");
-    expect(() =>
-      plan(
-        repo,
-        "--channel",
-        "stable",
-        "--version",
-        "0.2.0",
-        "--tag-prefix",
-        "vscode-assistant",
-        "--create-lineage",
-        "--sync-versions",
-      ),
-    ).toThrow("below the synchronized stable floor 1.4.3");
-
-    const bootstrap = plan(
-      repo,
-      "--channel",
-      "stable",
-      "--version",
-      "0.2.0",
-      "--tag-prefix",
-      "vscode-assistant",
-      "--create-lineage",
-    );
-    git(repo, "tag", "--annotate", bootstrap.tag, "--message", bootstrap.tagAnnotation);
-
-    expect(
-      plan(
-        repo,
-        "--channel",
-        "stable",
-        "--version",
-        "0.2.0",
-        "--tag-prefix",
-        "vscode-assistant",
-        "--create-lineage",
-        "--sync-versions",
-      ),
-    ).toMatchObject({
-      action: "resume",
-      version: "0.2.0",
-      alignmentFloor: "1.4.3",
-    });
-  });
-
-  it("excludes the retired VS Code tag namespace from version sync", { timeout: 20_000 }, () => {
-    git(repo, "tag", "vscode/v9.8.0");
+  it("excludes the retired Desktop tag namespace from version sync", { timeout: 20_000 }, () => {
+    git(repo, "tag", "retired-desktop/v9.8.0");
     git(repo, "tag", "desktop/v0.7.0");
 
     expect(
@@ -274,24 +227,24 @@ describe("managed release lineages", () => {
         "--version",
         "0.7.1",
         "--tag-prefix",
-        "vscode-assistant",
+        "desktop",
         "--create-lineage",
         "--sync-versions",
       ),
     ).toMatchObject({
       version: "0.7.1",
       alignmentFloor: "0.7.0",
-      tag: "vscode-assistant/v0.7.1",
+      tag: "desktop/v0.7.1",
     });
   });
 
   it("rejects lightweight tags and destination changes", { timeout: 20_000 }, () => {
-    git(repo, "tag", "vscode-shadow/v0.1.0");
-    expect(() => plan(repo, "--channel", "nightly", "--tag-prefix", "vscode-shadow")).toThrow(
+    git(repo, "tag", "desktop-shadow/v0.1.0");
+    expect(() => plan(repo, "--channel", "nightly", "--tag-prefix", "desktop-shadow")).toThrow(
       "lightweight or unrecognized",
     );
 
-    git(repo, "tag", "--delete", "vscode-shadow/v0.1.0");
+    git(repo, "tag", "--delete", "desktop-shadow/v0.1.0");
     const bootstrap = plan(
       repo,
       "--channel",
@@ -299,7 +252,7 @@ describe("managed release lineages", () => {
       "--version",
       "0.1.0",
       "--tag-prefix",
-      "vscode-shadow",
+      "desktop-shadow",
       "--create-lineage",
     );
     git(repo, "tag", "--annotate", bootstrap.tag, "--message", bootstrap.tagAnnotation);
@@ -312,7 +265,7 @@ describe("managed release lineages", () => {
         "--version",
         "0.1.0",
         "--tag-prefix",
-        "vscode-other",
+        "desktop-other",
         "--create-lineage",
       ),
     ).toThrow("already bound");
@@ -322,30 +275,30 @@ describe("managed release lineages", () => {
         "--channel",
         "nightly",
         "--tag-prefix",
-        "vscode-shadow",
+        "desktop-shadow",
         "--destination",
-        "poolside-ai.some-other-extension",
+        "appleton.some-other-extension",
       ),
     ).toThrow("is bound to");
   });
 
   it("rejects custom prefixes for schedules", { timeout: 20_000 }, () => {
     expect(() =>
-      plan(repo, "--channel", "nightly", "--tag-prefix", "vscode-shadow", "--scheduled"),
+      plan(repo, "--channel", "nightly", "--tag-prefix", "desktop-shadow", "--scheduled"),
     ).toThrow("Scheduled releases must use");
   });
 
   it("ignores malformed metadata outside the active lineage", { timeout: 20_000 }, () => {
     const unrelated = JSON.stringify({
-      kind: "poolside-release-lineage",
+      kind: "camber-release-lineage",
       schema: 2,
       product: "desktop",
       tagPrefix: "desktop-shadow",
-      destination: "poolside/desktop-shadow",
+      destination: "camber/desktop-shadow",
       version: "0.1.0",
       sourceSha: git(repo, "rev-parse", "HEAD"),
     });
-    git(repo, "tag", "--annotate", "desktop-shadow/v0.1.0", "--message", unrelated);
+    git(repo, "tag", "--annotate", "unrelated-preview/v0.1.0", "--message", unrelated);
 
     expect(
       plan(
@@ -355,45 +308,44 @@ describe("managed release lineages", () => {
         "--version",
         "0.1.0",
         "--tag-prefix",
-        "vscode-shadow",
+        "desktop-shadow",
         "--create-lineage",
       ),
-    ).toMatchObject({ action: "release", tag: "vscode-shadow/v0.1.0" });
+    ).toMatchObject({ action: "release", tag: "desktop-shadow/v0.1.0" });
   });
 
   it("rejects malformed metadata inside the active lineage", { timeout: 20_000 }, () => {
     const malformed = JSON.stringify({
-      kind: "poolside-release-lineage",
+      kind: "camber-release-lineage",
       schema: 2,
-      product: "vscode",
-      tagPrefix: "vscode-shadow",
+      product: "desktop",
+      tagPrefix: "desktop-shadow",
       destination,
       version: "0.1.0",
       sourceSha: git(repo, "rev-parse", "HEAD"),
     });
-    git(repo, "tag", "--annotate", "vscode-shadow/v0.1.0", "--message", malformed);
+    git(repo, "tag", "--annotate", "desktop-shadow/v0.1.0", "--message", malformed);
 
-    expect(() => plan(repo, "--channel", "nightly", "--tag-prefix", "vscode-shadow")).toThrow(
+    expect(() => plan(repo, "--channel", "nightly", "--tag-prefix", "desktop-shadow")).toThrow(
       "Unsupported release-lineage metadata",
     );
   });
 
   it("skips scheduled runs until the default lineage is bootstrapped", { timeout: 20_000 }, () => {
     expect(
-      plan(repo, "--channel", "nightly", "--tag-prefix", "vscode-assistant", "--scheduled"),
+      plan(repo, "--channel", "nightly", "--tag-prefix", "desktop", "--scheduled"),
     ).toMatchObject({
       action: "skip",
-      reason: "No vscode tags exist; bootstrap the first release manually with --version",
+      reason: "No desktop tags exist; bootstrap the first release manually with --version",
     });
 
     // An unbound lightweight tag cannot bootstrap scheduled publication.
-    git(repo, "tag", "vscode-assistant/v4.7.0");
+    git(repo, "tag", "desktop/v4.7.0");
     expect(
-      plan(repo, "--channel", "nightly", "--tag-prefix", "vscode-assistant", "--scheduled"),
+      plan(repo, "--channel", "nightly", "--tag-prefix", "desktop", "--scheduled"),
     ).toMatchObject({
       action: "skip",
-      reason:
-        "Tag lineage vscode-assistant is not bound; bootstrap it manually with an exact --version",
+      reason: "Tag lineage desktop is not bound; bootstrap it manually with an exact --version",
     });
   });
 
@@ -408,14 +360,14 @@ describe("managed release lineages", () => {
         "--version",
         "0.1.0",
         "--tag-prefix",
-        "vscode-assistant",
+        "desktop",
         "--create-lineage",
       );
       git(repo, "tag", "--annotate", nightly.tag, "--message", nightly.tagAnnotation);
 
       commit(repo, "stable change");
-      const stable = plan(repo, "--channel", "stable", "--tag-prefix", "vscode-assistant");
-      expect(stable).toMatchObject({ version: "0.2.0", tag: "vscode-assistant/v0.2.0" });
+      const stable = plan(repo, "--channel", "stable", "--tag-prefix", "desktop");
+      expect(stable).toMatchObject({ version: "0.2.0", tag: "desktop/v0.2.0" });
       git(repo, "tag", "--annotate", stable.tag, "--message", stable.tagAnnotation);
 
       expect(
@@ -424,16 +376,16 @@ describe("managed release lineages", () => {
           "--channel",
           "nightly",
           "--tag-prefix",
-          "vscode-assistant",
+          "desktop",
           "--scheduled",
           "--skip-if-no-changes",
         ),
       ).toMatchObject({
         action: "skip",
-        reason: "No vscode-affecting changes since vscode-assistant/v0.2.0",
-        previousTag: "vscode-assistant/v0.1.0",
-        changelogTag: "vscode-assistant/v0.1.0",
-        latestTag: "vscode-assistant/v0.2.0",
+        reason: "No desktop-affecting changes since desktop/v0.2.0",
+        previousTag: "desktop/v0.1.0",
+        changelogTag: "desktop/v0.1.0",
+        latestTag: "desktop/v0.2.0",
         affected: false,
         affectedFiles: [],
       });
@@ -445,7 +397,7 @@ describe("managed release lineages", () => {
           "--channel",
           "nightly",
           "--tag-prefix",
-          "vscode-assistant",
+          "desktop",
           "--scheduled",
           "--skip-if-no-changes",
         ),
@@ -468,7 +420,7 @@ describe("managed release lineages", () => {
         "--version",
         "0.1.0",
         "--tag-prefix",
-        "vscode-shadow",
+        "desktop-shadow",
         "--create-lineage",
         "--ref",
         firstSha,
@@ -487,7 +439,7 @@ describe("managed release lineages", () => {
         "--version",
         "0.1.0",
         "--tag-prefix",
-        "vscode-shadow",
+        "desktop-shadow",
         "--create-lineage",
         "--main-ref",
         "main",
@@ -496,7 +448,7 @@ describe("managed release lineages", () => {
   });
 
   it("ignores suffixed tags when binding the default lineage", { timeout: 20_000 }, () => {
-    git(repo, "tag", "vscode-assistant/v4.2.1-internal");
+    git(repo, "tag", "desktop/v4.2.1-internal");
     expect(
       plan(
         repo,
@@ -505,13 +457,13 @@ describe("managed release lineages", () => {
         "--version",
         "0.1.0",
         "--tag-prefix",
-        "vscode-assistant",
+        "desktop",
         "--create-lineage",
       ),
     ).toMatchObject({
       action: "release",
       version: "0.1.0",
-      tag: "vscode-assistant/v0.1.0",
+      tag: "desktop/v0.1.0",
       previousTag: null,
     });
   });
@@ -519,7 +471,7 @@ describe("managed release lineages", () => {
   it("rejects an arbitrary detached one-commit tag based on main", { timeout: 20_000 }, () => {
     git(repo, "switch", "--create", "unrelated-release");
     commit(repo, "unrelated side-branch change");
-    git(repo, "tag", "vscode-assistant/v4.7.0");
+    git(repo, "tag", "desktop/v4.7.0");
 
     git(repo, "switch", "main");
     commit(repo, "later main change");
@@ -532,7 +484,7 @@ describe("managed release lineages", () => {
         "--version",
         "4.7.1",
         "--tag-prefix",
-        "vscode-assistant",
+        "desktop",
         "--create-lineage",
       ),
     ).toThrow("is not an ancestor");
@@ -550,7 +502,7 @@ describe("managed release lineages", () => {
       "-m",
       "detached version stamp",
     );
-    git(repo, "tag", "vscode-assistant/v4.7.0", unrelatedTagCommit);
+    git(repo, "tag", "desktop/v4.7.0", unrelatedTagCommit);
 
     expect(() =>
       plan(
@@ -560,7 +512,7 @@ describe("managed release lineages", () => {
         "--version",
         "4.7.1",
         "--tag-prefix",
-        "vscode-assistant",
+        "desktop",
         "--create-lineage",
       ),
     ).toThrow("is not an ancestor");

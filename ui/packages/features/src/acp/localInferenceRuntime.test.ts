@@ -1,4 +1,4 @@
-import type { LocalInferenceState } from "@poolsideai/helperapi/schemas";
+import type { LocalInferenceState } from "@camber/helperapi/schemas";
 import { describe, expect, it } from "vitest";
 import {
   formatAutoUnload,

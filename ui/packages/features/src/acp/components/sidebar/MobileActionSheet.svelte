@@ -9,7 +9,7 @@
 </script>
 
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
 
   interface Props {
     title: string;

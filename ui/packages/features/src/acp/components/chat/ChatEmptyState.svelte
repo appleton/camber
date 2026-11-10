@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { InteractiveLogo } from "@poolsideai/components/interactive-logo";
+  import { InteractiveLogo } from "@camber/components/interactive-logo";
 
   interface Props {
     headerControls?: Snippet;

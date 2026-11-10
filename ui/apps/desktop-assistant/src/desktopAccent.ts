@@ -13,9 +13,9 @@ import { getSystemAccentColors, type SystemAccentColors } from "./rpc/host";
  * appearance changes.
  */
 
-export const SYSTEM_ACCENT_CHANGED_EVENT = "poolside:desktop-system-accent-changed";
+export const SYSTEM_ACCENT_CHANGED_EVENT = "camber:desktop-system-accent-changed";
 const SYSTEM_ACCENT_CLASS = "desktop-system-accent";
-const SYSTEM_ACCENT_STORAGE_KEY = "poolside-desktop-system-accent";
+const SYSTEM_ACCENT_STORAGE_KEY = "camber-desktop-system-accent";
 
 /**
  * The colour forms system_accent.rs emits: `#rrggbb`, or `rgb(r g b / p%)` if a

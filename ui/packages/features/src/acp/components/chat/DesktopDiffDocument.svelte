@@ -3,17 +3,17 @@
     DiffCodeView,
     type DiffCodeViewItem,
     type FileDiffMetadata,
-  } from "@poolsideai/components/file-diff";
+  } from "@camber/components/file-diff";
   import {
-    poolsideGitDiffContents,
-    poolsideGitDiffList,
-    poolsideGitDiffRead,
+    camberGitDiffContents,
+    camberGitDiffList,
+    camberGitDiffRead,
     type GitDiffFileStats,
     type GitDiffFileSummary,
     type GitDiffScope,
     type GitDiffStats,
     type GitStatusOutput,
-  } from "@poolsideai/helperapi";
+  } from "@camber/helperapi";
   import { getAllContexts, mount, tick, unmount, untrack } from "svelte";
   import DesktopDiffEmptyState from "./DesktopDiffEmptyState.svelte";
   import DiffFileHeader from "./DiffFileHeader.svelte";
@@ -243,7 +243,7 @@
     const order = new Map<string, number>(initialFiles.map((file, index) => [file.path, index]));
     try {
       for (;;) {
-        const page = await poolsideGitDiffList({ sessionId, cursor });
+        const page = await camberGitDiffList({ sessionId, cursor });
         if (gen !== generation) return;
         addFiles(page.files);
         for (const file of page.files) {
@@ -312,7 +312,7 @@
     let cursor = "";
     try {
       for (;;) {
-        const page = await poolsideGitDiffRead({ sessionId, file: file.path, cursor });
+        const page = await camberGitDiffRead({ sessionId, file: file.path, cursor });
         if (gen !== generation) return;
         if (page.chunk) {
           parts.push(page.chunk.patch);
@@ -387,7 +387,7 @@
     file.contentsState = "loading";
     void (async () => {
       try {
-        const result = await poolsideGitDiffContents({ sessionId, file: file.path });
+        const result = await camberGitDiffContents({ sessionId, file: file.path });
         if (gen !== generation) return;
         if (
           !result.hasContents ||
@@ -449,7 +449,7 @@
     let cursor = "";
     try {
       for (;;) {
-        const page = await poolsideGitDiffList({ sessionId, cursor });
+        const page = await camberGitDiffList({ sessionId, cursor });
         if (gen !== generation) return;
         addFiles(page.files);
         for (const file of page.files) {
@@ -480,7 +480,7 @@
     let cursor = "";
     try {
       for (;;) {
-        const page = await poolsideGitDiffRead({ sessionId, file: file.path, cursor });
+        const page = await camberGitDiffRead({ sessionId, file: file.path, cursor });
         if (gen !== generation) return;
         if (page.chunk) {
           parts.push(page.chunk.patch);

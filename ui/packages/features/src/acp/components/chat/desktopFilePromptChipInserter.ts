@@ -1,7 +1,7 @@
-import type { Command } from "@poolsideai/components/editor";
-import { getChips, type ChipNodeAttrs } from "@poolsideai/components/prompt";
-import { basename } from "@poolsideai/lib/path";
-import { generateId } from "@poolsideai/lib/string";
+import type { Command } from "@camber/components/editor";
+import { getChips, type ChipNodeAttrs } from "@camber/components/prompt";
+import { basename } from "@camber/lib/path";
+import { generateId } from "@camber/lib/string";
 import {
   DESKTOP_FILE_PROMPT_CHIP_EVENT,
   type DesktopFilePromptChipEventDetail,

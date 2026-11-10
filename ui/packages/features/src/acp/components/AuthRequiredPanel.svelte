@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Spinner } from "@poolsideai/components/spinner";
+  import { Spinner } from "@camber/components/spinner";
   import type { ACPAuthMethod } from "../authMethods";
   import type { ACPRegistryAgent } from "../agentRegistry";
   import { agentServerIconUrl } from "../localAgentIcon";
@@ -46,9 +46,9 @@
   let agentName = $derived(
     agent?.name ??
       (agentServer === DEFAULT_AGENT_SERVER
-        ? "Poolside"
+        ? "Camber"
         : agentServer === LOCAL_AGENT_SERVER
-          ? "Poolside Local"
+          ? "Camber Local"
           : agentServer),
   );
   let iconUrl = $derived(agentServerIconUrl(agentServer, agent));

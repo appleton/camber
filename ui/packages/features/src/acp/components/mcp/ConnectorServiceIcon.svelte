@@ -2,7 +2,7 @@
   import logos from "./assets/connector-logos.json";
   import { connectorLogoNames as iconNames } from "./connectorLogoNames";
   import IconifyIcon from "@iconify/svelte";
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import exaLogomarkURL from "./assets/exa-logomark.svg?url";
   import granolaLogomarkURL from "./assets/granola-logomark.svg?url";
   import parallelSymbolURL from "./assets/parallel-symbol.svg?url";

@@ -1,28 +1,28 @@
 import {
-  poolsideGitDiffContents,
-  poolsideGitDiffList,
-  poolsideGitDiffRead,
+  camberGitDiffContents,
+  camberGitDiffList,
+  camberGitDiffRead,
   type GitDiffChunk,
-} from "@poolsideai/helperapi";
+} from "@camber/helperapi";
 import { render, waitFor } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { diffCodeViewMock } from "../shared/DiffCodeView.mock.svelte";
 import DesktopDiffDocument from "./DesktopDiffDocument.svelte";
 
-vi.mock("@poolsideai/helperapi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@poolsideai/helperapi")>()),
-  poolsideGitDiffList: vi.fn(),
-  poolsideGitDiffRead: vi.fn(),
-  poolsideGitDiffContents: vi.fn(),
+vi.mock("@camber/helperapi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@camber/helperapi")>()),
+  camberGitDiffList: vi.fn(),
+  camberGitDiffRead: vi.fn(),
+  camberGitDiffContents: vi.fn(),
 }));
 
-vi.mock("@poolsideai/components/file-diff", async () => ({
+vi.mock("@camber/components/file-diff", async () => ({
   DiffCodeView: (await import("../shared/DiffCodeView.mock.svelte")).default,
 }));
 
-const readMock = vi.mocked(poolsideGitDiffRead);
-const listMock = vi.mocked(poolsideGitDiffList);
-const contentsMock = vi.mocked(poolsideGitDiffContents);
+const readMock = vi.mocked(camberGitDiffRead);
+const listMock = vi.mocked(camberGitDiffList);
+const contentsMock = vi.mocked(camberGitDiffContents);
 
 function patchFor(path: string, marker = "new"): string {
   return `diff --git a/${path} b/${path}

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { GitDiffScope, GitStatusOutput } from "@poolsideai/helperapi";
+  import type { GitDiffScope, GitStatusOutput } from "@camber/helperapi";
 
   interface Props {
     scope: GitDiffScope;

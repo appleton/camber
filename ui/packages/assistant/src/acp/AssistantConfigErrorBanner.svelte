@@ -1,14 +1,14 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import {
     appState,
     canOpenAssistantConfigFile,
     extractErrorMessage,
     getACPAgentServersRepo,
     openAssistantConfigFile,
-  } from "@poolsideai/features/acp";
-  import { isFailure, isLoading } from "@poolsideai/lib/async-state";
-  import Button from "../lib/ui/PoolsideButton.svelte";
+  } from "@camber/features/acp";
+  import { isFailure, isLoading } from "@camber/lib/async-state";
+  import Button from "../lib/ui/CamberButton.svelte";
 
   const agentServers = getACPAgentServersRepo();
 
@@ -61,7 +61,7 @@
         </span>
       </div>
       <div class="mt-0.5 text-[12px]/[16px] text-psx-foreground-tertiary">
-        Poolside is using the last successfully loaded agent configuration.
+        Camber is using the last successfully loaded agent configuration.
       </div>
       <div
         class="mt-1 line-clamp-2 text-[12px]/[16px] break-words text-psx-error-foreground"

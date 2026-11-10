@@ -5,7 +5,7 @@ import type {
   SessionConfigOption,
   SessionId,
 } from "@agentclientprotocol/sdk";
-import { failure, isSuccess, loading, success, waiting } from "@poolsideai/lib/async-state";
+import { failure, isSuccess, loading, success, waiting } from "@camber/lib/async-state";
 import { withClaudeSessionFeatures } from "../../claudePromptSuggestions";
 import { normalizeACPError } from "../../errors";
 import { appState, appStateUpdates } from "../../hostAdapter";

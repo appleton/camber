@@ -1,4 +1,4 @@
-import { markedKatex } from "@poolsideai/components/markdown";
+import { markedKatex } from "@camber/components/markdown";
 import { marked } from "marked";
 import { describe, expect, it } from "vitest";
 

@@ -8,7 +8,6 @@ include tools/make/lint.mk
 include tools/make/build.mk
 include tools/make/test.mk
 include tools/make/run.mk
-include tools/make/release.mk
 include tools/make/help.mk
 
 CMD?=

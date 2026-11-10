@@ -22,7 +22,7 @@
       <Prompt.Form.Field.Editor.Root>
         <Prompt.Form.Field.Editor.Suggestion />
         <Prompt.Form.Field.Editor.Placeholder>
-          Ask poolside something...
+          Ask camber something...
         </Prompt.Form.Field.Editor.Placeholder>
       </Prompt.Form.Field.Editor.Root>
     </Prompt.Form.Field.Root>
@@ -76,7 +76,7 @@
     await expect(canvas.getByTestId("prompt-suggestion")).toHaveAccessibleName(
       "Suggested prompt: Run the focused tests. Enter sends; Tab or Right Arrow edits",
     );
-    expect(canvas.queryByText("Ask poolside something...")).not.toBeInTheDocument();
+    expect(canvas.queryByText("Ask camber something...")).not.toBeInTheDocument();
 
     await userEvent.click(promptInput);
     await userEvent.keyboard("{Enter}");

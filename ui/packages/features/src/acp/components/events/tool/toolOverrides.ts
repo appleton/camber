@@ -1,4 +1,4 @@
-import type { WorkspaceFolder } from "@poolsideai/rpc";
+import type { WorkspaceFolder } from "@camber/rpc";
 import type { Component } from "svelte";
 import { isSubagentTool } from "../../../subagents";
 import type { ToolCall } from "../../../types";

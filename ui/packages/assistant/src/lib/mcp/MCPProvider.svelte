@@ -5,7 +5,7 @@
     getUserMCPServersRepo,
     setACPMCPSettingsContext,
     type ACPSessionRepository,
-  } from "@poolsideai/features/acp";
+  } from "@camber/features/acp";
 
   interface Props {
     children: Snippet;

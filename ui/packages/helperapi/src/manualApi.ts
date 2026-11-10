@@ -1,6 +1,6 @@
 import { runtime, toJsonrpcMethod } from "./orval/clientHelpers";
 
-// --- GitHub awareness (poolside/github/*) ---
+// --- GitHub awareness (camber/github/*) ---
 //
 // Hand-written bindings: the helper exposes these via methods/github.go. They
 // are kept here rather than in gen/api.ts so they survive codegen runs.
@@ -115,36 +115,36 @@ export interface GitHubPRUrlOutput {
   exists: boolean;
 }
 
-export async function poolsideGithubWorktreeStatuses(
+export async function camberGithubWorktreeStatuses(
   params: GitHubWorktreeStatusesParams,
 ): Promise<GitHubWorktreeStatusesOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/github/worktreeStatuses"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/github/worktreeStatuses"), params);
 }
 
-export async function poolsideGithubPrDetail(
+export async function camberGithubPrDetail(
   params: GitHubPRDetailParams,
 ): Promise<GitHubPRDetailOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/github/prDetail"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/github/prDetail"), params);
 }
 
-export async function poolsideGithubAuthStatus(): Promise<GitHubAuthStatusOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/github/authStatus"), {});
+export async function camberGithubAuthStatus(): Promise<GitHubAuthStatusOutput> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/github/authStatus"), {});
 }
 
-export async function poolsideGithubSetToken(params: GitHubSetTokenParams): Promise<void> {
-  await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/github/setToken"), params);
+export async function camberGithubSetToken(params: GitHubSetTokenParams): Promise<void> {
+  await runtime.jsonrpcCall(toJsonrpcMethod("/camber/github/setToken"), params);
 }
 
-export async function poolsideGithubPrUrl(params: GitHubPRUrlParams): Promise<GitHubPRUrlOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/github/prUrl"), params);
+export async function camberGithubPrUrl(params: GitHubPRUrlParams): Promise<GitHubPRUrlOutput> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/github/prUrl"), params);
 }
 
-// --- Approvals (poolside/acp/approvals/*) ---
+// --- Approvals (camber/acp/approvals/*) ---
 //
 // Hand-written bindings for the helper-owned pending-approval state
-// (pkg/poolside-helper/internal/handler/approvals). Permission prompts and
+// (pkg/camber-helper/internal/handler/approvals). Permission prompts and
 // elicitations are pushed to every surface as a reconciled set via the
-// poolside/acp/approvals/didChange notification; these bindings pull the boot/
+// camber/acp/approvals/didChange notification; these bindings pull the boot/
 // reconnect snapshot and answer one approval.
 
 export type ACPApprovalKind = "permission" | "elicitation";
@@ -199,14 +199,14 @@ export interface ACPApprovalsRespondOutput {
   outcome: ACPApprovalRespondOutcome;
 }
 
-export async function poolsideAcpApprovalsList(): Promise<ACPApprovalsDidChangeParams> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/acp/approvals/list"), {});
+export async function camberAcpApprovalsList(): Promise<ACPApprovalsDidChangeParams> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/acp/approvals/list"), {});
 }
 
-export async function poolsideAcpApprovalsRespond(
+export async function camberAcpApprovalsRespond(
   params: ACPApprovalsRespondParams,
 ): Promise<ACPApprovalsRespondOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/acp/approvals/respond"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/acp/approvals/respond"), params);
 }
 
 export interface GitHubLinksParams {
@@ -223,8 +223,8 @@ export interface GitHubLinksOutput {
   prExists: boolean;
 }
 
-export async function poolsideGithubLinks(params: GitHubLinksParams): Promise<GitHubLinksOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/github/links"), params);
+export async function camberGithubLinks(params: GitHubLinksParams): Promise<GitHubLinksOutput> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/github/links"), params);
 }
 
 export interface GitHubFetchImageParams {
@@ -236,10 +236,10 @@ export interface GitHubFetchImageOutput {
   ok: boolean;
 }
 
-export async function poolsideGithubFetchImage(
+export async function camberGithubFetchImage(
   params: GitHubFetchImageParams,
 ): Promise<GitHubFetchImageOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/github/fetchImage"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/github/fetchImage"), params);
 }
 
 // The GitHub status color mode is persisted in the acpNav settings DB (like the
@@ -248,17 +248,17 @@ export interface ACPNavGithubColorModeState {
   colorMode: string;
 }
 
-export async function poolsideAcpNavGetGithubColorMode(): Promise<ACPNavGithubColorModeState> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/acpNav/getGithubColorMode"), {});
+export async function camberAcpNavGetGithubColorMode(): Promise<ACPNavGithubColorModeState> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/acpNav/getGithubColorMode"), {});
 }
 
-export async function poolsideAcpNavSetGithubColorMode(params: {
+export async function camberAcpNavSetGithubColorMode(params: {
   colorMode: string;
 }): Promise<ACPNavGithubColorModeState> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/acpNav/setGithubColorMode"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/acpNav/setGithubColorMode"), params);
 }
 
-// --- Voice input (poolside/voiceInput/*) ---
+// --- Voice input (camber/voiceInput/*) ---
 //
 // Hand-written bindings for the helper's local Whisper speech-to-text; the
 // helper types live in methods/voice_input.go.
@@ -312,41 +312,41 @@ export interface VoiceInputTranscribeResult {
   text: string;
 }
 
-export async function poolsideVoiceInputGetState(): Promise<VoiceInputState> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/voiceInput/getState"), {});
+export async function camberVoiceInputGetState(): Promise<VoiceInputState> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/voiceInput/getState"), {});
 }
 
-export async function poolsideVoiceInputSetModel(params: {
+export async function camberVoiceInputSetModel(params: {
   modelId: string;
 }): Promise<VoiceInputState> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/voiceInput/setModel"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/voiceInput/setModel"), params);
 }
 
-export async function poolsideVoiceInputDownloadModel(params: {
+export async function camberVoiceInputDownloadModel(params: {
   modelId?: string;
 }): Promise<VoiceInputState> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/voiceInput/downloadModel"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/voiceInput/downloadModel"), params);
 }
 
-export async function poolsideVoiceInputCancelDownload(params: {
+export async function camberVoiceInputCancelDownload(params: {
   modelId?: string;
 }): Promise<VoiceInputState> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/voiceInput/cancelDownload"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/voiceInput/cancelDownload"), params);
 }
 
-export async function poolsideVoiceInputDeleteModel(params: {
+export async function camberVoiceInputDeleteModel(params: {
   modelId: string;
 }): Promise<VoiceInputState> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/voiceInput/deleteModel"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/voiceInput/deleteModel"), params);
 }
 
-export async function poolsideVoiceInputTranscribe(
+export async function camberVoiceInputTranscribe(
   params: VoiceInputTranscribeParams,
 ): Promise<VoiceInputTranscribeResult> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/voiceInput/transcribe"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/voiceInput/transcribe"), params);
 }
 
-// --- Conversation view state (poolside/acpNav/setConversationViewState) ---
+// --- Conversation view state (camber/acpNav/setConversationViewState) ---
 //
 // Hand-written variant of the generated binding: the generated schema lags
 // the helper's `reset` field, which drops every view-state entry this client
@@ -360,16 +360,16 @@ export interface ConversationViewStateParams {
   reset?: boolean;
 }
 
-export async function poolsideAcpNavReportConversationViewState(
+export async function camberAcpNavReportConversationViewState(
   params: ConversationViewStateParams,
 ): Promise<void> {
-  await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/acpNav/setConversationViewState"), params);
+  await runtime.jsonrpcCall(toJsonrpcMethod("/camber/acpNav/setConversationViewState"), params);
 }
 
-// --- Remote access administration (poolside/remoteAccess/*) ---
+// --- Remote access administration (camber/remoteAccess/*) ---
 //
 // Hand-written bindings for the desktop settings surface (methods defined in
-// pkg/poolside-helper/methods/remote_access.go). Primary-client only: the
+// pkg/camber-helper/methods/remote_access.go). Primary-client only: the
 // remote-access deny list blocks these for paired devices.
 
 export interface RemoteAccessDevice {
@@ -423,49 +423,46 @@ export interface RemoteAccessPairingCode {
   urls?: string[];
 }
 
-export async function poolsideRemoteAccessStatus(): Promise<RemoteAccessStatus> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/remoteAccess/status"), {});
+export async function camberRemoteAccessStatus(): Promise<RemoteAccessStatus> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/remoteAccess/status"), {});
 }
 
-export async function poolsideRemoteAccessEnable(params: {
+export async function camberRemoteAccessEnable(params: {
   bind?: string;
   port?: number;
 }): Promise<RemoteAccessStatus> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/remoteAccess/enable"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/remoteAccess/enable"), params);
 }
 
-export async function poolsideRemoteAccessDisable(): Promise<RemoteAccessStatus> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/remoteAccess/disable"), {});
+export async function camberRemoteAccessDisable(): Promise<RemoteAccessStatus> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/remoteAccess/disable"), {});
 }
 
-export async function poolsideRemoteAccessSetAutoStart(params: {
+export async function camberRemoteAccessSetAutoStart(params: {
   autoStart: boolean;
   bind?: string;
 }): Promise<RemoteAccessStatus> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/remoteAccess/setAutoStart"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/remoteAccess/setAutoStart"), params);
 }
 
-export async function poolsideRemoteAccessCreatePairingCode(): Promise<RemoteAccessPairingCode> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/remoteAccess/createPairingCode"), {});
+export async function camberRemoteAccessCreatePairingCode(): Promise<RemoteAccessPairingCode> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/remoteAccess/createPairingCode"), {});
 }
 
-export async function poolsideRemoteAccessConfirmPairing(params: {
+export async function camberRemoteAccessConfirmPairing(params: {
   pairingId: string;
   code: string;
 }): Promise<RemoteAccessStatus> {
-  return await runtime.jsonrpcCall(
-    toJsonrpcMethod("/poolside/remoteAccess/confirmPairing"),
-    params,
-  );
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/remoteAccess/confirmPairing"), params);
 }
 
-export async function poolsideRemoteAccessRevokeDevice(params: {
+export async function camberRemoteAccessRevokeDevice(params: {
   deviceId: string;
 }): Promise<RemoteAccessStatus> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/remoteAccess/revokeDevice"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/remoteAccess/revokeDevice"), params);
 }
 
-// --- Git working tree (poolside/git/*) ---
+// --- Git working tree (camber/git/*) ---
 //
 // Hand-written bindings for the helper's local git operations backing the
 // desktop Changes panel; the helper types live in methods/git.go.
@@ -511,8 +508,8 @@ export interface GitStatusParams {
   path: string;
 }
 
-export async function poolsideGitStatus(params: GitStatusParams): Promise<GitStatusOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/git/status"), params);
+export async function camberGitStatus(params: GitStatusParams): Promise<GitStatusOutput> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/git/status"), params);
 }
 
 export interface GitDiffFileParams {
@@ -538,8 +535,8 @@ export interface GitDiffFileOutput {
   newContent?: string;
 }
 
-export async function poolsideGitDiffFile(params: GitDiffFileParams): Promise<GitDiffFileOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/git/diffFile"), params);
+export async function camberGitDiffFile(params: GitDiffFileParams): Promise<GitDiffFileOutput> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/git/diffFile"), params);
 }
 
 export type GitDiffScope = "uncommitted" | "staged" | "unstaged";
@@ -586,8 +583,8 @@ export interface GitDiffOpenOutput {
   stats?: GitDiffStats;
 }
 
-export async function poolsideGitDiffOpen(params: GitDiffOpenParams): Promise<GitDiffOpenOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/git/diffOpen"), params);
+export async function camberGitDiffOpen(params: GitDiffOpenParams): Promise<GitDiffOpenOutput> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/git/diffOpen"), params);
 }
 
 export interface GitDiffListParams {
@@ -602,8 +599,8 @@ export interface GitDiffListOutput {
   stats?: GitDiffStats;
 }
 
-export async function poolsideGitDiffList(params: GitDiffListParams): Promise<GitDiffListOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/git/diffList"), params);
+export async function camberGitDiffList(params: GitDiffListParams): Promise<GitDiffListOutput> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/git/diffList"), params);
 }
 
 export interface GitDiffChunk {
@@ -629,8 +626,8 @@ export interface GitDiffReadOutput {
   complete: boolean;
 }
 
-export async function poolsideGitDiffRead(params: GitDiffReadParams): Promise<GitDiffReadOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/git/diffRead"), params);
+export async function camberGitDiffRead(params: GitDiffReadParams): Promise<GitDiffReadOutput> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/git/diffRead"), params);
 }
 
 export interface GitDiffContentsParams {
@@ -647,10 +644,10 @@ export interface GitDiffContentsOutput {
   newContent?: string;
 }
 
-export async function poolsideGitDiffContents(
+export async function camberGitDiffContents(
   params: GitDiffContentsParams,
 ): Promise<GitDiffContentsOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/git/diffContents"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/git/diffContents"), params);
 }
 
 export interface GitDiffStatsOutput {
@@ -658,14 +655,14 @@ export interface GitDiffStatsOutput {
   stats?: GitDiffStats;
 }
 
-export async function poolsideGitDiffStats(params: {
+export async function camberGitDiffStats(params: {
   sessionId: string;
 }): Promise<GitDiffStatsOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/git/diffStats"), params);
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/git/diffStats"), params);
 }
 
-export async function poolsideGitDiffClose(params: { sessionId: string }): Promise<void> {
-  await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/git/diffClose"), params);
+export async function camberGitDiffClose(params: { sessionId: string }): Promise<void> {
+  await runtime.jsonrpcCall(toJsonrpcMethod("/camber/git/diffClose"), params);
 }
 
 export interface GitStageParams {
@@ -673,12 +670,12 @@ export interface GitStageParams {
   files: string[];
 }
 
-export async function poolsideGitStage(params: GitStageParams): Promise<GitStatusOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/git/stage"), params);
+export async function camberGitStage(params: GitStageParams): Promise<GitStatusOutput> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/git/stage"), params);
 }
 
-export async function poolsideGitUnstage(params: GitStageParams): Promise<GitStatusOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/git/unstage"), params);
+export async function camberGitUnstage(params: GitStageParams): Promise<GitStatusOutput> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/git/unstage"), params);
 }
 
 export interface GitDiscardParams {
@@ -687,8 +684,8 @@ export interface GitDiscardParams {
   untrackedFiles?: string[];
 }
 
-export async function poolsideGitDiscard(params: GitDiscardParams): Promise<GitStatusOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/git/discard"), params);
+export async function camberGitDiscard(params: GitDiscardParams): Promise<GitStatusOutput> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/git/discard"), params);
 }
 
 export interface GitCommitParams {
@@ -696,6 +693,6 @@ export interface GitCommitParams {
   message: string;
 }
 
-export async function poolsideGitCommit(params: GitCommitParams): Promise<GitStatusOutput> {
-  return await runtime.jsonrpcCall(toJsonrpcMethod("/poolside/git/commit"), params);
+export async function camberGitCommit(params: GitCommitParams): Promise<GitStatusOutput> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/git/commit"), params);
 }

@@ -1,12 +1,12 @@
-import { poolsideGitStatus, type GitStatusOutput } from "@poolsideai/helperapi";
+import { camberGitStatus, type GitStatusOutput } from "@camber/helperapi";
 
 /**
  * Event-driven git working-tree tracker for the desktop conversation footer.
  *
- * Keeps a `poolside/git/status` snapshot for one worktree so the chat pane can
+ * Keeps a `camber/git/status` snapshot for one worktree so the chat pane can
  * keep repository and staging affordances visible, including for a clean tree.
  * Performance policy: no polling. Refreshes are driven by
- * - the desktop host's file watcher (`poolside:desktop-file-tree-changed`,
+ * - the desktop host's file watcher (`camber:desktop-file-tree-changed`,
  *   debounced here since agent edits arrive in bursts),
  * - turn completion, and
  * - window focus (safety net for edits made while unfocused),
@@ -18,7 +18,7 @@ export interface DesktopFileTreeChangedEventDetail {
   changes?: { path?: string }[];
 }
 
-export const DESKTOP_FILE_TREE_CHANGED_EVENT = "poolside:desktop-file-tree-changed";
+export const DESKTOP_FILE_TREE_CHANGED_EVENT = "camber:desktop-file-tree-changed";
 
 /**
  * Dispatched (window CustomEvent, no detail) after a git mutation performed
@@ -29,7 +29,7 @@ export const DESKTOP_FILE_TREE_CHANGED_EVENT = "poolside:desktop-file-tree-chang
  * refs, but filters bookkeeping churn — lock files, objects, fsmonitor
  * cookies — so helper git reads cannot retrigger the refresh that ran them.)
  */
-export const DESKTOP_GIT_CHANGED_EVENT = "poolside:desktop-git-changed";
+export const DESKTOP_GIT_CHANGED_EVENT = "camber:desktop-git-changed";
 
 const REFRESH_DEBOUNCE_MS = 750;
 
@@ -130,7 +130,7 @@ export class DesktopGitChangesState {
     const path = this.worktreePath;
     if (!path) return;
     const token = ++this.refreshToken;
-    void poolsideGitStatus({ path })
+    void camberGitStatus({ path })
       .then((git) => {
         if (token !== this.refreshToken || path !== this.worktreePath) return;
         this.current = git;

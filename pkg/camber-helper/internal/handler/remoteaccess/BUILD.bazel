@@ -1,0 +1,53 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "remoteaccess",
+    srcs = [
+        "auth.go",
+        "cert.go",
+        "denylist.go",
+        "file.go",
+        "hub.go",
+        "server.go",
+        "sessionlog.go",
+        "camberqa.go",
+        "tailscale_cert.go",
+        "tailscale_probe.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/handler/remoteaccess",
+    visibility = ["//pkg/camber-helper:__subpackages__"],
+    deps = [
+        "//pkg/camber-helper/internal/handler/remoteaccess/webui",
+        "//pkg/camber-helper/methods",
+        "@com_github_google_uuid//:uuid",
+        "@com_github_gorilla_websocket//:websocket",
+        "@com_github_sourcegraph_jsonrpc2//:jsonrpc2",
+        "@com_github_sourcegraph_jsonrpc2//websocket",
+        "@com_github_tliron_glsp//:glsp",
+    ],
+)
+
+go_test(
+    name = "remoteaccess_test",
+    srcs = [
+        "auth_test.go",
+        "cert_test.go",
+        "dev_server_test.go",
+        "file_test.go",
+        "hub_test.go",
+        "server_test.go",
+        "session_cookie_test.go",
+        "sessionlog_test.go",
+        "camberqa_test.go",
+    ],
+    embed = [":remoteaccess"],
+    deps = [
+        "//pkg/camber-helper/methods",
+        "@com_github_gorilla_websocket//:websocket",
+        "@com_github_sourcegraph_jsonrpc2//:jsonrpc2",
+        "@com_github_sourcegraph_jsonrpc2//websocket",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@com_github_tliron_glsp//:glsp",
+    ],
+)

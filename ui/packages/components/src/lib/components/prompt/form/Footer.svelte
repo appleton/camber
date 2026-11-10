@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from "@poolsideai/tailwind-config/tv";
+  import { cn } from "@camber/tailwind-config/tv";
   import type { HTMLAttributes } from "svelte/elements";
 
   interface Props extends HTMLAttributes<HTMLElement> {}

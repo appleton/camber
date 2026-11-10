@@ -22,7 +22,7 @@ describe("AgentUpdateBanner", () => {
     const updates = updateRepository("restart");
     vi.mocked(updates.update).mockResolvedValueOnce(undefined);
     render(Harness, { props: { updates } });
-    expect(screen.getByText("Restart required for the Poolside agent")).toBeVisible();
+    expect(screen.getByText("Restart required for the Camber agent")).toBeVisible();
     expect(screen.getByText(/Version 1.0.13 is installed/)).toBeVisible();
     await fireEvent.click(screen.getByRole("button", { name: "Restart agent" }));
     expect(updates.update).toHaveBeenCalledWith("poolside");
@@ -44,7 +44,7 @@ describe("AgentUpdateBanner", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Update agent" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Couldn’t update the Poolside agent to version 1.0.13.",
+      "Couldn’t update the Camber agent to version 1.0.13.",
     );
     expect(screen.getByRole("alert")).toHaveTextContent("unexpected sha256 property");
     expect(screen.getByRole("button", { name: "Retry" })).toBeVisible();
@@ -63,9 +63,9 @@ function updateRepository(kind = "update"): ACPAgentUpdateRepository {
       agentServer: "poolside",
       agent: {
         id: "poolside",
-        name: "Poolside",
+        name: "Camber",
         version: "1.0.13",
-        description: "Poolside ACP agent",
+        description: "Camber ACP agent",
         distribution: { binary: {} },
       },
       kind,

@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 
-const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const pnpm = "pnpm";
 
 if (process.env.SKIP_DESKTOP_TAURI_BUILD === "1") {
   // CI-only path (the UI Build gate sets this flag to skip the Rust/Tauri compile).

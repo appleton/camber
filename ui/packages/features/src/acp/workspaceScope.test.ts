@@ -42,13 +42,13 @@ describe("workspaceScope", () => {
 
   it("uses a stable navigation scope for chat working directories", () => {
     const state = appStateFor("desktop", []);
-    const folders = acpWorkspaceFolders(state, "/state/poolside/session-123");
+    const folders = acpWorkspaceFolders(state, "/state/camber/session-123");
 
-    expect(acpSessionWorkspacePath(state, folders, "/state/poolside/session-123", true)).toBe(
+    expect(acpSessionWorkspacePath(state, folders, "/state/camber/session-123", true)).toBe(
       ACP_CHAT_WORKSPACE_PATH,
     );
-    expect(acpSessionWorkspacePath(state, folders, "/state/poolside/session-123", false)).toBe(
-      "/state/poolside/session-123",
+    expect(acpSessionWorkspacePath(state, folders, "/state/camber/session-123", false)).toBe(
+      "/state/camber/session-123",
     );
   });
 

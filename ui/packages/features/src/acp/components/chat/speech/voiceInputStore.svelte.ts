@@ -1,13 +1,13 @@
 import {
-  poolsideVoiceInputCancelDownload,
-  poolsideVoiceInputDeleteModel,
-  poolsideVoiceInputDownloadModel,
-  poolsideVoiceInputGetState,
-  poolsideVoiceInputSetModel,
-  poolsideVoiceInputTranscribe,
+  camberVoiceInputCancelDownload,
+  camberVoiceInputDeleteModel,
+  camberVoiceInputDownloadModel,
+  camberVoiceInputGetState,
+  camberVoiceInputSetModel,
+  camberVoiceInputTranscribe,
   type VoiceInputState,
-} from "@poolsideai/helperapi";
-import { InfoMessageType } from "@poolsideai/rpc";
+} from "@camber/helperapi";
+import { InfoMessageType } from "@camber/rpc";
 import { currentACPHostState } from "../../../hostAdapter";
 import { rpc } from "../../../hostRpc";
 import { SpeechRecorder } from "./recorder";
@@ -32,7 +32,7 @@ export interface DictationSink {
 }
 
 /**
- * Webview-side view of the helper's poolside/voiceInput/* state plus the
+ * Webview-side view of the helper's camber/voiceInput/* state plus the
  * dictation state machine. Living here (not in the button) lets the prompt box
  * react to recording, the keyboard shortcut toggle it, and the button render
  * it. State refreshes on demand and polls only while a model download is in
@@ -70,7 +70,7 @@ export class VoiceInputStore {
 
   async refresh(): Promise<void> {
     try {
-      this.#apply(await poolsideVoiceInputGetState());
+      this.#apply(await camberVoiceInputGetState());
     } catch {
       // Older helpers (or remote hosts that reject the method) have no voice
       // input; treat as unsupported rather than surfacing an error.
@@ -125,19 +125,19 @@ export class VoiceInputStore {
 
   /** Settings-page actions; each returns the fresh helper state. */
   async downloadModel(modelId?: string): Promise<void> {
-    this.#apply(await poolsideVoiceInputDownloadModel(modelId ? { modelId } : {}));
+    this.#apply(await camberVoiceInputDownloadModel(modelId ? { modelId } : {}));
   }
 
   async cancelDownload(modelId?: string): Promise<void> {
-    this.#apply(await poolsideVoiceInputCancelDownload(modelId ? { modelId } : {}));
+    this.#apply(await camberVoiceInputCancelDownload(modelId ? { modelId } : {}));
   }
 
   async deleteModel(modelId: string): Promise<void> {
-    this.#apply(await poolsideVoiceInputDeleteModel({ modelId }));
+    this.#apply(await camberVoiceInputDeleteModel({ modelId }));
   }
 
   async selectModel(modelId: string): Promise<void> {
-    this.#apply(await poolsideVoiceInputSetModel({ modelId }));
+    this.#apply(await camberVoiceInputSetModel({ modelId }));
   }
 
   cancelDictation(): void {
@@ -155,7 +155,7 @@ export class VoiceInputStore {
   }
 
   async transcribe(audioBase64: string, mimeType: string): Promise<string> {
-    const result = await poolsideVoiceInputTranscribe({ audio: audioBase64, mimeType });
+    const result = await camberVoiceInputTranscribe({ audio: audioBase64, mimeType });
     return result.text;
   }
 
@@ -213,7 +213,7 @@ export class VoiceInputStore {
     try {
       // Progress renders on the mic button and in the voice settings section,
       // so a started download needs no toast.
-      this.#apply(await poolsideVoiceInputDownloadModel({}));
+      this.#apply(await camberVoiceInputDownloadModel({}));
     } catch (error) {
       console.error("voice input: model download failed", error);
       this.#toast("Could not start the voice model download", InfoMessageType.error);

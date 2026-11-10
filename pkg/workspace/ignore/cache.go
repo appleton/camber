@@ -4,7 +4,7 @@ import (
 	"container/list"
 	"sync"
 
-	"github.com/poolsideai/assistant/pkg/workspace/path"
+	"github.com/appleton/camber/pkg/workspace/path"
 )
 
 // lruCache implements a thread-safe LRU cache for storing boolean values

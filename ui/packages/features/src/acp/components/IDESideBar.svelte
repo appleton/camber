@@ -1,8 +1,8 @@
 <script lang="ts">
   import { createPopover, melt } from "@melt-ui/svelte";
-  import Icon, { type IconName } from "@poolsideai/components/icon";
-  import { formatError } from "@poolsideai/lib/errors";
-  import { InfoMessageType, type WorkspaceFolder } from "@poolsideai/rpc";
+  import Icon, { type IconName } from "@camber/components/icon";
+  import { formatError } from "@camber/lib/errors";
+  import { InfoMessageType, type WorkspaceFolder } from "@camber/rpc";
   import { onDestroy, onMount } from "svelte";
   import type { ACPSession } from "../features/Session.svelte";
   import { ACP_IDE_WORKSPACE_PATH, acpProtocolCwd, acpSessionLoadCwd } from "../workspaceScope";
@@ -588,15 +588,10 @@
           settingsOpen.set(false);
           onShowAgents();
         })}
-        {@render settingsMenuItem(
-          "gear",
-          "Extension Settings",
-          "Poolside extension options",
-          () => {
-            settingsOpen.set(false);
-            rpc.openSettings();
-          },
-        )}
+        {@render settingsMenuItem("gear", "Extension Settings", "Camber extension options", () => {
+          settingsOpen.set(false);
+          rpc.openSettings();
+        })}
       </div>
     {/if}
   </aside>

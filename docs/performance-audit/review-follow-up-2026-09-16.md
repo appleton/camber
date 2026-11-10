@@ -17,7 +17,7 @@ Baseline: `82080dfbaa66ebd9e7af925b5d906fb8d57e76f9`.
 Focused regression command:
 
 ```sh
-pnpm -F @poolsideai/assistant test:unit \
+pnpm -F @camber/assistant test:unit \
   src/acp/runtime/DesktopRuntime.svelte.test.ts \
   src/acp/DesktopPanel.test.ts \
   src/acp/runtime/shared/PendingSessionBootstrap.test.ts \
@@ -33,13 +33,13 @@ These are the actual panel and runtime with synthetic repositories and the exist
 | Chat directory | ![Stale chat replaces the selected conversation](review-new-conversation-chat-directory-before.png) | ![Selected conversation and editor preserved](review-new-conversation-chat-directory-after.png) |
 | Agent discovery | ![Stale conversation replaces the selected conversation](review-new-conversation-agent-discovery-before.png) | ![Selected conversation and editor preserved](review-new-conversation-agent-discovery-after.png) |
 
-Spoolside has no running target for this worktree, and its skill prohibits starting one automatically. This follow-up therefore does not establish native compositor behavior. The Desktop smoke-test build at `82080dfba` predates this fix.
+CamberQA has no running target for this worktree, and its skill prohibits starting one automatically. This follow-up therefore does not establish native compositor behavior. The Desktop smoke-test build at `82080dfba` predates this fix.
 
 ## Tab label descenders
 
 The tab title inherited `line-height: 1` while clipping overflow for ellipsis. That line box cut off the bottom of the `g` in “Chatting with Codex”. Setting `line-height: normal` on the title span preserves the font's full glyph height, including in the drag preview.
 
-A before/after render of the actual tab component in WebKit and Chromium covers desktop, compact, large, and enlarged-text sizes. Comparing each title with its unclipped reference finds 6–18 missing pixels before and zero after at 2× scale. Tab-bar dimensions are unchanged; long labels retain ellipsis, and selecting and closing tabs still work. Split-package lint passes; type checking reports zero errors and one existing Storybook warning. Native spoolside validation remains unavailable.
+A before/after render of the actual tab component in WebKit and Chromium covers desktop, compact, large, and enlarged-text sizes. Comparing each title with its unclipped reference finds 6–18 missing pixels before and zero after at 2× scale. Tab-bar dimensions are unchanged; long labels retain ellipsis, and selecting and closing tabs still work. Split-package lint passes; type checking reports zero errors and one existing Storybook warning. Native camberqa validation remains unavailable.
 
 | Before | After |
 | --- | --- |

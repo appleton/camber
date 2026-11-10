@@ -1,5 +1,5 @@
 import type { ClientSideConnection } from "@agentclientprotocol/sdk";
-import { poolsideAcpNavList } from "@poolsideai/helperapi";
+import { camberAcpNavList } from "@camber/helperapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_AGENT_SERVER } from "../agentServers";
 import {
@@ -10,12 +10,12 @@ import {
 } from "./HistoryRepository.svelte";
 import { ACPLocalHistoryRepositoryWriter } from "./LocalHistoryRepository.svelte";
 
-vi.mock("@poolsideai/helperapi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@poolsideai/helperapi")>()),
-  poolsideAcpNavList: vi.fn(),
+vi.mock("@camber/helperapi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@camber/helperapi")>()),
+  camberAcpNavList: vi.fn(),
 }));
 
-const navListMock = vi.mocked(poolsideAcpNavList);
+const navListMock = vi.mocked(camberAcpNavList);
 
 // Nav state with every listed session archived, so they all appear in the
 // archive view.
@@ -52,8 +52,8 @@ function mockConnection(overrides: Partial<ClientSideConnection> = {}): ClientSi
           title: "Native chat",
           updatedAt: "2026-03-30T10:00:00Z",
           _meta: {
-            "poolside/source": "native_session",
-            "poolside/read_only": false,
+            "camber/source": "native_session",
+            "camber/read_only": false,
           },
         },
         {
@@ -62,10 +62,10 @@ function mockConnection(overrides: Partial<ClientSideConnection> = {}): ClientSi
           title: "Agentic conversation",
           updatedAt: "2026-03-30T09:00:00Z",
           _meta: {
-            "poolside/source": "conversation",
-            "poolside/read_only": true,
-            "poolside/conversation_id": "agentic",
-            "poolside/conversation_kind": "agentic",
+            "camber/source": "conversation",
+            "camber/read_only": true,
+            "camber/conversation_id": "agentic",
+            "camber/conversation_kind": "agentic",
           },
         },
         {
@@ -74,10 +74,10 @@ function mockConnection(overrides: Partial<ClientSideConnection> = {}): ClientSi
           title: "Legacy chat",
           updatedAt: "2026-03-30T08:00:00Z",
           _meta: {
-            "poolside/source": "conversation",
-            "poolside/read_only": true,
-            "poolside/conversation_id": "legacy",
-            "poolside/conversation_kind": "legacy",
+            "camber/source": "conversation",
+            "camber/read_only": true,
+            "camber/conversation_id": "legacy",
+            "camber/conversation_kind": "legacy",
           },
         },
       ],

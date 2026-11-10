@@ -1,6 +1,6 @@
 <script module lang="ts">
   import { defineMeta } from "@storybook/addon-svelte-csf";
-  import { UserMessageBubble } from "@poolsideai/components/assistant-ui";
+  import { UserMessageBubble } from "@camber/components/assistant-ui";
 
   const { Story } = defineMeta({
     title: "Components/UserMessageBubble",

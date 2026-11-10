@@ -28,8 +28,8 @@ describe("McpToolCall", () => {
     render(ToolCallHarness, {
       props: {
         event: mcpTool({
-          title: "poolside__agent__slack__slack_search_channels",
-          _meta: { tool_name: "poolside__agent__slack__slack_search_channels" },
+          title: "camber__agent__slack__slack_search_channels",
+          _meta: { tool_name: "camber__agent__slack__slack_search_channels" },
         }),
       },
     });

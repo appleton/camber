@@ -50,8 +50,8 @@ describe("ViewImageToolCall", () => {
     expect(screen.queryByText(/image_url/)).not.toBeInTheDocument();
     const image = screen.getByAltText("Viewed image cat.png");
     expect(image).toHaveAttribute("src", `data:image/png;base64,${imageData}`);
-    expect(image).toHaveAttribute("data-poolside-image-path", "/tmp/cat.png");
-    expect(image).toHaveAttribute("data-poolside-image-name", "cat.png");
+    expect(image).toHaveAttribute("data-camber-image-path", "/tmp/cat.png");
+    expect(image).toHaveAttribute("data-camber-image-name", "cat.png");
 
     await fireEvent.click(screen.getByRole("button", { name: "Open image file cat.png" }));
 

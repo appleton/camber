@@ -1,5 +1,5 @@
-import { poolsideAcpNavInstallAgentServer } from "@poolsideai/helperapi";
-import type { ACPAgentServerConfig, ACPAgentServers } from "@poolsideai/rpc";
+import { camberAcpNavInstallAgentServer } from "@camber/helperapi";
+import type { ACPAgentServerConfig, ACPAgentServers } from "@camber/rpc";
 import { createContext } from "svelte";
 import { get } from "svelte/store";
 import {
@@ -210,7 +210,7 @@ export class ACPAgentUpdateRepository {
         configured[DEFAULT_AGENT_SERVER] ??
         configured[LEGACY_DEFAULT_AGENT_SERVER];
       // Without a registry opt-in or a local install, the helper launches the
-      // bundled Poolside agent automatically — nothing to install or update.
+      // bundled Camber agent automatically — nothing to install or update.
       if (currentConfig?.type !== "registry" && !hasRunnableAgentServerConfig(currentConfig)) {
         return [];
       }
@@ -311,7 +311,7 @@ export class ACPAgentUpdateRepository {
 
     try {
       await Promise.all([
-        poolsideAcpNavInstallAgentServer({
+        camberAcpNavInstallAgentServer({
           agentServer: agent.id,
           config: $state.snapshot(config) as ACPAgentServerConfig,
         }),

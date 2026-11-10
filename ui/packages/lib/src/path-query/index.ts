@@ -3,7 +3,7 @@
  * `~/`, `./`, optionally surrounded by quotes, with the rest treated as a
  * fuzzy workspace search.
  *
- * Shared between server (vscode-assistant searchFiles handler) and client
+ * Shared between helper search and client
  * (FilesMenu) so both sides classify the same string identically.
  */
 

@@ -32,7 +32,7 @@ describe("getToolIcon", () => {
 
   it("gives MCP tools their own icon instead of the shell glyph", () => {
     // Pool MCP tool: kind "execute", server__tool name — the regressed case.
-    const mcp = tool("execute", { _meta: { tool_name: "poolside-github__get_me" } });
+    const mcp = tool("execute", { _meta: { tool_name: "camber-github__get_me" } });
     expect(getToolIcon(mcp)).toBe("mcp");
   });
 

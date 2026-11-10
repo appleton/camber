@@ -1,4 +1,4 @@
-import { highlightShellCommand, parseShellCommand } from "@poolsideai/components/assistant-ui";
+import { highlightShellCommand, parseShellCommand } from "@camber/components/assistant-ui";
 import { describe, expect, it } from "vitest";
 
 describe("parseShellCommand", () => {

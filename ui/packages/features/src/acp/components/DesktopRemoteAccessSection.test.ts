@@ -14,19 +14,18 @@ function deferred<T>() {
 
 // The component uses the hand-written helperapi bindings; funnel them all
 // through one method-keyed mock so scenarios keep dispatching on the method.
-vi.mock("@poolsideai/helperapi", () => ({
-  poolsideRemoteAccessStatus: () => jsonrpcCall("poolside/remoteAccess/status", {}),
-  poolsideRemoteAccessEnable: (params: object) =>
-    jsonrpcCall("poolside/remoteAccess/enable", params),
-  poolsideRemoteAccessDisable: () => jsonrpcCall("poolside/remoteAccess/disable", {}),
-  poolsideRemoteAccessSetAutoStart: (params: object) =>
-    jsonrpcCall("poolside/remoteAccess/setAutoStart", params),
-  poolsideRemoteAccessCreatePairingCode: () =>
-    jsonrpcCall("poolside/remoteAccess/createPairingCode", {}),
-  poolsideRemoteAccessConfirmPairing: (params: object) =>
-    jsonrpcCall("poolside/remoteAccess/confirmPairing", params),
-  poolsideRemoteAccessRevokeDevice: (params: object) =>
-    jsonrpcCall("poolside/remoteAccess/revokeDevice", params),
+vi.mock("@camber/helperapi", () => ({
+  camberRemoteAccessStatus: () => jsonrpcCall("camber/remoteAccess/status", {}),
+  camberRemoteAccessEnable: (params: object) => jsonrpcCall("camber/remoteAccess/enable", params),
+  camberRemoteAccessDisable: () => jsonrpcCall("camber/remoteAccess/disable", {}),
+  camberRemoteAccessSetAutoStart: (params: object) =>
+    jsonrpcCall("camber/remoteAccess/setAutoStart", params),
+  camberRemoteAccessCreatePairingCode: () =>
+    jsonrpcCall("camber/remoteAccess/createPairingCode", {}),
+  camberRemoteAccessConfirmPairing: (params: object) =>
+    jsonrpcCall("camber/remoteAccess/confirmPairing", params),
+  camberRemoteAccessRevokeDevice: (params: object) =>
+    jsonrpcCall("camber/remoteAccess/revokeDevice", params),
 }));
 
 interface StatusOverrides {
@@ -50,7 +49,7 @@ interface StatusOverrides {
 
 function mockStatus(overrides: StatusOverrides = {}) {
   jsonrpcCall.mockImplementation(async (method: string) => {
-    if (method === "poolside/remoteAccess/status") {
+    if (method === "camber/remoteAccess/status") {
       return {
         enabled: false,
         devices: [],
@@ -199,8 +198,8 @@ describe("DesktopRemoteAccessSection", () => {
     };
     const save = deferred<typeof base & { autoStart: boolean; autoStartBind?: string }>();
     jsonrpcCall.mockImplementation(async (method: string, _params?: object) => {
-      if (method === "poolside/remoteAccess/status") return { ...base };
-      if (method === "poolside/remoteAccess/setAutoStart") {
+      if (method === "camber/remoteAccess/status") return { ...base };
+      if (method === "camber/remoteAccess/setAutoStart") {
         return await save.promise;
       }
       throw new Error(`unexpected call: ${method}`);
@@ -218,7 +217,7 @@ describe("DesktopRemoteAccessSection", () => {
     expect(toggle).toHaveAttribute("aria-checked", "true");
 
     await waitFor(() => {
-      expect(jsonrpcCall).toHaveBeenCalledWith("poolside/remoteAccess/setAutoStart", {
+      expect(jsonrpcCall).toHaveBeenCalledWith("camber/remoteAccess/setAutoStart", {
         autoStart: true,
         // The bind the server is currently running on becomes the auto-start bind.
         bind: "all",

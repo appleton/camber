@@ -25,7 +25,7 @@ const sourceIconPath = path.join(appDir, "src-tauri", "icons", `${ICON_NAME}.ico
 const destinationDir = path.join(appDir, "src-tauri", "icons", "icon-composer");
 const actool = execFileSync("xcrun", ["--find", "actool"], { encoding: "utf8" }).trim();
 const actoolVersion = readActoolVersion(actool);
-const temporaryDir = mkdtempSync(path.join(tmpdir(), "poolside-macos-icon-"));
+const temporaryDir = mkdtempSync(path.join(tmpdir(), "camber-macos-icon-"));
 
 try {
   const inputIconPath = compatibleIconPath(sourceIconPath, temporaryDir, actoolVersion);

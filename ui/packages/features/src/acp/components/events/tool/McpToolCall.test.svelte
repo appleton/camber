@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { EnvironmentProvider, LogProvider } from "@poolsideai/components/providers";
+  import { EnvironmentProvider, LogProvider } from "@camber/components/providers";
   import type { ToolCall } from "../../../types";
   import ToolCallComponent from "../ToolCall.svelte";
 

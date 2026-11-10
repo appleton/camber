@@ -19,8 +19,8 @@
   import SessionPlan from "../events/SessionPlan.svelte";
   import SessionEventsRenderer from "../SessionEventsRenderer.svelte";
   import { ScrollManager } from "./ScrollManager";
-  import { Boundary } from "@poolsideai/components/boundary";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import { Boundary } from "@camber/components/boundary";
+  import { Spinner } from "@camber/components/spinner";
   import ChatEmptyState from "./ChatEmptyState.svelte";
   import { onMount, tick, untrack, type Snippet } from "svelte";
   import { getKeybindingService } from "../../../keybindings";
@@ -61,8 +61,8 @@
     localRuntimeResidency,
     turnHasAgentOutput,
   } from "../../localInferenceRuntime";
-  import Icon from "@poolsideai/components/icon";
-  import { InfoMessageType } from "@poolsideai/rpc";
+  import Icon from "@camber/components/icon";
+  import { InfoMessageType } from "@camber/rpc";
   import type { ACPAuthMethodTerminal } from "../../authMethods";
   import { rpc } from "../../hostRpc";
   import {
@@ -154,7 +154,7 @@
   const setupScriptOutputs = getACPSetupScriptOutputRepo();
   const elicitation = getElicitationContext();
 
-  const DESKTOP_TERMINAL_WIDTH_STORAGE_KEY = "poolside.desktop.terminalWidth";
+  const DESKTOP_TERMINAL_WIDTH_STORAGE_KEY = "camber.desktop.terminalWidth";
   const DESKTOP_TERMINAL_DEFAULT_WIDTH = 420;
   const DESKTOP_TERMINAL_MIN_WIDTH = 280;
   const DESKTOP_TERMINAL_MAX_WIDTH = 900;
@@ -469,7 +469,7 @@
   let claudeSetupIconUrl = $derived(agentIconUrl(registry, "claude-acp"));
   let codexSetupIconUrl = $derived(agentIconUrl(registry, "codex-acp"));
   // Stop nudging users who have already set agents up: hide the "set up another agent"
-  // action once more than one agent beyond the built-in Poolside and Poolside local
+  // action once more than one agent beyond the built-in Camber and Camber local
   // agents is configured.
   let configuredExtraAgentCount = $derived(
     acp.agents.agentServerNames.filter(

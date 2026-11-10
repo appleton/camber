@@ -1,4 +1,4 @@
-import { withTimeout } from "@poolsideai/components/assistant-ui";
+import { withTimeout } from "@camber/components/assistant-ui";
 import { describe, expect, it } from "vitest";
 
 describe("withTimeout", () => {

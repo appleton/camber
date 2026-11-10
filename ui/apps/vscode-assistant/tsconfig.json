@@ -1,6 +1,0 @@
-{
-  "extends": "@poolsideai/tsconfig/svelte",
-  "include": ["**/*.js", "**/*.ts", "**/*.svelte"],
-  "references": [{ "path": "./tsconfig.node.json" }],
-  "exclude": ["node_modules", "dist", "src/extension"]
-}

@@ -94,7 +94,7 @@ export function isInsideToolCallGroup(): boolean {
  * growing summary line above a constant two-slot tail: the last two tool
  * calls, with any trailing activity (thought, "think" step, or the streaming
  * reply) taking the second slot. The user-facing setting stores this mode
- * string directly (VS Code `poolside.toolActivity`, desktop
+ * string directly (VS Code `camber.toolActivity`, desktop
  * `toolActivity`), so future modes are new values, not a settings
  * migration. Finished turns summarize regardless of the mode — except
  * interrupted ones, which keep their streaming layout (see

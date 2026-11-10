@@ -6,7 +6,7 @@ go_library(
         "binary.go",
         "list.go",
     ],
-    importpath = "github.com/poolsideai/assistant/pkg/common/data",
+    importpath = "github.com/appleton/camber/pkg/common/data",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/common/sync/bufferpool",

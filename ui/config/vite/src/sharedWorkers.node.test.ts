@@ -36,7 +36,7 @@ for (const [base, pattern] of [
   ["./", "webview/[name].js"],
 ]) {
   test(`one grammar for two workers and window, with source maps (${base})`, async () => {
-    const root = await realpath(await mkdtemp(join(tmpdir(), "poolside-shared-workers-")));
+    const root = await realpath(await mkdtemp(join(tmpdir(), "camber-shared-workers-")));
     try {
       const files = {
         "index.html": '<script type="module" src="/main.js"></script>',
@@ -111,7 +111,7 @@ for (const [base, pattern] of [
 }
 
 test("importing a production constructor does not require Worker support", async () => {
-  const root = await realpath(await mkdtemp(join(tmpdir(), "poolside-worker-fallback-")));
+  const root = await realpath(await mkdtemp(join(tmpdir(), "camber-worker-fallback-")));
   try {
     await writeFile(join(root, "main.js"), "export { default } from './task.js?shared-worker';");
     await writeFile(join(root, "task.js"), "self.onmessage = () => self.postMessage('ok');");

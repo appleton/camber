@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Spinner } from "@poolsideai/components/spinner";
+  import { Spinner } from "@camber/components/spinner";
   import { onMount, tick } from "svelte";
   import type { Attachment } from "svelte/attachments";
   import { extractErrorMessage } from "../../errors";

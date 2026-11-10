@@ -1,4 +1,4 @@
-import type { AssistantTerminalTab, AssistantTerminalUpdate } from "@poolsideai/rpc";
+import type { AssistantTerminalTab, AssistantTerminalUpdate } from "@camber/rpc";
 import { createContext } from "svelte";
 import { rpc } from "../hostRpc";
 
@@ -44,8 +44,8 @@ interface RunCommandAndWaitOptions {
 }
 
 const MAX_BUFFER_LENGTH = 200_000;
-const COMMAND_DONE_PREFIX = "\x1b]1337;PoolsideCommandDone=";
-const COMMAND_DONE_RE = /\x1b]1337;PoolsideCommandDone=([^:\x07]+):(\d+)\x07/g;
+const COMMAND_DONE_PREFIX = "\x1b]1337;CamberCommandDone=";
+const COMMAND_DONE_RE = /\x1b]1337;CamberCommandDone=([^:\x07]+):(\d+)\x07/g;
 // Terminal panes usually keep a stable size across sessions (the layout is
 // restored), so the last measured size is a good guess at the spawn size for
 // the next terminal. A shell spawned at the size its pane will actually have
@@ -54,7 +54,7 @@ const COMMAND_DONE_RE = /\x1b]1337;PoolsideCommandDone=([^:\x07]+):(\d+)\x07/g;
 // global — in a split layout with differently sized panes, whichever pane
 // resized last wins and a terminal opened in the other pane falls back to the
 // (now silent) clear+repaint path.
-const LAST_MEASURED_SIZE_STORAGE_KEY = "poolside.assistantTerminal.lastMeasuredSize";
+const LAST_MEASURED_SIZE_STORAGE_KEY = "camber.assistantTerminal.lastMeasuredSize";
 
 export interface AssistantTerminalSize {
   cols: number;
@@ -521,7 +521,7 @@ function commandWithDoneMarker(
     "(",
     command.trim(),
     ")",
-    `printf '\\033]1337;PoolsideCommandDone=${token}:%s\\007' "$?"`,
+    `printf '\\033]1337;CamberCommandDone=${token}:%s\\007' "$?"`,
   ];
   if (keepAliveAfterCommand) {
     lines.push('exec "${SHELL:-/bin/sh}"');
@@ -532,7 +532,7 @@ function commandWithDoneMarker(
 const [getAssistantTerminalContext, setAssistantTerminalRepositoryContext] =
   createContext<AssistantTerminalRepository>();
 
-const ASSISTANT_TERMINAL_REPOSITORY_GLOBAL = Symbol.for("poolside.assistantTerminalRepository");
+const ASSISTANT_TERMINAL_REPOSITORY_GLOBAL = Symbol.for("camber.assistantTerminalRepository");
 
 type AssistantTerminalRepositoryGlobal = typeof globalThis & {
   [ASSISTANT_TERMINAL_REPOSITORY_GLOBAL]?: AssistantTerminalRepositoryWriter;

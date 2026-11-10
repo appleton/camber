@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "glob",
+    testonly = True,
+    srcs = ["glob.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/pkg/test/integration/fake/glob",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "glob_test",
+    srcs = ["glob_test.go"],
+    deps = [":glob"],
+)

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { MarkdownBlock } from "@poolsideai/components/markdown";
+  import { MarkdownBlock } from "@camber/components/markdown";
   // Stamped by the release workflow (render-changelog); the committed file is
   // a placeholder, so dev builds show just the heading.
   import changelog from "../CHANGELOG.md?raw";

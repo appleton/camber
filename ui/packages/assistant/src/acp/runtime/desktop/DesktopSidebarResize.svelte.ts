@@ -1,5 +1,5 @@
 // Owns desktop sidebar width persistence and resize gesture state.
-const STORAGE_KEY = "poolside.desktop.sidebarWidth";
+const STORAGE_KEY = "camber.desktop.sidebarWidth";
 const DEFAULT_WIDTH = 260;
 const MIN_WIDTH = 220;
 const MAX_WIDTH = 640;

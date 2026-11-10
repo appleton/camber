@@ -1,4 +1,4 @@
-import type { ACPAgentServers } from "@poolsideai/rpc";
+import type { ACPAgentServers } from "@camber/rpc";
 import { get, writable } from "svelte/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ACPRegistryAgent } from "../agentRegistry";
@@ -7,8 +7,8 @@ import type { AcpAgentRegistryRepository } from "./AgentRegistryRepository.svelt
 import { ACPAgentUpdateRepository } from "./AgentUpdateRepository.svelte";
 import type { ACPSessionRepositoryWriter } from "./SessionRepository.svelte";
 
-vi.mock("@poolsideai/helperapi", () => ({
-  poolsideAcpNavInstallAgentServer: vi.fn(async () => ({ installed: true })),
+vi.mock("@camber/helperapi", () => ({
+  camberAcpNavInstallAgentServer: vi.fn(async () => ({ installed: true })),
 }));
 
 vi.mock("../hostRpc", () => ({
@@ -40,7 +40,7 @@ function createAppStore(state: AppStateInput): AppStore {
 
 function createRepo(
   agentServers: ACPAgentServers,
-  agents: ACPRegistryAgent[] = [poolsideAgent("1.0.5")],
+  agents: ACPRegistryAgent[] = [camberAgent("1.0.5")],
 ) {
   const appStore = createAppStore({
     userSettings: { acpAgentServers: agentServers },
@@ -70,12 +70,12 @@ function createRepo(
   };
 }
 
-function poolsideAgent(version: string): ACPRegistryAgent {
+function camberAgent(version: string): ACPRegistryAgent {
   return {
     id: "poolside",
-    name: "Poolside",
+    name: "Camber",
     version,
-    description: "Poolside ACP agent",
+    description: "Camber ACP agent",
     distribution: {
       binary: {
         "darwin-aarch64": {
@@ -102,7 +102,7 @@ function npxAgent(id: string, name: string, pkg: string): ACPRegistryAgent {
   };
 }
 
-function poolsideConfig(version: string): ACPAgentServers {
+function camberConfig(version: string): ACPAgentServers {
   return {
     poolside: {
       type: "registry",
@@ -133,8 +133,8 @@ describe("ACPAgentUpdateRepository", () => {
     vi.clearAllMocks();
   });
 
-  it("detects registry updates for the bundled Poolside agent", () => {
-    const { repo } = createRepo(poolsideConfig("1.0.4"));
+  it("detects registry updates for the bundled Camber agent", () => {
+    const { repo } = createRepo(camberConfig("1.0.4"));
 
     repo.refresh();
 
@@ -143,7 +143,7 @@ describe("ACPAgentUpdateRepository", () => {
   });
 
   function runningAgent(version = "1.0.4") {
-    const context = createRepo(poolsideConfig("1.0.5"));
+    const context = createRepo(camberConfig("1.0.5"));
     vi.mocked(context.sessionRepo.agents.isConnectedTo).mockReturnValue(true);
     vi.mocked(context.sessionRepo.agents.getInitializeResponse).mockReturnValue({
       protocolVersion: 1,
@@ -196,13 +196,13 @@ describe("ACPAgentUpdateRepository", () => {
   });
 
   it("does not offer a downgrade from an older cached registry", () => {
-    const { repo } = createRepo(poolsideConfig("1.0.6"));
+    const { repo } = createRepo(camberConfig("1.0.6"));
     repo.refresh();
     expect(repo.hasUpdate("poolside")).toBe(false);
   });
 
   it("restarts an installed update without reinstalling and refreshes models afterwards", async () => {
-    const { poolsideAcpNavInstallAgentServer } = await import("@poolsideai/helperapi");
+    const { camberAcpNavInstallAgentServer } = await import("@camber/helperapi");
     const { repo, sessionRepo } = runningAgent();
     vi.mocked(sessionRepo.agents.refreshCachedConfig).mockImplementationOnce(async () => {
       expect(sessionRepo.agents.restart).toHaveBeenCalledWith("poolside");
@@ -212,7 +212,7 @@ describe("ACPAgentUpdateRepository", () => {
       });
     });
     await repo.update("poolside");
-    expect(poolsideAcpNavInstallAgentServer).not.toHaveBeenCalled();
+    expect(camberAcpNavInstallAgentServer).not.toHaveBeenCalled();
     expect(sessionRepo.agents.refreshCachedConfig).toHaveBeenCalledWith("poolside", "/", {
       fresh: true,
     });
@@ -238,7 +238,7 @@ describe("ACPAgentUpdateRepository", () => {
     expect(sessionRepo.agents.restart).not.toHaveBeenCalled();
   });
 
-  it("does not prompt install for the bundled Poolside agent when nothing is configured", () => {
+  it("does not prompt install for the bundled Camber agent when nothing is configured", () => {
     const { repo } = createRepo({});
 
     repo.refresh();
@@ -246,7 +246,7 @@ describe("ACPAgentUpdateRepository", () => {
     expect(repo.hasUpdate("poolside")).toBe(false);
   });
 
-  it("does not prompt install for the bundled Poolside agent when only default config options are set", () => {
+  it("does not prompt install for the bundled Camber agent when only default config options are set", () => {
     const { repo } = createRepo({
       poolside: {
         command: "",
@@ -441,7 +441,7 @@ describe("ACPAgentUpdateRepository", () => {
   });
 
   it("updates a legacy Codex agent to the current registry config", async () => {
-    const { poolsideAcpNavInstallAgentServer } = await import("@poolsideai/helperapi");
+    const { camberAcpNavInstallAgentServer } = await import("@camber/helperapi");
     const { rpc } = await import("../hostRpc");
     const { repo, appStore, sessionRepo } = createRepo(
       {
@@ -470,7 +470,7 @@ describe("ACPAgentUpdateRepository", () => {
         mode: "full-access",
       },
     });
-    expect(poolsideAcpNavInstallAgentServer).toHaveBeenCalledWith({
+    expect(camberAcpNavInstallAgentServer).toHaveBeenCalledWith({
       agentServer: "codex-acp",
       config: expect.objectContaining({
         type: "registry",
@@ -486,16 +486,16 @@ describe("ACPAgentUpdateRepository", () => {
   });
 
   it("updates through helper install and preserves local default config options", async () => {
-    const { poolsideAcpNavInstallAgentServer } = await import("@poolsideai/helperapi");
+    const { camberAcpNavInstallAgentServer } = await import("@camber/helperapi");
     const { rpc } = await import("../hostRpc");
-    const { repo, appStore, sessionRepo } = createRepo(poolsideConfig("1.0.4"));
+    const { repo, appStore, sessionRepo } = createRepo(camberConfig("1.0.4"));
 
     repo.refresh();
     const update = repo.update("poolside");
     await vi.advanceTimersByTimeAsync(500);
     await update;
 
-    expect(poolsideAcpNavInstallAgentServer).toHaveBeenCalledWith({
+    expect(camberAcpNavInstallAgentServer).toHaveBeenCalledWith({
       agentServer: "poolside",
       config: expect.objectContaining({
         binary: expect.objectContaining({
@@ -528,14 +528,14 @@ describe("ACPAgentUpdateRepository", () => {
   });
 
   it("preserves diagnostic messages from serialized helper errors", async () => {
-    const { poolsideAcpNavInstallAgentServer } = await import("@poolsideai/helperapi");
+    const { camberAcpNavInstallAgentServer } = await import("@camber/helperapi");
     const message =
       "invalid request params: unexpected property config.binary.darwin-aarch64.sha256";
-    vi.mocked(poolsideAcpNavInstallAgentServer).mockRejectedValueOnce({
+    vi.mocked(camberAcpNavInstallAgentServer).mockRejectedValueOnce({
       code: -32602,
       message,
     });
-    const { repo } = createRepo(poolsideConfig("1.0.4"));
+    const { repo } = createRepo(camberConfig("1.0.4"));
 
     repo.refresh();
 

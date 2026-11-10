@@ -19,9 +19,9 @@ use tauri::{Emitter, Manager};
 #[cfg(not(target_os = "macos"))]
 const CLICKABLE_NOTIFICATIONS_UNSUPPORTED: &str = "CLICKABLE_NOTIFICATIONS_UNSUPPORTED";
 #[cfg(target_os = "macos")]
-pub const DESKTOP_NOTIFICATION_CLICK_EVENT: &str = "poolside:desktop-notification-click";
+pub const DESKTOP_NOTIFICATION_CLICK_EVENT: &str = "camber:desktop-notification-click";
 #[cfg(target_os = "macos")]
-const NOTIFICATION_IDENTIFIER_PREFIX: &str = "poolside-desktop-assistant-";
+const NOTIFICATION_IDENTIFIER_PREFIX: &str = "camber-desktop-assistant-";
 
 #[cfg(target_os = "macos")]
 static APP_HANDLE: std::sync::OnceLock<tauri::AppHandle> = std::sync::OnceLock::new();
@@ -242,7 +242,7 @@ fn apply_notification_icon(notification: &NSUserNotification) {
     };
 
     // `NSUserNotification` does not publicly expose the left-side identity image. This mirrors
-    // mac-notification-sys' existing implementation so spoolside notifications keep their icon.
+    // mac-notification-sys' existing implementation so camberqa notifications keep their icon.
     unsafe {
         let icon_object: &AnyObject = &icon;
         let has_border = NSNumber::numberWithBool(false);

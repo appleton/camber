@@ -2008,10 +2008,10 @@ function mcpTool(toolCallId: string): SessionEvent {
   return {
     eventKind: "tool_call",
     toolCallId,
-    title: "poolside-github__get_me",
+    title: "camber-github__get_me",
     kind: "execute",
     status: "completed",
-    _meta: { tool_name: "poolside-github__get_me" },
+    _meta: { tool_name: "camber-github__get_me" },
   };
 }
 

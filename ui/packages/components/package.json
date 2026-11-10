@@ -1,5 +1,5 @@
 {
-  "name": "@poolsideai/components",
+  "name": "@camber/components",
   "version": "2.3.53",
   "private": true,
   "type": "module",
@@ -128,8 +128,8 @@
     "test": "vitest run",
     "test:storybook": "vitest run --project storybook",
     "test:storybook:watch": "vitest --project storybook",
-    "test:unit": "POOLSIDE_SKIP_STORYBOOK_VITE=1 vitest run --project unit",
-    "test:unit:watch": "POOLSIDE_SKIP_STORYBOOK_VITE=1 vitest --project unit",
+    "test:unit": "CAMBER_SKIP_STORYBOOK_VITE=1 vitest run --project unit",
+    "test:unit:watch": "CAMBER_SKIP_STORYBOOK_VITE=1 vitest --project unit",
     "test:watch": "vitest"
   },
   "lint-staged": {
@@ -138,12 +138,12 @@
     ]
   },
   "dependencies": {
+    "@camber/diff": "workspace:*",
+    "@camber/lib": "workspace:*",
+    "@camber/tailwind-config": "workspace:*",
     "@floating-ui/dom": "^1.7.4",
     "@melt-ui/svelte": "catalog:",
     "@pierre/diffs": "^1.2.12",
-    "@poolsideai/diff": "workspace:*",
-    "@poolsideai/lib": "workspace:*",
-    "@poolsideai/tailwind-config": "workspace:*",
     "bits-ui": "^2.14.4",
     "dompurify": "3.4.12",
     "fuzzysort": "^3.1.0",
@@ -171,13 +171,13 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/storybook-config": "workspace:*",
+    "@camber/svelte-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
+    "@camber/vite-config": "workspace:*",
     "@chromatic-com/storybook": "catalog:",
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/storybook-config": "workspace:*",
-    "@poolsideai/svelte-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
-    "@poolsideai/vite-config": "workspace:*",
     "@storybook/addon-a11y": "catalog:",
     "@storybook/addon-svelte-csf": "catalog:",
     "@storybook/addon-vitest": "catalog:",

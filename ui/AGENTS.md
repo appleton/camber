@@ -14,11 +14,9 @@ Prefer focused package commands over whole-workspace checks while iterating.
 | Helper API bindings | `ui/packages/helperapi/` |
 | Split-pane tabs (desktop) | `ui/packages/splits/` |
 | Desktop host | `ui/apps/desktop-assistant/` |
-| VS Code host | `ui/apps/vscode-assistant/` |
-| Visual Studio host | `ui/apps/vs-assistant/` |
 | Mobile remote host | `ui/apps/mobile-remote/` |
 | Remote WebSocket client | `ui/packages/remote-client/` |
-| UI automation | `ui/packages/spoolside/` |
+| UI automation | `ui/packages/camberqa/` |
 
 ## Conventions
 
@@ -29,7 +27,7 @@ Prefer focused package commands over whole-workspace checks while iterating.
 - For shared chat shell behavior, start in `ui/packages/assistant`.
 - For host-specific behavior, use the relevant app under `ui/apps`.
 - Keep app README files focused on running, building, packaging, and host quirks.
-- Verify UI changes in the running app with spoolside and take before/after
+- Verify UI changes in the running app with camberqa and take before/after
   screenshots; see `../docs/coding-with-agents.md`.
 
 ## Common Checks

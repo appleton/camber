@@ -1,0 +1,13 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "server",
+    srcs = ["server.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/server",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/camber-helper/internal/handler",
+        "//pkg/camber-helper/internal/shellenv",
+        "@com_github_tliron_glsp//server",
+    ],
+)

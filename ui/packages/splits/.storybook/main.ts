@@ -1,4 +1,4 @@
-import { defineConfig } from "@poolsideai/storybook-config";
+import { defineConfig } from "@camber/storybook-config";
 
 const config = defineConfig({
   stories: ["./**/*.stories.ts"],

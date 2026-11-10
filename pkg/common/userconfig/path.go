@@ -20,17 +20,17 @@ func Directory() string {
 	return configHome
 }
 
-// PoolsideDirectory returns the OS abs path to the poolside config directory.
-func PoolsideDirectory() string {
+// CamberDirectory retains the original config directory so existing installs keep their settings.
+func CamberDirectory() string {
 	return filepath.Join(Directory(), "poolside")
 }
 
-// PoolsideConfigFile returns OS abs to a config file in poolside config directory
-func PoolsideConfigFile(name string) string {
-	return filepath.Join(PoolsideDirectory(), name)
+// CamberConfigFile returns OS abs to a config file in camber config directory
+func CamberConfigFile(name string) string {
+	return filepath.Join(CamberDirectory(), name)
 }
 
-// StateDirectory returns the path to poolside's XDG state directory for data that should
+// StateDirectory returns the path to camber's XDG state directory for data that should
 // persist between application restarts but is not important enough to store in $XDG_DATA_HOME
 // (e.g. logs, history, recently used files).
 //

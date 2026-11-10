@@ -6,15 +6,15 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 const paths = [
-  "pkg/poolside-helper/internal/handler/initialize.go",
-  "pkg/poolside-helper/internal/handler/acpnav/store.go",
+  "pkg/camber-helper/internal/handler/initialize.go",
+  "pkg/camber-helper/internal/handler/acpnav/store.go",
 ];
 const after = new Map(paths.map((path) => [path, readFileSync(path)]));
 const before = new Map(
   paths.map((path) => [path, execFileSync("git", ["show", `90b316a69:${path}`])]),
 );
 const rows = [];
-const output = process.argv[2] ?? "/tmp/poolside-l5-matched.json";
+const output = process.argv[2] ?? "/tmp/camber-l5-matched.json";
 try {
   for (let trial = 0; trial < 3; trial++) {
     for (const phase of trial % 2 ? ["after", "before"] : ["before", "after"]) {
@@ -24,8 +24,8 @@ try {
         "go",
         [
           "test",
-          "./pkg/poolside-helper/internal/handler",
-          "./pkg/poolside-helper/internal/handler/acpnav",
+          "./pkg/camber-helper/internal/handler",
+          "./pkg/camber-helper/internal/handler/acpnav",
           "-run",
           "^$",
           "-bench",
@@ -40,7 +40,7 @@ try {
           maxBuffer: 8 * 1024 * 1024,
           env: {
             ...process.env,
-            POOLSIDE_REMOTE_ACCESS_STATE: "/tmp/poolside-performance-test-remote.json",
+            CAMBER_REMOTE_ACCESS_STATE: "/tmp/camber-performance-test-remote.json",
           },
         },
       );

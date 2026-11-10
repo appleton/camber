@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { Checkbox } from "@poolsideai/components/checkbox";
-  import Icon from "@poolsideai/components/icon";
+  import { Checkbox } from "@camber/components/checkbox";
+  import Icon from "@camber/components/icon";
   import { slide } from "svelte/transition";
   import {
     Collapsible,
     CollapsibleContent,
     CollapsibleIndicator,
     CollapsibleTrigger,
-  } from "@poolsideai/components/collapsible";
+  } from "@camber/components/collapsible";
   import type { Plan } from "@agentclientprotocol/sdk";
 
   interface Props {

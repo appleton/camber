@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve Poolside Assistant.
+Thanks for helping improve Camber Assistant.
 
 ## Development
 
@@ -15,7 +15,7 @@ conversations must be resolved.
 - **[`docs/getting-started.md`](./docs/getting-started.md)**: Choose or
   configure an agent and start using the assistant.
 - **[`docs/coding-with-agents.md`](./docs/coding-with-agents.md)**: Work on
-  Poolside Assistant with coding agents, including spoolside, parallel
+  Camber Assistant with coding agents, including camberqa, parallel
   worktrees, snapshots, and screenshots.
 
 Before opening a large PR, read the relevant scoped
@@ -24,13 +24,9 @@ edit and the conventions that live there. `CLAUDE.md` files in this repo are
 symlinks to their sibling `AGENTS.md` — edit the `AGENTS.md`, and don't add a
 separate `CLAUDE.md` for your own agent.
 
-Each app has its own README. Read these before you start development. VS Code
-is a good starting point for general UI feature development, but many components
-are shared between apps.
+Read the desktop README before development. Shared components also serve the mobile remote companion.
 
 - **Desktop**: [`ui/apps/desktop-assistant/README.md`](./ui/apps/desktop-assistant/README.md)
-- **VS Code**: [`ui/apps/vscode-assistant/readme.md`](./ui/apps/vscode-assistant/readme.md)
-- **Visual Studio**: [`ui/apps/vs-assistant/README.md`](./ui/apps/vs-assistant/README.md)
 
 For shared UI workspace structure and package commands, use
 [`ui/README.md`](./ui/README.md).
@@ -39,7 +35,7 @@ For shared UI workspace structure and package commands, use
 
 Bugs, feature requests, agent compatibility reports, rough edges, and questions —
 we'd like to hear all of it. Please start in
-[GitHub Discussions](https://github.com/poolsideai/assistants/discussions)
+[GitHub Discussions](https://github.com/appleton/camber/discussions)
 rather than opening an issue directly.
 
 We keep the issue tracker for accepted, well-understood work that's ready to pick

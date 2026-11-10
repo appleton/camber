@@ -255,7 +255,7 @@ export function initLogoScene(
   }
 
   loader.load(
-    window.logoUri ?? "/poolside-logo.glb",
+    window.logoUri ?? "/camber-logo.glb",
     (gltf) => {
       if (disposed) {
         disposeObject3D(gltf.scene);
@@ -353,7 +353,7 @@ export function initLogoScene(
 
       // Load face overlay once and clone for front/back
       loader.load(
-        window.logoFaceUri ?? "/poolside-face-logo.glb",
+        window.logoFaceUri ?? "/camber-face-logo.glb",
         (faceGltf) => {
           if (disposed) {
             disposeObject3D(faceGltf.scene);

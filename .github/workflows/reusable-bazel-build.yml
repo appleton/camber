@@ -1,40 +1,14 @@
-# Reusable workflow for building Go projects with Bazel + Zig cross-compilation.
-#
-# Linux and Windows targets are cross-compiled from Ubuntu using the Zig toolchain
-# registered in MODULE.bazel (hermetic_cc_toolchain).  No Docker, no musl-cross
-# download, no goreleaser needed.
-#
-# Darwin targets still require a macOS runner because the macOS SDK cannot be
-# redistributed separately from Xcode.
-#
-# NOTE: --config=ci_amd64 is intentionally NOT used for macOS jobs because it
-# contains --platforms=@zig_sdk//platform:linux_amd64 which would override the
-# target OS.
-#
-# Usage example:
-#
-#   jobs:
-#     build:
-#       uses: ./.github/workflows/reusable-bazel-build.yml
-#       with:
-#         bazel_target: //cmd/poolside-helper:poolside-helper
-#         binary_name: poolside-helper
-#         tag: helper/v1.2.3
-#         tag_prefix: helper/
-#         sign_windows: true
-#         sign_darwin: true
-#       secrets: inherit
 name: reusable-bazel-build
 
 on:
   workflow_call:
     inputs:
       bazel_target:
-        description: "Base Bazel target (e.g. //cmd/poolside-helper:poolside-helper). Cross targets are derived by appending _{goos}_{goarch}."
+        description: "Base Bazel target (e.g. //cmd/camber-helper:camber-helper). Cross targets are derived by appending _{goos}_{goarch}."
         type: string
         required: true
       binary_name:
-        description: "Output binary name (e.g. poolside-helper). Used for renaming and packaging."
+        description: "Output binary name (e.g. camber-helper). Used for renaming and packaging."
         type: string
         required: true
       tag:
@@ -54,18 +28,13 @@ on:
         description: "Exact source ref to build"
         type: string
         required: false
-      sign_windows:
-        description: "Sign Windows binaries with SSL.com code signing"
-        type: boolean
-        required: false
-        default: false
       sign_darwin:
         description: "Sign macOS binaries with Apple code signing"
         type: boolean
         required: false
         default: false
       embed_mobile_webui:
-        description: "Build the mobile-remote UI bundle and copy it into the helper's webui embed dir before the Bazel build (poolside-helper only)"
+        description: "Build the mobile-remote UI bundle and copy it into the helper's webui embed dir before the Bazel build (camber-helper only)"
         type: boolean
         required: false
         default: false
@@ -78,28 +47,6 @@ jobs:
     strategy:
       matrix:
         include:
-          # linux and windows: cross-compiled from Ubuntu via the Zig toolchain.
-          # build_type=cross builds {bazel_target}_{goos}_{goarch} with --config=ci_amd64.
-          - os: ubuntu-24.04
-            goos: linux
-            goarch: amd64
-            build_type: cross
-
-          - os: ubuntu-24.04
-            goos: linux
-            goarch: arm64
-            build_type: cross
-
-          - os: ubuntu-24.04
-            goos: windows
-            goarch: amd64
-            build_type: cross
-
-          - os: ubuntu-24.04
-            goos: windows
-            goarch: arm64
-            build_type: cross
-
           # darwin/arm64: native on arm64 runner (Apple Silicon).
           - os: macos-latest
             goos: darwin
@@ -113,7 +60,7 @@ jobs:
           #   (e.g. resolv.h) — Apple's SDK is proprietary and can't be redistributed.
           # Until Bazel gains proper darwin cross-compilation support, a native Intel runner
           # is the only reliable way to produce CGO-enabled darwin/amd64 binaries.
-          - os: macos-15-large
+          - os: macos-15-intel
             goos: darwin
             goarch: amd64
             build_type: native
@@ -132,7 +79,7 @@ jobs:
         run: brew install bazelisk
 
       # The helper serves the mobile-remote UI from a bundle embedded at Go
-      # compile time (pkg/poolside-helper/internal/handler/remoteaccess/webui,
+      # compile time (pkg/camber-helper/internal/handler/remoteaccess/webui,
       # //go:embed via a glob'd embedsrcs). Only placeholders are committed, so
       # a release build must produce the bundle and copy it in BEFORE Bazel
       # compiles the binary — otherwise released helpers serve the "no mobile
@@ -141,7 +88,7 @@ jobs:
         if: inputs.embed_mobile_webui
         uses: ./.github/actions/ui-setup
         with:
-          pnpm_install_args: "--filter @poolsideai/mobile-remote..."
+          pnpm_install_args: "--filter @camber/mobile-remote..."
 
       - name: Embed mobile-remote UI bundle
         if: inputs.embed_mobile_webui
@@ -150,7 +97,7 @@ jobs:
           # The mobile-remote vite build (~6k modules) exceeds Node's default
           # ~2GB heap on the macos-latest runner.
           NODE_OPTIONS: "--max-old-space-size=4096"
-        run: pnpm --filter @poolsideai/mobile-remote embed
+        run: pnpm --filter @camber/mobile-remote embed
 
       - name: Compute version tag
         id: version
@@ -181,7 +128,7 @@ jobs:
 
           case "${{ matrix.build_type }}" in
             cross)
-              # Linux/Windows: use Zig toolchain via go_cross_binary.
+              # Optional Linux cross-compilation for helper development.
               # --config=ci_amd64 sets --platforms=linux_amd64 for the outer config,
               # but go_cross_binary applies its own platform transition so the
               # outer --platforms does not override the cross-compiled target.
@@ -208,7 +155,6 @@ jobs:
           mkdir -p dist
 
           SUFFIX=""
-          if [[ "${{ matrix.goos }}" == "windows" ]]; then SUFFIX=".exe"; fi
 
           DEST="dist/${{ steps.version.outputs.archive_name }}${SUFFIX}"
           cp "${{ steps.build.outputs.binary_path }}" "${DEST}"
@@ -236,24 +182,13 @@ jobs:
           tar -czf "${ARCHIVE}" "${BINARY}"
           sha256sum "${ARCHIVE}" > "${{ steps.version.outputs.archive_name }}.checksum"
 
-      - name: Sign Windows binary
-        if: inputs.sign_windows && matrix.goos == 'windows'
-        uses: ./.github/actions/sign-windows-binary
-        with:
-          archive_path: dist/${{ steps.version.outputs.archive_name }}.tar.gz
-          binary_name: ${{ steps.version.outputs.archive_name }}
-          username: ${{ secrets.WINDOWS_CODE_SIGN_USERNAME }}
-          password: ${{ secrets.WINDOWS_CODE_SIGN_PASSWORD }}
-          credential_id: ${{ secrets.WINDOWS_CODE_SIGN_CREDENTIAL_ID }}
-          totp_secret: ${{ secrets.WINDOWS_CODE_SIGN_TOTP_SECRET }}
-
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: artifact-${{ steps.version.outputs.archive_name }}
           path: |
-            ${{ (inputs.sign_windows && matrix.goos == 'windows') && 'signing-workspace' || 'dist' }}/${{ steps.version.outputs.archive_name }}.tar.gz
-            ${{ (inputs.sign_windows && matrix.goos == 'windows') && 'signing-workspace' || 'dist' }}/${{ steps.version.outputs.archive_name }}.checksum
+            dist/${{ steps.version.outputs.archive_name }}.tar.gz
+            dist/${{ steps.version.outputs.archive_name }}.checksum
           # GitHub Release assets are the durable copy. This artifact only
           # transports the build to publication and product packaging jobs.
           retention-days: 7

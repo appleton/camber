@@ -1,7 +1,7 @@
 <script lang="ts">
   import { type Snippet } from "svelte";
 
-  import { AcpHandoffConfirmationProvider } from "@poolsideai/features/acp";
+  import { AcpHandoffConfirmationProvider } from "@camber/features/acp";
 
   import GlobalProviders from "../lib/GlobalProviders.svelte";
   import IdentityManager from "../lib/IdentityManager.svelte";

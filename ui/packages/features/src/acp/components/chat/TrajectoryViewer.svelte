@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import Icon from "@poolsideai/components/icon";
-  import { FileCodeView } from "@poolsideai/components/file-diff";
-  import { Switch } from "@poolsideai/components/switch";
+  import Icon from "@camber/components/icon";
+  import { FileCodeView } from "@camber/components/file-diff";
+  import { Switch } from "@camber/components/switch";
   import { appState } from "../../hostAdapter";
   import { normalizeAgentServerName } from "../../agentServers";
   import { getACPContext } from "../../features/SessionRepository.svelte";
@@ -54,7 +54,7 @@
     capture.setConversationCollecting(agentServer, conversationId, chatSession.sessionId, enabled);
   }
 
-  const SIDEBAR_WIDTH_STORAGE_KEY = "poolside.acp.trajectorySidebarWidth";
+  const SIDEBAR_WIDTH_STORAGE_KEY = "camber.acp.trajectorySidebarWidth";
   const SIDEBAR_DEFAULT_WIDTH = 320;
   const SIDEBAR_MIN_WIDTH = 200;
   // Keep at least this much room for the JSON detail pane while resizing.

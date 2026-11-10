@@ -3,9 +3,9 @@
 </script>
 
 <script lang="ts">
-  import { Badge } from "@poolsideai/components/badge";
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import { Badge } from "@camber/components/badge";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
   import {
     worktreeBlocksUI,
     worktreeBusyLabel,
@@ -19,7 +19,7 @@
   import { githubDotColorClass, githubStatusSummary } from "../../github/githubStatus";
   import GithubWorktreeTooltip from "./GithubWorktreeTooltip.svelte";
   import { withShortcut } from "../../../keybindings";
-  import { reorderable } from "@poolsideai/dnd";
+  import { reorderable } from "@camber/dnd";
   import { suppressContextMenu } from "./contextMenuHelpers";
   import ReorderDragPreview from "./ReorderDragPreview.svelte";
   import { ReorderMotion } from "./ReorderMotion.svelte";

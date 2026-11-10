@@ -8,8 +8,8 @@
 </script>
 
 <script lang="ts">
-  import type { DiffLinesResult } from "@poolsideai/diff";
-  import { diffLines } from "@poolsideai/diff";
+  import type { DiffLinesResult } from "@camber/diff";
+  import { diffLines } from "@camber/diff";
   import { createContext, type Snippet } from "svelte";
   import type { LiteralUnion, SetRequired } from "type-fest";
 

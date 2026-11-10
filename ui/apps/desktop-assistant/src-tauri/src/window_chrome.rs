@@ -19,7 +19,7 @@
 //!
 //! The legacy artwork needs its own optical correction relative to the Tahoe
 //! default. Its initial -1pt offset preserves the previous effective `y: 25`
-//! placement. Set `POOLSIDE_LEGACY_TRAFFIC_LIGHT_Y_OFFSET` to try other values
+//! placement. Set `CAMBER_LEGACY_TRAFFIC_LIGHT_Y_OFFSET` to try other values
 //! at launch (run the app binary directly; `open` does not forward the
 //! environment).
 //!
@@ -41,7 +41,7 @@ const LEGACY_TRAFFIC_LIGHT_Y_OFFSET: f64 = -4.0;
 
 /// Launch-time override for [`LEGACY_TRAFFIC_LIGHT_Y_OFFSET`], for tuning the
 /// offset against real builds without recompiling.
-const LEGACY_Y_OFFSET_ENV: &str = "POOLSIDE_LEGACY_TRAFFIC_LIGHT_Y_OFFSET";
+const LEGACY_Y_OFFSET_ENV: &str = "CAMBER_LEGACY_TRAFFIC_LIGHT_Y_OFFSET";
 
 /// Close button height that separates Tahoe chrome (14pt) from the legacy
 /// chrome (16pt).

@@ -1,4 +1,4 @@
-import type { ACPAgentServers } from "@poolsideai/rpc";
+import type { ACPAgentServers } from "@camber/rpc";
 
 export const DEFAULT_AGENT_SERVER = "poolside";
 export const LOCAL_AGENT_SERVER = "local";
@@ -7,14 +7,14 @@ const LEGACY_SELF_PLACEHOLDERS = new Set(["{{SELF}}", "{{$SELF}}"]);
 
 export function resolveAgentServers(agentServers?: ACPAgentServers | null): ACPAgentServers {
   const input = agentServers ?? {};
-  const configuredPoolside = input[DEFAULT_AGENT_SERVER] ?? input[LEGACY_DEFAULT_AGENT_SERVER];
-  const shouldUseConfiguredPoolside =
-    configuredPoolside?.command && !LEGACY_SELF_PLACEHOLDERS.has(configuredPoolside.command);
+  const configuredCamber = input[DEFAULT_AGENT_SERVER] ?? input[LEGACY_DEFAULT_AGENT_SERVER];
+  const shouldUseConfiguredCamber =
+    configuredCamber?.command && !LEGACY_SELF_PLACEHOLDERS.has(configuredCamber.command);
   const resolved: ACPAgentServers = {
-    [DEFAULT_AGENT_SERVER]: shouldUseConfiguredPoolside
-      ? configuredPoolside
+    [DEFAULT_AGENT_SERVER]: shouldUseConfiguredCamber
+      ? configuredCamber
       : {
-          ...configuredPoolside,
+          ...configuredCamber,
           command: "",
           args: undefined,
         },

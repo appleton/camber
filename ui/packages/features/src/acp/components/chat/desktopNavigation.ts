@@ -1,4 +1,4 @@
-import type { PaneID, TabID } from "@poolsideai/splits";
+import type { PaneID, TabID } from "@camber/splits";
 import type { DesktopSplitSurface } from "./desktopSplitsCache";
 
 export interface DesktopSplitNavigationLocation {

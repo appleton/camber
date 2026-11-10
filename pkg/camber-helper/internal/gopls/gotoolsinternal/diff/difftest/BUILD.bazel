@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "difftest",
+    testonly = True,
+    srcs = ["difftest.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/diff/difftest",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/camber-helper/internal/gopls/gotoolsinternal/diff"],
+)
+
+go_test(
+    name = "difftest_test",
+    srcs = ["difftest_test.go"],
+    env = {"GO_BUILDER_NAME": "bazel"},
+    deps = [
+        ":difftest",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/testenv",
+    ],
+)

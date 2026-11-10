@@ -17,23 +17,23 @@
   },
   "QF1001": {
     "exclude_files": {
-      "pkg/poolside-helper/internal/gopls/gotoolsinternal/diff/.*": "TODO: temporarily disabled: 2 existing violations",
-      "pkg/poolside-helper/gopls/pkg/protocol/.*": "TODO: temporarily disabled: 8 existing violations"
+      "pkg/camber-helper/internal/gopls/gotoolsinternal/diff/.*": "TODO: temporarily disabled: 2 existing violations",
+      "pkg/camber-helper/gopls/pkg/protocol/.*": "TODO: temporarily disabled: 8 existing violations"
     }
   },
   "S1031": {
     "exclude_files": {
-      "pkg/poolside-helper/internal/gopls/pkg/test/integration/fake/.*": "TODO: temporarily disabled: 2 existing violations"
+      "pkg/camber-helper/internal/gopls/pkg/test/integration/fake/.*": "TODO: temporarily disabled: 2 existing violations"
     }
   },
   "SA1019": {
     "exclude_files": {
-      "pkg/poolside-helper/internal/gopls/gotoolsinternal/diff/myers/.*": "TODO: temporarily disabled: 1 existing violations"
+      "pkg/camber-helper/internal/gopls/gotoolsinternal/diff/myers/.*": "TODO: temporarily disabled: 1 existing violations"
     }
   },
   "SA4006": {
     "exclude_files": {
-      "pkg/poolside-helper/internal/gopls/gotoolsinternal/goroot/.*": "TODO: temporarily disabled: 1 existing violations"
+      "pkg/camber-helper/internal/gopls/gotoolsinternal/goroot/.*": "TODO: temporarily disabled: 1 existing violations"
     }
   },
   "ST1000": {
@@ -45,45 +45,45 @@
   },
   "ST1003": {
     "exclude_files": {
-      "pkg/poolside-helper/internal/gopls/.*": "TODO: temporarily disabled: violations for windows builds",
-      "pkg/poolside-helper/internal/gopls/gotoolsinternal/event/export/ocagent/wire/.*": "TODO: temporarily disabled: 18 existing violations"
+      "pkg/camber-helper/internal/gopls/.*": "TODO: temporarily disabled: violations for windows builds",
+      "pkg/camber-helper/internal/gopls/gotoolsinternal/event/export/ocagent/wire/.*": "TODO: temporarily disabled: 18 existing violations"
     }
   },
   "ST1016": {
     "exclude_files": {
-      "pkg/poolside-helper/internal/gopls/gotoolsinternal/diff/lcs/.*": "TODO: temporarily disabled: 2 existing violations",
-      "pkg/poolside-helper/internal/gopls/gotoolsinternal/jsonrpc2/.*": "TODO: temporarily disabled: 6 existing violations",
-      "pkg/poolside-helper/gopls/pkg/protocol/.*": "TODO: temporarily disabled: 2 existing violations",
-      "pkg/poolside-helper/internal/gopls/gotoolsinternal/memoize/.*": "TODO: temporarily disabled: 1 existing violations"
+      "pkg/camber-helper/internal/gopls/gotoolsinternal/diff/lcs/.*": "TODO: temporarily disabled: 2 existing violations",
+      "pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2/.*": "TODO: temporarily disabled: 6 existing violations",
+      "pkg/camber-helper/gopls/pkg/protocol/.*": "TODO: temporarily disabled: 2 existing violations",
+      "pkg/camber-helper/internal/gopls/gotoolsinternal/memoize/.*": "TODO: temporarily disabled: 1 existing violations"
     }
   },
   "ST1020": {
     "exclude_files": {
-      "pkg/poolside-helper/.*": "TODO: temporarily disabled: 21 existing violations",
+      "pkg/camber-helper/.*": "TODO: temporarily disabled: 21 existing violations",
       "pkg/common/.*": "TODO: temporarily disabled: 20 existing violations",
       "pkg/workspace/.*": "TODO: temporarily disabled: 2 existing violations"
     }
   },
   "ST1021": {
     "exclude_files": {
-      "pkg/poolside-helper/.*": "TODO: temporarily disabled: 21 existing violations",
+      "pkg/camber-helper/.*": "TODO: temporarily disabled: 21 existing violations",
       "pkg/common/.*": "TODO: temporarily disabled: 4 existing violations"
     }
   },
   "ST1022": {
     "exclude_files": {
-      "pkg/poolside-helper/internal/gopls/.*": "TODO: temporarily disabled: violations for windows builds",
-      "pkg/poolside-helper/methods/.*": "TODO: temporarily disabled: 1 existing violations"
+      "pkg/camber-helper/internal/gopls/.*": "TODO: temporarily disabled: violations for windows builds",
+      "pkg/camber-helper/methods/.*": "TODO: temporarily disabled: 1 existing violations"
     }
   },
   "ineffassign": {
     "exclude_files": {
-      "pkg/poolside-helper/internal/gopls/gotoolsinternal/goroot/.*": "TODO: temporarily disabled: 1 existing violations"
+      "pkg/camber-helper/internal/gopls/gotoolsinternal/goroot/.*": "TODO: temporarily disabled: 1 existing violations"
     }
   },
   "nilness": {
     "exclude_files": {
-      "pkg/poolside-helper/internal/gopls/pkg/test/integration/fake/.*": "TODO: temporarily disabled: 2 existing violations"
+      "pkg/camber-helper/internal/gopls/pkg/test/integration/fake/.*": "TODO: temporarily disabled: 2 existing violations"
     }
   }
 }

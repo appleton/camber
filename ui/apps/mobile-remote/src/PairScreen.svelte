@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DEVICE_TOKEN_STORAGE_KEY } from "@poolsideai/remote-client";
+  import { DEVICE_TOKEN_STORAGE_KEY } from "@camber/remote-client";
 
   interface Props {
     onPaired: () => void;
@@ -145,19 +145,19 @@
 
 <div class="pair-screen">
   <div class="pair-card">
-    <h1>Poolside Remote</h1>
+    <h1>Camber Remote</h1>
     {#if confirmationCode}
-      <p>Enter this code in Poolside Assistant on your desktop.</p>
+      <p>Enter this code in Camber Assistant on your desktop.</p>
       <div class="confirmation-code">{confirmationCode}</div>
       <p class="waiting">Waiting for desktop approval…</p>
     {:else if scanCode}
-      <p>Requesting approval from Poolside Assistant on your desktop.</p>
+      <p>Requesting approval from Camber Assistant on your desktop.</p>
       <button type="button" disabled={busy} onclick={() => startPairing(true)}>
         {busy ? "Requesting…" : "Request approval"}
       </button>
     {:else}
       <p>
-        Open <strong>Settings → Remote Access</strong> in Poolside Assistant and scan the QR code.
+        Open <strong>Settings → Remote Access</strong> in Camber Assistant and scan the QR code.
       </p>
     {/if}
     {#if error}

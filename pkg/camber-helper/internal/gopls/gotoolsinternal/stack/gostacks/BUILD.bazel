@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "gostacks_lib",
+    srcs = ["gostacks.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/stack/gostacks",
+    visibility = ["//visibility:private"],
+    deps = ["//pkg/camber-helper/internal/gopls/gotoolsinternal/stack"],
+)
+
+go_binary(
+    name = "gostacks",
+    embed = [":gostacks_lib"],
+    visibility = ["//visibility:public"],
+)

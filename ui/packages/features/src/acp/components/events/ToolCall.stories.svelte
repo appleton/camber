@@ -17,8 +17,8 @@
       title: "Read README.md",
       kind: "read",
       status: "completed",
-      locations: [{ path: "/Users/poolie/poolside/assistant/README.md" }],
-      rawInput: { path: "/Users/poolie/poolside/assistant/README.md" },
+      locations: [{ path: "/Users/poolie/camber/assistant/README.md" }],
+      rawInput: { path: "/Users/poolie/camber/assistant/README.md" },
       rawOutput: { lines: 42 },
       content: [
         {
@@ -35,7 +35,7 @@
 />
 
 <Story
-  name="Fetch (Poolside)"
+  name="Fetch (Camber)"
   args={{
     event: {
       eventKind: "tool_call",
@@ -85,7 +85,7 @@
   child's final message when it finishes.
 -->
 <Story
-  name="Subagent (Poolside, running)"
+  name="Subagent (Camber, running)"
   args={{
     event: {
       eventKind: "tool_call",
@@ -103,7 +103,7 @@
 />
 
 <Story
-  name="Subagent (Poolside, completed)"
+  name="Subagent (Camber, completed)"
   args={{
     event: {
       eventKind: "tool_call",

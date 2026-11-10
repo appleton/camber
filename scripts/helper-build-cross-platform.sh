@@ -7,8 +7,6 @@ set -euo pipefail
 
 # Other platforms can be added here as needed.
 ALL_PLATFORMS=(
-    "windows/amd64"
-    "windows/arm64"
     "linux/amd64"
     "linux/arm64"
     "darwin/amd64"
@@ -21,12 +19,6 @@ get_cross_compile_settings() {
     local goarch="${platform#*/}"
 
     case "$platform" in
-        windows/amd64)
-            echo "CC=/llvm-mingw/bin/x86_64-w64-mingw32-gcc CXX=/llvm-mingw/bin/x86_64-w64-mingw32-g++ CGO_ENABLED=1"
-            ;;
-        windows/arm64)
-            echo "CC=/llvm-mingw/bin/aarch64-w64-mingw32-gcc CXX=/llvm-mingw/bin/aarch64-w64-mingw32-g++ CGO_ENABLED=1"
-            ;;
         darwin/amd64)
             echo "CC=o64-clang CXX=o64-clang++ CGO_ENABLED=1"
             ;;
@@ -53,13 +45,9 @@ get_ldflags() {
     local commit="$3"
     local date="$4"
 
-    local base_ldflags="-s -w -X github.com/poolsideai/assistant/pkg/common/version.Tag=${tag} -X github.com/poolsideai/assistant/pkg/common/version.Commit=${commit} -X github.com/poolsideai/assistant/pkg/common/version.BuildTime=${date}"
+    local base_ldflags="-s -w -X github.com/appleton/camber/pkg/common/version.Tag=${tag} -X github.com/appleton/camber/pkg/common/version.Commit=${commit} -X github.com/appleton/camber/pkg/common/version.BuildTime=${date}"
 
-    if [[ "$goos" == "windows" ]]; then
-        echo "$base_ldflags -linkmode external -extldflags \"-static\""
-    else
-        echo "$base_ldflags"
-    fi
+    echo "$base_ldflags"
 }
 
 get_output_filename() {
@@ -69,9 +57,6 @@ get_output_filename() {
     local goarch="${platform#*/}"
 
     local filename="${tool}-${goos}-${goarch}"
-    if [[ "$goos" == "windows" ]]; then
-        filename="${filename}.exe"
-    fi
     echo "$filename"
 }
 
@@ -90,9 +75,6 @@ get_current_platform() {
             ;;
         Linux)
             os="linux"
-            ;;
-        CYGWIN*|MINGW*|MSYS*)
-            os="windows"
             ;;
         *)
             echo "Unsupported OS: $(uname -s)" >&2
@@ -258,10 +240,10 @@ EOF
 show_usage() {
     echo "Usage: $0 [OPTIONS] <tool> <platform|all>"
     echo ""
-    echo "Build poolside-helper for different platforms"
+    echo "Build camber-helper for different platforms"
     echo ""
     echo "Tools:"
-    echo "  poolside-helper"
+    echo "  camber-helper"
     echo ""
     echo "Platforms:"
     for platform in "${ALL_PLATFORMS[@]}"; do
@@ -274,9 +256,9 @@ show_usage() {
     echo "  --help       - Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0 poolside-helper windows/amd64"
-    echo "  $0 poolside-helper all"
-    echo "  $0 --clean poolside-helper windows/amd64"
+    echo "  $0 camber-helper darwin/arm64"
+    echo "  $0 camber-helper all"
+    echo "  $0 --clean camber-helper darwin/arm64"
     echo ""
     echo "Environment variables:"
     echo "  TAG          - Version tag (default: dev-TIMESTAMP)"
@@ -299,7 +281,7 @@ while [[ $# -gt 0 ]]; do
             show_usage
             exit 0
             ;;
-        poolside-helper)
+        camber-helper)
             if [[ -n "$TOOL" ]]; then
                 echo "Error: Tool already specified as '$TOOL'" >&2
                 echo "Cannot specify multiple tools in one invocation" >&2

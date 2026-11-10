@@ -1,23 +1,25 @@
 name: Release · Desktop
 
-# Manual one-product entry point for the shared release coordinator.
 on:
   workflow_dispatch:
     inputs:
       release:
-        description: "Release type"
+        description: Release type
         required: true
         default: preview
         type: choice
-        options:
-          - preview
-          - stable-patch
-          - stable-minor
-          - stable-major
-      sync_versions:
-        description: "Align with the highest VS Code/Desktop/Visual Studio version"
+        options: [preview, stable-patch, stable-minor, stable-major]
+      helper_tag:
+        description: Published immutable helper tag (helper/vM.m.p)
         required: true
-        default: true
+        type: string
+      version:
+        description: Exact desktop version (required for first release)
+        required: false
+        type: string
+      create_lineage:
+        description: Bootstrap the desktop release lineage
+        default: false
         type: boolean
 
 permissions:
@@ -25,12 +27,29 @@ permissions:
   packages: read
 
 jobs:
+  runtime:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.runtime.outputs.version }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Verify published helper
+        id: runtime
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HELPER_TAG: ${{ inputs.helper_tag }}
+        run: |
+          set -euo pipefail
+          bash scripts/download-helper-runtime.sh "$HELPER_TAG" "$RUNNER_TEMP/helper-runtime"
+          echo "version=${HELPER_TAG#helper/v}" >> "$GITHUB_OUTPUT"
   release:
-    name: Release Desktop
-    uses: ./.github/workflows/release-products.yml
+    needs: runtime
+    uses: ./.github/workflows/release-desktop.yml
     with:
       release: ${{ inputs.release }}
-      vscode: false
-      desktop: true
-      sync_versions: ${{ inputs.sync_versions }}
+      sync_versions: false
+      helper_tag: ${{ inputs.helper_tag }}
+      helper_version: ${{ needs.runtime.outputs.version }}
+      version: ${{ inputs.version }}
+      create_lineage: ${{ inputs.create_lineage }}
     secrets: inherit

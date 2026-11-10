@@ -1,14 +1,14 @@
 import {
-  poolsideMcpServersAuthenticate,
-  poolsideMcpServersDelete,
-  poolsideMcpServersList,
-  poolsideMcpServersSetEnabled,
-  poolsideMcpServersSignOut,
-  poolsideMcpServersTestConfig,
-  poolsideMcpServersTestConnection,
-  poolsideMcpServersUpsert,
-} from "@poolsideai/helperapi";
-import type { MCPServerEntry, MCPServersTestConnectionOutput } from "@poolsideai/helperapi/schemas";
+  camberMcpServersAuthenticate,
+  camberMcpServersDelete,
+  camberMcpServersList,
+  camberMcpServersSetEnabled,
+  camberMcpServersSignOut,
+  camberMcpServersTestConfig,
+  camberMcpServersTestConnection,
+  camberMcpServersUpsert,
+} from "@camber/helperapi";
+import type { MCPServerEntry, MCPServersTestConnectionOutput } from "@camber/helperapi/schemas";
 import { extractErrorMessage, isMethodNotFoundError } from "../errors";
 
 export type { MCPServerEntry };
@@ -39,7 +39,7 @@ export class UserMCPServersRepository {
     this.isLoading = true;
     this.error = null;
     try {
-      const result = await poolsideMcpServersList({});
+      const result = await camberMcpServersList({});
       this.isSupported = true;
       const servers = result.servers ?? [];
       const nextOAuthState = { ...this.oauthState };
@@ -66,7 +66,7 @@ export class UserMCPServersRepository {
     this.isSaving = true;
     this.error = null;
     try {
-      await poolsideMcpServersUpsert({ server: entry });
+      await camberMcpServersUpsert({ server: entry });
       await this.load();
       this.notifyChanged();
     } catch (e) {
@@ -81,7 +81,7 @@ export class UserMCPServersRepository {
     this.isSaving = true;
     this.error = null;
     try {
-      await poolsideMcpServersDelete({ name });
+      await camberMcpServersDelete({ name });
       this.servers = this.servers.filter((s) => s.name !== name);
       const next = { ...this.testResults };
       delete next[name];
@@ -104,7 +104,7 @@ export class UserMCPServersRepository {
     this.enabledSaveTokens.set(name, token);
     this.servers = this.servers.map((s) => (s.name === name ? { ...s, enabled } : s));
     const operation = (this.enabledSaveQueues.get(name) ?? Promise.resolve()).then(async () => {
-      await poolsideMcpServersSetEnabled({ name, enabled });
+      await camberMcpServersSetEnabled({ name, enabled });
       this.persistedEnabled.set(name, enabled);
       this.notifyChanged();
     });
@@ -138,7 +138,7 @@ export class UserMCPServersRepository {
     this.isAuthenticating = name;
     this.error = null;
     try {
-      await poolsideMcpServersAuthenticate({ name });
+      await camberMcpServersAuthenticate({ name });
       this.oauthState = { ...this.oauthState, [name]: true };
       this.notifyChanged();
     } catch (e) {
@@ -159,7 +159,7 @@ export class UserMCPServersRepository {
     this.isSaving = true;
     this.error = null;
     try {
-      await poolsideMcpServersSignOut({ name });
+      await camberMcpServersSignOut({ name });
       this.oauthState = { ...this.oauthState, [name]: false };
       this.notifyChanged();
     } catch (e) {
@@ -172,7 +172,7 @@ export class UserMCPServersRepository {
 
   // Probe an unsaved config so the UI can validate a connector before adding.
   async testConfig(entry: MCPServerEntry): Promise<MCPServersTestConnectionOutput> {
-    return await poolsideMcpServersTestConfig({ server: entry });
+    return await camberMcpServersTestConfig({ server: entry });
   }
 
   // Record a probe result (e.g. from the add flow) so a freshly added connector
@@ -185,7 +185,7 @@ export class UserMCPServersRepository {
     this.isTesting = name;
     this.error = null;
     try {
-      const result = await poolsideMcpServersTestConnection({ name });
+      const result = await camberMcpServersTestConnection({ name });
       this.testResults = { ...this.testResults, [name]: result };
     } catch (e) {
       this.testResults = {

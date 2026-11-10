@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { AvailableCommand } from "@agentclientprotocol/sdk";
-  import * as Prompt from "@poolsideai/components/prompt";
+  import * as Prompt from "@camber/components/prompt";
   import { getACPChatSessionScope } from "../../../../features/ChatSessionScope.svelte";
   import { resolvedSkillCommands, visibleServerCommandEntries } from "./serverCommands";
   import SkillCommandItems from "./SkillCommandItems.svelte";

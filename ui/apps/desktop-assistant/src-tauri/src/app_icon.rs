@@ -9,7 +9,7 @@
 //! Hue rotation is the right operation for this artwork: the parasol glyph is
 //! near-white glass with almost no saturation, so it comes through untouched,
 //! while the saturated plate carries all of the colour. Saturation is rescaled
-//! to the target's own so the mid-dark spoolside colours don't land as pastel
+//! to the target's own so the mid-dark camberqa colours don't land as pastel
 //! versions of the brand purple. The user-facing green and cyan tints also
 //! lower the plate's value slightly without dulling the glass.
 //!
@@ -27,7 +27,7 @@ const ICON_SIZE: usize = 512;
 /// A tint the user can apply to the app icon.
 ///
 /// The colours are based on `SLOT_COLORS` in
-/// `ui/packages/spoolside/src/worktree/shared.ts`. Green and cyan are darkened
+/// `ui/packages/camberqa/src/worktree/shared.ts`. Green and cyan are darkened
 /// slightly for the user-facing palette.
 #[derive(Debug, Clone, Copy, Default, Deserialize, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -70,11 +70,11 @@ impl AppIconTint {
 
 /// Apply the user's chosen `tint`. Best effort; macOS only.
 ///
-/// A spoolside launch tints the icon per worktree so a fleet of instances stays
+/// A camberqa launch tints the icon per worktree so a fleet of instances stays
 /// tellable apart, and that has to win over a personal preference — otherwise
 /// every window in the fleet goes back to looking identical.
 pub fn apply(app_handle: &AppHandle, tint: AppIconTint) {
-    if spoolside_tint().is_some() {
+    if camberqa_tint().is_some() {
         return;
     }
     apply_tint(
@@ -85,7 +85,7 @@ pub fn apply(app_handle: &AppHandle, tint: AppIconTint) {
 }
 
 /// Tint the icon with an arbitrary colour, or restore the shipped icon with
-/// `None`. Used for the per-worktree spoolside icons, whose colours come from
+/// `None`. Used for the per-worktree camberqa icons, whose colours come from
 /// the slot palette rather than this enum.
 pub fn apply_color(app_handle: &AppHandle, color: Option<String>) {
     apply_tint(app_handle, color, 1.0);
@@ -97,9 +97,9 @@ fn apply_tint(app_handle: &AppHandle, color: Option<String>, brightness: f32) {
     });
 }
 
-/// The colour spoolside launched this instance with, if any.
-pub fn spoolside_tint() -> Option<String> {
-    std::env::var("SPOOLSIDE_DOCK_ICON_COLOR")
+/// The colour camberqa launched this instance with, if any.
+pub fn camberqa_tint() -> Option<String> {
+    std::env::var("CAMBERQA_DOCK_ICON_COLOR")
         .ok()
         .filter(|value| !value.is_empty())
 }
@@ -129,7 +129,7 @@ mod platform {
     use objc2_foundation::{NSData, NSPoint, NSRect, NSSize, NSString};
 
     /// The icon Tauri bundles, embedded so an unbundled `tauri dev` build — what
-    /// spoolside launches — still has artwork to tint.
+    /// camberqa launches — still has artwork to tint.
     const EMBEDDED_ICON_PNG: &[u8] = include_bytes!("../icons/icon.png");
 
     /// Apple's icon grid puts the artwork in an 824px area on a 1024px canvas.

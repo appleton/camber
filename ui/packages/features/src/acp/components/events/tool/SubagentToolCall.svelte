@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import type { ToolOverrideProps } from "./toolOverrides";
   import { DEFAULT_AGENT_SERVER } from "../../../agentServers";
   import { getACPAgentRegistryRepo } from "../../../features/AgentRegistryRepository.svelte";

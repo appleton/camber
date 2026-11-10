@@ -3,7 +3,7 @@ import {
   refreshACPNavState,
   wireACPHistorySync,
   wireACPSessionSync,
-} from "@poolsideai/features/acp";
+} from "@camber/features/acp";
 import { onDestroy, onMount } from "svelte";
 import { get } from "svelte/store";
 
@@ -18,9 +18,7 @@ interface RegisterSyncEffectsOptions {
 // Hosts that install startup diagnostics (desktop) receive these checkpoints
 // in the boot log; elsewhere the optional global is absent and they no-op.
 function bootDiag(event: string): void {
-  (globalThis as { __poolsideStartupDiag?: (event: string) => void }).__poolsideStartupDiag?.(
-    event,
-  );
+  (globalThis as { __camberStartupDiag?: (event: string) => void }).__camberStartupDiag?.(event);
 }
 
 // Wires ACP history/session sync, local history source, nav polling, and initial refreshes.

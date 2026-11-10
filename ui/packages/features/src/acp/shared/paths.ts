@@ -1,5 +1,5 @@
-import { normalize, relative } from "@poolsideai/lib/path";
-import type { WorkspaceFolder } from "@poolsideai/rpc";
+import { normalize, relative } from "@camber/lib/path";
+import type { WorkspaceFolder } from "@camber/rpc";
 
 const NO_CONTEXT_PREFIX = "/path/to/";
 

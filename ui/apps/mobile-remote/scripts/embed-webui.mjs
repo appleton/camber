@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Builds the mobile-remote bundle and copies it into the helper's embed
-// directory (pkg/poolside-helper/internal/handler/remoteaccess/webui/dist) so
+// directory (pkg/camber-helper/internal/handler/remoteaccess/webui/dist) so
 // `//go:embed` bakes the UI into the helper binary. Run this before building
 // the helper whenever the mobile UI changes. Helper release builds run this
 // via the embed_mobile_webui input of reusable-bazel-build.yml; the webui
@@ -15,13 +15,10 @@ import { gzipSync, constants as zlibConstants } from "node:zlib";
 const appDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const repoRoot = path.resolve(appDir, "../../..");
 const distDir = path.join(appDir, "dist");
-const embedDir = path.join(
-  repoRoot,
-  "pkg/poolside-helper/internal/handler/remoteaccess/webui/dist",
-);
+const embedDir = path.join(repoRoot, "pkg/camber-helper/internal/handler/remoteaccess/webui/dist");
 
-console.log("building @poolsideai/mobile-remote (turbo build)…");
-execFileSync("pnpm", ["exec", "turbo", "build", "--filter", "@poolsideai/mobile-remote..."], {
+console.log("building @camber/mobile-remote (turbo build)…");
+execFileSync("pnpm", ["exec", "turbo", "build", "--filter", "@camber/mobile-remote..."], {
   cwd: path.join(repoRoot, "ui"),
   stdio: "inherit",
 });
@@ -74,8 +71,8 @@ function compressTree(dir) {
 }
 
 console.log("embedded. Rebuild the helper to bake it in:");
-console.log("  go build ./cmd/poolside-helper");
+console.log("  go build ./cmd/camber-helper");
 console.log("  # or, for the desktop app:");
 console.log(
-  "  POOLSIDE_DESKTOP_LOCAL_HELPER=1 pnpm --dir ui/apps/desktop-assistant download:binaries",
+  "  CAMBER_DESKTOP_LOCAL_HELPER=1 pnpm --dir ui/apps/desktop-assistant download:binaries",
 );

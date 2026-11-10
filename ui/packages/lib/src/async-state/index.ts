@@ -17,7 +17,7 @@ export { toError } from "../errors/index.js";
  *
  * @example Basic usage with Svelte 5 runes
  * ```ts
- * import { type AsyncState, loading, success, failure, isSuccess } from "@poolsideai/lib/async-state";
+ * import { type AsyncState, loading, success, failure, isSuccess } from "@camber/lib/async-state";
  *
  * let state: AsyncState<User[], string> = $state(loading);
  *
@@ -33,7 +33,7 @@ export { toError } from "../errors/index.js";
  *
  * @example Using fromPromise to eliminate boilerplate
  * ```ts
- * import { fromPromise } from "@poolsideai/lib/async-state";
+ * import { fromPromise } from "@camber/lib/async-state";
  *
  * async function load() {
  *   await fromPromise(() => api.fetchUsers(), (s) => state = s);

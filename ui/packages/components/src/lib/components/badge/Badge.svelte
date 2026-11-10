@@ -44,7 +44,7 @@
   import type { WithChild } from "../../types/child.js";
   import { createAttachmentKey, type Attachment } from "svelte/attachments";
   import type { Except } from "type-fest";
-  import { type VariantProps, tv, cn } from "@poolsideai/tailwind-config/tv";
+  import { type VariantProps, tv, cn } from "@camber/tailwind-config/tv";
   import type { Prominence } from "../../utils/prominence.js";
   import type { Size } from "../../utils/size.js";
 

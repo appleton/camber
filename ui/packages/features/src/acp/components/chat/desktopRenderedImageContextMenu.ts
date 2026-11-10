@@ -1,6 +1,6 @@
-import { getUnknownErrorMessage } from "@poolsideai/lib/errors";
-import { normalize, relative } from "@poolsideai/lib/path";
-import { InfoMessageType } from "@poolsideai/rpc";
+import { getUnknownErrorMessage } from "@camber/lib/errors";
+import { normalize, relative } from "@camber/lib/path";
+import { InfoMessageType } from "@camber/rpc";
 import { get } from "svelte/store";
 import { appState } from "../../hostAdapter";
 import { rpc, type RPCClient } from "../../hostRpc";
@@ -51,10 +51,10 @@ export function desktopRenderedImageTarget(
   const src = image.currentSrc || image.src;
   if (!src) return;
 
-  const path = image.dataset["poolsideImagePath"]?.trim() || undefined;
+  const path = image.dataset["camberImagePath"]?.trim() || undefined;
   const name =
     (path ? fileNameFromPath(path) : undefined) ||
-    image.dataset["poolsideImageName"]?.trim() ||
+    image.dataset["camberImageName"]?.trim() ||
     image.alt.trim() ||
     fileNameFromSource(src) ||
     "image";

@@ -1,4 +1,4 @@
-import type { GitStatusOutput } from "@poolsideai/helperapi";
+import type { GitStatusOutput } from "@camber/helperapi";
 import { describe, expect, it } from "vitest";
 import { gitViewDisabledReason } from "./desktopCommandPicker";
 

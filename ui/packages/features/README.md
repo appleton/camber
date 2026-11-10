@@ -1,4 +1,4 @@
-@poolsideai/features contains shared application features, e.g. auth. Features can comprise state-management, UI, and anything else required. In contrast, @poolsideai/components contains only UI logic and state.
+@camber/features contains shared application features, e.g. auth. Features can comprise state-management, UI, and anything else required. In contrast, @camber/components contains only UI logic and state.
 
 Each feature should be self-contained. If there are cross-feature dependencies, express them via the public API, rather than mutual imports.
 
@@ -11,5 +11,5 @@ Each feature should be self-contained. If there are cross-feature dependencies, 
 
 `ConnectorServiceIcon` ships only the logo names in `connectorLogoNames.ts`.
 After changing that map or updating `@iconify-json/logos`, run
-`pnpm -F @poolsideai/features codegen:connector-logos`. The build checks that the
+`pnpm -F @camber/features codegen:connector-logos`. The build checks that the
 subset exactly matches upstream; do not import the full catalogue into UI code.

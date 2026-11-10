@@ -2,7 +2,7 @@ import { isAbsolute } from "./isAbsolute.js";
 
 describe("unix", () => {
   it("should recognize absolute path starting with /", () => {
-    expect(isAbsolute("/Users/poolie/poolside/file.ts")).toBe(true);
+    expect(isAbsolute("/Users/poolie/camber/file.ts")).toBe(true);
   });
 
   it("should recognize root directory as absolute", () => {
@@ -10,11 +10,11 @@ describe("unix", () => {
   });
 
   it("should recognize absolute path with trailing slash", () => {
-    expect(isAbsolute("/Users/poolie/poolside/")).toBe(true);
+    expect(isAbsolute("/Users/poolie/camber/")).toBe(true);
   });
 
   it("should recognize absolute path with dots", () => {
-    expect(isAbsolute("/Users/poolie/../poolside/file.ts")).toBe(true);
+    expect(isAbsolute("/Users/poolie/../camber/file.ts")).toBe(true);
   });
 
   it("should recognize absolute path to dotfile", () => {
@@ -24,7 +24,7 @@ describe("unix", () => {
 
 describe("windows", () => {
   it("should recognize absolute path with drive letter", () => {
-    expect(isAbsolute("C:\\Users\\poolie\\poolside\\file.ts")).toBe(true);
+    expect(isAbsolute("C:\\Users\\poolie\\camber\\file.ts")).toBe(true);
   });
 
   it("should recognize drive root as absolute", () => {
@@ -36,7 +36,7 @@ describe("windows", () => {
   });
 
   it("should recognize absolute path with trailing backslash", () => {
-    expect(isAbsolute("C:\\Users\\poolie\\poolside\\")).toBe(true);
+    expect(isAbsolute("C:\\Users\\poolie\\camber\\")).toBe(true);
   });
 
   it("should recognize different drive letters", () => {

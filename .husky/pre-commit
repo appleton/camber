@@ -19,7 +19,7 @@ fi
 # Go: gofmt (opt-in with PRECOMMIT_GO_FMT=true)
 if [ "$PRECOMMIT_GO_FMT" = "true" ]; then
   # Keep exclusions in sync with .github/workflows/gofmt.yml
-  staged_go_files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.go' | grep -v -E '(^third_party/|^pkg/poolside-helper/(gopls|internal/gopls)/)' || true)
+  staged_go_files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.go' | grep -v -E '(^third_party/|^pkg/camber-helper/(gopls|internal/gopls)/)' || true)
   if [ -n "$staged_go_files" ]; then
     echo "Running gofmt on staged Go files..."
     gofmt -w $staged_go_files

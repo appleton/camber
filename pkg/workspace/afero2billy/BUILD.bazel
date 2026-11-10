@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "afero2billy",
     srcs = ["wrapper.go"],
-    importpath = "github.com/poolsideai/assistant/pkg/workspace/afero2billy",
+    importpath = "github.com/appleton/camber/pkg/workspace/afero2billy",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_go_git_go_billy_v5//:go-billy",

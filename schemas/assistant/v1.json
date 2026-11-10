@@ -1,19 +1,19 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://poolside.ai/assets/schemas/assistant/v1.json",
-  "title": "Poolside Assistant configuration",
-  "description": "Configures ACP agent servers used by Poolside Assistant. Unknown properties are accepted for forward compatibility.",
+  "$id": "https://raw.githubusercontent.com/appleton/camber/main/schemas/assistant/v1.json",
+  "title": "Camber Assistant configuration",
+  "description": "Configures ACP agent servers used by Camber Assistant. Unknown properties are accepted for forward compatibility.",
   "type": "object",
   "properties": {
     "$schema": {
       "type": "string",
       "format": "uri",
       "description": "JSON Schema used by editors for validation and completion.",
-      "default": "https://poolside.ai/assets/schemas/assistant/v1.json"
+      "default": "https://raw.githubusercontent.com/appleton/camber/main/schemas/assistant/v1.json"
     },
     "agent_servers": {
       "type": "object",
-      "description": "ACP agent servers keyed by the name shown in Poolside Assistant.",
+      "description": "ACP agent servers keyed by the name shown in Camber Assistant.",
       "propertyNames": {
         "type": "string",
         "minLength": 1,
@@ -34,11 +34,11 @@
       "not": {
         "const": "default"
       },
-      "description": "Agent server selected for new conversations. Defaults to \"poolside\" when omitted."
+      "description": "Agent server selected for new conversations. Defaults to \"camber\" when omitted."
     },
     "default_agent_server_pinned": {
       "type": "boolean",
-      "description": "When true, the default_agent_server choice was explicitly pinned by the user and Poolside Assistant skips automatic updates to it (such as last-used tracking).",
+      "description": "When true, the default_agent_server choice was explicitly pinned by the user and Camber Assistant skips automatic updates to it (such as last-used tracking).",
       "default": false
     }
   },
@@ -99,7 +99,7 @@
     },
     "registryAgentServer": {
       "title": "Registry-managed ACP agent server",
-      "description": "Uses command and distribution metadata managed by Poolside's ACP registry.",
+      "description": "Uses command and distribution metadata managed by Camber's ACP registry.",
       "type": "object",
       "properties": {
         "type": {
@@ -119,8 +119,8 @@
       "additionalProperties": true
     },
     "localAgentServer": {
-      "title": "Poolside Local agent server",
-      "description": "Reserved for the Poolside Local on-device runtime configured by the desktop app.",
+      "title": "Camber Local agent server",
+      "description": "Reserved for the Camber Local on-device runtime configured by the desktop app.",
       "type": "object",
       "properties": {
         "type": {
@@ -147,13 +147,13 @@
         "type": "string",
         "minLength": 1
       },
-      "description": "Config option IDs whose default_config_options value was explicitly pinned by the user. Poolside Assistant skips automatic updates (such as last-used tracking) for pinned options.",
+      "description": "Config option IDs whose default_config_options value was explicitly pinned by the user. Camber Assistant skips automatic updates (such as last-used tracking) for pinned options.",
       "default": []
     }
   },
   "examples": [
     {
-      "$schema": "https://poolside.ai/assets/schemas/assistant/v1.json",
+      "$schema": "https://raw.githubusercontent.com/appleton/camber/main/schemas/assistant/v1.json",
       "agent_servers": {
         "pool-main": {
           "type": "custom",

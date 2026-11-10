@@ -1,0 +1,9 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "label",
+    srcs = ["keys.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/pkg/label",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/camber-helper/internal/gopls/gotoolsinternal/event/keys"],
+)

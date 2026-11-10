@@ -236,7 +236,7 @@ pub fn run() {
             settings::sync_theme_menu_items_from_settings(app.handle());
             system_accent::observe_system_accent_changes(app.handle());
 
-            // Apply the per-worktree dock icon tint for spoolside launches.
+            // Apply the per-worktree dock icon tint for camberqa launches.
             // Re-applied on RunEvent::Ready below so it survives the platform's
             // own icon setup during launch.
             dock::set_dock_icon(app.handle());
@@ -246,7 +246,7 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("error while running Poolside");
+        .expect("error while running Camber");
 
     app.run(|app_handle, event| match event {
         tauri::RunEvent::Ready => {
@@ -257,7 +257,7 @@ pub fn run() {
         tauri::RunEvent::ExitRequested { .. } => {
             helper::shutdown_from_run_event(app_handle);
         }
-        // macOS open-URL events (e.g. poolside:// deep links). Tauri v2 delivers
+        // macOS open-URL events (e.g. camber:// deep links). Tauri v2 delivers
         // these via RunEvent::Opened when the app is already running or at launch.
         // We focus the main window and forward the URLs to the webview so the
         // frontend can react (auth callbacks, navigation targets, etc.).

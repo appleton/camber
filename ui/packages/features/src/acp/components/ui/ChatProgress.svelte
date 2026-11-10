@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ChatProgress as SharedChatProgress } from "@poolsideai/components/assistant-ui";
+  import { ChatProgress as SharedChatProgress } from "@camber/components/assistant-ui";
   import type { Snippet } from "svelte";
 
   interface Props {

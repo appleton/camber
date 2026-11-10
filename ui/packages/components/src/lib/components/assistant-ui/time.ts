@@ -1,4 +1,4 @@
-export { withTimeout } from "@poolsideai/lib/promise";
+export { withTimeout } from "@camber/lib/promise";
 
 export async function sleep(ms: number) {
   return new Promise((res) => setTimeout(res, ms));

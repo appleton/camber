@@ -4,9 +4,9 @@
 
 <script lang="ts">
   import type { ContentBlock } from "@agentclientprotocol/sdk";
-  import { InfoMessageType } from "@poolsideai/rpc";
-  import Icon from "@poolsideai/components/icon";
-  import * as Prompt from "@poolsideai/components/prompt";
+  import { InfoMessageType } from "@camber/rpc";
+  import Icon from "@camber/components/icon";
+  import * as Prompt from "@camber/components/prompt";
   import { flushSync, onDestroy, onMount, type ComponentProps, type Snippet } from "svelte";
   import { getOptionalACPConnectionPoolContext } from "../../connectionPoolContext";
   import { getACPChatSessionScope } from "../../features/ChatSessionScope.svelte";

@@ -210,8 +210,8 @@ describe("MCP and skill breakdown", () => {
   it("labels an MCP group and a skill group", () => {
     expect(
       summarizeLiveToolGroup([
-        metaTool("m1", "poolside-github__get_me"),
-        metaTool("m2", "poolside-github__list_issues"),
+        metaTool("m1", "camber-github__get_me"),
+        metaTool("m2", "camber-github__list_issues"),
       ]),
     ).toBe("Used 2 MCP tools");
     expect(summarizeLiveToolGroup([metaTool("s1", "skill")])).toBe("Used 1 skill");
@@ -219,7 +219,7 @@ describe("MCP and skill breakdown", () => {
 
   it("breaks MCP and skill out of the settled summary instead of counting them as commands", () => {
     const events: SessionEventGroupItem[] = [
-      metaTool("m1", "poolside-github__get_me"),
+      metaTool("m1", "camber-github__get_me"),
       metaTool("s1", "skill"),
       kindTool("run-1", "execute", { cmd: "pnpm test" }),
     ];
@@ -229,8 +229,8 @@ describe("MCP and skill breakdown", () => {
   it("breaks MCP tools out of the compact live summary", () => {
     const events: SessionEventGroupItem[] = [
       kindTool("read-1", "read", { path: "/repo/a.ts" }),
-      metaTool("m1", "poolside-github__get_me"),
-      metaTool("m2", "poolside-github__list_issues"),
+      metaTool("m1", "camber-github__get_me"),
+      metaTool("m2", "camber-github__list_issues"),
     ];
     expect(summarizeLiveToolGroup(events)).toBe("Read 1 file, used 2 MCP tools");
   });

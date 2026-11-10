@@ -1,6 +1,6 @@
 import semver from "semver";
 
-export type ReleaseProduct = "vscode" | "desktop" | "vs";
+export type ReleaseProduct = "desktop";
 export type ReleaseChannel = "stable" | "nightly";
 export type ReleaseBump = "patch" | "minor" | "major";
 
@@ -21,19 +21,6 @@ export interface VersionPlan {
   crossProductMaximum: string | null;
   alignmentFloor: string | null;
   exactVersion: boolean;
-}
-
-export interface CoordinatedVersionCandidate {
-  product: ReleaseProduct;
-  action: "release" | "resume" | "skip";
-  version?: string;
-  implicitRecovery?: boolean;
-}
-
-export interface CoordinatedVersionPlan {
-  version: string | null;
-  activeProducts: ReleaseProduct[];
-  recovering: boolean;
 }
 
 function parseNumericVersion(version: string): semver.SemVer | null {
@@ -161,63 +148,5 @@ export function calculateVersionPlan(input: VersionPlanInput): VersionPlan {
     crossProductMaximum,
     alignmentFloor,
     exactVersion: false,
-  };
-}
-
-/**
- * Select one exact version for a coordinated multi-product release.
- *
- * Each product first calculates its own valid candidate from the same tag
- * snapshot. The coordinator uses the highest candidate, eliminating the
- * order-dependent drift that occurs when product workflows align and publish
- * sequentially.
- *
- * An unpublished tag already reserved at the source SHA wins during a retry.
- * The coordinator filters completed releases before calling this function.
- * Every other active product must still be able to use that reserved version;
- * otherwise a newer release has interleaved and the retry fails closed.
- */
-export function calculateCoordinatedVersion(
-  candidates: CoordinatedVersionCandidate[],
-): CoordinatedVersionPlan {
-  const active = candidates.filter(
-    (candidate): candidate is CoordinatedVersionCandidate & { version: string } =>
-      candidate.action !== "skip" && candidate.version !== undefined,
-  );
-  const missingVersion = candidates.find(
-    (candidate) => candidate.action !== "skip" && candidate.version === undefined,
-  );
-  if (missingVersion) {
-    throw new Error(`Active ${missingVersion.product} release plan has no version`);
-  }
-  if (active.length === 0) {
-    return { version: null, activeProducts: [], recovering: false };
-  }
-
-  const recoveries = active.filter(
-    (candidate) => candidate.action === "resume" && candidate.implicitRecovery === true,
-  );
-  const recoveryVersions = validNumericVersions(recoveries.map((candidate) => candidate.version));
-  if (recoveryVersions.length > 1) {
-    throw new Error(
-      `Coordinated release tags at the source SHA disagree: ${recoveryVersions.join(", ")}`,
-    );
-  }
-
-  const recoveryVersion = recoveryVersions[0];
-  if (recoveryVersion) {
-    const advanced = active.find((candidate) => semver.gt(candidate.version, recoveryVersion));
-    if (advanced) {
-      throw new Error(
-        `${advanced.product} now requires ${advanced.version}, above reserved coordinated version ${recoveryVersion}`,
-      );
-    }
-  }
-
-  return {
-    version:
-      recoveryVersion ?? validNumericVersions(active.map((candidate) => candidate.version))[0],
-    activeProducts: active.map((candidate) => candidate.product),
-    recovering: recoveryVersion !== undefined,
   };
 }

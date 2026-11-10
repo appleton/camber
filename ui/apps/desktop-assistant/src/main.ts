@@ -1,4 +1,4 @@
-import { DesktopPanel, init } from "@poolsideai/assistant";
+import { DesktopPanel, init } from "@camber/assistant";
 import {
   appState,
   desktopUpdate,
@@ -7,8 +7,8 @@ import {
   type ACPDebugAPI,
   type NativeMenuSetDefaultPayload,
   type Notifier,
-} from "@poolsideai/features/acp";
-import { InfoMessageType } from "@poolsideai/rpc";
+} from "@camber/features/acp";
+import { InfoMessageType } from "@camber/rpc";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -21,6 +21,7 @@ import {
   sendNotification,
 } from "@tauri-apps/plugin-notification";
 import { mount } from "svelte";
+import { startCamberQABridge } from "./camberqaBridge";
 import {
   applyDesktopAccent,
   seedDesktopAccentFromCache,
@@ -86,7 +87,6 @@ import {
   type HelperJsonRpcRequestEvent,
   type HelperNotificationBatchApplyResult,
 } from "./rpc/host";
-import { startSpoolsideBridge } from "./spoolsideBridge";
 import { logStartupDiagnostic } from "./startupDiagnostics";
 import { tauriDragDropSubscriber } from "./tauriDragDropSubscriber";
 import {
@@ -99,8 +99,8 @@ import {
 import { getVSCodeFileIconDefinition, VSCODE_FILE_ICON_THEME } from "./vscodeFileIconTheme";
 import { currentZoomLevel, installDesktopZoom } from "./zoom";
 
-const HELPER_JSONRPC_REQUEST_EVENT = "poolside:helper-jsonrpc-request";
-const HELPER_JSONRPC_NOTIFICATION_BATCH_EVENT = "poolside:helper-jsonrpc-notification-batch";
+const HELPER_JSONRPC_REQUEST_EVENT = "camber:helper-jsonrpc-request";
+const HELPER_JSONRPC_NOTIFICATION_BATCH_EVENT = "camber:helper-jsonrpc-notification-batch";
 // Star-row clicks in an open native menu. native_menu.rs emits this with
 // `emit_to`, targeted at the window that opened the menu, and
 // presentNativeMenu matches payloads to its own request by `token`. Reception
@@ -108,7 +108,7 @@ const HELPER_JSONRPC_NOTIFICATION_BATCH_EVENT = "poolside:helper-jsonrpc-notific
 // every window's targeted emissions too, so only the window-scoped listener
 // keeps another window's clicks out of this webview.
 const NATIVE_MENU_SET_DEFAULT_TAURI_EVENT = "native-menu:set-default";
-const DESKTOP_NOTIFICATION_CLICK_EVENT = "poolside:desktop-notification-click";
+const DESKTOP_NOTIFICATION_CLICK_EVENT = "camber:desktop-notification-click";
 const CLICKABLE_NOTIFICATIONS_UNSUPPORTED = "CLICKABLE_NOTIFICATIONS_UNSUPPORTED";
 const DESKTOP_WINDOW_FULLSCREEN_CLASS = "desktop-window-fullscreen";
 const TERMINAL_FONT_FALLBACK = 'Menlo, Monaco, Consolas, "Liberation Mono", monospace';
@@ -129,7 +129,7 @@ const NOTIFICATION_ID_MAX = 2_147_483_647;
 // setting in applyDesktopWindowVibrancy once settings load.
 const isMacosPlatform = navigator.userAgent.includes("Macintosh");
 const DESKTOP_WINDOW_VIBRANCY_CLASS = "desktop-vibrancy";
-const DESKTOP_WINDOW_VIBRANCY_STORAGE_KEY = "poolside-desktop-window-vibrancy";
+const DESKTOP_WINDOW_VIBRANCY_STORAGE_KEY = "camber-desktop-window-vibrancy";
 if (isMacosPlatform) {
   document.documentElement.classList.add("platform-macos");
   if (localStorage.getItem(DESKTOP_WINDOW_VIBRANCY_STORAGE_KEY) !== "false") {
@@ -256,16 +256,16 @@ function codeFontFamilyCssValue(fontFamily: string): string {
 
 const rpcWebViewResponseHandler = createWebviewResponseSender();
 
-function spoolsideDesktopInstance(): DesktopInstanceInfo | undefined {
+function camberqaDesktopInstance(): DesktopInstanceInfo | undefined {
   const params = new URLSearchParams(window.location.search);
   const color =
-    params.get("spoolsideColor") ?? (import.meta.env.VITE_SPOOLSIDE_COLOR as string | undefined);
+    params.get("camberqaColor") ?? (import.meta.env.VITE_CAMBERQA_COLOR as string | undefined);
   const worktreeName =
-    params.get("spoolsideWorktreeName") ??
-    (import.meta.env.VITE_SPOOLSIDE_WORKTREE_NAME as string | undefined);
+    params.get("camberqaWorktreeName") ??
+    (import.meta.env.VITE_CAMBERQA_WORKTREE_NAME as string | undefined);
   const folderName =
-    params.get("spoolsideFolderName") ??
-    (import.meta.env.VITE_SPOOLSIDE_FOLDER_NAME as string | undefined);
+    params.get("camberqaFolderName") ??
+    (import.meta.env.VITE_CAMBERQA_FOLDER_NAME as string | undefined);
   if (!color && !worktreeName && !folderName) return undefined;
 
   const titleLabel = [folderName, worktreeName]
@@ -274,7 +274,7 @@ function spoolsideDesktopInstance(): DesktopInstanceInfo | undefined {
     )
     .join(" - ");
   if (titleLabel) {
-    document.title = `Poolside - ${titleLabel}`;
+    document.title = `Camber - ${titleLabel}`;
   }
 
   return {
@@ -291,9 +291,9 @@ interface StartOptions {
 
 export async function start({ onShellInteractive, onInitialScreenSettled }: StartOptions = {}) {
   logStartupDiagnostic("start.begin");
-  const desktopInstance = spoolsideDesktopInstance();
+  const desktopInstance = camberqaDesktopInstance();
   let acpDebugAPI: ACPDebugAPI | undefined;
-  startSpoolsideBridge(() => acpDebugAPI);
+  startCamberQABridge(() => acpDebugAPI);
 
   const target = document.getElementById("app");
 
@@ -351,15 +351,7 @@ export async function start({ onShellInteractive, onInitialScreenSettled }: Star
     environment: {
       assistantEnv: import.meta.env.DEV ? ("development" as const) : ("production" as const),
       assistantHost: "desktop",
-      // Node process.platform identifiers, matching what the IDE hosts report
-      // (VS Code passes process.platform; Visual Studio hard-codes "win32").
-      // Native-menu gating (supportsNativeMenus) requires "darwin". The Tauri
-      // webview has no process, so derive it from the engine's UA.
-      operatingSystem: navigator.userAgent.includes("Mac")
-        ? "darwin"
-        : navigator.userAgent.includes("Windows")
-          ? "win32"
-          : "linux",
+      operatingSystem: "darwin",
       assistantHostVersion: assistantVersion,
       assistantVersion,
       assistantProduct: "desktop-assistant",
@@ -382,8 +374,8 @@ export async function start({ onShellInteractive, onInitialScreenSettled }: Star
         terminalPanel: true,
         openWorkspace: false,
         addFolderToWorkspace: false,
-        // Spoolside bridge flows that click through a confirmation disable
-        // this per-flow (withDomConfirmationDialogs in spoolsideBridge.ts) —
+        // CamberQA bridge flows that click through a confirmation disable
+        // this per-flow (withDomConfirmationDialogs in camberqaBridge.ts) —
         // native dialogs are invisible to the bridge.
         nativeConfirmDialog: true,
       },
@@ -575,12 +567,12 @@ export async function start({ onShellInteractive, onInitialScreenSettled }: Star
       // An OAuth callback's query carries a live authorization code — log
       // only the redacted target, never the full URL.
       console.info(
-        "poolside: deep link received",
+        "camber: deep link received",
         isOAuthCallback ? `${MCP_OAUTH_CALLBACK_DEEP_LINK}?<redacted>` : url,
       );
       if (isOAuthCallback) {
         desktopHost.mcpOAuthCallback(url).catch((error) => {
-          console.warn("poolside: MCP OAuth deep-link callback failed", error);
+          console.warn("camber: MCP OAuth deep-link callback failed", error);
           desktopHost.showInfoMessage(
             "Sign-in didn't complete — the connection may have timed out. Try connecting again.",
             InfoMessageType.error,

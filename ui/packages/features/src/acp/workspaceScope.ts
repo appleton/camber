@@ -1,5 +1,5 @@
-import { basename } from "@poolsideai/lib/path";
-import type { WorkspaceFolder } from "@poolsideai/rpc";
+import { basename } from "@camber/lib/path";
+import type { WorkspaceFolder } from "@camber/rpc";
 import type { AppState } from "./hostAdapter";
 import type { ACPNavProject } from "./navTypes";
 import { workspacePathFitsWorkspaceFolders } from "./workspacePaths";

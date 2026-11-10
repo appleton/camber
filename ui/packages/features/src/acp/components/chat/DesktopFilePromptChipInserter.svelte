@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getChips, getPrompt } from "@poolsideai/components/prompt";
+  import { getChips, getPrompt } from "@camber/components/prompt";
   import { onMount } from "svelte";
   import { get } from "svelte/store";
   import { getContextRepoContext } from "../../../context";

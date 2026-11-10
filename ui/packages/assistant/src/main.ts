@@ -1,8 +1,8 @@
 /// <reference path="../global.d.ts" />
 
-import { warmDiffWorkerPool } from "@poolsideai/components/file-diff";
-import { enableAcpTranscriptBatching } from "@poolsideai/features/acp";
-export type { MobileSpoolsideInstance, MobileSpoolsideSlot } from "@poolsideai/features/acp";
+import { warmDiffWorkerPool } from "@camber/components/file-diff";
+import { enableAcpTranscriptBatching } from "@camber/features/acp";
+export type { MobileCamberQAInstance, MobileCamberQASlot } from "@camber/features/acp";
 export { default as ChatOnlyPanel } from "./acp/ChatOnlyPanel.svelte";
 export { default as DesktopPanel } from "./acp/DesktopPanel.svelte";
 export type { MobileAppearance, MobileThemePreference } from "./acp/mobile/appearance";

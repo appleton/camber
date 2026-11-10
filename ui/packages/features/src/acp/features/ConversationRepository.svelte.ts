@@ -1,22 +1,16 @@
 import type { AgentCapabilities, SessionId } from "@agentclientprotocol/sdk";
 import {
-  poolsideAcpNavArchiveConversation,
-  poolsideAcpNavDeleteConversation,
-  poolsideAcpNavList,
-  poolsideAcpNavRenameConversation,
-  poolsideAcpNavRestoreConversation,
-  poolsideAcpNavUpsertConversation,
-  poolsideAcpRenameSession,
-  poolsideAcpSessionClose,
-  poolsideAcpSessionDelete,
-} from "@poolsideai/helperapi";
-import {
-  failure,
-  fromPromise,
-  success,
-  waiting,
-  type AsyncState,
-} from "@poolsideai/lib/async-state";
+  camberAcpNavArchiveConversation,
+  camberAcpNavDeleteConversation,
+  camberAcpNavList,
+  camberAcpNavRenameConversation,
+  camberAcpNavRestoreConversation,
+  camberAcpNavUpsertConversation,
+  camberAcpRenameSession,
+  camberAcpSessionClose,
+  camberAcpSessionDelete,
+} from "@camber/helperapi";
+import { failure, fromPromise, success, waiting, type AsyncState } from "@camber/lib/async-state";
 import { createContext } from "svelte";
 import { DEFAULT_AGENT_SERVER, normalizeAgentServerName } from "../agentServers";
 import { normalizeACPError, type ACPRequestError } from "../errors";
@@ -66,7 +60,7 @@ export class ACPConversationRepositoryWriter {
   async refresh({ showLoading = true }: ACPRefreshOptions = {}): Promise<void> {
     const result = await fromPromise(
       async () => {
-        const state = await poolsideAcpNavList({});
+        const state = await camberAcpNavList({});
         return this.conversationsFromNavState(state);
       },
       (state) => {
@@ -92,7 +86,7 @@ export class ACPConversationRepositoryWriter {
         this.applySessionOverrides(dedupeConversationSummaries([...this.sessions, session])),
       );
     }
-    const state = await poolsideAcpNavUpsertConversation({
+    const state = await camberAcpNavUpsertConversation({
       conversation: conversationToNav(workspacePath, session),
     });
     this.applyNavState(state);
@@ -105,7 +99,7 @@ export class ACPConversationRepositoryWriter {
     session: ACPConversationSummary,
   ): Promise<ACPConversationSummary | undefined> {
     this.applyNavState(
-      await poolsideAcpNavRestoreConversation({
+      await camberAcpNavRestoreConversation({
         conversation: conversationToNav(workspacePath, session),
       }),
     );
@@ -224,7 +218,7 @@ export class ACPConversationRepositoryWriter {
   ): Promise<void> {
     agentServer = normalizeAgentServerName(agentServer);
     this.applyNavState(
-      await poolsideAcpNavArchiveConversation({
+      await camberAcpNavArchiveConversation({
         workspacePath,
         conversationId,
         agentServer,
@@ -239,7 +233,7 @@ export class ACPConversationRepositoryWriter {
       // archive-cancels-the-selected-conversation behavior (DesktopSideBar)
       // to background rows — archiving means the user is done with the work.
       try {
-        await poolsideAcpSessionClose({ agentServer, sessionId });
+        await camberAcpSessionClose({ agentServer, sessionId });
       } catch (e) {
         console.error("Failed to close ACP session on archive", e);
       }
@@ -251,7 +245,7 @@ export class ACPConversationRepositoryWriter {
     agentServer = normalizeAgentServerName(agentServer);
     let sessions = this.sessions.filter((session) => session.agentServer === agentServer);
     try {
-      const state = await poolsideAcpNavList({});
+      const state = await camberAcpNavList({});
       sessions = this.conversationsFromNavState(state).filter(
         (session) => session.agentServer === agentServer,
       );
@@ -292,8 +286,8 @@ export class ACPConversationRepositoryWriter {
     this.emitClosedSession(deleted);
 
     try {
-      await poolsideAcpNavDeleteConversation({ agentServer, sessionId });
-      await poolsideAcpSessionDelete({ agentServer, sessionId });
+      await camberAcpNavDeleteConversation({ agentServer, sessionId });
+      await camberAcpSessionDelete({ agentServer, sessionId });
     } catch (e) {
       this.deleteState = failure(normalizeACPError(e));
       console.error("Failed to delete ACP session", e);
@@ -316,9 +310,9 @@ export class ACPConversationRepositoryWriter {
     }
 
     try {
-      await poolsideAcpNavDeleteConversation({ conversationId });
+      await camberAcpNavDeleteConversation({ conversationId });
       if (sessionId) {
-        await poolsideAcpSessionDelete({ agentServer, sessionId });
+        await camberAcpSessionDelete({ agentServer, sessionId });
       }
     } catch (e) {
       this.deleteState = failure(normalizeACPError(e));
@@ -345,7 +339,7 @@ export class ACPConversationRepositoryWriter {
     );
     try {
       this.applyNavState(
-        await poolsideAcpNavRenameConversation({
+        await camberAcpNavRenameConversation({
           conversationId,
           nickname: trimmed,
           ...(canRenameSession ? { title: trimmed } : {}),
@@ -359,7 +353,7 @@ export class ACPConversationRepositoryWriter {
     const renamed = this.sessions.find((session) => session.id === conversationId);
     const sessionForACP = renamed ?? existing;
     if (sessionForACP?.sessionId && canRenameSession) {
-      void poolsideAcpRenameSession({
+      void camberAcpRenameSession({
         agentServer: sessionForACP.agentServer,
         sessionId: sessionForACP.sessionId,
         title: trimmed,
@@ -376,7 +370,7 @@ export class ACPConversationRepositoryWriter {
   }
 
   async archivedConversations(): Promise<ACPNavConversation[]> {
-    const state = await poolsideAcpNavList({});
+    const state = await camberAcpNavList({});
     return (state.conversations ?? []).filter((conversation) => conversation.archived);
   }
 
@@ -458,7 +452,7 @@ export class ACPConversationRepositoryWriter {
       ) ?? session;
 
     this.applyNavState(
-      await poolsideAcpNavUpsertConversation({
+      await camberAcpNavUpsertConversation({
         conversation: conversationToNav(workspacePath, { ...updatedSession, title }),
       }),
     );

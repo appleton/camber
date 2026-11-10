@@ -1,0 +1,22 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "persistent",
+    srcs = [
+        "map.go",
+        "set.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/pkg/util/persistent",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/camber-helper/internal/gopls/pkg/util/constraints"],
+)
+
+go_test(
+    name = "persistent_test",
+    srcs = [
+        "map_test.go",
+        "set_test.go",
+    ],
+    embed = [":persistent"],
+    deps = ["//pkg/camber-helper/internal/gopls/pkg/util/constraints"],
+)

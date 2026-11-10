@@ -8,7 +8,7 @@
 </script>
 
 <script lang="ts">
-  import { POOLSIDE_ROUNDEL_ICON_URL, StreamingIndicator } from "@poolsideai/features/acp/startup";
+  import { CAMBER_ROUNDEL_ICON_URL, StreamingIndicator } from "@camber/features/acp/startup";
 
   interface Props {
     onCopyReport: () => Promise<void>;
@@ -65,7 +65,7 @@
 
 <div class="desktop-startup-working">
   {#if issue === null}
-    <StreamingIndicator iconUrl={POOLSIDE_ROUNDEL_ICON_URL} size={24} />
+    <StreamingIndicator iconUrl={CAMBER_ROUNDEL_ICON_URL} size={24} />
   {:else}
     <div
       bind:this={panelElement}
@@ -75,16 +75,16 @@
     >
       <h1 id="desktop-startup-issue-title">
         {issue.kind === "failed"
-          ? "Poolside couldn’t start"
-          : "Poolside is taking longer than expected to start"}
+          ? "Camber couldn’t start"
+          : "Camber is taking longer than expected to start"}
       </h1>
       {#if issue.message}
         <p class="desktop-startup-issue-message">{issue.message}</p>
       {/if}
       <p>
         {issue.kind === "failed"
-          ? "Retry, or copy a diagnostic report to share with the Poolside team."
-          : "Something may have gone wrong. You can keep waiting, retry, or copy a diagnostic report to share with the Poolside team."}
+          ? "Retry, or copy a diagnostic report to share with the Camber team."
+          : "Something may have gone wrong. You can keep waiting, retry, or copy a diagnostic report to share with the Camber team."}
       </p>
       <div class="desktop-startup-issue-actions">
         {#if issue.kind === "failed"}

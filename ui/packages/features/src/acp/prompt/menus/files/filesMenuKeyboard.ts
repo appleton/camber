@@ -10,7 +10,7 @@
  * — see FilesMenu.svelte. Migrating to a ProseMirror keymap plugin attached
  * to the editor is the next step; this module is shaped to slot into either.
  */
-import type { ClassifiedQuery } from "@poolsideai/lib/path-query";
+import type { ClassifiedQuery } from "@camber/lib/path-query";
 import type { FileLike } from "./pathRewrites.js";
 import { isExactSingleMatch } from "./pathRewrites.js";
 

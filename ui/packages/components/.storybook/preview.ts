@@ -1,4 +1,4 @@
-import { definePreviewConfig } from "@poolsideai/storybook-config";
+import { definePreviewConfig } from "@camber/storybook-config";
 import { Providers } from "../src/lib/storybook/index.js";
 import "./globals.css";
 

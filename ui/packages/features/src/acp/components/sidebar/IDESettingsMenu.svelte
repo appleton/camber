@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createPopover, melt } from "@melt-ui/svelte";
-  import Icon, { type IconName } from "@poolsideai/components/icon";
+  import Icon, { type IconName } from "@camber/components/icon";
   import { rpc } from "../../hostRpc";
   import IDESettingsPill from "./IDESettingsPill.svelte";
   import { suppressContextMenu } from "./contextMenuHelpers";
@@ -67,7 +67,7 @@
       () => select(onShowAgents),
       currentView === "agents",
     )}
-    {@render menuItem("gear", "Extension Settings", "Poolside extension options", () =>
+    {@render menuItem("gear", "Extension Settings", "Camber extension options", () =>
       select(() => rpc.openSettings()),
     )}
   </div>

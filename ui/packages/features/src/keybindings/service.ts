@@ -5,7 +5,7 @@
 //   - Desktop (Tauri) has no OS-level keybinding engine, so the service OWNS
 //     dispatch: it runs the keydown matcher and fires registered handlers.
 //   - VS Code already resolves keybindings in the extension host via contributed
-//     `keybindings` + a `when: poolside.webviewFocus` context key. Re-dispatching
+//     `keybindings` + a `when: camber.webviewFocus` context key. Re-dispatching
 //     in the webview would double-fire, so the service DELEGATES: register() is a
 //     no-op and dispatch belongs to the host. It still answers hint()/binding()
 //     for display, reading the host-resolved hints fed in over RPC.
@@ -56,7 +56,7 @@ export interface KeybindingService {
 /**
  * Persistence seam for user overrides. The default is in-memory; on desktop the
  * runtime backs it with `createAcpDbKeybindingStore`, which persists to the ACP
- * nav DB (`poolside/acpNav/get|setKeybindings`) so edits survive restarts.
+ * nav DB (`camber/acpNav/get|setKeybindings`) so edits survive restarts.
  * `null` means "explicitly unbound by the user".
  */
 export interface KeybindingOverrideStore {
@@ -173,7 +173,7 @@ class DesktopKeybindingService implements KeybindingService {
 interface DelegatedOptions {
   platform: Platform;
   host?: KeybindingHost;
-  /** Host-resolved display hints, keyed by contributed command id (`poolside.<id>`). */
+  /** Host-resolved display hints, keyed by contributed command id (`camber.<id>`). */
   getHostHints: () => Record<string, string | undefined>;
 }
 

@@ -1,5 +1,5 @@
 import type { AnyMessage } from "@agentclientprotocol/sdk";
-import type { ColorTheme, FileIconTheme, ThemeRepository } from "@poolsideai/components/providers";
+import type { ColorTheme, FileIconTheme, ThemeRepository } from "@camber/components/providers";
 import {
   getUserMCPServersRepo,
   setACPActiveAgentServer,
@@ -9,10 +9,10 @@ import {
   type ACPSessionRepository,
   type ACPTransport,
   type LocalInferenceRepository,
-} from "@poolsideai/features/acp";
-import type { ContextRepository } from "@poolsideai/features/context";
-import type { ElicitationRepository } from "@poolsideai/features/elicitation";
-import type { ACPApproval } from "@poolsideai/helperapi";
+} from "@camber/features/acp";
+import type { ContextRepository } from "@camber/features/context";
+import type { ElicitationRepository } from "@camber/features/elicitation";
+import type { ACPApproval } from "@camber/helperapi";
 import {
   type ACPElicitationOutput,
   type ACPElicitationParams,
@@ -20,7 +20,7 @@ import {
   type JSONRPCErrorCode,
   type JSONRPCErrorData,
   type LocalInferenceDidChangeParams,
-} from "@poolsideai/helperapi/schemas";
+} from "@camber/helperapi/schemas";
 import type {
   ActiveFileContext,
   AssistantTerminalTab,
@@ -28,13 +28,9 @@ import type {
   Configuration,
   Keybindings,
   Language,
-} from "@poolsideai/rpc";
-import type {
-  Assistant,
-  AssistantMessage,
-  JSONRPCNotifyBatchResult,
-} from "@poolsideai/rpc/assistant";
-import type { RPCError } from "@poolsideai/rpc/generics";
+} from "@camber/rpc";
+import type { Assistant, AssistantMessage, JSONRPCNotifyBatchResult } from "@camber/rpc/assistant";
+import type { RPCError } from "@camber/rpc/generics";
 import { focusPrompt } from "../../shared/Helpers";
 import { type AppStore } from "../store";
 
@@ -43,7 +39,7 @@ export type WebviewRPCListener = Pick<Window, "addEventListener" | "removeEventL
 // Host-driven conversation navigation (e.g. a clicked desktop notification).
 // The RPC server has no handle on navigation state, so it broadcasts a window
 // event for the runtime that owns activeConversationId (see DesktopRuntime).
-export const SET_CURRENT_CONVERSATION_EVENT = "poolside:set-current-conversation";
+export const SET_CURRENT_CONVERSATION_EVENT = "camber:set-current-conversation";
 type RPCMessageEvent = Pick<MessageEvent<AssistantMessage>, "data"> &
   Partial<Pick<MessageEvent, "source">>;
 

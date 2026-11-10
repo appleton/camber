@@ -1,6 +1,6 @@
-import { poolsideAcpNavCreateChat } from "@poolsideai/helperapi";
+import { camberAcpNavCreateChat } from "@camber/helperapi";
 
 export async function createACPChatWorkingDirectory(sessionId: string): Promise<string> {
-  const result = await poolsideAcpNavCreateChat({ sessionId });
+  const result = await camberAcpNavCreateChat({ sessionId });
   return result.path;
 }

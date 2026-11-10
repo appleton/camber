@@ -2,7 +2,7 @@
   import { run } from "svelte/legacy";
 
   import parseDiff from "parse-diff";
-  import { compact } from "@poolsideai/lib/array";
+  import { compact } from "@camber/lib/array";
   import mermaid from "mermaid";
   import Icon from "../icon/Icon.svelte";
   import CodeBlockOptions from "../assistant-ui/CodeBlockOptions/CodeBlockOptions.svelte";

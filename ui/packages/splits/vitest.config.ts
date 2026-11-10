@@ -1,1 +1,1 @@
-export { default } from "@poolsideai/vite-config";
+export { default } from "@camber/vite-config";

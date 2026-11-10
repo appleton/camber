@@ -1,4 +1,4 @@
-import { getOrSet } from "@poolsideai/lib/map";
+import { getOrSet } from "@camber/lib/map";
 import fuzzysort from "fuzzysort";
 import type { ItemsBySection } from "../context/list.js";
 import type { Item } from "../context/prompt.js";

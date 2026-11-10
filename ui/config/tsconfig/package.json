@@ -1,5 +1,5 @@
 {
-  "name": "@poolsideai/tsconfig",
+  "name": "@camber/tsconfig",
   "version": "2.3.53",
   "private": true,
   "description": "Common typescript configuration",
@@ -17,9 +17,9 @@
       "prettier --ignore-unknown --write"
     ]
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "devDependencies": {
-    "@poolsideai/prettier-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
     "prettier": "catalog:"
   }
 }

@@ -1,20 +1,20 @@
 import {
-  poolsideAcpNavGetGithubColorMode,
-  poolsideAcpNavSetGithubColorMode,
-  poolsideGithubAuthStatus,
-  poolsideGithubFetchImage,
-  poolsideGithubLinks,
-  poolsideGithubPrDetail,
-  poolsideGithubPrUrl,
-  poolsideGithubSetToken,
-  poolsideGithubWorktreeStatuses,
+  camberAcpNavGetGithubColorMode,
+  camberAcpNavSetGithubColorMode,
+  camberGithubAuthStatus,
+  camberGithubFetchImage,
+  camberGithubLinks,
+  camberGithubPrDetail,
+  camberGithubPrUrl,
+  camberGithubSetToken,
+  camberGithubWorktreeStatuses,
   type GitHubAuthStatusOutput,
   type GitHubLinksOutput,
   type GitHubPRDetailOutput,
   type GitHubPRStatus,
   type GitHubPRUrlOutput,
   type GitHubWorktreeStatus,
-} from "@poolsideai/helperapi";
+} from "@camber/helperapi";
 import { createContext } from "svelte";
 import {
   githubStatusCategory,
@@ -34,7 +34,7 @@ function normalizeColorMode(value: string | undefined): GitHubColorMode | undefi
 
 export type ACPGithubRepository = ACPGithubRepositoryWriter;
 
-// ACPGithubRepositoryWriter is a thin reactive cache over poolside/github/*.
+// ACPGithubRepositoryWriter is a thin reactive cache over camber/github/*.
 // All GitHub I/O happens in the helper; this just holds the latest per-worktree
 // status keyed by path and exposes detail/auth passthroughs for the panel and
 // settings UI. The sidebar drives polling via start().
@@ -90,7 +90,7 @@ export class ACPGithubRepositoryWriter {
 
   setColorMode(mode: GitHubColorMode): void {
     this.colorMode = mode;
-    void poolsideAcpNavSetGithubColorMode({ colorMode: mode }).catch(() => {
+    void camberAcpNavSetGithubColorMode({ colorMode: mode }).catch(() => {
       // Best-effort persistence; the in-memory value still applies this session.
     });
   }
@@ -98,7 +98,7 @@ export class ACPGithubRepositoryWriter {
   // Loads the persisted color mode from the acpNav settings DB. Called on start.
   private async loadColorMode(): Promise<void> {
     try {
-      const result = await poolsideAcpNavGetGithubColorMode();
+      const result = await camberAcpNavGetGithubColorMode();
       const mode = normalizeColorMode(result.colorMode);
       if (mode) this.colorMode = mode;
     } catch {
@@ -125,7 +125,7 @@ export class ACPGithubRepositoryWriter {
     const generation = ++this.generation;
     this.inFlight = true;
     try {
-      const result = await poolsideGithubWorktreeStatuses({ paths: targets });
+      const result = await camberGithubWorktreeStatuses({ paths: targets });
       if (generation !== this.generation) return; // superseded by a newer refresh
       const next = new Map<string, GitHubWorktreeStatus>();
       for (const entry of result.statuses) {
@@ -193,19 +193,19 @@ export class ACPGithubRepositoryWriter {
   }
 
   async prDetail(path: string): Promise<GitHubPRDetailOutput> {
-    return poolsideGithubPrDetail({ path });
+    return camberGithubPrDetail({ path });
   }
 
   // Resolves the URL to open for a worktree: the PR if it exists, otherwise the
   // create-PR page for the current branch. Empty url => no GitHub remote.
   async prUrl(path: string): Promise<GitHubPRUrlOutput> {
-    return poolsideGithubPrUrl({ path });
+    return camberGithubPrUrl({ path });
   }
 
   // Resolves the full set of GitHub destinations for a path (repo, pulls,
   // issues, current/new PR) for the header dropdown.
   async links(path: string): Promise<GitHubLinksOutput> {
-    return poolsideGithubLinks({ path });
+    return camberGithubLinks({ path });
   }
 
   // Fetches an auth-gated GitHub-hosted image as a data URI (cached), so the
@@ -216,7 +216,7 @@ export class ACPGithubRepositoryWriter {
     if (cached !== undefined) return cached;
     let dataUri = "";
     try {
-      const result = await poolsideGithubFetchImage({ url });
+      const result = await camberGithubFetchImage({ url });
       if (result.ok) dataUri = result.dataUri;
     } catch {
       // leave empty
@@ -226,13 +226,13 @@ export class ACPGithubRepositoryWriter {
   }
 
   async authStatus(): Promise<GitHubAuthStatusOutput> {
-    return poolsideGithubAuthStatus();
+    return camberGithubAuthStatus();
   }
 
   // setToken stores (or clears, when empty) the fallback token, then refreshes
   // so the icon colors reflect the new auth immediately.
   async setToken(token: string): Promise<void> {
-    await poolsideGithubSetToken({ token });
+    await camberGithubSetToken({ token });
     // Force past the inFlight guard so an in-progress poll can't swallow this.
     await this.refresh(undefined, { force: true });
   }

@@ -1,6 +1,6 @@
-import { getUnknownErrorMessage } from "@poolsideai/lib/errors";
-import { dirname } from "@poolsideai/lib/path";
-import { InfoMessageType } from "@poolsideai/rpc";
+import { getUnknownErrorMessage } from "@camber/lib/errors";
+import { dirname } from "@camber/lib/path";
+import { InfoMessageType } from "@camber/rpc";
 
 export type DesktopFileTreeContextMenuAction =
   | "open"

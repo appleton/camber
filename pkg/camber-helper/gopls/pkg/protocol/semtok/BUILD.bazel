@@ -1,0 +1,8 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "semtok",
+    srcs = ["semtok.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/gopls/pkg/protocol/semtok",
+    visibility = ["//visibility:public"],
+)

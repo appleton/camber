@@ -3,7 +3,7 @@ import type {
   ContentBlock,
   ToolCallContent,
 } from "@agentclientprotocol/sdk";
-import type { ExtractUnionMember } from "@poolsideai/lib/types";
+import type { ExtractUnionMember } from "@camber/lib/types";
 
 export type UserMessage = {
   eventKind: "user_message";

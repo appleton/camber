@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ACPProjectRepositoryWriter } from "./ProjectRepository.svelte";
 
-vi.mock("@poolsideai/helperapi", () => ({
-  poolsideAcpNavGetProjectSettings: vi.fn(),
-  poolsideAcpNavList: vi.fn(),
-  poolsideAcpNavRemoveProject: vi.fn(),
-  poolsideAcpNavReorderProjects: vi.fn(),
-  poolsideAcpNavReorderWorktrees: vi.fn(),
-  poolsideAcpNavSetProjectCollapsed: vi.fn(),
-  poolsideAcpNavSetProjectSettings: vi.fn(),
-  poolsideAcpNavUpsertProject: vi.fn(),
+vi.mock("@camber/helperapi", () => ({
+  camberAcpNavGetProjectSettings: vi.fn(),
+  camberAcpNavList: vi.fn(),
+  camberAcpNavRemoveProject: vi.fn(),
+  camberAcpNavReorderProjects: vi.fn(),
+  camberAcpNavReorderWorktrees: vi.fn(),
+  camberAcpNavSetProjectCollapsed: vi.fn(),
+  camberAcpNavSetProjectSettings: vi.fn(),
+  camberAcpNavUpsertProject: vi.fn(),
 }));
 
 describe("ACPProjectRepositoryWriter", () => {
@@ -18,8 +18,8 @@ describe("ACPProjectRepositoryWriter", () => {
   });
 
   it("marks a worktree busy through the removal lifecycle", async () => {
-    const { poolsideAcpNavList } = await import("@poolsideai/helperapi");
-    vi.mocked(poolsideAcpNavList).mockResolvedValue({
+    const { camberAcpNavList } = await import("@camber/helperapi");
+    vi.mocked(camberAcpNavList).mockResolvedValue({
       conversations: [],
       projects: [
         {
@@ -63,8 +63,8 @@ describe("ACPProjectRepositoryWriter", () => {
   });
 
   it("clearing busy when path is not tracked is a no-op", async () => {
-    const { poolsideAcpNavList } = await import("@poolsideai/helperapi");
-    vi.mocked(poolsideAcpNavList).mockResolvedValue({
+    const { camberAcpNavList } = await import("@camber/helperapi");
+    vi.mocked(camberAcpNavList).mockResolvedValue({
       conversations: [],
       projects: [
         {
@@ -86,8 +86,8 @@ describe("ACPProjectRepositoryWriter", () => {
   });
 
   it("renders a prepared worktree as a busy placeholder, then merges with the server row", async () => {
-    const { poolsideAcpNavList } = await import("@poolsideai/helperapi");
-    vi.mocked(poolsideAcpNavList).mockResolvedValue({
+    const { camberAcpNavList } = await import("@camber/helperapi");
+    vi.mocked(camberAcpNavList).mockResolvedValue({
       conversations: [],
       projects: [
         {
@@ -148,7 +148,7 @@ describe("ACPProjectRepositoryWriter", () => {
   });
 
   it("keeps the last loaded projects visible while a refresh is in flight", async () => {
-    const { poolsideAcpNavList } = await import("@poolsideai/helperapi");
+    const { camberAcpNavList } = await import("@camber/helperapi");
     const project = {
       path: "/repo",
       name: "assistant",
@@ -158,7 +158,7 @@ describe("ACPProjectRepositoryWriter", () => {
       createdAt: "2026-05-20T09:00:00Z",
       updatedAt: "2026-05-20T09:00:00Z",
     };
-    vi.mocked(poolsideAcpNavList).mockResolvedValueOnce({ conversations: [], projects: [project] });
+    vi.mocked(camberAcpNavList).mockResolvedValueOnce({ conversations: [], projects: [project] });
     const repo = new ACPProjectRepositoryWriter();
 
     await repo.refresh();
@@ -166,7 +166,7 @@ describe("ACPProjectRepositoryWriter", () => {
 
     // Second refresh that stays pending so we can observe the loading window.
     let resolveList: (value: { conversations: never[]; projects: (typeof project)[] }) => void;
-    vi.mocked(poolsideAcpNavList).mockImplementationOnce(
+    vi.mocked(camberAcpNavList).mockImplementationOnce(
       () => new Promise((resolve) => (resolveList = resolve)),
     );
     const pending = repo.refresh();
@@ -187,8 +187,8 @@ describe("ACPProjectRepositoryWriter", () => {
   });
 
   it("keeps deleteRequested when a server row replaces a pending worktree", async () => {
-    const { poolsideAcpNavList } = await import("@poolsideai/helperapi");
-    vi.mocked(poolsideAcpNavList)
+    const { camberAcpNavList } = await import("@camber/helperapi");
+    vi.mocked(camberAcpNavList)
       .mockResolvedValueOnce({
         conversations: [],
         projects: [

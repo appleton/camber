@@ -7,7 +7,7 @@ import {
 import type {
   ACPCompactionNotification,
   ACPTurnEndedNotification,
-} from "@poolsideai/helperapi/schemas";
+} from "@camber/helperapi/schemas";
 import { DEFAULT_AGENT_SERVER, normalizeAgentServerName } from "./agentServers";
 import { CLAUDE_SDK_MESSAGE_METHOD, parseClaudePromptSuggestion } from "./claudePromptSuggestions";
 import type { ACPSessionRepositoryWriter } from "./features/SessionRepository.svelte";
@@ -36,12 +36,12 @@ export class ACPClient implements Client {
       case "authenticate/update": {
         return this.repo.agents.handleAuthenticateUpdate(params, this.agentServer);
       }
-      case "poolside/acp/compaction_update":
+      case "camber/acp/compaction_update":
         return this.repo.handleCompactionUpdate(
           this.agentServer,
           params as unknown as ACPCompactionNotification,
         );
-      case "poolside/acp/turn_ended":
+      case "camber/acp/turn_ended":
         return this.repo.handleTurnEnded(
           this.agentServer,
           params as unknown as ACPTurnEndedNotification,

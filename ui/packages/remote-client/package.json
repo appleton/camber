@@ -1,16 +1,15 @@
 {
-  "name": "@poolsideai/remote-client",
+  "name": "@camber/remote-client",
   "version": "0.1.0",
   "private": true,
-  "description": "Browser-side client for poolside-helper's remote access WebSocket: JSON-RPC transport, sequenced session-event gating, device-token auth recovery, and the webview host adapter used by the mobile remote (and by any future surface that talks to a remote helper).",
+  "description": "Browser-side client for camber-helper's remote access WebSocket: JSON-RPC transport, sequenced session-event gating, device-token auth recovery, and the webview host adapter used by the mobile remote (and by any future surface that talks to a remote helper).",
   "repository": {
     "type": "git",
-    "url": "https://github.com/poolsideai/assistants"
+    "url": "https://github.com/appleton/camber"
   },
   "author": {
-    "name": "Poolside",
-    "email": "hello@poolside.ai",
-    "url": "https://poolside.ai"
+    "name": "Andy Appleton",
+    "url": "https://github.com/appleton"
   },
   "type": "module",
   "exports": {
@@ -30,15 +29,15 @@
     "test:unit": "vitest run --project unit",
     "test:unit:watch": "vitest --project unit"
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "dependencies": {
-    "@poolsideai/rpc": "workspace:*"
+    "@camber/rpc": "workspace:*"
   },
   "devDependencies": {
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
-    "@poolsideai/vite-config": "workspace:*",
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
+    "@camber/vite-config": "workspace:*",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",

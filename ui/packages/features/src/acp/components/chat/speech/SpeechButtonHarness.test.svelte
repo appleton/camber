@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DisplayProvider } from "@poolsideai/components/providers";
+  import { DisplayProvider } from "@camber/components/providers";
   import SpeechButton from "./SpeechButton.svelte";
 </script>
 

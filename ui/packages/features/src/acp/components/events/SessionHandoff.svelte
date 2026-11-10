@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { getACPAgentRegistryRepo } from "../../features/AgentRegistryRepository.svelte";
   import { agentServerIconUrl } from "../../localAgentIcon";
   import type { SessionHandoff } from "../../types";

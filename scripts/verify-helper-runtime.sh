@@ -12,14 +12,10 @@ runtime_dir="${1:?usage: verify-helper-runtime.sh <runtime-directory>}"
 }
 
 expected=(
-  poolside-helper-darwin-amd64
-  poolside-helper-darwin-arm64
-  poolside-helper-linux-amd64
-  poolside-helper-linux-arm64
-  poolside-helper-windows-amd64
-  poolside-helper-windows-arm64
-  poolside-mlx-sidecar-darwin-arm64
-  poolside-whisper-server-darwin-arm64
+  camber-helper-darwin-amd64
+  camber-helper-darwin-arm64
+  camber-mlx-sidecar-darwin-arm64
+  camber-whisper-server-darwin-arm64
 )
 
 for asset in "${expected[@]}"; do

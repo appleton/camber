@@ -1,4 +1,4 @@
-import { InfoMessageType } from "@poolsideai/rpc";
+import { InfoMessageType } from "@camber/rpc";
 import type { ACPDumpEntry } from "./debugDump";
 import { rpc } from "./hostRpc";
 

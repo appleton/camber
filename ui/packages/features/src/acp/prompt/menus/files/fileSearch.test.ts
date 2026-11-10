@@ -1,10 +1,10 @@
-import type { SearchFile, SearchFilesOutput } from "@poolsideai/helperapi/schemas";
+import type { SearchFile, SearchFilesOutput } from "@camber/helperapi/schemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppState } from "../../../hostAdapter";
 import { acpDesktopWorkspaceRoot, pathContains, searchProjectFiles } from "./fileSearch";
 
-vi.mock("@poolsideai/helperapi", () => ({
-  poolsideSearchFiles: vi.fn(),
+vi.mock("@camber/helperapi", () => ({
+  camberSearchFiles: vi.fn(),
 }));
 
 describe("searchProjectFiles", () => {
@@ -13,8 +13,8 @@ describe("searchProjectFiles", () => {
   });
 
   it("keeps existing desktop searches scoped to the containing project root", async () => {
-    const { poolsideSearchFiles } = await import("@poolsideai/helperapi");
-    vi.mocked(poolsideSearchFiles).mockResolvedValue(emptySearchResponse());
+    const { camberSearchFiles } = await import("@camber/helperapi");
+    vi.mocked(camberSearchFiles).mockResolvedValue(emptySearchResponse());
 
     await searchProjectFiles({
       query: "button",
@@ -23,7 +23,7 @@ describe("searchProjectFiles", () => {
       projects: [{ path: "/repo" }],
     });
 
-    expect(poolsideSearchFiles).toHaveBeenCalledWith({
+    expect(camberSearchFiles).toHaveBeenCalledWith({
       query: "button",
       workspaces: [{ path: "/repo", name: "repo", index: -1 }],
       excludeOpenFilesOutsideWorkspaces: false,
@@ -31,8 +31,8 @@ describe("searchProjectFiles", () => {
   });
 
   it("can scope desktop searches to the exact conversation cwd", async () => {
-    const { poolsideSearchFiles } = await import("@poolsideai/helperapi");
-    vi.mocked(poolsideSearchFiles).mockResolvedValue(emptySearchResponse());
+    const { camberSearchFiles } = await import("@camber/helperapi");
+    vi.mocked(camberSearchFiles).mockResolvedValue(emptySearchResponse());
 
     await searchProjectFiles({
       query: "button",
@@ -43,7 +43,7 @@ describe("searchProjectFiles", () => {
       excludeOpenFilesOutsideWorkspaces: true,
     });
 
-    expect(poolsideSearchFiles).toHaveBeenCalledWith({
+    expect(camberSearchFiles).toHaveBeenCalledWith({
       query: "button",
       workspaces: [{ path: "/repo/packages/app", name: "app", index: -1 }],
       excludeOpenFilesOutsideWorkspaces: true,
@@ -51,7 +51,7 @@ describe("searchProjectFiles", () => {
   });
 
   it("does not fall back to helper-global workspaces for cwd-scoped desktop searches", async () => {
-    const { poolsideSearchFiles } = await import("@poolsideai/helperapi");
+    const { camberSearchFiles } = await import("@camber/helperapi");
 
     const result = await searchProjectFiles({
       query: "button",
@@ -61,13 +61,13 @@ describe("searchProjectFiles", () => {
       desktopWorkspaceScope: "cwd",
     });
 
-    expect(poolsideSearchFiles).not.toHaveBeenCalled();
+    expect(camberSearchFiles).not.toHaveBeenCalled();
     expect(result).toEqual({ kind: "ok", response: { files: [] } });
   });
 
   it("filters cwd-scoped desktop responses back to the conversation cwd", async () => {
-    const { poolsideSearchFiles } = await import("@poolsideai/helperapi");
-    vi.mocked(poolsideSearchFiles).mockResolvedValue({
+    const { camberSearchFiles } = await import("@camber/helperapi");
+    vi.mocked(camberSearchFiles).mockResolvedValue({
       workspaces: ["app"],
       files: [
         searchFile("/repo/packages/app/Button.svelte"),

@@ -53,13 +53,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           # PRs use their base repository until the migration destination has
           # releases; pushes and manual runs use the public canonical runtime.
-          POOLSIDE_HELPER_REPOSITORY: ${{ github.event.pull_request.base.repo.full_name || 'poolsideai/assistants' }}
-        run: pnpm -F @poolsideai/desktop-assistant download:binaries aarch64-apple-darwin
+          CAMBER_HELPER_REPOSITORY: ${{ github.event.pull_request.base.repo.full_name || 'appleton/camber' }}
+        run: pnpm -F @camber/desktop-assistant download:binaries aarch64-apple-darwin
 
       # tauri-build embeds the isolation app (dist-isolation) at compile time,
       # even for a dev-profile test build.
       - name: Build isolation assets
-        run: pnpm -F @poolsideai/desktop-assistant build:isolation
+        run: pnpm -F @camber/desktop-assistant build:isolation
 
       - name: Test
         working-directory: ui/apps/desktop-assistant/src-tauri

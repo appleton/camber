@@ -1,5 +1,5 @@
-import { poolsideAcpNavList, poolsideAcpNavUpsertConversation } from "@poolsideai/helperapi";
-import type { WorkspaceFolder } from "@poolsideai/rpc";
+import { camberAcpNavList, camberAcpNavUpsertConversation } from "@camber/helperapi";
+import type { WorkspaceFolder } from "@camber/rpc";
 import { normalizeAgentServerName } from "../../agentServers";
 import {
   getExecCommand,
@@ -274,7 +274,7 @@ function stableMetadataJSON(metadata: ACPSessionMetadataSnapshot): string {
 
 async function findNavConversation(session: ACPSession) {
   const agentServer = normalizeAgentServerName(session.agentServer);
-  const state = await poolsideAcpNavList({});
+  const state = await camberAcpNavList({});
   return (
     (state.conversations ?? []).find((candidate) => {
       if (normalizeAgentServerName(candidate.agentServer) !== agentServer) return false;
@@ -299,7 +299,7 @@ async function persistMetadataToSidebarDatabase(
   const conversation = await findNavConversation(session);
   if (!conversation) return;
 
-  await poolsideAcpNavUpsertConversation({
+  await camberAcpNavUpsertConversation({
     conversation: {
       ...conversation,
       metadata,

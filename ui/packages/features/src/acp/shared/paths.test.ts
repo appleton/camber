@@ -1,4 +1,4 @@
-import type { WorkspaceFolder } from "@poolsideai/rpc";
+import type { WorkspaceFolder } from "@camber/rpc";
 import { describe, expect, it } from "vitest";
 import {
   getReadableFileInfo,

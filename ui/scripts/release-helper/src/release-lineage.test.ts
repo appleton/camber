@@ -14,32 +14,32 @@ import {
 
 const sourceSha = "0123456789abcdef0123456789abcdef01234567";
 const metadata = createReleaseTagMetadata({
-  product: "vscode",
-  tagPrefix: "vscode-shadow-202607",
-  destination: "poolside-ai.assistant-release-test-202607",
-  displayName: "Poolside Assistant Release Test 202607",
+  product: "desktop",
+  tagPrefix: "desktop-shadow-202607",
+  destination: "appleton.assistant-release-test-202607",
+  displayName: "Camber Assistant Release Test 202607",
   version: "0.1.0",
   sourceSha,
 });
 const desktopMetadata = createReleaseTagMetadata({
   product: "desktop",
   tagPrefix: "desktop",
-  destination: "poolside/desktop-assistant",
+  destination: "camber/desktop-assistant",
   version: "1.0.0",
   sourceSha,
 });
 
 describe("release tag names", () => {
   it("creates and parses canonical version tags", () => {
-    expect(releaseTag("vscode-shadow-202607", "0.1.2")).toBe("vscode-shadow-202607/v0.1.2");
-    expect(versionFromReleaseTag("vscode-shadow-202607", "vscode-shadow-202607/v0.1.2")).toBe(
+    expect(releaseTag("desktop-shadow-202607", "0.1.2")).toBe("desktop-shadow-202607/v0.1.2");
+    expect(versionFromReleaseTag("desktop-shadow-202607", "desktop-shadow-202607/v0.1.2")).toBe(
       "0.1.2",
     );
-    expect(versionFromReleaseTag("vscode", "vscode-shadow/v0.1.2")).toBeNull();
+    expect(versionFromReleaseTag("desktop", "desktop-shadow/v0.1.2")).toBeNull();
   });
 
   it("rejects unsafe or ambiguous prefixes", () => {
-    for (const prefix of ["VSCODE", "vscode/smoke", "vscode..smoke", "vscode-", ""]) {
+    for (const prefix of ["VSCODE", "desktop/smoke", "desktop..smoke", "desktop-", ""]) {
       expect(() => validateTagPrefix(prefix)).toThrow("Tag prefix");
     }
   });
@@ -61,9 +61,9 @@ describe("release tag metadata", () => {
   it("binds a prefix to one product and destination", () => {
     expect(() =>
       assertLineageAssociation(metadata, {
-        product: "vscode",
-        tagPrefix: "vscode-shadow-202607",
-        destination: "poolside-ai.another-extension",
+        product: "desktop",
+        tagPrefix: "desktop-shadow-202607",
+        destination: "appleton.another-extension",
       }),
     ).toThrow("is bound to");
   });
@@ -76,7 +76,7 @@ describe("release tag metadata", () => {
       assertLineageAssociation(desktopMetadata, {
         product: "desktop",
         tagPrefix: "desktop",
-        destination: "poolside/another-desktop-app",
+        destination: "camber/another-desktop-app",
       }),
     ).toThrow("is bound to");
   });
@@ -84,8 +84,8 @@ describe("release tag metadata", () => {
   it("binds a version tag to its source and display name", () => {
     expect(() =>
       assertVersionTagMetadata(metadata, {
-        product: "vscode",
-        tagPrefix: "vscode-shadow-202607",
+        product: "desktop",
+        tagPrefix: "desktop-shadow-202607",
         destination: metadata.destination,
         version: "0.1.0",
         sourceSha,
@@ -94,8 +94,8 @@ describe("release tag metadata", () => {
     ).not.toThrow();
     expect(() =>
       assertVersionTagMetadata(metadata, {
-        product: "vscode",
-        tagPrefix: "vscode-shadow-202607",
+        product: "desktop",
+        tagPrefix: "desktop-shadow-202607",
         destination: metadata.destination,
         version: "0.1.1",
         sourceSha,
@@ -106,10 +106,10 @@ describe("release tag metadata", () => {
   it("prevents one destination from using two prefixes", () => {
     expect(() =>
       assertDestinationHasSinglePrefix(
-        [{ tag: "vscode-old/v0.1.0", metadata: { ...metadata, tagPrefix: "vscode-old" } }],
+        [{ tag: "desktop-old/v0.1.0", metadata: { ...metadata, tagPrefix: "desktop-old" } }],
         {
-          product: "vscode",
-          tagPrefix: "vscode-new",
+          product: "desktop",
+          tagPrefix: "desktop-new",
           destination: metadata.destination,
         },
       ),

@@ -1,4 +1,4 @@
-import type { ACPAgentServerConfig } from "@poolsideai/rpc";
+import type { ACPAgentServerConfig } from "@camber/rpc";
 
 export const ACP_AGENT_REGISTRY_URL =
   "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json";

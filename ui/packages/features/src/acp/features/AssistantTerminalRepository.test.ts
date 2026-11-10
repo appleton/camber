@@ -1,4 +1,4 @@
-import type { AssistantTerminalTab } from "@poolsideai/rpc";
+import type { AssistantTerminalTab } from "@camber/rpc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { initializeStatefulModule, type HostMessageSender } from "../hostRpc";
 import {
@@ -295,9 +295,9 @@ describe("AssistantTerminalRepositoryWriter", () => {
         placement: "splitRight",
       }),
     );
-    expect(command).toContain("PoolsideCommandDone");
+    expect(command).toContain("CamberCommandDone");
     expect(command).toContain('"$?"');
-    expect(command).not.toContain("__poolside_command_status");
+    expect(command).not.toContain("__camber_command_status");
     expect(command).not.toContain("unset");
     expect(sender).not.toHaveBeenCalled();
 
@@ -322,7 +322,7 @@ describe("AssistantTerminalRepositoryWriter", () => {
       expect(repo.tabs.map((candidate) => candidate.id)).toEqual(["terminal-1"]),
     );
     const command = opener.mock.calls[0]?.[1]?.command;
-    const token = command?.match(/PoolsideCommandDone=([^:]+):%s/)?.[1];
+    const token = command?.match(/CamberCommandDone=([^:]+):%s/)?.[1];
     expect(opener).toHaveBeenCalledWith(
       "/repo",
       expect.objectContaining({
@@ -334,7 +334,7 @@ describe("AssistantTerminalRepositoryWriter", () => {
     expect(command).toContain('exec "${SHELL:-/bin/sh}"');
     expect(token).toBeTruthy();
 
-    repo.terminalDidWrite("terminal-1", `\x1b]1337;PoolsideCommandDone=${token}:0\x07`);
+    repo.terminalDidWrite("terminal-1", `\x1b]1337;CamberCommandDone=${token}:0\x07`);
 
     await expect(exit).resolves.toBe(0);
     expect(repo.tabs.map((candidate) => candidate.id)).toEqual(["terminal-1"]);
@@ -428,10 +428,10 @@ describe("AssistantTerminalRepositoryWriter", () => {
       expect(repo.tabs.map((candidate) => candidate.id)).toEqual(["terminal-1"]),
     );
     const command = sender.mock.calls[0][1]?.[1] as string;
-    const token = command.match(/PoolsideCommandDone=([^:]+):%s/)?.[1];
+    const token = command.match(/CamberCommandDone=([^:]+):%s/)?.[1];
     expect(token).toBeTruthy();
 
-    repo.terminalDidWrite("terminal-1", `\x1b]1337;PoolsideCommandDone=${token}:7\x07`);
+    repo.terminalDidWrite("terminal-1", `\x1b]1337;CamberCommandDone=${token}:7\x07`);
 
     await expect(exit).resolves.toBe(7);
     expect(repo.buffers["terminal-1"]).toBeUndefined();
@@ -449,7 +449,7 @@ describe("AssistantTerminalRepositoryWriter", () => {
       expect(repo.tabs.map((candidate) => candidate.id)).toEqual(["terminal-1"]),
     );
     const command = sender.mock.calls[0][1]?.[1] as string;
-    const token = command.match(/PoolsideCommandDone=([^:]+):%s/)?.[1];
+    const token = command.match(/CamberCommandDone=([^:]+):%s/)?.[1];
     expect(token).toBeTruthy();
     expect(sender).toHaveBeenCalledWith("createAssistantTerminal", [
       "/repo",
@@ -461,7 +461,7 @@ describe("AssistantTerminalRepositoryWriter", () => {
       undefined,
     ]);
 
-    repo.terminalDidWrite("terminal-1", `hello\n\x1b]1337;PoolsideCommandDone=${token}:0\x07`);
+    repo.terminalDidWrite("terminal-1", `hello\n\x1b]1337;CamberCommandDone=${token}:0\x07`);
 
     await expect(exit).resolves.toBe(0);
     expect(onOutput).toHaveBeenCalledWith("hello\n");

@@ -3,10 +3,10 @@
 // runtime guard — no translation layer, no derived taxonomy.
 // Reference: https://agentclientprotocol.com/rfds/elicitation#restricted-json-schema
 
-import type { _ACPElicitationParamsMeta } from "@poolsideai/helperapi/schemas";
+import type { _ACPElicitationParamsMeta } from "@camber/helperapi/schemas";
 import { isArray, isPlainObject, isString, uniq } from "lodash";
 
-const META_KEY_FIELD_ORDER = "poolside/field_order";
+const META_KEY_FIELD_ORDER = "camber/field_order";
 
 export interface EnumOption {
   readonly const: string;

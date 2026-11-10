@@ -1,0 +1,13 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "lsptest",
+    testonly = True,
+    srcs = ["lsptest.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/lsptest",
+    visibility = ["//pkg/camber-helper:__subpackages__"],
+    deps = [
+        "@com_github_sourcegraph_jsonrpc2//:jsonrpc2",
+        "@com_github_tliron_glsp//:glsp",
+    ],
+)

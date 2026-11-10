@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { isPreviewableImagePath } from "@poolsideai/components/assistant-ui";
-  import { FileCodeView } from "@poolsideai/components/file-diff";
-  import { MarkdownBlock } from "@poolsideai/components/markdown";
-  import { Spinner } from "@poolsideai/components/spinner";
-  import { acpHostRpc as rpc, markdownHost } from "@poolsideai/features/acp";
+  import { isPreviewableImagePath } from "@camber/components/assistant-ui";
+  import { FileCodeView } from "@camber/components/file-diff";
+  import { MarkdownBlock } from "@camber/components/markdown";
+  import { Spinner } from "@camber/components/spinner";
+  import { acpHostRpc as rpc, markdownHost } from "@camber/features/acp";
 
   // Mobile counterpart of the desktop file viewer panel: one full-screen page
   // per file, rendered as an image, rich markdown, or a read-only CodeMirror

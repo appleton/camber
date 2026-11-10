@@ -1,0 +1,8 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "typesutil",
+    srcs = ["typesutil.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/pkg/util/typesutil",
+    visibility = ["//visibility:public"],
+)

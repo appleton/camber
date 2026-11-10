@@ -3,7 +3,7 @@ import { basename } from "node:path";
 import { parseAst, type Plugin } from "vite";
 
 const QUERY = "?shared-worker";
-const PREFIX = "\0poolside:shared-worker:";
+const PREFIX = "\0camber:shared-worker:";
 const PRELOAD_HELPER = "\0vite/preload-helper.js";
 
 /**
@@ -15,7 +15,7 @@ export function sharedWorkers(): Plugin {
   let building = false;
   const workers = new Set<string>();
   return {
-    name: "poolside-shared-workers",
+    name: "camber-shared-workers",
     enforce: "pre",
     configResolved(config) {
       building = config.command === "build";

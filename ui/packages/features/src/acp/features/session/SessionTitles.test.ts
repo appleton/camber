@@ -40,7 +40,7 @@ describe("ACPSessionTitles.emit", () => {
   it("strips flattened handoff context from a replayed title", () => {
     const { session, titles } = sessionStub();
     new ACPSessionTitles(session).emit(
-      'continuepoolside://handoff/56a2ba59.md <context ref="poolside://handoff/56a2ba59.md">handoff body',
+      'continuecamber://handoff/56a2ba59.md <context ref="camber://handoff/56a2ba59.md">handoff body',
     );
     expect(titles).toEqual(["continue"]);
   });
@@ -48,7 +48,7 @@ describe("ACPSessionTitles.emit", () => {
   it("drops a title that is nothing but injected context", () => {
     const { session, titles } = sessionStub();
     new ACPSessionTitles(session).emit(
-      '<context ref="poolside://handoff/56a2ba59.md">handoff body</context>',
+      '<context ref="camber://handoff/56a2ba59.md">handoff body</context>',
     );
     expect(titles).toEqual([]);
   });

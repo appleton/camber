@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { Badge } from "@poolsideai/components/badge";
-  import { Button } from "@poolsideai/components/button";
-  import Icon from "@poolsideai/components/icon";
-  import { Switch } from "@poolsideai/components/switch";
-  import type { MCPServersTestConnectionOutput } from "@poolsideai/helperapi/schemas";
+  import { Badge } from "@camber/components/badge";
+  import { Button } from "@camber/components/button";
+  import Icon from "@camber/components/icon";
+  import { Switch } from "@camber/components/switch";
+  import type { MCPServersTestConnectionOutput } from "@camber/helperapi/schemas";
   import {
     getUserMCPServersRepo,
     type MCPServerEntry,

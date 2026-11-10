@@ -1,9 +1,0 @@
-{
-  "extends": "@poolsideai/tsconfig/base",
-  "compilerOptions": {
-    "composite": true,
-    "noEmit": false,
-    "emitDeclarationOnly": true
-  },
-  "include": ["src/extension/**/*.ts", "vite-env.d.ts"]
-}

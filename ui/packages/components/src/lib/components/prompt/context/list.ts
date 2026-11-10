@@ -1,4 +1,4 @@
-import type { EntityCollection, EntityRelation } from "@poolsideai/lib/types";
+import type { EntityCollection, EntityRelation } from "@camber/lib/types";
 import { getContext, setContext } from "svelte";
 import { writable } from "svelte/store";
 import type { Destructor } from "../../../actions/floating.js";

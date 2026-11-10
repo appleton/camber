@@ -52,7 +52,7 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("@poolsideai/components/prompt", async () => ({
+vi.mock("@camber/components/prompt", async () => ({
   Root: (await import("./PromptSubmit.test.svelte")).default,
 }));
 vi.mock("../../features/ChatSessionScope.svelte", () => ({

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
-  import type { VoiceInputDownloadState, VoiceInputModel } from "@poolsideai/helperapi";
-  import { getUnknownErrorMessage } from "@poolsideai/lib/errors";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
+  import type { VoiceInputDownloadState, VoiceInputModel } from "@camber/helperapi";
+  import { getUnknownErrorMessage } from "@camber/lib/errors";
   import { onMount } from "svelte";
   import { appState } from "../hostAdapter";
   import { rpc } from "../hostRpc";

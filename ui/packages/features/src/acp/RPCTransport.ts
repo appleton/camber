@@ -64,7 +64,7 @@ export class RPCTransport implements Stream, ACPTransport {
           // response back into the readable stream for the SDK to resolve.
           // The helper call is intentionally detached so long-lived requests
           // like session/prompt do not block later writes such as cancel.
-          const method = `poolside/acp/${msg.method}`;
+          const method = `camber/acp/${msg.method}`;
           const params = transport.withAgentServer(msg.params ?? {});
           void Promise.resolve()
             .then(() => helperApiClient.jsonrpcCall(method, params))
@@ -77,7 +77,7 @@ export class RPCTransport implements Stream, ACPTransport {
         } else if ("method" in msg) {
           // Outbound ACP notification — fire and forget.
           helperApiClient.jsonrpcNotify(
-            `poolside/acp/${msg.method}`,
+            `camber/acp/${msg.method}`,
             transport.withAgentServer(msg.params ?? {}),
           );
         }

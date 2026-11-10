@@ -1,4 +1,4 @@
-import { InfoMessageType } from "@poolsideai/rpc";
+import { InfoMessageType } from "@camber/rpc";
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
 import type { ACPHandoffConfirmationController } from "../features/HandoffConfirmationContext";

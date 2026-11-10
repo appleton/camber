@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { ACP_AGENT_REGISTRY_URL } from "./agentRegistry";
 import { DEFAULT_AGENT_SERVER, LOCAL_AGENT_SERVER } from "./agentServers";
 import {
+  CAMBER_ROUNDEL_ICON_URL,
   LOCAL_AGENT_ICON_URL,
   LOCAL_AGENT_ROUNDEL_ICON_URL,
   LOCAL_AGENT_SYSTEM_ICON_URL,
-  POOLSIDE_ROUNDEL_ICON_URL,
   agentServerIconUrl,
 } from "./localAgentIcon";
 
@@ -30,11 +30,11 @@ describe("local agent icon", () => {
     expect(agentServerIconUrl("custom", undefined)).toBeUndefined();
   });
 
-  it("draws the first-party Poolside agent from our own roundel, not the registry icon", () => {
+  it("draws the first-party Camber agent from our own roundel, not the registry icon", () => {
     expect(agentServerIconUrl(DEFAULT_AGENT_SERVER, { icon: "ignored.svg" })).toBe(
-      POOLSIDE_ROUNDEL_ICON_URL,
+      CAMBER_ROUNDEL_ICON_URL,
     );
-    expect(agentServerIconUrl(DEFAULT_AGENT_SERVER, undefined)).toBe(POOLSIDE_ROUNDEL_ICON_URL);
+    expect(agentServerIconUrl(DEFAULT_AGENT_SERVER, undefined)).toBe(CAMBER_ROUNDEL_ICON_URL);
   });
 
   it("exposes separate local-agent layers for two-colour picker rendering", () => {
@@ -49,8 +49,8 @@ describe("local agent icon", () => {
     expect(system).toContain('transform="translate(6 6) scale(0.625)"');
   });
 
-  it("exposes the detailed filled Poolside brand roundel for branded surfaces", () => {
-    const svg = decodeURIComponent(POOLSIDE_ROUNDEL_ICON_URL.replace("data:image/svg+xml,", ""));
+  it("exposes the detailed filled Camber brand roundel for branded surfaces", () => {
+    const svg = decodeURIComponent(CAMBER_ROUNDEL_ICON_URL.replace("data:image/svg+xml,", ""));
     expect(svg).toContain('viewBox="0 0 16 16"');
     // Shrunk a hair about the artboard centre to match the sibling agent icons.
     expect(svg).toContain("scale(0.93)");

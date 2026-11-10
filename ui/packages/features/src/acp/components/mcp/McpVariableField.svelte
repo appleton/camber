@@ -1,9 +1,9 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { Button } from "@poolsideai/components/button";
-  import { Spinner } from "@poolsideai/components/spinner";
-  import { Tooltip } from "@poolsideai/components/tooltip";
-  import type { InputVariable, MCPServerInputs } from "@poolsideai/helperapi/schemas";
+  import Icon from "@camber/components/icon";
+  import { Button } from "@camber/components/button";
+  import { Spinner } from "@camber/components/spinner";
+  import { Tooltip } from "@camber/components/tooltip";
+  import type { InputVariable, MCPServerInputs } from "@camber/helperapi/schemas";
   import { getACPMCPSettingsRepo } from "../../features/MCPSettingsRepository.context";
 
   interface Props {

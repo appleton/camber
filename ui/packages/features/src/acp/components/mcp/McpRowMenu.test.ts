@@ -19,7 +19,7 @@ const items: MenuSpecItem[] = [
   { kind: "action", id: "test-connection", label: "Test connection", icon: "run" },
   { kind: "separator" },
   { kind: "action", id: "delete", label: "Delete", icon: "trash", destructive: true },
-  { kind: "action", id: "managed", label: "Managed by Poolside", icon: "info", enabled: false },
+  { kind: "action", id: "managed", label: "Managed by Camber", icon: "info", enabled: false },
 ];
 
 describe("McpRowMenu", () => {
@@ -36,8 +36,8 @@ describe("McpRowMenu", () => {
 
       expect(screen.getByRole("button", { name: /Test connection/ })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /Delete/ })).toBeInTheDocument();
-      expect(screen.getByText("Managed by Poolside")).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /Managed by Poolside/ })).toBeNull();
+      expect(screen.getByText("Managed by Camber")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Managed by Camber/ })).toBeNull();
     });
 
     it("reports the selected item id and closes the menu", async () => {

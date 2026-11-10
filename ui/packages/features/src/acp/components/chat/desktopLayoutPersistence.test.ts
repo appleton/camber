@@ -1,4 +1,4 @@
-import { SplitsController, type SplitNode, type TabID } from "@poolsideai/splits";
+import { SplitsController, type SplitNode, type TabID } from "@camber/splits";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   captureDesktopSplitsLayout,
@@ -186,7 +186,7 @@ describe("desktop layout persistence", () => {
 
   it("captures the files tree subview so changes mode round-trips", () => {
     window.localStorage.setItem(
-      "poolside.desktop.filesTreePrefs.v1",
+      "camber.desktop.filesTreePrefs.v1",
       JSON.stringify({
         version: 1,
         worktrees: { "/repo": { viewMode: "changes", expandedDirectoryPaths: ["src"] } },
@@ -220,10 +220,10 @@ describe("desktop layout persistence", () => {
       bottomPanelVisible: true,
     })!;
 
-    writeStoredDesktopLayout("new:poolside:/repo", layout);
-    renameStoredDesktopLayout("new:poolside:/repo", "conversation-1");
+    writeStoredDesktopLayout("new:camber:/repo", layout);
+    renameStoredDesktopLayout("new:camber:/repo", "conversation-1");
 
-    expect(readStoredDesktopLayout("new:poolside:/repo")).toBeUndefined();
+    expect(readStoredDesktopLayout("new:camber:/repo")).toBeUndefined();
     expect(readStoredDesktopLayout("conversation-1")).toEqual(layout);
   });
 
@@ -366,7 +366,7 @@ describe("desktop layout persistence", () => {
   });
 
   it("treats persisted pending conversations as default-layout candidates", () => {
-    expect(isDesktopDefaultLayoutCandidate("new:poolside:/repo")).toBe(true);
+    expect(isDesktopDefaultLayoutCandidate("new:camber:/repo")).toBe(true);
     expect(isDesktopDefaultLayoutCandidate("conversation-1", "conversation-1")).toBe(true);
     expect(isDesktopDefaultLayoutCandidate("conversation-1", null)).toBe(false);
     expect(isDesktopDefaultLayoutCandidate("conversation-1", "conversation-2")).toBe(false);
@@ -381,7 +381,7 @@ describe("desktop layout persistence", () => {
     writeStoredWorktreeSetupSurface("mainTab");
     expect(readStoredWorktreeSetupSurface()).toBe("mainTab");
 
-    window.localStorage.setItem("poolside.desktop.worktreeSetupSurface.v1", "garbage");
+    window.localStorage.setItem("camber.desktop.worktreeSetupSurface.v1", "garbage");
     expect(readStoredWorktreeSetupSurface()).toBe("sidebar");
   });
 
@@ -398,7 +398,7 @@ function createEntry(key: string): DesktopSplitsEntry {
   const bottomPanelController = emptyController();
   const chatTabId = mainController.allTabIds[0] as TabID;
   mainController.updateTab(chatTabId, {
-    title: "Chatting with Poolside",
+    title: "Chatting with Camber",
     icon: "agent",
     isClosable: false,
   });

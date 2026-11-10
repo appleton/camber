@@ -67,13 +67,13 @@ describe("ConfirmationDialog", () => {
       ]);
     });
     expect(calls[0].args[0]).toEqual({
-      title: "Hand off to Poolside?",
-      description: "A new Poolside session will continue with context from this conversation.",
+      title: "Hand off to Camber?",
+      description: "A new Camber session will continue with context from this conversation.",
       confirmLabel: "Hand Off",
       destructive: false,
     });
     expect(calls[1].args[0]).toEqual({
-      title: "Hand off to Poolside?",
+      title: "Hand off to Camber?",
       message: "handoff failed",
     });
     expect(screen.queryByRole("dialog")).toBeNull();

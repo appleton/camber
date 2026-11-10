@@ -33,7 +33,7 @@ permissions:
 jobs:
   publish:
     name: Publish permanent helper release
-    if: github.repository == 'poolsideai/assistants'
+    if: github.repository == 'appleton/camber' && vars.CAMBER_RELEASES_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout helper source
@@ -46,7 +46,7 @@ jobs:
         if: inputs.action != 'reuse'
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
-          pattern: artifact-poolside-*
+          pattern: artifact-camber-*
           path: helper-release
           merge-multiple: true
 
@@ -139,12 +139,12 @@ jobs:
               echo "Runtime built and signed from \`${SOURCE_SHA}\`."
               echo
               echo "This helper release is produced by the product release pipeline and is the"
-              echo "durable source for VS Code, Desktop, Visual Studio, and local binary downloads."
+              echo "durable source for Desktop and local binary downloads."
             } > "$RUNNER_TEMP/helper-notes.md"
             gh release create "${TAG}" \
               --verify-tag \
               --draft \
-              --title "poolside-helper ${VERSION}" \
+              --title "camber-helper ${VERSION}" \
               --notes-file "$RUNNER_TEMP/helper-notes.md"
           fi
 

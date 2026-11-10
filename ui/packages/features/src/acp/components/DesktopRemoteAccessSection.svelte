@@ -1,19 +1,19 @@
 <script lang="ts">
   import qrcode from "qrcode-generator";
 
-  import { Button } from "@poolsideai/components/button";
-  import { Switch } from "@poolsideai/components/switch";
+  import { Button } from "@camber/components/button";
+  import { Switch } from "@camber/components/switch";
   import {
-    poolsideRemoteAccessConfirmPairing,
-    poolsideRemoteAccessCreatePairingCode,
-    poolsideRemoteAccessDisable,
-    poolsideRemoteAccessEnable,
-    poolsideRemoteAccessRevokeDevice,
-    poolsideRemoteAccessSetAutoStart,
-    poolsideRemoteAccessStatus,
+    camberRemoteAccessConfirmPairing,
+    camberRemoteAccessCreatePairingCode,
+    camberRemoteAccessDisable,
+    camberRemoteAccessEnable,
+    camberRemoteAccessRevokeDevice,
+    camberRemoteAccessSetAutoStart,
+    camberRemoteAccessStatus,
     type RemoteAccessPairingCode,
     type RemoteAccessStatus,
-  } from "@poolsideai/helperapi";
+  } from "@camber/helperapi";
 
   type BindMode = "loopback" | "tailscale" | "all";
 
@@ -83,7 +83,7 @@
 
   async function refresh() {
     try {
-      applyStatus(await poolsideRemoteAccessStatus());
+      applyStatus(await camberRemoteAccessStatus());
       if (!stickyError) error = "";
     } catch (e) {
       if (!stickyError) error = errorMessage(e);
@@ -95,7 +95,7 @@
     enabling = true;
     clearError();
     try {
-      applyStatus(await poolsideRemoteAccessEnable({ bind }));
+      applyStatus(await camberRemoteAccessEnable({ bind }));
     } catch (e) {
       setActionError(e);
     } finally {
@@ -109,7 +109,7 @@
     clearError();
     pairing = null;
     try {
-      applyStatus(await poolsideRemoteAccessDisable());
+      applyStatus(await camberRemoteAccessDisable());
     } catch (e) {
       setActionError(e);
     } finally {
@@ -126,7 +126,7 @@
     // so queued toggles preserve user order without locking the switch.
     const autoStartBind = status?.enabled && isBindMode(status.bind) ? status.bind : bind;
     const operation = autoStartSaveQueue.then(async () => {
-      const next = await poolsideRemoteAccessSetAutoStart(
+      const next = await camberRemoteAccessSetAutoStart(
         autoStart ? { autoStart: true, bind: autoStartBind } : { autoStart: false },
       );
       applyStatus(next);
@@ -149,7 +149,7 @@
     confirmationCode = "";
     showPairUrl = false;
     try {
-      pairing = await poolsideRemoteAccessCreatePairingCode();
+      pairing = await camberRemoteAccessCreatePairingCode();
     } catch (e) {
       setActionError(e);
     } finally {
@@ -162,7 +162,7 @@
     clearError();
     try {
       applyStatus(
-        await poolsideRemoteAccessConfirmPairing({
+        await camberRemoteAccessConfirmPairing({
           pairingId,
           code: confirmationCode.trim(),
         }),
@@ -181,7 +181,7 @@
     busy = true;
     clearError();
     try {
-      applyStatus(await poolsideRemoteAccessRevokeDevice({ deviceId }));
+      applyStatus(await camberRemoteAccessRevokeDevice({ deviceId }));
     } catch (e) {
       setActionError(e);
     } finally {
@@ -311,7 +311,7 @@
       <div class="border-psx-border mt-3 flex items-center justify-between gap-3 border-t pt-3">
         <div class="min-w-0">
           <div class={titleClass}>Keep open on startup</div>
-          <p class={subClass}>Turn remote access back on when Poolside Assistant starts.</p>
+          <p class={subClass}>Turn remote access back on when Camber Assistant starts.</p>
         </div>
         <Switch
           checked={autoStartChecked}

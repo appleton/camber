@@ -1,4 +1,4 @@
-import { appState, type ACPNavProject, type AppState } from "@poolsideai/features/acp";
+import { appState, type ACPNavProject, type AppState } from "@camber/features/acp";
 import { get } from "svelte/store";
 import { describe, expect, it } from "vitest";
 import {

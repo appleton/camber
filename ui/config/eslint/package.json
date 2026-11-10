@@ -1,5 +1,5 @@
 {
-  "name": "@poolsideai/eslint-config",
+  "name": "@camber/eslint-config",
   "version": "2.3.53",
   "private": true,
   "description": "Common eslint configuration",
@@ -28,7 +28,7 @@
       "prettier --ignore-unknown --write"
     ]
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "dependencies": {
     "eslint": "catalog:",
     "eslint-plugin-svelte": "catalog:",
@@ -37,8 +37,8 @@
     "typescript-eslint": "catalog:"
   },
   "devDependencies": {
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
     "prettier": "catalog:",
     "typescript": "catalog:"
   }

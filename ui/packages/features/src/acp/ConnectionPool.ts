@@ -4,7 +4,7 @@ import type {
   InitializeRequest,
   InitializeResponse,
 } from "@agentclientprotocol/sdk";
-import { poolsideAcpServerRestart } from "@poolsideai/helperapi";
+import { camberAcpServerRestart } from "@camber/helperapi";
 import { get } from "svelte/store";
 import { DEFAULT_AGENT_SERVER, normalizeAgentServerName } from "./agentServers";
 import { ACPClient } from "./Client";
@@ -181,7 +181,7 @@ export class ACPConnectionPool implements ACPTransport {
     const run = (async () => {
       await previous.catch(() => {});
       this.disconnect(server);
-      await poolsideAcpServerRestart({ agentServer: server });
+      await camberAcpServerRestart({ agentServer: server });
     })();
     this.restartsInFlight.set(server, run);
     try {
@@ -248,7 +248,7 @@ export class ACPConnectionPool implements ACPTransport {
   }
 }
 
-const LEGACY_ACP_TASK_DID_CHANGE_METHOD = "poolside/acpTask/didChange";
+const LEGACY_ACP_TASK_DID_CHANGE_METHOD = "camber/acpTask/didChange";
 
 function isLegacyACPTaskDidChangeMessage(message: AnyMessage): boolean {
   return (
@@ -284,7 +284,7 @@ function defaultInitializeRequest(): InitializeRequest {
   return {
     protocolVersion: 1,
     clientInfo: {
-      name: assistantHost ? `poolside-${assistantHost}` : "poolside-assistant",
+      name: assistantHost ? `camber-${assistantHost}` : "camber-assistant",
       version: assistantVersion || "local",
     },
     clientCapabilities,

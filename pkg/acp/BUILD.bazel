@@ -7,7 +7,7 @@ go_library(
         "permission.go",
         "sessionmeta.go",
     ],
-    importpath = "github.com/poolsideai/assistant/pkg/acp",
+    importpath = "github.com/appleton/camber/pkg/acp",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_coder_acp_go_sdk//:acp-go-sdk",

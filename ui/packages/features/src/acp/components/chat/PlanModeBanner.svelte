@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import Kbd from "@poolsideai/components/kbd";
+  import Icon from "@camber/components/icon";
+  import Kbd from "@camber/components/kbd";
   import { slide } from "svelte/transition";
   import { getACPChatSessionScope } from "../../features/ChatSessionScope.svelte";
   import { appState } from "../../hostAdapter";
@@ -10,7 +10,7 @@
   // Resolve the toggle hint from the keybinding service (works on desktop and IDE);
   // the `$appState` reference keeps it reactive to the VS Code getKeybindings update.
   let planModeToggleKeybinding = $derived(
-    shortcutHint("togglePlanMode") ?? $appState.keybindings["poolside.togglePlanMode"],
+    shortcutHint("togglePlanMode") ?? $appState.keybindings["camber.togglePlanMode"],
   );
 
   async function disablePlanMode(): Promise<void> {

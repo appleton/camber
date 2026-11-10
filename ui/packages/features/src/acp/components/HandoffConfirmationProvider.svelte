@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { InfoMessageType } from "@poolsideai/rpc";
+  import { InfoMessageType } from "@camber/rpc";
   import type { Snippet } from "svelte";
   import { extractErrorMessage } from "../errors";
   import { getACPAgentRegistryRepo } from "../features/AgentRegistryRepository.svelte";

@@ -1,9 +1,9 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Poolside",
-  "mainBinaryName": "Poolside",
+  "productName": "Camber",
+  "mainBinaryName": "Camber",
   "version": "0.0.0",
-  "identifier": "ai.poolside.desktop-assistant",
+  "identifier": "io.github.appleton.camber",
   "build": {
     "runner": "mbx",
     "beforeDevCommand": "pnpm dev:web",
@@ -18,7 +18,7 @@
       {
         "label": "main",
         "create": false,
-        "title": "Poolside",
+        "title": "Camber",
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
         "trafficLightPosition": {
@@ -43,13 +43,13 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "createUpdaterArtifacts": true,
+    "createUpdaterArtifacts": false,
     "licenseFile": "../../../../LICENSE",
     "category": "DeveloperTool",
     "externalBin": [
-      "binaries/poolside-helper",
-      "binaries/poolside-mlx-sidecar",
-      "binaries/poolside-whisper-server"
+      "binaries/camber-helper",
+      "binaries/camber-mlx-sidecar",
+      "binaries/camber-whisper-server"
     ],
     "resources": {
       "../../../../LICENSE": "LICENSE",
@@ -60,22 +60,19 @@
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
+      "icons/icon.icns"
     ],
-    "shortDescription": "Poolside",
-    "longDescription": "Poolside for desktop",
+    "shortDescription": "Camber",
+    "longDescription": "Camber for desktop",
     "macOS": {
-      "bundleName": "Poolside",
+      "bundleName": "Camber",
       "entitlements": "Entitlements.plist"
     }
   },
   "plugins": {
     "updater": {
-      "endpoints": [
-        "https://cdn.crabnebula.app/update/poolside/desktop-assistant/{{target}}-{{arch}}/{{current_version}}"
-      ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJBRUQ5ODRERjk1MTkxNjkKUldScGtWSDVUWmp0dXY1Z3E2YU9HNjNoV2RmcTFCRS9ZNU1DUWdtMVlvaW9QUjZ2dHZjVnFobXkK"
+      "endpoints": [],
+      "pubkey": ""
     }
   }
 }

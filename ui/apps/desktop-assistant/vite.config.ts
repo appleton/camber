@@ -1,4 +1,4 @@
-import base, { mergeConfigs } from "@poolsideai/vite-config";
+import base, { mergeConfigs } from "@camber/vite-config";
 import { defineConfig } from "vite";
 import { startupBudget } from "./scripts/startup-budget";
 
@@ -14,7 +14,7 @@ export default defineConfig((env) =>
       // Sourcemaps stay dev-only: tauri build packages dist/ verbatim, so a
       // production `true` shipped ~90MB of .map files inside the app bundle,
       // growing the download and Gatekeeper's first-launch verification work.
-      sourcemap: env.command === "serve" || process.env.POOLSIDE_BUILD_SOURCEMAPS === "1",
+      sourcemap: env.command === "serve" || process.env.CAMBER_BUILD_SOURCEMAPS === "1",
       rollupOptions: {
         input: {
           main: "index.html",

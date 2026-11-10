@@ -2,7 +2,7 @@ import type {
   LocalInferenceDownloadState,
   LocalInferenceModel,
   LocalInferenceState,
-} from "@poolsideai/helperapi/schemas";
+} from "@camber/helperapi/schemas";
 
 export function localInferenceDownloads(
   state: LocalInferenceState | null | undefined,

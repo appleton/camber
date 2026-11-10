@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "humautil",
     srcs = ["schema.go"],
-    importpath = "github.com/poolsideai/assistant/pkg/humautil",
+    importpath = "github.com/appleton/camber/pkg/humautil",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_danielgtaylor_huma_v2//:huma",

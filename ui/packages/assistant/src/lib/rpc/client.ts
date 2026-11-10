@@ -1,4 +1,4 @@
-import type { HostClient } from "@poolsideai/rpc";
+import type { HostClient } from "@camber/rpc";
 
 export type HostMessageSender = (method: string, args: any[]) => Promise<any>;
 type RawJsonRPC = Pick<HostClient, "jsonrpc" | "jsonrpcNotify">;

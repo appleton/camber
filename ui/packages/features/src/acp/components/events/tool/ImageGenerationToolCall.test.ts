@@ -51,8 +51,8 @@ describe("ImageGenerationToolCall", () => {
     expect(screen.queryByText(/Revised prompt/)).not.toBeInTheDocument();
     const image = screen.getByAltText("Generated result");
     expect(image).toHaveAttribute("src", `data:image/png;base64,${imageData}`);
-    expect(image).toHaveAttribute("data-poolside-image-path", "/tmp/cat.png");
-    expect(image).toHaveAttribute("data-poolside-image-name", "/tmp/cat.png");
+    expect(image).toHaveAttribute("data-camber-image-path", "/tmp/cat.png");
+    expect(image).toHaveAttribute("data-camber-image-name", "/tmp/cat.png");
   });
 
   it("opens the generated image file when the thumbnail is clicked", async () => {

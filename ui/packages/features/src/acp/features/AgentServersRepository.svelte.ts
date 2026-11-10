@@ -1,4 +1,4 @@
-import { poolsideAcpNavListAgentServers } from "@poolsideai/helperapi";
+import { camberAcpNavListAgentServers } from "@camber/helperapi";
 import {
   fromPromise,
   isSuccess,
@@ -6,8 +6,8 @@ import {
   loading,
   waiting,
   type AsyncState,
-} from "@poolsideai/lib/async-state";
-import type { ACPAgentServers } from "@poolsideai/rpc";
+} from "@camber/lib/async-state";
+import type { ACPAgentServers } from "@camber/rpc";
 import { createContext } from "svelte";
 import { get } from "svelte/store";
 import { agentServerNames, normalizeAgentServerName } from "../agentServers";
@@ -99,7 +99,7 @@ export class ACPAgentServersRepository {
   private async refreshFromLocalConfig(preserveSuccess: boolean): Promise<void> {
     const result = await fromPromise(
       async () => {
-        const state = await poolsideAcpNavListAgentServers({});
+        const state = await camberAcpNavListAgentServers({});
         this.defaultAgentServer = state.defaultAgentServer;
         // Absent on the wire means unpinned (the store omits a false flag).
         this.defaultAgentServerPinned = state.default_agent_server_pinned === true;

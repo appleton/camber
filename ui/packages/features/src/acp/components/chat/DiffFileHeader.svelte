@@ -27,8 +27,8 @@
   // with the reactive file-state proxy as a prop, so collapse toggles and
   // streaming stat updates re-render here without pierre rebuilding the
   // slot. Matches the filename/path/badge/± treatment of the changes list.
-  import { Badge } from "@poolsideai/components/badge";
-  import Icon from "@poolsideai/components/icon";
+  import { Badge } from "@camber/components/badge";
+  import Icon from "@camber/components/icon";
 
   interface Props {
     file: DiffFileHeaderState;

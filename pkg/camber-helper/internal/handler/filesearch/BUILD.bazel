@@ -1,0 +1,37 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "filesearch",
+    srcs = [
+        "direct.go",
+        "index.go",
+        "server.go",
+        "types.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/handler/filesearch",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/common/data",
+        "//pkg/camber-helper/gopls/pkg/protocol",
+        "//pkg/camber-helper/methods",
+        "//pkg/workspace/ignore",
+        "@com_github_sahilm_fuzzy//:fuzzy",
+        "@com_github_spf13_afero//:afero",
+        "@com_github_tliron_glsp//:glsp",
+    ],
+)
+
+go_test(
+    name = "filesearch_test",
+    srcs = [
+        "direct_test.go",
+        "index_test.go",
+        "server_test.go",
+    ],
+    embed = [":filesearch"],
+    deps = [
+        "//pkg/camber-helper/methods",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)

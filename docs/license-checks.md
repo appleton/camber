@@ -46,7 +46,7 @@ few package managers need extra evidence:
 
   A handful of packages fail every run rather than intermittently, because they
   publish a license file but no registry metadata to read: `cmdk-sv@0.0.19`,
-  `config-chain@1.1.13`, `khroma@2.1.0`, and `svelte-toolbelt@0.10.6`. Those are
+  `khroma@2.1.0`, and `svelte-toolbelt@0.10.6`. Those are
   recorded as MIT in `NPM_OVERRIDES`, which also wins over anything recovered
   from the registry. Add an entry there only for a package the recovery step
   reports it could not resolve — an override matching no package in the SBOM is
@@ -54,7 +54,7 @@ few package managers need extra evidence:
 - Rust: Syft finds crates from `Cargo.lock`, but does not populate their
   licenses. The script merges license expressions from `cargo metadata
   --locked` for `ui/apps/desktop-assistant/src-tauri`.
-- Swift: Syft finds packages from `cmd/poolside-mlx-sidecar/Package.resolved`,
+- Swift: Syft finds packages from `cmd/camber-mlx-sidecar/Package.resolved`,
   but Swift Package Manager pins carry no license metadata. The script records
   the license declared by each upstream repository (Apache-2.0 for the Apple
   and swift-server packages, MIT for `vmlx-swift` and `yyjson`) and fails if an
@@ -65,7 +65,10 @@ few package managers need extra evidence:
   strips SPDX exception suffixes so the base license is evaluated.
 - Local/first-party packages and workflows are not third-party OSS packages; the
   script removes known local artifacts from the patched SBOM before invoking
-  Grant.
+  Grant. This includes the root Go module, `github.com/appleton/camber`, whose
+  detected license evidence includes a content hash of `NOTICE.md`. Keeping it
+  out of the dependency report prevents attribution edits from changing that
+  report when no dependency has changed.
 - GitHub Actions and the VSCE signing helper are release/workflow tooling rather
   than distributed application dependencies, so they are reported separately and
   excluded from this dependency-license policy input.

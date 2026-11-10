@@ -1,4 +1,4 @@
-import type { AssistantMessage } from "@poolsideai/rpc/assistant";
+import type { AssistantMessage } from "@camber/rpc/assistant";
 import { describe, type Mock, type MockInstance } from "vitest";
 import {
   SET_CURRENT_CONVERSATION_EVENT,

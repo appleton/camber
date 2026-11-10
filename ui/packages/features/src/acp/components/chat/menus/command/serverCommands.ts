@@ -12,7 +12,7 @@ export interface ServerCommandEntry {
 
 export function isSkillCommand(command: AvailableCommand): boolean {
   return (
-    command.name.startsWith("$") || command._meta?.["poolside/slash_command_category"] === "skill"
+    command.name.startsWith("$") || command._meta?.["camber/slash_command_category"] === "skill"
   );
 }
 
@@ -27,7 +27,7 @@ export function installedSkillsAsCommands(
   return skills.map((skill) => ({
     name: skill.name.startsWith("$") ? skill.name : `$${skill.name}`,
     description: skill.description,
-    _meta: { "poolside/slash_command_category": "skill" },
+    _meta: { "camber/slash_command_category": "skill" },
   }));
 }
 

@@ -10,8 +10,8 @@
 </script>
 
 <ConfirmationDialog
-  title="Hand off to Poolside?"
-  description="A new Poolside session will continue with context from this conversation."
+  title="Hand off to Camber?"
+  description="A new Camber session will continue with context from this conversation."
   {detail}
   confirmLabel="Hand Off"
   onCancel={() => {}}

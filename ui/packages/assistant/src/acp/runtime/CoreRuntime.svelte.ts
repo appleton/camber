@@ -1,5 +1,5 @@
-import { isAppleUser } from "@poolsideai/components";
-import { createHelperApiClient } from "@poolsideai/features/acp";
+import { isAppleUser } from "@camber/components";
+import { createHelperApiClient } from "@camber/features/acp";
 import {
   type HydratableOverrideStore,
   type KeybindingService,
@@ -8,7 +8,7 @@ import {
   createDelegatedKeybindingService,
   createDesktopKeybindingService,
   setKeybindingService,
-} from "@poolsideai/features/keybindings";
+} from "@camber/features/keybindings";
 import {
   provideVSCodeDesignSystem,
   vsCodeButton,
@@ -56,7 +56,7 @@ export class CoreRuntime implements Runtime {
   #keybindingStore?: HydratableOverrideStore;
 
   constructor(props: RuntimeProps) {
-    const initialState = props.initialState ?? window.POOLSIDE_INITIAL_STATE;
+    const initialState = props.initialState ?? window.CAMBER_INITIAL_STATE;
     appState.update(appStateUpdates.setInitialState(initialState));
 
     this.target = props.target;

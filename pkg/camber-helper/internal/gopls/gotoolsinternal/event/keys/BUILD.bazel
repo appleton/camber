@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "keys",
+    srcs = [
+        "keys.go",
+        "standard.go",
+        "util.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/event/keys",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/camber-helper/internal/gopls/gotoolsinternal/event/label"],
+)
+
+go_test(
+    name = "keys_test",
+    srcs = ["util_test.go"],
+    embed = [":keys"],
+)

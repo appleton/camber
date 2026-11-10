@@ -1,4 +1,4 @@
-import type { IconName } from "@poolsideai/components/icon";
+import type { IconName } from "@camber/components/icon";
 
 export type DesktopSettingsSection =
   | "preferences"

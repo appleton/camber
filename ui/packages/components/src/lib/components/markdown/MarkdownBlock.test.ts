@@ -334,7 +334,7 @@ describe("MarkdownBlock", () => {
 
   it("opens absolute markdown file links with encoded spaces and line numbers", async () => {
     const decodedPath =
-      "/Users/poolie/Library/Application Support/poolside/worktrees/pale-porthole/ui/packages/components/src/lib/components/markdown/RenderedMarkdown.svelte";
+      "/Users/poolie/Library/Application Support/camber/worktrees/pale-porthole/ui/packages/components/src/lib/components/markdown/RenderedMarkdown.svelte";
     const encodedTarget = decodedPath.replace("Application Support", "Application%20Support");
     const openFile = vi.fn();
     const host: MarkdownHostAdapter = {
@@ -343,7 +343,7 @@ describe("MarkdownBlock", () => {
         environment: { assistantHost: "desktop" },
         workspaces: [
           {
-            path: "/Users/poolie/Library/Application Support/poolside/worktrees/pale-porthole",
+            path: "/Users/poolie/Library/Application Support/camber/worktrees/pale-porthole",
           },
         ],
       }),

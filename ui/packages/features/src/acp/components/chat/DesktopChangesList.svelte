@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import type { GitStatusOutput as CachedGitStatusOutput } from "@poolsideai/helperapi";
+  import type { GitStatusOutput as CachedGitStatusOutput } from "@camber/helperapi";
 
   // Last known status per worktree so remounts (tab switches, opening the
   // Diff tab in the same pane) render instantly instead of flashing a
@@ -19,17 +19,17 @@
 </script>
 
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
   import {
-    poolsideGitCommit,
-    poolsideGitDiscard,
-    poolsideGitStage,
-    poolsideGitStatus,
-    poolsideGitUnstage,
+    camberGitCommit,
+    camberGitDiscard,
+    camberGitStage,
+    camberGitStatus,
+    camberGitUnstage,
     type GitFileChange,
     type GitStatusOutput,
-  } from "@poolsideai/helperapi";
+  } from "@camber/helperapi";
   import { untrack } from "svelte";
   import { extractErrorMessage } from "../../errors";
   import {
@@ -41,8 +41,8 @@
     DESKTOP_FILE_TREE_CHANGED_EVENT,
     DESKTOP_GIT_CHANGED_EVENT,
   } from "../../features/DesktopGitChangesState.svelte";
-  import { getUnknownErrorMessage } from "@poolsideai/lib/errors";
-  import { InfoMessageType } from "@poolsideai/rpc";
+  import { getUnknownErrorMessage } from "@camber/lib/errors";
+  import { InfoMessageType } from "@camber/rpc";
   import { rpc, type RPCClient } from "../../hostRpc";
   import {
     DESKTOP_OPEN_DIFF_TAB_EVENT,
@@ -99,7 +99,7 @@
   }
 
   const DESKTOP_FILE_TREE_CONTEXT_MENU_ACTION_EVENT =
-    "poolside:desktop-file-tree-context-menu-action";
+    "camber:desktop-file-tree-context-menu-action";
 
   type LoadState =
     | { status: "loading" }
@@ -215,7 +215,7 @@
       loadState = { status: "loading" };
     }
     try {
-      const git = await poolsideGitStatus({ path });
+      const git = await camberGitStatus({ path });
       if (token !== loadToken) return;
       applyStatus(git);
     } catch (error) {
@@ -339,11 +339,11 @@
   }
 
   function stageFile(file: GitFileChange): void {
-    void runAction(() => poolsideGitStage({ path: worktreePath, files: [file.path] }));
+    void runAction(() => camberGitStage({ path: worktreePath, files: [file.path] }));
   }
 
   function unstageFile(file: GitFileChange): void {
-    void runAction(() => poolsideGitUnstage({ path: worktreePath, files: [file.path] }));
+    void runAction(() => camberGitUnstage({ path: worktreePath, files: [file.path] }));
   }
 
   function performDiscard(file: GitFileChange, staged: boolean): void {
@@ -352,9 +352,9 @@
       // A staged file is unstaged first so the discard restores the last
       // committed state, not the staged snapshot.
       if (staged) {
-        await poolsideGitUnstage({ path: worktreePath, files: [file.path] });
+        await camberGitUnstage({ path: worktreePath, files: [file.path] });
       }
-      return poolsideGitDiscard({
+      return camberGitDiscard({
         path: worktreePath,
         files: untracked ? [] : [file.path],
         untrackedFiles: untracked ? [file.path] : [],
@@ -365,13 +365,13 @@
   function stageAll(git: GitStatusOutput): void {
     const files = [...git.unstaged, ...git.untracked].map((file) => file.path);
     if (files.length === 0) return;
-    void runAction(() => poolsideGitStage({ path: worktreePath, files }));
+    void runAction(() => camberGitStage({ path: worktreePath, files }));
   }
 
   function unstageAll(git: GitStatusOutput): void {
     const files = git.staged.map((file) => file.path);
     if (files.length === 0) return;
-    void runAction(() => poolsideGitUnstage({ path: worktreePath, files }));
+    void runAction(() => camberGitUnstage({ path: worktreePath, files }));
   }
 
   function commit(git: GitStatusOutput): void {
@@ -380,7 +380,7 @@
     // the message textarea.
     if (!message || git.staged.length === 0 || actionBusy) return;
     void runAction(async () => {
-      const refreshed = await poolsideGitCommit({ path: worktreePath, message });
+      const refreshed = await camberGitCommit({ path: worktreePath, message });
       commitMessage = "";
       return refreshed;
     });

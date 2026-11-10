@@ -1,5 +1,5 @@
 {
-  "name": "@poolsideai/diff",
+  "name": "@camber/diff",
   "version": "2.3.53",
   "private": true,
   "type": "module",
@@ -30,17 +30,17 @@
       "prettier --ignore-unknown --write"
     ]
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "dependencies": {
-    "@poolsideai/lib": "workspace:*",
+    "@camber/lib": "workspace:*",
     "diff": "^8.0.4",
     "fastest-levenshtein": "^1.0.16"
   },
   "devDependencies": {
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
-    "@poolsideai/vite-config": "workspace:*",
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
+    "@camber/vite-config": "workspace:*",
     "@vitest/ui": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",

@@ -3,7 +3,7 @@ import { writable } from "svelte/store";
 /**
  * Desktop self-update affordance state. The desktop host sets this once an app
  * update has been downloaded (see the desktop-assistant `src/updater.ts`); the
- * sidebar chrome renders the "Update" pill from it, mirroring Poolside Studio.
+ * sidebar chrome renders the "Update" pill from it, mirroring Camber Studio.
  *
  * `version` is absent when the host detected that the installed bundle was
  * replaced by something other than our own updater — the restart is still the

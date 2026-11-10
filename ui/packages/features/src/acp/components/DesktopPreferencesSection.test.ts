@@ -207,7 +207,7 @@ describe("DesktopPreferencesSection", () => {
             settings = desktopSettings(updateChannel);
             // The native command emits this event before its promise resolves.
             window.dispatchEvent(
-              new CustomEvent("poolside:desktop-settings-changed", { detail: settings }),
+              new CustomEvent("camber:desktop-settings-changed", { detail: settings }),
             );
             return settings;
           }

@@ -1,17 +1,17 @@
-import { isFailure, isSuccess } from "@poolsideai/lib/async-state";
+import { isFailure, isSuccess } from "@camber/lib/async-state";
 import { get, writable } from "svelte/store";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { appState, type AppState, type AppStore } from "../hostAdapter";
 import { ACPAgentServersRepository } from "./AgentServersRepository.svelte";
 import type { ACPSessionRepositoryWriter } from "./SessionRepository.svelte";
 
-vi.mock("@poolsideai/helperapi", () => ({
-  poolsideAcpNavListAgentServers: vi.fn(),
+vi.mock("@camber/helperapi", () => ({
+  camberAcpNavListAgentServers: vi.fn(),
 }));
 
 beforeEach(async () => {
-  const { poolsideAcpNavListAgentServers } = await import("@poolsideai/helperapi");
-  vi.mocked(poolsideAcpNavListAgentServers).mockReset();
+  const { camberAcpNavListAgentServers } = await import("@camber/helperapi");
+  vi.mocked(camberAcpNavListAgentServers).mockReset();
 });
 
 type AppStateInput = Omit<Partial<AppState>, "environment" | "userSettings"> & {
@@ -99,14 +99,14 @@ describe("ACPAgentServersRepository", () => {
   it("keeps ready chats usable during background refreshes and transient failures", async () => {
     const appStore = createAppStore({});
     const { repo } = createRepo(appStore);
-    const { poolsideAcpNavListAgentServers } = await import("@poolsideai/helperapi");
+    const { camberAcpNavListAgentServers } = await import("@camber/helperapi");
     const installed = { "codex-acp": { command: "npx" } };
-    vi.mocked(poolsideAcpNavListAgentServers).mockResolvedValueOnce({ agentServers: installed });
+    vi.mocked(camberAcpNavListAgentServers).mockResolvedValueOnce({ agentServers: installed });
     await repo.refresh();
     const ready = repo.state;
 
     let rejectRefresh!: (error: Error) => void;
-    vi.mocked(poolsideAcpNavListAgentServers).mockImplementationOnce(
+    vi.mocked(camberAcpNavListAgentServers).mockImplementationOnce(
       () =>
         new Promise((_, reject) => {
           rejectRefresh = reject;
@@ -123,7 +123,7 @@ describe("ACPAgentServersRepository", () => {
       expect(get(appStore).userSettings.acpAgentServers).toEqual(installed);
 
       const updated = { "codex-acp": { command: "codex-acp" } };
-      vi.mocked(poolsideAcpNavListAgentServers).mockResolvedValueOnce({ agentServers: updated });
+      vi.mocked(camberAcpNavListAgentServers).mockResolvedValueOnce({ agentServers: updated });
       await repo.refresh({ background: true });
       expect(repo.agentServers).toEqual(updated);
       expect(get(appStore).userSettings.acpAgentServers).toEqual(updated);
@@ -165,8 +165,8 @@ describe("ACPAgentServersRepository", () => {
         agentServers: { "settings-only": { command: "node" } },
       },
     });
-    const { poolsideAcpNavListAgentServers } = await import("@poolsideai/helperapi");
-    vi.mocked(poolsideAcpNavListAgentServers).mockResolvedValue({
+    const { camberAcpNavListAgentServers } = await import("@camber/helperapi");
+    vi.mocked(camberAcpNavListAgentServers).mockResolvedValue({
       agentServers: { "codex-acp": { command: "npx" } },
     });
     const { repo, sessionRepo } = createRepo(appStore);
@@ -174,7 +174,7 @@ describe("ACPAgentServersRepository", () => {
     repo.refreshWhenReady();
     await vi.waitFor(() => expect(isSuccess(repo.state)).toBe(true));
 
-    expect(poolsideAcpNavListAgentServers).toHaveBeenCalledWith({});
+    expect(camberAcpNavListAgentServers).toHaveBeenCalledWith({});
     expect(get(appStore).userSettings.acpAgentServers).toEqual({
       "codex-acp": { command: "npx" },
     });
@@ -193,7 +193,7 @@ describe("ACPAgentServersRepository", () => {
 
     repo.refreshWhenReady();
     await flushPromises();
-    expect(poolsideAcpNavListAgentServers).toHaveBeenCalledTimes(1);
+    expect(camberAcpNavListAgentServers).toHaveBeenCalledTimes(1);
   });
 
   it("explicitly refreshes pool config-backed agent servers on demand", async () => {
@@ -203,8 +203,8 @@ describe("ACPAgentServersRepository", () => {
         acpAgentServers: {},
       },
     });
-    const { poolsideAcpNavListAgentServers } = await import("@poolsideai/helperapi");
-    vi.mocked(poolsideAcpNavListAgentServers)
+    const { camberAcpNavListAgentServers } = await import("@camber/helperapi");
+    vi.mocked(camberAcpNavListAgentServers)
       .mockResolvedValueOnce({
         agentServers: { "codex-acp": { command: "npx" } },
       })
@@ -216,7 +216,7 @@ describe("ACPAgentServersRepository", () => {
     await repo.refresh();
     await repo.refresh();
 
-    expect(poolsideAcpNavListAgentServers).toHaveBeenCalledTimes(2);
+    expect(camberAcpNavListAgentServers).toHaveBeenCalledTimes(2);
     expect(get(appStore).userSettings.acpAgentServers).toEqual({
       "gemini-acp": { command: "node" },
     });
@@ -230,8 +230,8 @@ describe("ACPAgentServersRepository", () => {
       },
     });
     const error = new Error("assistant config: parsing assistant.json: invalid character");
-    const { poolsideAcpNavListAgentServers } = await import("@poolsideai/helperapi");
-    vi.mocked(poolsideAcpNavListAgentServers).mockRejectedValue(error);
+    const { camberAcpNavListAgentServers } = await import("@camber/helperapi");
+    vi.mocked(camberAcpNavListAgentServers).mockRejectedValue(error);
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const { repo } = createRepo(appStore);
 
@@ -247,7 +247,7 @@ describe("ACPAgentServersRepository", () => {
 
       repo.refreshWhenReady();
       await flushPromises();
-      expect(poolsideAcpNavListAgentServers).toHaveBeenCalledTimes(1);
+      expect(camberAcpNavListAgentServers).toHaveBeenCalledTimes(1);
     } finally {
       consoleError.mockRestore();
     }
@@ -261,8 +261,8 @@ describe("ACPAgentServersRepository", () => {
       },
     });
     const error = new Error("helper transport closed");
-    const { poolsideAcpNavListAgentServers } = await import("@poolsideai/helperapi");
-    vi.mocked(poolsideAcpNavListAgentServers).mockRejectedValue(error);
+    const { camberAcpNavListAgentServers } = await import("@camber/helperapi");
+    vi.mocked(camberAcpNavListAgentServers).mockRejectedValue(error);
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const { repo } = createRepo(appStore);
 
@@ -330,8 +330,8 @@ describe("ACPAgentServersRepository", () => {
       environment: { assistantHost: "desktop" },
       userSettings: { acpAgentServers: {} },
     });
-    const { poolsideAcpNavListAgentServers } = await import("@poolsideai/helperapi");
-    vi.mocked(poolsideAcpNavListAgentServers).mockResolvedValue({
+    const { camberAcpNavListAgentServers } = await import("@camber/helperapi");
+    vi.mocked(camberAcpNavListAgentServers).mockResolvedValue({
       agentServers: { local: { type: "local" } },
     });
     const { repo, sessionRepo } = createRepo(appStore);

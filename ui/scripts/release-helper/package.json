@@ -1,8 +1,8 @@
 {
-  "name": "@poolsideai/release-helper",
+  "name": "@camber/release-helper",
   "version": "1.0.0",
   "private": true,
-  "description": "CLI tool for release version management in the Poolside Assistant repo",
+  "description": "CLI tool for release version management in the Camber Assistant repo",
   "type": "module",
   "scripts": {
     "check:format": "prettier . --check --cache --ignore-path ../../.gitignore",
@@ -21,7 +21,7 @@
       "prettier --ignore-unknown --write"
     ]
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "dependencies": {
     "chalk": "^5",
     "commander": "^11",
@@ -30,9 +30,9 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "@types/semver": "^7",
     "eslint": "catalog:",

@@ -11,8 +11,8 @@ function client(initial: Record<string, string | null> = {}) {
     },
     jsonrpcCall: vi.fn(async (method: string, params: any) => {
       calls.push({ method, params });
-      if (method === "poolside/acpNav/getKeybindings") return { keybindings: stored };
-      if (method === "poolside/acpNav/setKeybindings") {
+      if (method === "camber/acpNav/getKeybindings") return { keybindings: stored };
+      if (method === "camber/acpNav/setKeybindings") {
         stored = params.keybindings;
         return { keybindings: stored };
       }

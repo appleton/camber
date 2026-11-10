@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createPopover, melt } from "@melt-ui/svelte";
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
   import { appState } from "../../hostAdapter";
   import { supportsNativeMenus } from "../chat/desktopContextMenu";
   import { presentNativeMenu, type MenuSpecItem } from "../ui/menuSpec";
@@ -99,7 +99,7 @@
         {:else if item.kind === "action"}
           {#if item.enabled === false}
             <!-- Disabled actions are informational rather than interactive
-                 (e.g. "managed by Poolside"): render as inert text, not a
+                 (e.g. "managed by Camber"): render as inert text, not a
                  disabled button. -->
             <div
               class="text-psx-foreground-secondary flex items-center gap-2 px-2 py-1.5 text-[13px]/[18px]"

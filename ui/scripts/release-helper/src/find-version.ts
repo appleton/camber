@@ -29,7 +29,6 @@ import {
   type LineageAssociation,
 } from "./release-lineage.js";
 import {
-  calculateCoordinatedVersion,
   calculateVersionPlan,
   validNumericVersions,
   versionMatchesChannel,
@@ -209,7 +208,6 @@ async function buildChangelog(
 
 /** Default stamped-changelog destinations, relative to the repository root. */
 const CHANGELOG_PATHS: Record<string, string> = {
-  vscode: "ui/apps/vscode-assistant/CHANGELOG.md",
   desktop: "ui/apps/desktop-assistant/CHANGELOG.md",
 };
 
@@ -680,22 +678,6 @@ function buildReleasePlan(
   };
 }
 
-interface CoordinatedReleaseOptions {
-  products: ReleaseProduct[];
-  bootstrapVersion?: string;
-  channel: ReleaseChannel;
-  ref: string;
-  bump: ReleaseBump;
-  mainRef: string;
-  syncVersions: boolean;
-  scheduled: boolean;
-  skipIfNoChanges: boolean;
-  vscodeDestination: string;
-  vscodeDisplayName?: string;
-  desktopDestination: string;
-  vsDestination: string;
-}
-
 function isPublishedGithubRelease(tag: string): boolean {
   const args = ["release", "view", tag, "--json", "isDraft", "--jq", ".isDraft"];
   if (process.env.GITHUB_REPOSITORY) {
@@ -754,7 +736,7 @@ function buildHelperReleasePlan(
   const action = existing ? (published ? "reuse" : "resume") : "release";
   const tagAnnotation = JSON.stringify({
     schema: 1,
-    kind: "poolside-helper-release",
+    kind: "camber-helper-release",
     tag,
     version,
     sourceSha,
@@ -773,144 +755,10 @@ function buildHelperReleasePlan(
   };
 }
 
-function buildCoordinatedReleasePlan(options: CoordinatedReleaseOptions): object {
-  if (options.products.length === 0) {
-    throw new Error("Select at least one product for a coordinated release");
-  }
-
-  if (options.bootstrapVersion && options.scheduled) {
-    throw new Error("Scheduled releases cannot bootstrap a tag lineage");
-  }
-
-  const plans = Object.fromEntries(
-    options.products.map((product) => {
-      const project = versionFinder.getProject(product);
-      const destinations: Record<ReleaseProduct, string> = {
-        vscode: options.vscodeDestination,
-        desktop: options.desktopDestination,
-        vs: options.vsDestination,
-      };
-      const destination = destinations[product];
-      if (!destination) {
-        throw new Error(`${product} coordinated releases require a destination`);
-      }
-      const common: ReleasePlanOptions = {
-        version: options.bootstrapVersion,
-        syncVersions: options.scheduled ? false : options.syncVersions,
-        scheduled: options.scheduled,
-        skipIfNoChanges: options.scheduled && options.skipIfNoChanges,
-        dryRun: false,
-        mainRef: options.mainRef,
-        destination,
-        displayName: product === "vscode" ? options.vscodeDisplayName : undefined,
-        tagPrefix: project.tag,
-        createLineage: Boolean(options.bootstrapVersion),
-        allowDivergentRef: false,
-      };
-      const scheduledPlan = buildReleasePlan(
-        product,
-        options.channel,
-        options.ref,
-        options.bump,
-        common,
-      );
-
-      if (!options.scheduled) {
-        if (
-          scheduledPlan.action === "resume" &&
-          scheduledPlan.implicitRecovery === true &&
-          typeof scheduledPlan.tag === "string" &&
-          isPublishedGithubRelease(scheduledPlan.tag)
-        ) {
-          return [
-            product,
-            buildReleasePlan(product, options.channel, options.ref, options.bump, {
-              ...common,
-              ignoreImplicitRecovery: true,
-            }),
-          ];
-        }
-        return [product, scheduledPlan];
-      }
-
-      if (scheduledPlan.action !== "skip" || scheduledPlan.version === undefined) {
-        return [product, scheduledPlan];
-      }
-
-      // A schedule retried after one product reserved its tag sees no new
-      // changes for that product. Check the manual implicit-recovery path so
-      // the coordinator can recover and reuse an unpublished reservation.
-      const recoveryPlan = buildReleasePlan(product, options.channel, options.ref, options.bump, {
-        ...common,
-        scheduled: false,
-        skipIfNoChanges: false,
-      });
-      return [
-        product,
-        recoveryPlan.action === "resume" &&
-        recoveryPlan.implicitRecovery === true &&
-        typeof recoveryPlan.tag === "string" &&
-        !isPublishedGithubRelease(recoveryPlan.tag)
-          ? recoveryPlan
-          : scheduledPlan,
-      ];
-    }),
-  ) as Partial<Record<ReleaseProduct, ProductReleasePlan>>;
-
-  const candidates = options.products.map((product) => {
-    const plan = plans[product];
-    if (!plan) throw new Error(`Missing coordinated ${product} plan`);
-    return {
-      product,
-      action: plan.action,
-      version: plan.version,
-      implicitRecovery: plan.implicitRecovery,
-    };
-  });
-  const activeProducts = candidates
-    .filter((candidate) => candidate.action !== "skip")
-    .map((candidate) => candidate.product);
-  const coordinated = options.syncVersions
-    ? calculateCoordinatedVersion(candidates)
-    : {
-        version: null,
-        activeProducts,
-        recovering: candidates.some(
-          (candidate) => candidate.action === "resume" && candidate.implicitRecovery === true,
-        ),
-      };
-  const versions = Object.fromEntries(
-    activeProducts.map((product) => {
-      const candidate = plans[product]?.version;
-      if (!candidate) throw new Error(`Active ${product} plan has no version`);
-      return [product, coordinated.version ?? candidate];
-    }),
-  );
-  const sourceShas = [
-    ...new Set(options.products.map((product) => plans[product]?.sourceSha).filter(Boolean)),
-  ];
-  if (sourceShas.length !== 1) {
-    throw new Error(`Coordinated product plans disagree on source SHA: ${sourceShas.join(", ")}`);
-  }
-
-  return {
-    channel: options.channel,
-    bootstrapVersion: options.bootstrapVersion ?? null,
-    sourceSha: sourceShas[0],
-    scheduled: options.scheduled,
-    syncVersions: options.syncVersions,
-    version: coordinated.version,
-    versions,
-    activeProducts: coordinated.activeProducts,
-    recovering: coordinated.recovering,
-    products: plans,
-  };
-}
-
 program
   .command("prev-stable")
   .description("Find the previous stable-channel version for a project")
-  .argument("<project>", "Project name (e.g., vscode, desktop)")
+  .argument("<project>", "Project name (desktop)")
   .option("--tag-prefix <prefix>", "Override the project's release tag prefix")
   .action(async (project: string, options: { tagPrefix?: string }) => {
     await printPreviousChannelVersion(project, "stable", options.tagPrefix);
@@ -918,8 +766,8 @@ program
 
 program
   .command("prev-nightly")
-  .description("Find the previous nightly (desktop) / pre-release (vscode) version for a project")
-  .argument("<project>", "Project name (e.g., vscode, desktop)")
+  .description("Find the previous desktop preview version")
+  .argument("<project>", "Project name (desktop)")
   .option("--tag-prefix <prefix>", "Override the project's release tag prefix")
   .action(async (project: string, options: { tagPrefix?: string }) => {
     await printPreviousChannelVersion(project, "nightly", options.tagPrefix);
@@ -928,7 +776,7 @@ program
 program
   .command("plan")
   .description("Create a validated, machine-readable product release plan")
-  .argument("<product>", "Product to release (vscode|desktop|vs)")
+  .argument("<product>", "Product to release (desktop)")
   .requiredOption("--channel <channel>", "Release channel (stable|nightly)")
   .option("--ref <ref>", "Commit to release", "HEAD")
   .option("--bump <bump>", "Stable bump (patch|minor|major)", "patch")
@@ -953,7 +801,7 @@ program
       options: ReleasePlanOptions & { channel: string; ref: string; bump: string },
     ) => {
       try {
-        if (product !== "vscode" && product !== "desktop" && product !== "vs") {
+        if (product !== "desktop") {
           throw new Error(`Unknown release product: ${product}`);
         }
         if (options.channel !== "stable" && options.channel !== "nightly") {
@@ -963,79 +811,6 @@ program
           throw new Error(`Unknown release bump: ${options.bump}`);
         }
         const plan = buildReleasePlan(product, options.channel, options.ref, options.bump, options);
-        console.log(JSON.stringify(plan));
-      } catch (error) {
-        console.error(chalk.red(`Error: ${error}`));
-        process.exit(1);
-      }
-    },
-  );
-
-program
-  .command("plan-products")
-  .description("Create one retry-safe version plan for coordinated product releases")
-  .option(
-    "--bootstrap-version <version>",
-    "Create or resume a lineage at an exact migration version",
-  )
-  .requiredOption("--channel <channel>", "Release channel (stable|nightly)")
-  .option("--ref <ref>", "Commit to release", "HEAD")
-  .option("--bump <bump>", "Stable bump (patch|minor|major)", "patch")
-  .option("--main-ref <ref>", "Public mainline ref used for ancestry validation", "origin/main")
-  .option("--vscode", "Include VS Code", false)
-  .option("--desktop", "Include Desktop", false)
-  .option("--vs", "Include Visual Studio", false)
-  .option("--sync-versions", "Give every active product one exact version", false)
-  .option("--scheduled", "Apply scheduled-release recovery and bootstrap rules", false)
-  .option("--skip-if-no-changes", "Exclude scheduled products with no owning-path changes", false)
-  .option("--vscode-destination <identity>", "VS Code Marketplace extension identity", "")
-  .option("--vscode-display-name <name>", "VS Code Marketplace display name")
-  .option("--desktop-destination <identity>", "CrabNebula application identity", "")
-  .option("--vs-destination <identity>", "Visual Studio Marketplace extension identity", "")
-  .action(
-    async (options: {
-      bootstrapVersion?: string;
-      channel: string;
-      ref: string;
-      bump: string;
-      mainRef: string;
-      vscode: boolean;
-      desktop: boolean;
-      vs: boolean;
-      syncVersions: boolean;
-      scheduled: boolean;
-      skipIfNoChanges: boolean;
-      vscodeDestination: string;
-      vscodeDisplayName?: string;
-      desktopDestination: string;
-      vsDestination: string;
-    }) => {
-      try {
-        if (options.channel !== "stable" && options.channel !== "nightly") {
-          throw new Error(`Unknown release channel: ${options.channel}`);
-        }
-        if (options.bump !== "patch" && options.bump !== "minor" && options.bump !== "major") {
-          throw new Error(`Unknown release bump: ${options.bump}`);
-        }
-        const products: ReleaseProduct[] = [];
-        if (options.vscode) products.push("vscode");
-        if (options.desktop) products.push("desktop");
-        if (options.vs) products.push("vs");
-        const plan = buildCoordinatedReleasePlan({
-          products,
-          bootstrapVersion: options.bootstrapVersion,
-          channel: options.channel,
-          ref: options.ref,
-          bump: options.bump,
-          mainRef: options.mainRef,
-          syncVersions: options.syncVersions,
-          scheduled: options.scheduled,
-          skipIfNoChanges: options.skipIfNoChanges,
-          vscodeDestination: options.vscodeDestination,
-          vscodeDisplayName: options.vscodeDisplayName,
-          desktopDestination: options.desktopDestination,
-          vsDestination: options.vsDestination,
-        });
         console.log(JSON.stringify(plan));
       } catch (error) {
         console.error(chalk.red(`Error: ${error}`));
@@ -1070,7 +845,7 @@ program
 program
   .command("changelog")
   .description("Generate release notes from conventional commits, path-scoped to the app")
-  .argument("<project>", "Project name (e.g., vscode, desktop)")
+  .argument("<project>", "Project name (desktop)")
   .option("--prev <ref>", "Previous tag or version to diff against (overrides --channel discovery)")
   .option(
     "--channel <channel>",
@@ -1081,7 +856,7 @@ program
   .option(
     "--repository <owner/repo>",
     "GitHub repository for commit/compare links",
-    process.env.GITHUB_REPOSITORY || "poolsideai/assistants",
+    process.env.GITHUB_REPOSITORY || "appleton/camber",
   )
   .option("--slack", "Emit the truncated Slack variant instead of the release markdown", false)
   .action(
@@ -1109,7 +884,7 @@ program
 program
   .command("render-changelog")
   .description("Regenerate a product CHANGELOG.md from its release tag history")
-  .argument("<project>", "Project name (e.g., vscode, desktop)")
+  .argument("<project>", "Project name (desktop)")
   .requiredOption("--version <version>", "Numeric version being released (top section)")
   .option("--head <sha>", "Head commit for the top section", "HEAD")
   .option("--tag-prefix <prefix>", "Override the project's release tag prefix")

@@ -16,7 +16,7 @@ function tool(meta: Record<string, unknown> | undefined, title = "tool"): ToolCa
 describe("tool categorization", () => {
   it("detects MCP tools by the __ namespace separator, across agents", () => {
     // Pool agent: <server>__<tool>, NO mcp__ prefix — the real case that regressed.
-    expect(isMcpToolCall(tool({ tool_name: "poolside-github__get_me" }))).toBe(true);
+    expect(isMcpToolCall(tool({ tool_name: "camber-github__get_me" }))).toBe(true);
     // Claude Code: mcp__<server>__<tool>, nested under claudeCode.
     expect(isMcpToolCall(tool({ tool_name: "mcp__github__search_issues" }))).toBe(true);
     expect(isMcpToolCall(tool({ claudeCode: { toolName: "mcp__linear__list" } }))).toBe(true);

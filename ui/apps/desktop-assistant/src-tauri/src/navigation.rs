@@ -76,13 +76,13 @@ pub fn open_changelog(app_handle: AppHandle) -> Result<(), String> {
 }
 
 pub fn is_third_party_licenses_deep_link(url: &Url) -> bool {
-    url.scheme() == "poolside"
+    url.scheme() == "camber"
         && url.host_str() == Some(THIRD_PARTY_LICENSES_DEEP_LINK_HOST)
         && matches!(url.path(), "" | "/")
 }
 
 pub fn is_changelog_deep_link(url: &Url) -> bool {
-    url.scheme() == "poolside"
+    url.scheme() == "camber"
         && url.host_str() == Some(CHANGELOG_DEEP_LINK_HOST)
         && matches!(url.path(), "" | "/")
 }
@@ -275,10 +275,10 @@ mod tests {
     #[test]
     fn denies_external_and_unsupported_navigation() {
         for target in [
-            "https://poolside.ai/docs",
+            "https://github.com/appleton/camber/docs",
             "http://example.com",
-            "mailto:hello@poolside.ai",
-            "poolside://auth/callback",
+            "mailto:hello@example.com",
+            "camber://auth/callback",
             "file:///etc/passwd",
             "file://tauri.localhost/etc/passwd",
             "tauri://other-host/index.html",
@@ -333,35 +333,35 @@ mod tests {
     #[test]
     fn matches_changelog_deep_links() {
         assert!(is_changelog_deep_link(
-            &Url::parse("poolside://changelog").unwrap(),
+            &Url::parse("camber://changelog").unwrap(),
         ));
         assert!(is_changelog_deep_link(
-            &Url::parse("poolside://changelog/").unwrap(),
+            &Url::parse("camber://changelog/").unwrap(),
         ));
         assert!(!is_changelog_deep_link(
-            &Url::parse("poolside://third-party-licenses").unwrap(),
+            &Url::parse("camber://third-party-licenses").unwrap(),
         ));
         assert!(!is_changelog_deep_link(
-            &Url::parse("poolside://changelog/extra").unwrap(),
+            &Url::parse("camber://changelog/extra").unwrap(),
         ));
         assert!(!is_changelog_deep_link(
-            &Url::parse("https://poolside.ai/changelog").unwrap(),
+            &Url::parse("https://github.com/appleton/camber/changelog").unwrap(),
         ));
     }
 
     #[test]
     fn matches_third_party_licenses_deep_links() {
         assert!(is_third_party_licenses_deep_link(
-            &Url::parse("poolside://third-party-licenses").unwrap(),
+            &Url::parse("camber://third-party-licenses").unwrap(),
         ));
         assert!(is_third_party_licenses_deep_link(
-            &Url::parse("poolside://third-party-licenses/").unwrap(),
+            &Url::parse("camber://third-party-licenses/").unwrap(),
         ));
         assert!(!is_third_party_licenses_deep_link(
-            &Url::parse("poolside://oauth/callback").unwrap(),
+            &Url::parse("camber://oauth/callback").unwrap(),
         ));
         assert!(!is_third_party_licenses_deep_link(
-            &Url::parse("https://poolside.ai/legal/eula").unwrap(),
+            &Url::parse("https://github.com/appleton/camber/legal/eula").unwrap(),
         ));
     }
 }

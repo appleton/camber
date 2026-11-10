@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Content } from "@agentclientprotocol/sdk";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import type { WorkspaceFolder } from "@camber/rpc";
   import ContentRenderer from "../content/ContentRenderer.svelte";
 
   interface Props {

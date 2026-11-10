@@ -14,7 +14,7 @@
 // first report after a webview boot carries reset:true so entries a previous
 // webview lifetime left behind stop counting as watched.
 
-import { poolsideAcpNavReportConversationViewState } from "@poolsideai/helperapi";
+import { camberAcpNavReportConversationViewState } from "@camber/helperapi";
 import { currentACPHostState } from "../hostAdapter";
 
 const VIEW_STATE_HOSTS = new Set(["desktop", "mobile"]);
@@ -40,7 +40,7 @@ export function reportConversationViewState(report: ConversationViewStateReport)
   state.queue = state.queue.then(async () => {
     const reset = !state.resetDone;
     try {
-      await poolsideAcpNavReportConversationViewState({
+      await camberAcpNavReportConversationViewState({
         agentServer: report.agentServer,
         sessionId: report.sessionId,
         active: report.active,
@@ -50,7 +50,7 @@ export function reportConversationViewState(report: ConversationViewStateReport)
     } catch (error) {
       // Losing a report never breaks the UI — the helper's per-connection
       // cleanup and the next report self-correct — so log and move on.
-      console.debug("poolside: conversation view-state report failed", error);
+      console.debug("camber: conversation view-state report failed", error);
     }
   });
 }

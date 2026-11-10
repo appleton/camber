@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
   import { untrack } from "svelte";
   import { getACPGithubRepo } from "../../features/GithubRepository.svelte";
   import {
@@ -198,9 +198,9 @@
   {:else if !state.repoSupported}
     <div class="github-panel-centered github-panel-message">
       <Icon name="git-branch" size={20} class="text-psx-foreground-tertiary" />
-      <p>Poolside couldn’t detect a supported GitHub remote.</p>
+      <p>Camber couldn’t detect a supported GitHub remote.</p>
       <p class="github-panel-hint">
-        Poolside checks the resolved URL of the <code>origin</code> remote. Its hostname must be
+        Camber checks the resolved URL of the <code>origin</code> remote. Its hostname must be
         <code>github.com</code> or a recognizable GitHub Enterprise hostname. Git URL aliases,
         including <code>url.*.insteadOf</code>, must resolve to one of those hostnames. Check it
         with <code>git remote get-url origin</code>.

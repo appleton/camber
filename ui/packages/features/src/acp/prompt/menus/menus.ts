@@ -1,4 +1,4 @@
-import type { MenuProps } from "@poolsideai/components/prompt";
+import type { MenuProps } from "@camber/components/prompt";
 
 export const menus = {
   command: {

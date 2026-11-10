@@ -1,4 +1,4 @@
-import { InfoMessageType, type AttachedFile } from "@poolsideai/rpc";
+import { InfoMessageType, type AttachedFile } from "@camber/rpc";
 import type { ContextRepository } from "../../../../context";
 
 interface FileContextAttachmentRPC {

@@ -5,7 +5,7 @@
     DisplayProvider,
     EnvironmentProvider,
     LogProvider,
-  } from "@poolsideai/components/providers";
+  } from "@camber/components/providers";
   import { _setContextRepoContextForTests } from "../../../context";
   import { setElicitationContext } from "../../../elicitation";
   import AcpChatPane from "./ChatPane.svelte";

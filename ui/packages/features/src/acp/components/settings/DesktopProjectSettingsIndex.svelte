@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { untrack } from "svelte";
   import { slide } from "svelte/transition";
   import { compareWorktreesByDisplayOrder } from "../../navTypes";

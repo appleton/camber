@@ -419,7 +419,7 @@ function rawResultSessionId(message: Record<string, unknown>): string | null {
 function rawConversationId(message: Record<string, unknown>): string | null {
   const params = message.params as { _meta?: unknown } | undefined | null;
   if (!params?._meta || typeof params._meta !== "object") return null;
-  const conversationId = (params._meta as Record<string, unknown>)["poolside/conversation_id"];
+  const conversationId = (params._meta as Record<string, unknown>)["camber/conversation_id"];
   return typeof conversationId === "string" && conversationId.length > 0 ? conversationId : null;
 }
 

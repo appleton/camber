@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "myers",
+    srcs = ["diff.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/diff/myers",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/camber-helper/internal/gopls/gotoolsinternal/diff"],
+)
+
+go_test(
+    name = "myers_test",
+    srcs = ["diff_test.go"],
+    deps = [
+        ":myers",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/diff/difftest",
+    ],
+)

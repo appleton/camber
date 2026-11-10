@@ -59,7 +59,7 @@ const noRestrictedUnscopedLodash: [
 
 const config: ConfigArray = ts.config(
   {
-    name: "javascript/poolside",
+    name: "javascript/camber",
     files: ["**/*.{js,mjs,cjs}"],
     rules: {
       "no-lonely-if": "warn",

@@ -1,6 +1,6 @@
 <script module lang="ts">
   import { defineMeta, type StoryContext } from "@storybook/addon-svelte-csf";
-  import * as Prompt from "@poolsideai/components/prompt";
+  import * as Prompt from "@camber/components/prompt";
   import type { ComponentProps } from "svelte";
   import ActivePromptSubmit from "./ActivePromptSubmit.svelte";
 

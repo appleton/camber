@@ -6,7 +6,7 @@ let activeAgentServer = $state<string | null>(null);
 // Whether that agent accepts MCP servers (from ACP capabilities). Relevant for
 // non-pool agents. null = not known yet (don't warn).
 let activeAgentSupportsMcp = $state<boolean | null>(null);
-// Whether the active Poolside model permits user/custom MCP servers. This is
+// Whether the active Camber model permits user/custom MCP servers. This is
 // per-model and only the live chat session knows it (the sidebar's config probe
 // uses a different/default model), so the chat broadcasts it here. null =
 // unknown / non-pool (don't warn).

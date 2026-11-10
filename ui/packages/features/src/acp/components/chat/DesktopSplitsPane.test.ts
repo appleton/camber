@@ -1,4 +1,4 @@
-import { poolsideGitStatus } from "@poolsideai/helperapi";
+import { camberGitStatus } from "@camber/helperapi";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/svelte";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { initializeStatefulModule } from "../../hostRpc";
@@ -10,9 +10,9 @@ vi.mock("./ChatPane.svelte", async () => ({
   default: (await import("./DesktopSplitsPane.chat.mock.svelte")).default,
 }));
 
-vi.mock("@poolsideai/helperapi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@poolsideai/helperapi")>()),
-  poolsideGitStatus: vi.fn(),
+vi.mock("@camber/helperapi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@camber/helperapi")>()),
+  camberGitStatus: vi.fn(),
 }));
 
 describe("DesktopSplitsPane subagent tabs", () => {
@@ -43,7 +43,7 @@ describe("DesktopSplitsPane subagent tabs", () => {
   beforeEach(() => {
     localStorage.clear();
     initializeStatefulModule(vi.fn().mockResolvedValue(undefined));
-    vi.mocked(poolsideGitStatus).mockResolvedValue({
+    vi.mocked(camberGitStatus).mockResolvedValue({
       isRepo: true,
       branch: "main",
       detached: false,
@@ -135,7 +135,7 @@ describe("DesktopSplitsPane subagent tabs", () => {
       expect(screen.queryByRole("tab", { name: "Auth researcher" })).not.toBeInTheDocument(),
     );
 
-    window.dispatchEvent(new CustomEvent("poolside:desktop-reopen-closed-tab"));
+    window.dispatchEvent(new CustomEvent("camber:desktop-reopen-closed-tab"));
     subagentTab = await screen.findByRole("tab", { name: "Auth researcher" });
     expect(subagentTab).toHaveAttribute("aria-selected", "true");
     expect(

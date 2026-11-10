@@ -1,4 +1,4 @@
-import type { Tab, TabID } from "@poolsideai/splits";
+import type { Tab, TabID } from "@camber/splits";
 import { subagentStatusIsRunning } from "../../subagents";
 import type { DesktopTabDescriptor } from "./desktopSplitsCache";
 

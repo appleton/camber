@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Button } from "@poolsideai/components/button";
-  import { Spinner } from "@poolsideai/components/spinner";
-  import type { GitHubAuthStatusOutput } from "@poolsideai/helperapi";
+  import { Button } from "@camber/components/button";
+  import { Spinner } from "@camber/components/spinner";
+  import type { GitHubAuthStatusOutput } from "@camber/helperapi";
   import { getACPGithubRepo } from "../features/GithubRepository.svelte";
   import { GITHUB_COLOR_MODES, type GitHubColorMode } from "../github/githubStatus";
   import SettingsSection from "./settings/SettingsSection.svelte";

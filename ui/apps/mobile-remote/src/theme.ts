@@ -2,7 +2,7 @@
 // token themes without the Tauri native calls. The preference (system, light,
 // dark) comes from the mobile app's own settings — see settings.ts.
 
-import type { MobileThemePreference } from "@poolsideai/assistant";
+import type { MobileThemePreference } from "@camber/assistant";
 
 export type ResolvedTheme = "light" | "dark";
 

@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "prometheus",
+    srcs = ["prometheus.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/event/export/prometheus",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/core",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/export/metric",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/label",
+    ],
+)

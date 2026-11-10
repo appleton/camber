@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { isAppleUser } from "@poolsideai/components";
-  import { Switch } from "@poolsideai/components/switch";
+  import { isAppleUser } from "@camber/components";
+  import { Switch } from "@camber/components/switch";
   import { onMount } from "svelte";
   import { desktopUpdate } from "../desktopUpdate";
   import { rpc, type RPCClient } from "../hostRpc";
@@ -73,7 +73,7 @@
   };
 
   const desktopRpc = rpc as DesktopSettingsRPC;
-  const DESKTOP_SETTINGS_CHANGED_EVENT = "poolside:desktop-settings-changed";
+  const DESKTOP_SETTINGS_CHANGED_EVENT = "camber:desktop-settings-changed";
   const MIN_CHAT_FONT_SIZE = 10;
   const MAX_CHAT_FONT_SIZE = 24;
   const MIN_CODE_FONT_SIZE = 8;
@@ -1175,7 +1175,7 @@
       </label>
     </div>
     <p class="text-psx-foreground-secondary text-[12px]/[16px]">
-      Poolside waits for all conversations to finish, then installs and restarts automatically.
+      Camber waits for all conversations to finish, then installs and restarts automatically.
     </p>
     <div class="flex w-full max-w-[360px] items-center justify-between gap-3">
       <select
@@ -1222,7 +1222,7 @@
 <SettingsSection title="About">
   <div class="flex items-center gap-1.5 px-3 pb-3 pt-3 text-[13px]/[18px]">
     <span class="text-psx-foreground-primary">
-      Poolside Assistant{appVersion ? ` ${appVersion}` : ""}
+      Camber Assistant{appVersion ? ` ${appVersion}` : ""}
     </span>
     <span class="text-psx-foreground-secondary" aria-hidden="true">·</span>
     <span class="text-psx-foreground-secondary">{appChannelLabel}</span>

@@ -5,7 +5,7 @@ import ConversationRowPopover from "./ConversationRowPopover.svelte";
 
 const sidebar = vi.hoisted(() => ({
   renameTarget: null,
-  reviewSessionKey: vi.fn(() => "poolside:conversation-1"),
+  reviewSessionKey: vi.fn(() => "camber:conversation-1"),
   isRenamingConversation: vi.fn(() => false),
   openConversationPreview: vi.fn(),
   leaveConversationPreview: vi.fn(),
@@ -52,7 +52,7 @@ describe("ConversationRowPopover", () => {
     render(ConversationRowPopover, {
       props: {
         session,
-        agentName: "Poolside",
+        agentName: "Camber",
         onOpen: vi.fn(),
         onContextMenu,
       },
@@ -70,7 +70,7 @@ describe("ConversationRowPopover", () => {
     render(ConversationRowPopover, {
       props: {
         session,
-        agentName: "Poolside",
+        agentName: "Camber",
         onOpen: vi.fn(),
         onArchive,
       },
@@ -89,7 +89,7 @@ describe("ConversationRowPopover", () => {
     render(ConversationRowPopover, {
       props: {
         session,
-        agentName: "Poolside",
+        agentName: "Camber",
         onOpen: vi.fn(),
         onArchive: vi.fn(),
       },
@@ -108,7 +108,7 @@ describe("ConversationRowPopover", () => {
     render(ConversationRowPopover, {
       props: {
         session,
-        agentName: "Poolside",
+        agentName: "Camber",
         onOpen: vi.fn(),
       },
     });

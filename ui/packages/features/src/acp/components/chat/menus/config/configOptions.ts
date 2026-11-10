@@ -3,7 +3,7 @@ import type {
   SessionConfigSelectGroup,
   SessionConfigSelectOption,
 } from "@agentclientprotocol/sdk";
-import type { IconName } from "@poolsideai/components/icon";
+import type { IconName } from "@camber/components/icon";
 import {
   fastToggleState,
   isFastConfigOption,
@@ -70,7 +70,7 @@ export function booleanCurrentValue(option: SessionConfigOption): boolean {
   return option.type === "boolean" ? option.currentValue : false;
 }
 
-// Poolside, Claude, and Codex use different names for the same permission
+// Camber, Claude, and Codex use different names for the same permission
 // semantics. The category drives the icon and the selected Dangerous warning.
 export type ModeAppearance = ConfigValueAppearance;
 
@@ -96,7 +96,7 @@ function normalizeConfigValue(value: string): string {
 }
 
 // Resolve the current mode by both its display name and wire value. Display
-// names take precedence because they preserve distinctions such as Poolside's
+// names take precedence because they preserve distinctions such as Camber's
 // "Always ask" versus Codex's "Read-only" even if an agent uses an opaque or
 // generic value internally. Matching is case/separator/punctuation insensitive.
 export function modeAppearance(option: SessionConfigOption, value?: string): ModeAppearance {
@@ -149,7 +149,7 @@ function modeValueAppearance(rawValue: string, displayName: string): ModeAppeara
   return UNKNOWN_MODE;
 }
 
-// Carrying out the work, as opposed to planning it: Poolside calls it "Build",
+// Carrying out the work, as opposed to planning it: Camber calls it "Build",
 // Codex "Default". It shares the command menu's plan/build glyph pair.
 const BUILD_MODE: ConfigValueAppearance = { category: null, icon: "code" };
 
@@ -176,7 +176,7 @@ export function collaborationAppearance(
 // Agents may describe each value ("Opus 5 · Best for everyday, complex tasks",
 // "Auto-approves workspace file reads and writes"), which pickers render as
 // subtext under the name. Agents with nothing to add repeat the name as the
-// description instead of omitting it (Poolside lists every model that way), so
+// description instead of omitting it (Camber lists every model that way), so
 // an equal description is dropped rather than printed twice.
 export function valueDescription(value: SessionConfigSelectOption): string | null {
   const description = value.description?.trim();
@@ -236,7 +236,7 @@ const CLAUDE_EFFORT_NAMES = {
 const KNOWN_EFFORT_RANGES: readonly KnownEffortRange[] = [
   {
     values: ["none", "minimal", "low", "medium", "high", "xhigh"],
-  }, // Poolside thought level
+  }, // Camber thought level
   {
     values: ["low", "medium", "high", "xhigh", "max"],
     optionIds: ["effort"],

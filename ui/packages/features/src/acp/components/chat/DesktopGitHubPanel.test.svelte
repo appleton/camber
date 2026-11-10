@@ -10,7 +10,7 @@
   let { worktreePath, onTitleChange }: Props = $props();
 
   // The real repository is wired here; its prDetail() call goes through the
-  // mocked @poolsideai/helperapi binding in the test.
+  // mocked @camber/helperapi binding in the test.
   setACPGithubContext();
 </script>
 
