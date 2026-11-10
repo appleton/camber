@@ -8,7 +8,7 @@ output="${2:?usage: build-macos-helper-runtime.sh <M.m.p> <output-directory>}"
 [[ "$(uname -s)/$(uname -m)" == Darwin/arm64 ]] || { echo "Build on Apple Silicon macOS" >&2; exit 1; }
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
-git diff --quiet HEAD || { echo "Commit source changes before building a release" >&2; exit 1; }
+[[ -z "$(git status --porcelain)" ]] || { echo "Commit source changes before building a release" >&2; exit 1; }
 source_sha="$(git rev-parse HEAD)"
 build_time="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 mkdir -p "$output"

@@ -33,7 +33,7 @@ Chat with agents locally and control desktop sessions from your phone.
 
 ## Install
 
-Camber releases have not been published yet. Build from source for now;
+Desktop installers have not been published yet. Build from source for now;
 the links below are the destinations for future releases.
 
 | Surface                             | Status    | Download                                                                                                      |

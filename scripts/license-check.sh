@@ -104,7 +104,6 @@ NPM_OVERRIDES="${TMP_DIR}/npm-overrides.json"
 cat >"$NPM_OVERRIDES" <<'JSON'
 {
   "cmdk-sv@0.0.19": "MIT",
-  "config-chain@1.1.13": "MIT",
   "khroma@2.1.0": "MIT",
   "svelte-toolbelt@0.10.6": "MIT"
 }

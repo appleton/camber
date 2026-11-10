@@ -13,7 +13,7 @@ The helper must embed the mobile UI (`pnpm -F @camber/mobile-remote embed`).
 Build from a clean committed tree on Apple Silicon with:
 
 ```sh
-scripts/build-macos-helper-runtime.sh 0.0.1 /tmp/camber-runtime
+scripts/build-macos-helper-runtime.sh 0.0.430 /tmp/camber-runtime
 ```
 
 The script stamps the source commit, version and build time, builds both Mac

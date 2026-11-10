@@ -46,7 +46,7 @@ few package managers need extra evidence:
 
   A handful of packages fail every run rather than intermittently, because they
   publish a license file but no registry metadata to read: `cmdk-sv@0.0.19`,
-  `config-chain@1.1.13`, `khroma@2.1.0`, and `svelte-toolbelt@0.10.6`. Those are
+  `khroma@2.1.0`, and `svelte-toolbelt@0.10.6`. Those are
   recorded as MIT in `NPM_OVERRIDES`, which also wins over anything recovered
   from the registry. Add an entry there only for a package the recovery step
   reports it could not resolve — an override matching no package in the SBOM is
