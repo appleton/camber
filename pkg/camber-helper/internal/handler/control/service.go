@@ -77,6 +77,9 @@ type Args struct {
 	Mode           string         `json:"mode,omitempty"`
 	Cursor         string         `json:"cursor,omitempty"`
 	WaitMs         int            `json:"waitMs,omitempty"`
+	// Archived and Limit page chat.list (list.go); Cursor carries its page token.
+	Archived bool `json:"archived,omitempty"`
+	Limit    int  `json:"limit,omitempty"`
 }
 
 type Record struct {
@@ -246,6 +249,9 @@ func (s *Service) list(ctx context.Context, a Args, children bool, g *glsp.Conte
 	}
 	if children && parent == "" {
 		return nil, pkgerrors.Errorf("parentId is required")
+	}
+	if !children {
+		return s.listSummaries(ctx, a, g)
 	}
 	state, err := s.nav.List(ctx, &methods.ACPNavListParams{}, g)
 	if err != nil {

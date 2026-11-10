@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "config.go",
         "discover.go",
+        "list.go",
         "poll.go",
         "service.go",
         "worktree.go",

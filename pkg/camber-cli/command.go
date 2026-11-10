@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -136,7 +137,7 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 	agents := group("agents", "Discover agents and their configuration")
 	add(agents, "list", "List available agents", "agents.list", cobra.NoArgs, empty)
 	agentArgs := func(cmd *cobra.Command, args []string) (map[string]any, error) {
-		return map[string]any{"agentServer": args[0], "workspacePath": getString(cmd, "workspace")}, nil
+		return map[string]any{"agentServer": args[0], "workspacePath": getPath(cmd, "workspace")}, nil
 	}
 	inspectAgent := add(agents, "inspect AGENT", "Inspect an agent and its configuration", "agents.inspect", cobra.ExactArgs(1), agentArgs)
 	inspectAgent.Flags().String("workspace", "", "Workspace path used for session-specific options")
@@ -148,23 +149,37 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 	add(projects, "list", "List projects", "projects.list", cobra.NoArgs, empty)
 	worktrees := group("worktrees", "Inspect and manage project worktrees")
 	listWorktrees := add(worktrees, "list", "List project worktrees", "worktrees.list", cobra.NoArgs, func(cmd *cobra.Command, args []string) (map[string]any, error) {
-		return map[string]any{"projectPath": getString(cmd, "project")}, nil
+		return map[string]any{"projectPath": getPath(cmd, "project")}, nil
 	})
 	listWorktrees.Flags().String("project", os.Getenv("CAMBER_PROJECT_PATH"), "Project path")
 	inspectWorktree := add(worktrees, "inspect PATH", "Inspect a worktree", "worktrees.inspect", cobra.ExactArgs(1), func(cmd *cobra.Command, args []string) (map[string]any, error) {
-		return map[string]any{"workspacePath": args[0], "projectPath": getString(cmd, "project")}, nil
+		return map[string]any{"workspacePath": absPath(args[0]), "projectPath": getPath(cmd, "project")}, nil
 	})
 	inspectWorktree.Flags().String("project", os.Getenv("CAMBER_PROJECT_PATH"), "Project path")
 	createWorktree := add(worktrees, "create NAME", "Create a project worktree", "worktrees.create", cobra.ExactArgs(1), func(cmd *cobra.Command, args []string) (map[string]any, error) {
-		return map[string]any{"projectPath": getString(cmd, "project"), "worktreeName": args[0]}, nil
+		return map[string]any{"projectPath": getPath(cmd, "project"), "worktreeName": args[0]}, nil
 	})
 	createWorktree.Flags().String("project", os.Getenv("CAMBER_PROJECT_PATH"), "Project path")
 	removeWorktree := add(worktrees, "remove PATH", "Remove a worktree through normal application validation", "worktrees.remove", cobra.ExactArgs(1), func(cmd *cobra.Command, args []string) (map[string]any, error) {
-		return map[string]any{"projectPath": getString(cmd, "project"), "workspacePath": args[0]}, nil
+		return map[string]any{"projectPath": getPath(cmd, "project"), "workspacePath": absPath(args[0])}, nil
 	})
 	removeWorktree.Flags().String("project", os.Getenv("CAMBER_PROJECT_PATH"), "Project path")
 	chat := group("chat", "Create, configure, and observe conversations")
-	add(chat, "list", "List conversations", "chat.list", cobra.NoArgs, empty)
+	listChats := add(chat, "list", "List conversation summaries, most recent first (paged)", "chat.list", cobra.NoArgs, func(cmd *cobra.Command, args []string) (map[string]any, error) {
+		archived, _ := cmd.Flags().GetBool("archived")
+		limit, _ := cmd.Flags().GetInt("limit")
+		input := map[string]any{"cursor": getString(cmd, "cursor")}
+		if archived {
+			input["archived"] = true
+		}
+		if limit != 0 {
+			input["limit"] = limit
+		}
+		return input, nil
+	})
+	listChats.Flags().Bool("archived", false, "Include archived conversations")
+	listChats.Flags().Int("limit", 0, "Conversations per page (default 200, max 500)")
+	listChats.Flags().String("cursor", "", "nextCursor from a previous page; repeat while hasMore is true")
 	for _, name := range []string{"inspect", "children", "snapshot"} {
 		add(chat, name+" [CHAT]", "Inspect or select a conversation", "chat."+name, cobra.MaximumNArgs(1), chatArgs)
 	}
@@ -193,7 +208,7 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"parentId": parent, "agentServer": getString(cmd, "agent"), "workspacePath": getString(cmd, "workspace"), "projectPath": getString(cmd, "project"), "worktreeName": getString(cmd, "new-worktree"), "config": cfg, "model": getString(cmd, "model"), "effort": getString(cmd, "effort"), "mode": getString(cmd, "mode"), "text": text, "requestId": getString(cmd, "request-id")}, nil
+		return map[string]any{"parentId": parent, "agentServer": getString(cmd, "agent"), "workspacePath": getPath(cmd, "workspace"), "projectPath": getPath(cmd, "project"), "worktreeName": getString(cmd, "new-worktree"), "config": cfg, "model": getString(cmd, "model"), "effort": getString(cmd, "effort"), "mode": getString(cmd, "mode"), "text": text, "requestId": getString(cmd, "request-id")}, nil
 	})
 	configFlags(spawn)
 	spawn.Flags().String("agent", "", "Destination agent ID")
@@ -348,6 +363,24 @@ func configFlags(cmd *cobra.Command) {
 	cmd.Flags().String("effort", "", "Reasoning effort from discovered options")
 	cmd.Flags().String("mode", "", "Agent mode ID")
 }
+
+// getPath reads a path flag as an absolute, cleaned path: the desktop
+// rejects relative and ".."-containing paths.
+func getPath(cmd *cobra.Command, name string) string {
+	return absPath(getString(cmd, name))
+}
+
+// absPath resolves path against the working directory; empty stays empty.
+func absPath(path string) string {
+	if path == "" {
+		return ""
+	}
+	if abs, err := filepath.Abs(path); err == nil {
+		return abs
+	}
+	return path
+}
+
 func getString(cmd *cobra.Command, name string) string {
 	value, _ := cmd.Flags().GetString(name)
 	aliases := map[string]string{"input": "config", "workspace": "worktree", "request-id": "idempotency-key"}

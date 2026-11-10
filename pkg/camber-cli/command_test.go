@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -242,4 +244,51 @@ func TestCallerTokenIsForwardedInDispatchParams(t *testing.T) {
 		_, present := f.calls[0].params["callerToken"]
 		assert.False(t, present)
 	})
+}
+
+func TestChatListPagingFlags(t *testing.T) {
+	f := &fakeCaller{}
+	_, err := execute(t, f, "chat", "list")
+	require.NoError(t, err)
+	require.Len(t, f.calls, 1)
+	assert.Equal(t, "chat.list", f.calls[0].params["command"])
+	assert.Equal(t, map[string]any{"cursor": ""}, f.calls[0].params["args"], "archived excluded and the default limit by default")
+
+	f = &fakeCaller{}
+	_, err = execute(t, f, "chat", "list", "--archived", "--limit", "50", "--cursor", "abc")
+	require.NoError(t, err)
+	require.Len(t, f.calls, 1)
+	assert.Equal(t, map[string]any{"archived": true, "limit": 50, "cursor": "abc"}, f.calls[0].params["args"])
+}
+
+func TestPathFlagsAreSentAbsolute(t *testing.T) {
+	t.Setenv("CAMBER_PROJECT_PATH", "")
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+	for _, tc := range []struct {
+		args  []string
+		field string
+		want  string
+	}{
+		{[]string{"chat", "spawn", "--text", "x", "--workspace", "."}, "workspacePath", wd},
+		{[]string{"chat", "spawn", "--text", "x", "--worktree", "sub/../wt"}, "workspacePath", filepath.Join(wd, "wt")},
+		{[]string{"chat", "spawn", "--text", "x", "--project", "../proj"}, "projectPath", filepath.Join(filepath.Dir(wd), "proj")},
+		{[]string{"agents", "inspect", "codex", "--workspace", "."}, "workspacePath", wd},
+		{[]string{"worktrees", "list", "--project", "."}, "projectPath", wd},
+		{[]string{"worktrees", "inspect", "wt"}, "workspacePath", filepath.Join(wd, "wt")},
+		{[]string{"worktrees", "remove", "./wt/", "--project", "/abs/../root"}, "projectPath", "/root"},
+		{[]string{"worktrees", "remove", "./wt/"}, "workspacePath", filepath.Join(wd, "wt")},
+		{[]string{"worktrees", "create", "name", "--project", "."}, "projectPath", wd},
+	} {
+		f := &fakeCaller{}
+		_, err := execute(t, f, tc.args...)
+		require.NoError(t, err, tc.args)
+		require.Len(t, f.calls, 1)
+		assert.Equal(t, tc.want, f.calls[0].params["args"].(map[string]any)[tc.field], tc.args)
+	}
+	f := &fakeCaller{}
+	_, err = execute(t, f, "chat", "spawn", "--text", "x")
+	require.NoError(t, err)
+	require.Len(t, f.calls, 1)
+	assert.Equal(t, "", f.calls[0].params["args"].(map[string]any)["workspacePath"], "an omitted path stays empty")
 }
