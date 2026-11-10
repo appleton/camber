@@ -405,10 +405,24 @@ func (s *Server) ReleasePreparedWorktree(_ context.Context, req *methods.ACPNavR
 }
 
 func (s *Server) CreateWorktree(ctx context.Context, req *methods.ACPNavCreateWorktreeParams, gCtx *glsp.Context) (methods.ACPNavProject, error) {
+	return s.createWorktree(ctx, req, gCtx, false)
+}
+
+// CreateWorktreeIsolated is CreateWorktree for control automation: git runs
+// without repo hooks or fsmonitor. The desktop UI keeps CreateWorktree.
+func (s *Server) CreateWorktreeIsolated(ctx context.Context, req *methods.ACPNavCreateWorktreeParams, gCtx *glsp.Context) (methods.ACPNavProject, error) {
+	return s.createWorktree(ctx, req, gCtx, true)
+}
+
+func (s *Server) createWorktree(ctx context.Context, req *methods.ACPNavCreateWorktreeParams, gCtx *glsp.Context, isolated bool) (methods.ACPNavProject, error) {
 	if s.store == nil {
 		return methods.ACPNavProject{}, sql.ErrConnDone
 	}
-	project, err := s.store.CreateWorktree(ctx, req.ProjectPath, req.WorktreeName)
+	create := s.store.CreateWorktree
+	if isolated {
+		create = s.store.CreateWorktreeIsolated
+	}
+	project, err := create(ctx, req.ProjectPath, req.WorktreeName)
 	if err != nil {
 		return methods.ACPNavProject{}, err
 	}

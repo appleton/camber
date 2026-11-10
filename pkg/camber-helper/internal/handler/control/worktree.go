@@ -16,7 +16,12 @@ import (
 )
 
 func (s *Service) createWorktree(ctx context.Context, a Args, g *glsp.Context) (methods.ACPNavProject, error) {
-	p, err := s.nav.CreateWorktree(ctx, &methods.ACPNavCreateWorktreeParams{ProjectPath: a.ProjectPath, WorktreeName: a.WorktreeName}, g)
+	root, err := s.registeredRootProject(ctx, a.ProjectPath, g)
+	if err != nil {
+		return methods.ACPNavProject{}, err
+	}
+	a.ProjectPath = root
+	p, err := s.nav.CreateWorktreeIsolated(ctx, &methods.ACPNavCreateWorktreeParams{ProjectPath: a.ProjectPath, WorktreeName: a.WorktreeName}, g)
 	if err != nil {
 		return p, err
 	}
@@ -117,7 +122,7 @@ func (s *Service) removeWorktree(ctx context.Context, a Args, g *glsp.Context) (
 	}
 	// Store.RemoveWorktree follows the interactive UI's force-delete path.
 	// Automation must explicitly reject dirty/untracked work before invoking it.
-	dirty, err := exec.CommandContext(ctx, "git", "-C", path, "status", "--porcelain", "--untracked-files=all").CombinedOutput()
+	dirty, err := exec.CommandContext(ctx, "git", "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", "-C", path, "status", "--porcelain", "--untracked-files=all").CombinedOutput()
 	if err != nil {
 		return nil, pkgerrors.Wrap(err, "checking worktree state")
 	}
@@ -194,4 +199,24 @@ func (s *Service) checkRegisteredWorkspace(ctx context.Context, path string, g *
 		}
 	}
 	return pkgerrors.Errorf("workspace %s is not a registered project or worktree (or a subdirectory of one)", path)
+}
+
+// registeredRootProject requires a path that creates worktrees to be a
+// registered root project itself, not a subdirectory and not a worktree
+// (symlinks resolved), and returns the registered path.
+func (s *Service) registeredRootProject(ctx context.Context, path string, g *glsp.Context) (string, error) {
+	if path == "" {
+		return "", pkgerrors.Errorf("projectPath is required")
+	}
+	state, err := s.nav.List(ctx, &methods.ACPNavListParams{}, g)
+	if err != nil {
+		return "", err
+	}
+	target := canonicalControlPath(path)
+	for _, p := range state.Projects {
+		if !p.IsWorktree && canonicalControlPath(p.Path) == target {
+			return p.Path, nil
+		}
+	}
+	return "", pkgerrors.Errorf("project %s is not a registered root project; worktrees can only be created from a registered project root (see projects list)", path)
 }

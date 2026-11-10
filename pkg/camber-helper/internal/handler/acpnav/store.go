@@ -755,6 +755,24 @@ func (s *Store) ReleasePreparedWorktree(path string) {
 }
 
 func (s *Store) CreateWorktree(ctx context.Context, projectPath, worktreeName string) (methods.ACPNavProject, error) {
+	return s.createWorktree(ctx, projectPath, worktreeName, false)
+}
+
+// CreateWorktreeIsolated is CreateWorktree for automation: git runs with repo
+// hooks and fsmonitor disabled so repo-controlled code is not executed.
+func (s *Store) CreateWorktreeIsolated(ctx context.Context, projectPath, worktreeName string) (methods.ACPNavProject, error) {
+	return s.createWorktree(ctx, projectPath, worktreeName, true)
+}
+
+// isolatedGitConfig stops git from running repo-controlled hooks or fsmonitor.
+var isolatedGitConfig = []string{"-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false"}
+
+// IsolatedGitArgs prefixes args with isolatedGitConfig.
+func IsolatedGitArgs(args ...string) []string {
+	return append(append([]string{}, isolatedGitConfig...), args...)
+}
+
+func (s *Store) createWorktree(ctx context.Context, projectPath, worktreeName string, isolated bool) (methods.ACPNavProject, error) {
 	projectPath = cleanPath(projectPath)
 	if projectPath == "" {
 		return methods.ACPNavProject{}, fmt.Errorf("project path is required")
@@ -787,7 +805,11 @@ func (s *Store) CreateWorktree(ctx context.Context, projectPath, worktreeName st
 
 	rl := s.repoLock(projectPath)
 	rl.Lock()
-	out, err := s.runGit(ctx, "-C", projectPath, "worktree", "add", "-b", branch, worktreePath)
+	addArgs := []string{"-C", projectPath, "worktree", "add", "-b", branch, worktreePath}
+	if isolated {
+		addArgs = IsolatedGitArgs(addArgs...)
+	}
+	out, err := s.runGit(ctx, addArgs...)
 	rl.Unlock()
 	if err != nil {
 		s.worktreeMu.Lock()
@@ -1387,7 +1409,7 @@ func (s *Store) RestoreConversation(ctx context.Context, c methods.ACPNavConvers
 			return err
 		}
 	}
-	if err := s.upsertConversationTx(ctx, tx, c, now); err != nil {
+	if _, err := s.upsertConversationTx(ctx, tx, c, now); err != nil {
 		return err
 	}
 	// Upserts keep an archived sub-agent archived; restoring is explicit.
@@ -1464,6 +1486,8 @@ func (s *Store) RemoveWorktree(ctx context.Context, path string) error {
 }
 
 // RemoveWorktreeSafely preserves Git failures and never forces removal.
+// It is reached only from control automation, so git runs isolated from
+// repo hooks and fsmonitor.
 func (s *Store) RemoveWorktreeSafely(ctx context.Context, path string) error {
 	return s.removeWorktree(ctx, path, false)
 }
@@ -1490,6 +1514,9 @@ func (s *Store) removeWorktree(ctx context.Context, path string, force bool) err
 			args = append(args, "--force")
 		}
 		args = append(args, path)
+		if !force {
+			args = IsolatedGitArgs(args...)
+		}
 		output, removeErr := s.runGit(ctx, args...)
 		rl.Unlock()
 		if !force && removeErr != nil {
