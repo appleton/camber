@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime/trace"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -772,6 +773,57 @@ func IsolatedGitArgs(args ...string) []string {
 	return append(append([]string{}, isolatedGitConfig...), args...)
 }
 
+// lfsFilterOverrides pins git-lfs to its canonical commands so a repo cannot
+// repoint the lfs filter at something else.
+var lfsFilterOverrides = []string{
+	"-c", "filter.lfs.smudge=git-lfs smudge -- %f",
+	"-c", "filter.lfs.process=git-lfs filter-process",
+	"-c", "filter.lfs.clean=git-lfs clean -- %f",
+	"-c", "filter.lfs.required=true",
+}
+
+// filterDriverOverrides returns -c arguments that disable every repo-configured
+// clean/smudge/process filter driver (they run config-defined commands during
+// checkout), except lfs, which is pinned to its canonical values.
+func (s *Store) filterDriverOverrides(ctx context.Context, projectPath string) ([]string, error) {
+	out, err := s.runGit(ctx, IsolatedGitArgs("-C", projectPath, "config", "--null", "--get-regexp", `^filter\..*\.(smudge|clean|process|required)$`)...)
+	if err != nil {
+		var exitErr *exec.ExitError
+		if stderrors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+			return nil, nil // no matching keys
+		}
+		return nil, fmt.Errorf("listing git filter drivers: %w: %s", err, strings.TrimSpace(string(out)))
+	}
+	names := map[string]struct{}{}
+	for _, record := range strings.Split(string(out), "\x00") {
+		key, _, _ := strings.Cut(record, "\n")
+		key = strings.TrimSpace(key)
+		rest, ok := strings.CutPrefix(key, "filter.")
+		if !ok {
+			continue
+		}
+		if i := strings.LastIndex(rest, "."); i > 0 {
+			names[rest[:i]] = struct{}{}
+		}
+	}
+	sorted := make([]string, 0, len(names))
+	for name := range names {
+		sorted = append(sorted, name)
+	}
+	sort.Strings(sorted)
+	var args []string
+	for _, name := range sorted {
+		if name == "lfs" {
+			args = append(args, lfsFilterOverrides...)
+			continue
+		}
+		for _, v := range []string{"smudge=", "clean=", "process=", "required=false"} {
+			args = append(args, "-c", "filter."+name+"."+v)
+		}
+	}
+	return args, nil
+}
+
 func (s *Store) createWorktree(ctx context.Context, projectPath, worktreeName string, isolated bool) (methods.ACPNavProject, error) {
 	projectPath = cleanPath(projectPath)
 	if projectPath == "" {
@@ -806,10 +858,17 @@ func (s *Store) createWorktree(ctx context.Context, projectPath, worktreeName st
 	rl := s.repoLock(projectPath)
 	rl.Lock()
 	addArgs := []string{"-C", projectPath, "worktree", "add", "-b", branch, worktreePath}
+	var out []byte
+	var err error
 	if isolated {
-		addArgs = IsolatedGitArgs(addArgs...)
+		var overrides []string
+		if overrides, err = s.filterDriverOverrides(ctx, projectPath); err == nil {
+			addArgs = append(append([]string{}, isolatedGitConfig...), append(overrides, addArgs...)...)
+			out, err = s.runGit(ctx, addArgs...)
+		}
+	} else {
+		out, err = s.runGit(ctx, addArgs...)
 	}
-	out, err := s.runGit(ctx, addArgs...)
 	rl.Unlock()
 	if err != nil {
 		s.worktreeMu.Lock()
