@@ -12,7 +12,7 @@ import (
 )
 
 const skillMarker = "<!-- Installed by camber skill setup. -->"
-const skillStub = "---\nname: camber\ndescription: Control the running Camber desktop, including agent configuration, conversations, projects, and worktrees.\n---\n\n" + skillMarker + "\n\nRun `camber skill show` and follow the guide it prints.\nUse `camber <command> --help` for task-specific details.\nIf the guide cannot load, run `camber status --json` and `camber --help`.\n"
+const skillStub = "---\nname: camber\ndescription: Control the running Camber desktop, including agent configuration, conversations, projects, and worktrees.\n---\n\n" + skillMarker + "\n\nRun `camber skill show` and follow the guide it prints.\nUse `camber <command> --help` for task-specific details.\nPass the `callerToken` from your Camber host context with `--caller-token` on `chat spawn` and `chat config set`; permission-bypass modes require it. Keep it private.\nIf the guide cannot load, run `camber status --json` and `camber --help`.\n"
 
 func addInstallCommands(root, skill *cobra.Command, emit func(*cobra.Command, json.RawMessage) error) {
 	cli := &cobra.Command{Use: "cli", Short: "Manage the native command entrypoint"}

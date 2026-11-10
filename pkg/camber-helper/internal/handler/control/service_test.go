@@ -85,6 +85,33 @@ func (f *fakeAgent) Prompt(ctx context.Context, p *methods.ACPPromptParams, _ *g
 		return &methods.ACPPromptOutput{StopReason: acpsdk.StopReasonEndTurn}, nil
 	}
 }
+
+// fakeCallers maps caller tokens to conversation ids, like acpproxy.
+type fakeCallers map[string]string
+
+func (f fakeCallers) ResolveCallerToken(token string) (string, bool) {
+	id, ok := f[token]
+	return id, ok
+}
+
+func (f fakeCallers) RedactCallerTokens(data []byte) []byte {
+	for token := range f {
+		data = []byte(strings.ReplaceAll(string(data), token, "[redacted]"))
+	}
+	return data
+}
+
+func (f *fakeAgent) CloseSession(_ context.Context, p *methods.ACPCloseSessionParams, _ *glsp.Context) (*methods.ACPCloseSessionOutput, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	call := "close"
+	if p.CancelInFlight {
+		call = "close:cancel"
+	}
+	f.calls = append(f.calls, call)
+	return &methods.ACPCloseSessionOutput{}, nil
+}
+
 func fixture(t *testing.T) (*Service, *fakeAgent) {
 	t.Helper()
 	store, err := acpnav.Open(context.Background(), filepath.Join(t.TempDir(), "nav.sqlite"))
@@ -94,7 +121,7 @@ func fixture(t *testing.T) (*Service, *fakeAgent) {
 	t.Cleanup(func() { require.NoError(t, nav.Close()) })
 	log := remoteaccess.NewSessionLog(remoteaccess.NewHub())
 	agent := &fakeAgent{options: testOptions, started: make(chan struct{}), finish: make(chan struct{}), log: log}
-	s := New(nav, agent, log)
+	s := New(nav, agent, log, fakeCallers{})
 	_, err = nav.UpsertProject(context.Background(), &methods.ACPNavUpsertProjectParams{Path: t.TempDir()}, nil)
 	require.NoError(t, err)
 	_, err = nav.UpsertConversation(context.Background(), &methods.ACPNavUpsertConversationParams{Conversation: methods.ACPNavConversation{ID: "parent", AgentServer: "test", WorkspacePath: t.TempDir(), Cwd: t.TempDir()}}, nil)

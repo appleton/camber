@@ -77,7 +77,7 @@ func TestUnrelatedStopRemainsAvailableDuringPreparation(t *testing.T) {
 	finished := make(chan struct{})
 	go func() {
 		defer close(finished)
-		_, _ = s.spawn(context.Background(), Args{ParentID: "parent", Text: "prepare", RequestID: "blocked"}, nil)
+		_, _ = s.spawn(context.Background(), Args{ParentID: "parent", Text: "prepare", RequestID: "blocked"}, "", nil)
 	}()
 	defer func() { close(agent.release); <-finished }()
 	select {

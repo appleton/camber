@@ -100,7 +100,7 @@ func inheritCompatible(parent, child json.RawMessage, a Args) map[string]any {
 	return out
 }
 
-func (s *Service) configure(ctx context.Context, a Args, set bool, g *glsp.Context) (any, error) {
+func (s *Service) configure(ctx context.Context, a Args, set bool, caller string, g *glsp.Context) (any, error) {
 	releaseOperation, lockErr := s.lockConversation(ctx, a.ConversationID)
 	if lockErr != nil {
 		return nil, lockErr
@@ -123,14 +123,16 @@ func (s *Service) configure(ctx context.Context, a Args, set bool, g *glsp.Conte
 			}
 		}
 	}
+	// Agent-origin calls may select a bypass mode only when the token-proven
+	// caller (the target or its parent) is live in one; see checkConfigEscalation.
+	refs := []View{v}
 	if set {
-		refs := []View{v}
 		if v.ParentID != "" {
 			if parent, perr := s.view(ctx, v.ParentID, g); perr == nil {
 				refs = append(refs, parent)
 			}
 		}
-		if err = s.checkEscalation(a, "the conversation or its parent", refs); err != nil {
+		if err = s.checkConfigEscalation(a, caller, false, v, refs); err != nil {
 			return nil, err
 		}
 	}
@@ -151,6 +153,11 @@ func (s *Service) configure(ctx context.Context, a Args, set bool, g *glsp.Conte
 	if set {
 		if len(a.Config) == 0 && a.Model == "" && a.Effort == "" && a.Mode == "" {
 			return nil, pkgerrors.Errorf("config, model, effort or mode is required")
+		}
+		// Resolve against the loaded schema so display names count, before
+		// any setter runs.
+		if err = s.checkConfigEscalation(a, caller, true, v, refs); err != nil {
+			return nil, err
 		}
 		if err = s.applyConfig(ctx, &v, a, g); err != nil {
 			return nil, err
@@ -552,12 +559,18 @@ func isDangerousModeValue(value string) bool {
 	}
 }
 
-func permissionEscalationError(value, who string) error {
-	return &methods.JSONRPCError{Code: methods.CamberErrorCodeEntityInvalid, Message: "PERMISSION_ESCALATION: permission-bypass mode " + strconv.Quote(value) + " cannot be selected through the control CLI unless " + who + " already uses one"}
+// escalationError explains how an agent can prove it may use a bypass mode.
+func escalationError(what, who string) error {
+	return &methods.JSONRPCError{Code: methods.CamberErrorCodeEntityInvalid, Message: "PERMISSION_ESCALATION: " + what + " is only allowed when the request carries --caller-token proving it comes from " + who + ", and that conversation is running in a permission-bypass mode right now. Pass the callerToken from your Camber host context, or choose a non-bypass mode."}
+}
+
+func bypassModeText(value string) string {
+	return "permission-bypass mode " + strconv.Quote(value)
 }
 
 // explicitDangerousValue returns a permission-bypass value the caller asked
-// for. It needs no schema, so it can run before any agent-side change.
+// for, judged by the raw value alone. It needs no schema, so it can run
+// before any side effect; schemaDangerousValue adds option display names.
 func explicitDangerousValue(a Args) string {
 	for _, v := range []string{a.Mode, a.Model, a.Effort} {
 		if isDangerousModeValue(v) {
@@ -570,6 +583,85 @@ func explicitDangerousValue(a Args) string {
 		}
 	}
 	return ""
+}
+
+// schemaDangerousValue resolves requested values against a session's schema
+// and returns one that changes the session to a permission-bypass choice,
+// judged by value or display name (as the UI does). Re-selecting the current
+// value is not a change. A mode value the schema does not offer is rejected,
+// so an opaque value cannot slip past the name check.
+func schemaDangerousValue(options, modes json.RawMessage, a Args) (string, error) {
+	modeOption := false
+	for _, o := range parseOptions(options) {
+		var requested []string
+		if text, ok := a.Config[o.ID].(string); ok {
+			requested = append(requested, text)
+		}
+		isMode := optionInCategory(o, "mode")
+		for category, value := range map[string]string{"mode": a.Mode, "model": a.Model, "thought_level": a.Effort} {
+			if value != "" && optionInCategory(o, category) {
+				requested = append(requested, value)
+			}
+		}
+		modeOption = modeOption || isMode
+		for _, value := range requested {
+			name, found := optionEntryName(o.Options, value)
+			if !found {
+				if isMode {
+					return "", pkgerrors.Errorf("unsupported value %q for mode option %s", value, o.ID)
+				}
+				continue
+			}
+			if current, ok := o.Current.(string); ok && current == value {
+				continue
+			}
+			if isDangerousModeValue(value) || isDangerousModeValue(name) {
+				return value, nil
+			}
+		}
+	}
+	if a.Mode == "" || modeOption {
+		return "", nil
+	}
+	var legacy struct {
+		Current   string `json:"currentModeId"`
+		Available []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"availableModes"`
+	}
+	_ = json.Unmarshal(modes, &legacy)
+	for _, m := range legacy.Available {
+		if m.ID != a.Mode {
+			continue
+		}
+		if m.ID != legacy.Current && (isDangerousModeValue(m.ID) || isDangerousModeValue(m.Name)) {
+			return m.ID, nil
+		}
+		return "", nil
+	}
+	return "", pkgerrors.Errorf("unsupported mode %q", a.Mode)
+}
+
+// optionEntryName finds a select value, including inside option groups.
+func optionEntryName(raw []json.RawMessage, value string) (string, bool) {
+	for _, r := range raw {
+		var entry struct {
+			Value   string            `json:"value"`
+			Name    string            `json:"name"`
+			Options []json.RawMessage `json:"options"`
+		}
+		if json.Unmarshal(r, &entry) != nil {
+			continue
+		}
+		if entry.Value == value && len(entry.Options) == 0 {
+			return entry.Name, true
+		}
+		if name, ok := optionEntryName(entry.Options, value); ok {
+			return name, true
+		}
+	}
+	return "", false
 }
 
 // optionsDangerous reports whether the effective mode is a bypass mode. A
@@ -588,35 +680,38 @@ func optionsDangerous(options, modes json.RawMessage) bool {
 		if isDangerousModeValue(value) {
 			return true
 		}
-		for _, r := range o.Options {
-			var entry struct {
-				Value string `json:"value"`
-				Name  string `json:"name"`
-			}
-			if json.Unmarshal(r, &entry) == nil && entry.Value == value && isDangerousModeValue(entry.Name) {
-				return true
-			}
+		if name, ok := optionEntryName(o.Options, value); ok && isDangerousModeValue(name) {
+			return true
 		}
 	}
 	if found {
 		return false
 	}
 	var legacy struct {
-		Current string `json:"currentModeId"`
+		Current   string `json:"currentModeId"`
+		Available []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"availableModes"`
 	}
 	_ = json.Unmarshal(modes, &legacy)
-	return isDangerousModeValue(legacy.Current)
+	if isDangerousModeValue(legacy.Current) {
+		return true
+	}
+	for _, m := range legacy.Available {
+		if m.ID == legacy.Current && isDangerousModeValue(m.Name) {
+			return true
+		}
+	}
+	return false
 }
 
-// conversationDangerous reports whether a conversation currently runs in a
-// permission-bypass mode, from live session state, else saved selections.
+// conversationDangerous reports whether a conversation runs, or would resume,
+// in a permission-bypass mode: live session state, else saved selections. It
+// decides whether a child would inherit a bypass mode, never authorization.
 func (s *Service) conversationDangerous(v View) bool {
-	if source, ok := s.agent.(interface {
-		SessionConfiguration(string, string) (json.RawMessage, json.RawMessage, bool)
-	}); ok && v.SessionID != "" {
-		if options, modes, found := source.SessionConfiguration(v.AgentServer, v.SessionID); found {
-			return optionsDangerous(options, modes)
-		}
+	if options, modes, found := s.liveConfiguration(v); found {
+		return optionsDangerous(options, modes)
 	}
 	if _, found, _ := savedConfiguration(v.Metadata); found {
 		saved := v
@@ -627,17 +722,85 @@ func (s *Service) conversationDangerous(v View) bool {
 	return optionsDangerous(v.ConfigOptions, v.Modes)
 }
 
-// checkEscalation rejects explicitly requested bypass modes unless one of the
-// reference conversations (target and/or parent) already uses one.
-func (s *Service) checkEscalation(a Args, who string, refs []View) error {
-	value := explicitDangerousValue(a)
-	if value == "" {
-		return nil
+// liveConfiguration returns a session's configuration only while it is loaded.
+func (s *Service) liveConfiguration(v View) (json.RawMessage, json.RawMessage, bool) {
+	source, ok := s.agent.(interface {
+		SessionConfiguration(string, string) (json.RawMessage, json.RawMessage, bool)
+	})
+	if !ok || v.SessionID == "" {
+		return nil, nil, false
+	}
+	return source.SessionConfiguration(v.AgentServer, v.SessionID)
+}
+
+// provenDangerousCaller reports whether the token-proven caller is one of
+// refs and that conversation's loaded session is in a permission-bypass mode
+// now. Saved metadata alone never qualifies: an idle conversation cannot be
+// the one asking.
+func (s *Service) provenDangerousCaller(caller string, refs ...View) bool {
+	if caller == "" {
+		return false
 	}
 	for _, ref := range refs {
-		if s.conversationDangerous(ref) {
-			return nil
+		if ref.ID != caller || ref.Archived {
+			continue
+		}
+		if options, modes, found := s.liveConfiguration(ref); found && optionsDangerous(options, modes) {
+			return true
 		}
 	}
-	return permissionEscalationError(value, who)
+	return false
+}
+
+// configNamesMode reports whether config selects a mode option, judged by the
+// parent's known schema (live, else recorded) and the conventional "mode" id.
+func (s *Service) configNamesMode(parent View, config map[string]any) bool {
+	if len(config) == 0 {
+		return false
+	}
+	if _, ok := config["mode"]; ok {
+		return true
+	}
+	options := parent.ConfigOptions
+	if live, _, found := s.liveConfiguration(parent); found {
+		options = live
+	}
+	return configSetsCategory(options, config, "mode")
+}
+
+// checkSpawnEscalation runs before any spawn side effect. A child may get a
+// permission-bypass mode, explicitly or by inheriting it from a same-agent
+// parent, only when the caller proves it is that parent and the parent is
+// live in a bypass mode. Agent defaults are not caller choices.
+func (s *Service) checkSpawnEscalation(a Args, caller string, parent View, hasParent bool) error {
+	proven := hasParent && s.provenDangerousCaller(caller, parent)
+	if proven {
+		return nil
+	}
+	if value := explicitDangerousValue(a); value != "" {
+		return escalationError("giving a child "+bypassModeText(value), "the parent conversation")
+	}
+	sameAgent := a.AgentServer == "" || a.AgentServer == parent.AgentServer
+	if hasParent && sameAgent && a.Mode == "" && !s.configNamesMode(parent, a.Config) && s.conversationDangerous(parent) {
+		return escalationError("inheriting parent conversation "+parent.ID+"'s permission-bypass mode", "that parent conversation")
+	}
+	return nil
+}
+
+// checkConfigEscalation rejects a bypass value for config.set unless the
+// proven caller is the target or its parent and is live in a bypass mode.
+// Without a schema it judges raw values, so it can run before agent calls.
+func (s *Service) checkConfigEscalation(a Args, caller string, schema bool, v View, refs []View) error {
+	value := explicitDangerousValue(a)
+	if schema {
+		resolved, err := schemaDangerousValue(v.ConfigOptions, v.Modes, a)
+		if err != nil {
+			return err
+		}
+		value = resolved
+	}
+	if value == "" || s.provenDangerousCaller(caller, refs...) {
+		return nil
+	}
+	return escalationError("selecting "+bypassModeText(value), "the conversation or its parent")
 }

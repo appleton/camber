@@ -23,10 +23,12 @@ func NewCommand() *cobra.Command { return NewCommandWithClient(&Client{}) }
 
 func NewCommandWithClient(caller Caller) *cobra.Command {
 	var instanceID string
+	var callerToken string
 	var jsonOutput bool
 	var timeout time.Duration
 	root := &cobra.Command{Use: "poolside", Short: "Control a running Camber desktop", SilenceUsage: true, SilenceErrors: true}
 	root.PersistentFlags().StringVar(&instanceID, "instance", os.Getenv("CAMBER_INSTANCE_ID"), "Desktop instance ID (otherwise use inherited context or the unique running instance)")
+	root.PersistentFlags().StringVar(&callerToken, "caller-token", os.Getenv("CAMBER_CALLER_TOKEN"), "Caller token from your Camber host context; proves which conversation is asking (needed for permission-bypass modes on chat spawn and chat config set)")
 	root.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Print structured JSON (NDJSON when following)")
 	root.PersistentFlags().DurationVar(&timeout, "timeout", 10*time.Minute, "Deadline for each desktop request (including workspace setup)")
 	root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
@@ -46,7 +48,11 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 		return writeJSON(cmd.OutOrStdout(), value, true)
 	}
 	dispatch := func(cmd *cobra.Command, name string, args map[string]any) (json.RawMessage, error) {
-		return caller.Call(cmd.Context(), "camber/control/dispatch", map[string]any{"command": name, "args": args})
+		params := map[string]any{"command": name, "args": args}
+		if callerToken != "" {
+			params["callerToken"] = callerToken
+		}
+		return caller.Call(cmd.Context(), "camber/control/dispatch", params)
 	}
 	run := func(name string, build func(*cobra.Command, []string) (map[string]any, error)) func(*cobra.Command, []string) error {
 		return func(cmd *cobra.Command, args []string) error {

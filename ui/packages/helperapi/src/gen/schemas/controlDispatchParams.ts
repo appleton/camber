@@ -10,6 +10,8 @@ export interface ControlDispatchParams {
   readonly $schema?: string;
   /** Action arguments */
   args?: unknown;
+  /** Caller token from the issuing conversation's Camber host context */
+  callerToken?: string;
   /** Action name, discoverable through actions.list */
   command: string;
 }

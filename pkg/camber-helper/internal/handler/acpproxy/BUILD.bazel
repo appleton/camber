@@ -4,6 +4,7 @@ go_library(
     name = "acpproxy",
     srcs = [
         "agent_registry.go",
+        "caller_token.go",
         "claude_auth_probe.go",
         "client.go",
         "control_context.go",

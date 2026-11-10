@@ -213,3 +213,33 @@ func TestFollowGivesUpAfterRepeatedDisconnects(t *testing.T) {
 	require.ErrorIs(t, err, io.ErrUnexpectedEOF)
 	assert.Len(t, f.calls, 4)
 }
+
+func TestCallerTokenIsForwardedInDispatchParams(t *testing.T) {
+	t.Run("flag", func(t *testing.T) {
+		t.Setenv("CAMBER_CALLER_TOKEN", "")
+		f := &fakeCaller{}
+		_, err := execute(t, f, "chat", "spawn", "parent", "--text", "task", "--caller-token", "tok-flag")
+		require.NoError(t, err)
+		require.Len(t, f.calls, 1)
+		assert.Equal(t, "tok-flag", f.calls[0].params["callerToken"])
+		_, inArgs := f.calls[0].params["args"].(map[string]any)["callerToken"]
+		assert.False(t, inArgs, "the token travels beside the action arguments")
+	})
+	t.Run("environment fallback", func(t *testing.T) {
+		t.Setenv("CAMBER_CALLER_TOKEN", "tok-env")
+		f := &fakeCaller{}
+		_, err := execute(t, f, "chat", "config", "set", "child", "--mode", "plan")
+		require.NoError(t, err)
+		require.Len(t, f.calls, 1)
+		assert.Equal(t, "tok-env", f.calls[0].params["callerToken"])
+	})
+	t.Run("absent", func(t *testing.T) {
+		t.Setenv("CAMBER_CALLER_TOKEN", "")
+		f := &fakeCaller{}
+		_, err := execute(t, f, "chat", "list")
+		require.NoError(t, err)
+		require.Len(t, f.calls, 1)
+		_, present := f.calls[0].params["callerToken"]
+		assert.False(t, present)
+	})
+}

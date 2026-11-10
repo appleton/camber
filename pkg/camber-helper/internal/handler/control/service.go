@@ -35,16 +35,28 @@ type Agent interface {
 	Cancel(context.Context, *methods.ACPCancelParams, *glsp.Context) (*methods.ACPCancelOutput, error)
 }
 
+// CallerResolver maps a caller token, delivered only in a conversation's
+// per-prompt host context, back to that conversation. It is the only way a
+// control request proves which conversation issued it.
+type CallerResolver interface {
+	ResolveCallerToken(string) (string, bool)
+	// RedactCallerTokens removes minted tokens from control output.
+	RedactCallerTokens([]byte) []byte
+}
+
 type Service struct {
 	nav        *acpnav.Server
 	agent      Agent
 	log        *remoteaccess.SessionLog
+	callers    CallerResolver
 	mu         sync.Mutex
 	operations map[string]chan struct{}
 }
 
-func New(nav *acpnav.Server, agent Agent, log *remoteaccess.SessionLog) *Service {
-	return &Service{nav: nav, agent: agent, log: log}
+// New builds the control service. callers may be nil, in which case no
+// request is ever a proven caller.
+func New(nav *acpnav.Server, agent Agent, log *remoteaccess.SessionLog, callers CallerResolver) *Service {
+	return &Service{nav: nav, agent: agent, log: log, callers: callers}
 }
 
 type Args struct {
@@ -122,6 +134,12 @@ func (s *Service) Dispatch(ctx context.Context, params *methods.ControlDispatchP
 	if a.WaitMs < 0 || a.WaitMs > 30000 {
 		return nil, pkgerrors.Errorf("waitMs must be between 0 and 30000")
 	}
+	// A resolved token proves the issuing conversation. Absent or unknown
+	// tokens leave the request unproven; most actions do not need proof.
+	caller := ""
+	if s.callers != nil && params.CallerToken != "" {
+		caller, _ = s.callers.ResolveCallerToken(params.CallerToken)
+	}
 	var out any
 	var err error
 	switch params.Command {
@@ -163,7 +181,7 @@ func (s *Service) Dispatch(ctx context.Context, params *methods.ControlDispatchP
 	case "chat.inspect":
 		out, err = s.displayView(ctx, a.ConversationID, g)
 	case "chat.spawn":
-		out, err = s.spawn(ctx, a, g)
+		out, err = s.spawn(ctx, a, caller, g)
 	case "chat.send":
 		out, err = s.send(ctx, a, g)
 	case "chat.steer":
@@ -173,7 +191,7 @@ func (s *Service) Dispatch(ctx context.Context, params *methods.ControlDispatchP
 	case "chat.poll", "chat.output", "chat.snapshot":
 		out, err = s.poll(ctx, a, params.Command, g)
 	case "chat.config.list", "chat.config.set":
-		out, err = s.configure(ctx, a, params.Command == "chat.config.set", g)
+		out, err = s.configure(ctx, a, params.Command == "chat.config.set", caller, g)
 	default:
 		err = pkgerrors.Errorf("unknown control action %q; run actions.list", params.Command)
 	}
@@ -181,6 +199,9 @@ func (s *Service) Dispatch(ctx context.Context, params *methods.ControlDispatchP
 		return nil, err
 	}
 	raw, err := json.Marshal(out)
+	if err == nil && s.callers != nil {
+		raw = s.callers.RedactCallerTokens(raw)
+	}
 	return raw, pkgerrors.WithStack(err)
 }
 
@@ -291,6 +312,9 @@ func (s *Service) probe(ctx context.Context, a Args, g *glsp.Context) (any, erro
 	if a.AgentServer == "" {
 		return nil, pkgerrors.Errorf("agentServer is required")
 	}
+	if err := s.checkRegisteredWorkspace(ctx, a.WorkspacePath, g); err != nil {
+		return nil, err
+	}
 	if err := s.initialize(ctx, a.AgentServer, g); err != nil {
 		return nil, err
 	}
@@ -304,7 +328,7 @@ func (s *Service) probe(ctx context.Context, a Args, g *glsp.Context) (any, erro
 	return map[string]any{"agentServer": a.AgentServer, "configOptions": options, "modes": modes}, nil
 }
 
-func (s *Service) spawn(ctx context.Context, a Args, g *glsp.Context) (any, error) {
+func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Context) (any, error) {
 	if strings.TrimSpace(a.Text) == "" {
 		return nil, pkgerrors.Errorf("text is required")
 	}
@@ -369,12 +393,11 @@ func (s *Service) spawn(ctx context.Context, a Args, g *glsp.Context) (any, erro
 			return nil, pkgerrors.Errorf("parent conversation %s is archived; restore it before spawning sub-agents", a.ParentID)
 		}
 	}
-	// Agent-origin calls may match their parent's permission mode, never exceed it.
-	var refs []View
-	if a.ParentID != "" {
-		refs = append(refs, parent)
-	}
-	if err := s.checkEscalation(a, "the parent conversation", refs); err != nil {
+	// A child may run in a permission-bypass mode (explicit or inherited) only
+	// when the token-proven caller is its parent and the parent is live in a
+	// bypass mode. Check before any side effect; the schema-aware check before
+	// the final configuration repeats it with option display names.
+	if err := s.checkSpawnEscalation(a, caller, parent, a.ParentID != ""); err != nil {
 		return nil, err
 	}
 	for _, requested := range []string{a.WorkspacePath, a.ProjectPath} {
@@ -414,6 +437,13 @@ func (s *Service) spawn(ctx context.Context, a Args, g *glsp.Context) (any, erro
 	if a.WorkspacePath == "" {
 		return nil, pkgerrors.Errorf("workspacePath or parentId is required")
 	}
+	if a.WorktreeName != "" {
+		root, err := s.registeredRootProject(ctx, a.ProjectPath, g)
+		if err != nil {
+			return nil, err
+		}
+		a.ProjectPath = root
+	}
 	v := View{ACPNavConversation: methods.ACPNavConversation{ID: id, WorkspacePath: a.WorkspacePath, Cwd: a.WorkspacePath, AgentServer: a.AgentServer, Title: compactText(a.Text, 256), WorkingDirectories: []string{a.WorkspacePath}}, Record: Record{Task: compactText(a.Text, 4096), RequestHash: requestHash, Status: "preparing", PreparationEpoch: s.log.ProcessEpoch()}}
 	v.ParentID, v.RootID = a.ParentID, parent.RootID
 	if v.RootID == "" {
@@ -432,7 +462,7 @@ func (s *Service) spawn(ctx context.Context, a Args, g *glsp.Context) (any, erro
 		return nil, err
 	}
 	if a.WorktreeName != "" {
-		p, err := s.nav.CreateWorktree(ctx, &methods.ACPNavCreateWorktreeParams{ProjectPath: a.ProjectPath, WorktreeName: a.WorktreeName}, g)
+		p, err := s.nav.CreateWorktreeIsolated(ctx, &methods.ACPNavCreateWorktreeParams{ProjectPath: a.ProjectPath, WorktreeName: a.WorktreeName}, g)
 		if err != nil {
 			v.Status = "failed"
 			v.Error = err.Error()
@@ -573,16 +603,53 @@ func (s *Service) spawn(ctx context.Context, a Args, g *glsp.Context) (any, erro
 		}
 	}
 
+	// a now holds explicit and inherited selections; resolve them against the
+	// child's schema (value and display name) before applying any of them.
+	escalation, err := schemaDangerousValue(v.ConfigOptions, v.Modes, a)
+	if err == nil && escalation != "" && (a.ParentID == "" || !s.provenDangerousCaller(caller, parent)) {
+		err = escalationError("giving a child "+bypassModeText(escalation), "the parent conversation")
+	}
+	if err != nil {
+		return nil, s.abandonSpawn(ctx, &v, err, false, g)
+	}
 	if err = s.applyConfig(ctx, &v, a, g); err != nil {
 		v.Status = "failed"
 		v.Error = err.Error()
 		_ = s.save(context.WithoutCancel(ctx), v)
 		return nil, err
 	}
+	// Preparation can take minutes; the parent may have been archived
+	// meanwhile. Never start a task under an archived parent.
+	if a.ParentID != "" {
+		latest, viewErr := s.view(ctx, a.ParentID, g)
+		if viewErr != nil {
+			return nil, s.abandonSpawn(ctx, &v, viewErr, false, g)
+		}
+		if latest.Archived {
+			return nil, s.abandonSpawn(ctx, &v, pkgerrors.Errorf("parent conversation %s was archived while the child was being prepared; the child was archived and its task was not sent", a.ParentID), true, g)
+		}
+	}
 	if err = s.launch(ctx, &v, a, g); err != nil {
 		return nil, err
 	}
 	return map[string]any{"conversation": v, "turnId": v.TurnID, "cursor": v.Cursor, "configOptions": v.ConfigOptions}, nil
+}
+
+// abandonSpawn fails a prepared child before its prompt: it records the error,
+// optionally archives the child, and closes its agent session.
+func (s *Service) abandonSpawn(ctx context.Context, v *View, cause error, archive bool, g *glsp.Context) error {
+	ctx = context.WithoutCancel(ctx)
+	v.Status = "failed"
+	v.Error = cause.Error()
+	_ = s.save(ctx, *v)
+	if archive {
+		_, _ = s.nav.ArchiveConversation(ctx, &methods.ACPNavArchiveConversationParams{ConversationID: v.ID}, g)
+	}
+	if v.SessionID != "" {
+		// Best effort: some ACP agents do not implement close.
+		_, _ = s.agent.CloseSession(ctx, &methods.ACPCloseSessionParams{ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: v.AgentServer}, CloseSessionRequest: acpsdk.CloseSessionRequest{SessionId: acpsdk.SessionId(v.SessionID)}, CancelInFlight: true}, g)
+	}
+	return cause
 }
 
 func (s *Service) launch(ctx context.Context, v *View, a Args, g *glsp.Context) error {

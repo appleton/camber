@@ -839,7 +839,7 @@ func newHandlerBaseState() *CamberHandler {
 	)
 
 	h.sessionLog = remoteaccess.NewSessionLog(h.remoteHub)
-	h.controlHandler = control.New(h.acpNavHandler, h.acpProxyHandler, h.sessionLog)
+	h.controlHandler = control.New(h.acpNavHandler, h.acpProxyHandler, h.sessionLog, h.acpProxyHandler)
 	h.acpNavHandler.SetArchivedSessionCloser(func(ctx context.Context, agentServer, sessionID string) {
 		_, err := h.acpProxyHandler.CloseSession(ctx, &methods.ACPCloseSessionParams{
 			ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: agentServer},

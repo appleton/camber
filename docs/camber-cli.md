@@ -95,13 +95,14 @@ camber chat spawn PARENT \
   --input '{"OPTION_ID":"VALUE"}' \
   --text @task.txt \
   --request-id api-task-001 \
+  --caller-token CALLER_TOKEN \
   --timeout 10m \
   --json
 ```
 
 Use `--workspace PATH` (or `--worktree PATH`) to share an existing workspace
-instead of creating one. Pass the parent ID from your per-prompt Camber host
-context. The desktop supplies the instance environment, but does not export a
+instead of creating one. Pass the parent ID and caller token from your
+per-prompt Camber host context (see [Caller identity](#caller-identity)). The desktop supplies the instance environment, but does not export a
 conversation ID from its shared agent process. An external wrapper may set
 `CAMBER_CONVERSATION_ID`, `CAMBER_PROJECT_PATH`, and
 `CAMBER_WORKSPACE_PATH` as optional defaults; `camber context` reports
@@ -139,14 +140,52 @@ an unapplied requested configuration.
 
 Permission and workspace guardrails apply to every control call:
 
-- Permission-bypass modes (`bypassPermissions`, `agent-full-access`,
-  `full-access`, `always-allow`, `allow-all`, `yolo`, `bypass*`) cannot be
-  requested through `--mode`, `--input`, or `chat config set` unless the parent
-  conversation (or, for `config set`, the target or its parent) already uses
-  one. Failures return `PERMISSION_ESCALATION` before any agent change. Values
-  inherited from the parent or from the agent's configured defaults are allowed.
-- An explicit `--workspace`/`--project` must be a registered project or worktree
-  (symlinks resolved) or a subdirectory of one.
+- A permission-bypass mode is one whose value or display name matches
+  `bypassPermissions`, `agent-full-access`, `full-access`, `always-allow`,
+  `allow-all`, `yolo` or `bypass*` (ignoring case and punctuation, so an opaque
+  value labelled "Full access" counts). Requested values are resolved against
+  the session's option schema; a mode value the schema does not offer is
+  rejected.
+- `chat spawn` gives a child a bypass mode, whether requested with `--mode` or
+  `--input` or inherited from a same-agent parent, only when the request's
+  `--caller-token` proves it comes from that parent and the parent's session is
+  loaded and running in a bypass mode right now. A parent that only has a saved
+  bypass selection (an idle conversation) does not qualify.
+- `chat config set` selects a bypass value only when `--caller-token` proves the
+  request comes from the target or its parent, and that conversation is loaded
+  and running in a bypass mode right now.
+- Otherwise the call fails with `PERMISSION_ESCALATION` before any change: pass
+  the caller token from your host context, or choose a non-bypass mode. A bypass
+  mode the agent applies by default (for example from the agent's configured
+  default options, or a different child agent) is not a caller choice and is
+  allowed.
+- An explicit `--workspace`/`--project`, and the `--workspace` used by
+  `agents inspect` and `agents config options`, must be a registered project or
+  worktree (symlinks resolved) or a subdirectory of one.
+- `worktrees create` and `chat spawn --new-worktree` require the project path
+  to be a registered root project itself: not a subdirectory and not a
+  worktree.
+
+### Caller identity
+
+Each prompt's Camber host context carries a `callerToken` beside the
+`instanceId` and `conversationId`. It is a random per-conversation secret that
+lives in the desktop helper's memory until the helper restarts. The desktop
+puts it only in that conversation's host context. It is not exported through
+the agent process environment, which several conversations share, and it is not
+shown in conversation lists or other CLI output (control responses replace
+known tokens with `[redacted]`). Pass it with `--caller-token TOKEN`, or set
+`CAMBER_CALLER_TOKEN` in your own command's environment. Do not write it to
+files, task text, or other conversations.
+
+The token is checked only where it unlocks extra permission: bypass modes on
+`chat spawn` and `chat config set`. A missing or unknown token makes those
+requests unproven; it does not otherwise fail them. No other action is scoped
+to the caller. Any local process that can reach the desktop's control socket
+(the same OS user) can still list, inspect, read, send to, steer or stop any
+conversation, and spawn non-bypass children under any parent. The token stops
+one conversation borrowing another's bypass mode through the CLI; it is not a
+sandbox against a process that can read your files.
 
 After a session closes or the helper restarts, configuration discovery,
 updates, and continuations restore saved selections before proceeding.
@@ -199,6 +238,13 @@ output, raw input/output, `_meta` and images become size placeholders, long
 text is truncated with a marker, and the event carries
 `_poolside: {"truncated": true, "originalBytes": N}`. The stored history and
 remote clients keep the full event.
+When any event on a page was reduced, that page returns `truncated: true` and
+`reducedEvents: N`. In `output` and `snapshot` responses,
+`agentTextTruncated: true` means agent message text on that page was cut, and
+`complete` is then `false` even though the turn finished. A reduced event can
+sit on an earlier page of a multi-page read, so treat the answer as complete
+only if no page you read had `truncated: true`; read the full text in the
+desktop transcript instead.
 UI-started turns can also be read by their original turn ID after a later turn
 starts, while their turn records and output remain retained in the helper.
 

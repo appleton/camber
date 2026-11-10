@@ -22,6 +22,9 @@ type controlContext struct {
 	ConversationID string `json:"conversationId"`
 	AgentServer    string `json:"agentServer"`
 	WorkspacePath  string `json:"workspacePath"`
+	// CallerToken proves this conversation's identity to the control
+	// dispatcher. It appears only in this prompt's host context.
+	CallerToken string `json:"callerToken,omitempty"`
 }
 
 type controlConversationSource interface {
@@ -45,6 +48,7 @@ func (h *Handler) promptControlContext(ctx context.Context, serverName, sessionI
 				ConversationID: conversation.ID,
 				AgentServer:    serverName,
 				WorkspacePath:  conversation.Cwd,
+				CallerToken:    h.CallerToken(conversation.ID),
 			}
 		}
 	}
@@ -58,7 +62,7 @@ func withControlContext(prompt []acpsdk.ContentBlock, origin *controlContext, em
 	identity, _ := json.Marshal(origin)
 	text := "\nCamber CLI origin (the conversation running this agent, independent of UI focus):\n" +
 		string(identity) +
-		"\nUse `camber skill show` for current CLI instructions. Pass the instanceId with --instance and use conversationId as the parent when spawning child conversations. Use explicit target IDs; do not infer your origin from the focused desktop conversation.\n"
+		"\nUse `camber skill show` for current CLI instructions. Pass the instanceId with --instance and use conversationId as the parent when spawning child conversations. Pass callerToken with --caller-token on `chat spawn` and `chat config set` so the desktop can verify which conversation is asking; it is required to give a child or conversation a permission-bypass mode. Keep the token private: do not write it to files, task text, or other conversations. Use explicit target IDs; do not infer your origin from the focused desktop conversation.\n"
 	out := append([]acpsdk.ContentBlock(nil), prompt...)
 	for i, block := range out {
 		if block.Resource == nil || block.Resource.Resource.TextResourceContents == nil {

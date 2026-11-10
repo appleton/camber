@@ -8,6 +8,9 @@ const ControlDispatchMethod = "camber/control/dispatch"
 type ControlDispatchParams struct {
 	Command string          `json:"command" doc:"Action name, discoverable through actions.list"`
 	Args    json.RawMessage `json:"args,omitempty" doc:"Action arguments"`
+	// CallerToken proves the issuing conversation; agents receive it in their
+	// per-prompt host context. Absent or unknown tokens prove nothing.
+	CallerToken string `json:"callerToken,omitempty" doc:"Caller token from the issuing conversation's Camber host context"`
 }
 
 type ControlDispatchOutput = json.RawMessage

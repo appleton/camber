@@ -95,6 +95,8 @@ type Handler struct {
 	// helper-owned state; agent requests block on it and surfaces answer via
 	// camber/acp/approvals/respond. Set once at wiring time.
 	approvals *approvals.Store
+	// callers holds per-conversation control caller tokens (caller_token.go).
+	callers callerTokens
 	// closed is set by Close, before it stops the processes. A session call
 	// that arrives during shutdown must not restart an agent (see
 	// processReadyForSession): nothing would stop the new subprocess, leaving
