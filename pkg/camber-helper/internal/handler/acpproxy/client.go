@@ -171,6 +171,9 @@ func (c *acpClient) SessionUpdate(_ context.Context, params acpsdk.SessionNotifi
 	// order even if the async delivery queue is busy.
 	if c.handler != nil {
 		c.handler.observeSessionUpdate(c.agentServer, string(params.SessionId), params.Update)
+		// Revoke a leaked caller token before the update reaches any surface
+		// or the control event log.
+		c.handler.observeCallerTokenLeak(c.agentServer, string(params.SessionId), params.Update)
 	}
 	c.asyncNotifications.enqueue(c.routeSessionUpdate, acpsdk.ClientMethodSessionUpdate, params)
 	return nil

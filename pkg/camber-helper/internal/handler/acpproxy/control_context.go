@@ -48,7 +48,7 @@ func (h *Handler) promptControlContext(ctx context.Context, serverName, sessionI
 				ConversationID: conversation.ID,
 				AgentServer:    serverName,
 				WorkspacePath:  conversation.Cwd,
-				CallerToken:    h.CallerToken(conversation.ID),
+				CallerToken:    h.callerTokenForSession(conversation.ID, promptSessionKey{agentServer: serverName, sessionID: sessionID}),
 			}
 		}
 	}

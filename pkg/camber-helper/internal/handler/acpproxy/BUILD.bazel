@@ -43,6 +43,7 @@ go_test(
     name = "acpproxy_test",
     srcs = [
         "agent_registry_test.go",
+        "caller_token_test.go",
         "claude_auth_probe_test.go",
         "client_test.go",
         "control_context_test.go",
