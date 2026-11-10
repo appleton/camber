@@ -65,7 +65,10 @@ few package managers need extra evidence:
   strips SPDX exception suffixes so the base license is evaluated.
 - Local/first-party packages and workflows are not third-party OSS packages; the
   script removes known local artifacts from the patched SBOM before invoking
-  Grant.
+  Grant. This includes the root Go module, `github.com/appleton/camber`, whose
+  detected license evidence includes a content hash of `NOTICE.md`. Keeping it
+  out of the dependency report prevents attribution edits from changing that
+  report when no dependency has changed.
 - GitHub Actions and the VSCE signing helper are release/workflow tooling rather
   than distributed application dependencies, so they are reported separately and
   excluded from this dependency-license policy input.

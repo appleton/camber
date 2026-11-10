@@ -157,6 +157,7 @@ JSON
 FIRST_PARTY_PACKAGES="${TMP_DIR}/first-party-packages.json"
 cat >"$FIRST_PARTY_PACKAGES" <<'JSON'
 [
+  "github.com/appleton/camber",
   "desktop-assistant",
   "./.github/actions/sign-darwin-binary",
   "./.github/actions/ui-setup",

@@ -3,9 +3,9 @@
 Generated from the patched Syft SBOM and evaluated by Grant against `grant.yaml`.
 
 - Grant result: `compliant`
-- SBOM package records: `1899`
-- Grant packages evaluated: `1696`
-- Allowed: `1696`
+- SBOM package records: `1898`
+- Grant packages evaluated: `1695`
+- Allowed: `1695`
 - Denied: `0`
 - Ignored: `0`
 - Unlicensed: `0`
@@ -21,7 +21,6 @@ The table preserves every unique ecosystem, package, and version record from the
 | go-module | github.com/ProtonMail/go-crypto | v1.1.6 | BSD-3-Clause |
 | go-module | github.com/adrg/xdg | v0.5.3 | MIT |
 | go-module | github.com/anmitsu/go-shlex | v0.0.0-20200514113438-38f4b401e2be | MIT |
-| go-module | github.com/appleton/camber | UNKNOWN | Apache-2.0, BSD-3-Clause, sha256:c19f18f345d516a9f39da54f833b827bf95d5125f5bc752070ff7b2ce66873de |
 | go-module | github.com/armon/go-socks5 | v0.0.0-20160902184237-e75332964ef5 | MIT |
 | go-module | github.com/aymanbagabas/go-osc52/v2 | v2.0.1 | MIT |
 | go-module | github.com/cloudflare/circl | v1.6.3 | BSD-3-Clause |
