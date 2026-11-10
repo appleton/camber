@@ -110,6 +110,11 @@ func (s *Service) configure(ctx context.Context, a Args, set bool, caller string
 	if err != nil {
 		return nil, err
 	}
+	if set {
+		if err = archivedError(v); err != nil {
+			return nil, err
+		}
+	}
 	cached := false
 	if source, ok := s.agent.(interface {
 		SessionConfiguration(string, string) (json.RawMessage, json.RawMessage, bool)
@@ -134,6 +139,18 @@ func (s *Service) configure(ctx context.Context, a Args, set bool, caller string
 		}
 		if err = s.checkConfigEscalation(a, caller, false, v, refs); err != nil {
 			return nil, err
+		}
+	}
+	// A restore re-applies saved selections; it may bring back a saved bypass
+	// mode only for a proven caller (see checkPromptEscalation). Listing still
+	// works without proof, from the recorded schema and saved selections.
+	if !cached {
+		if gateErr := s.checkPromptEscalation(ctx, v, caller, "restoring", g); gateErr != nil {
+			if set {
+				return nil, gateErr
+			}
+			savedConfigurationView(&v)
+			return map[string]any{"conversationId": v.ID, "configOptions": v.ConfigOptions, "modes": v.Modes, "restored": false}, nil
 		}
 	}
 	if v.Status == "running" || s.log.Cursor(v.AgentServer, v.SessionID).TurnActive {
@@ -541,6 +558,33 @@ func syncLegacyMode(v *View) {
 	}
 }
 
+// savedConfigurationView overlays a conversation's saved selections onto its
+// recorded schema without loading the session.
+func savedConfigurationView(v *View) {
+	saved, found, err := savedConfiguration(v.Metadata)
+	if err != nil || !found {
+		return
+	}
+	var opts []map[string]any
+	if json.Unmarshal(v.ConfigOptions, &opts) != nil || len(opts) == 0 {
+		_ = useSavedParentConfiguration(v)
+		return
+	}
+	for _, o := range opts {
+		id, _ := o["id"].(string)
+		if value, ok := saved.Config[id]; ok {
+			o["currentValue"] = value
+		}
+	}
+	v.ConfigOptions, _ = json.Marshal(opts)
+	var modes map[string]any
+	if saved.Mode != "" && json.Unmarshal(v.Modes, &modes) == nil && modes != nil {
+		modes["currentModeId"] = saved.Mode
+		v.Modes, _ = json.Marshal(modes)
+	}
+	syncLegacyMode(v)
+}
+
 // isDangerousModeValue reports permission-bypass mode values (no approval
 // gates). Keep in sync with modeValueAppearance in
 // ui/packages/features/src/acp/components/chat/menus/config/configOptions.ts.
@@ -750,6 +794,34 @@ func (s *Service) provenDangerousCaller(caller string, refs ...View) bool {
 		}
 	}
 	return false
+}
+
+// checkPromptEscalation gates control prompts (send, steer) and
+// control-origin session restores. A conversation that runs, or would resume
+// from saved selections, in a permission-bypass mode accepts them only from a
+// token-proven caller that is the conversation itself, or its parent while the
+// parent is live in a bypass mode.
+func (s *Service) checkPromptEscalation(ctx context.Context, v View, caller, action string, g *glsp.Context) error {
+	if !s.conversationDangerous(v) || s.provenPromptCaller(ctx, caller, v, g) {
+		return nil
+	}
+	return &methods.JSONRPCError{Code: methods.CamberErrorCodeEntityInvalid, Message: "PERMISSION_ESCALATION: conversation " + v.ID + " runs, or would resume, in a permission-bypass mode, so " + action + " it is only allowed when the request carries --caller-token proving it comes from that conversation, or from its parent while the parent is running in a permission-bypass mode right now. Pass the callerToken from your Camber host context, or ask the user to act on the conversation in the Camber desktop app."}
+}
+
+// provenPromptCaller reports whether the token-proven caller is the target
+// itself, or the target's control parent live in a permission-bypass mode.
+func (s *Service) provenPromptCaller(ctx context.Context, caller string, v View, g *glsp.Context) bool {
+	if caller == "" {
+		return false
+	}
+	if caller == v.ID {
+		return !v.Archived
+	}
+	if v.ParentID == "" || caller != v.ParentID {
+		return false
+	}
+	parent, err := s.view(ctx, v.ParentID, g)
+	return err == nil && s.provenDangerousCaller(caller, parent)
 }
 
 // configNamesMode reports whether config selects a mode option, judged by the

@@ -159,9 +159,22 @@ Permission and workspace guardrails apply to every control call:
   mode the agent applies by default (for example from the agent's configured
   default options, or a different child agent) is not a caller choice and is
   allowed.
+- `chat send` and `chat steer` to a conversation that runs in a bypass mode, or
+  would resume in one from its saved selections, require `--caller-token`
+  proving the request comes from that conversation itself, or from its parent
+  while the parent is loaded and running in a bypass mode. Otherwise they fail
+  with `PERMISSION_ESCALATION` before anything is restored or sent. `chat stop`
+  is never scoped.
+- Control actions restore a conversation whose saved selection is a bypass mode
+  only for such a proven caller. Without proof, `chat config list` returns the
+  saved selections with `restored: false`, and `chat config set` fails.
+- `chat send`, `chat steer` and `chat config set` reject archived conversations;
+  restore them first. `chat stop` still works.
 - An explicit `--workspace`/`--project`, and the `--workspace` used by
   `agents inspect` and `agents config options`, must be a registered project or
-  worktree (symlinks resolved) or a subdirectory of one.
+  worktree (symlinks resolved) or a subdirectory of one. The helper requires an
+  absolute path with no `..` segments; the CLI resolves relative flag values
+  before sending them.
 - `worktrees create` and `chat spawn --new-worktree` require the project path
   to be a registered root project itself: not a subdirectory and not a
   worktree.
@@ -176,19 +189,28 @@ the agent process environment, which several conversations share, and it is not
 shown in conversation lists or other CLI output (control responses replace
 known tokens with `[redacted]`). Pass it with `--caller-token TOKEN`, or set
 `CAMBER_CALLER_TOKEN` in your own command's environment. Do not write it to
-files, task text, or other conversations.
+files, task text, or other conversations. If the token appears in a
+conversation's messages or reasoning, even split across several messages, or
+another conversation's token appears anywhere in its output, the desktop revokes
+it immediately. Token-gated actions then fail until that conversation's next
+prompt, which carries a new token. Pass it only as `--caller-token` on the
+command line.
 
-The token is checked only where it unlocks extra permission: bypass modes on
-`chat spawn` and `chat config set`. A missing or unknown token makes those
-requests unproven; it does not otherwise fail them. No other action is scoped
-to the caller. Any local process that can reach the desktop's control socket
-(the same OS user) can still list, inspect, read, send to, steer or stop any
-conversation, and spawn non-bypass children under any parent. The token stops
+The token is checked where it unlocks extra permission: bypass modes on
+`chat spawn` and `chat config set`, and sending to, steering or restoring a
+conversation that is (or would resume) in a bypass mode. A missing or unknown
+token makes those requests unproven; it does not otherwise fail them. Any local
+process that can reach the desktop's control socket (the same OS user) can
+still list, inspect, read or stop any conversation, send to or steer any
+conversation not in a bypass mode, and spawn non-bypass children under any
+parent. The token stops
 one conversation borrowing another's bypass mode through the CLI; it is not a
 sandbox against a process that can read your files.
 
 After a session closes or the helper restarts, configuration discovery,
-updates, and continuations restore saved selections before proceeding.
+updates, and continuations restore saved selections before proceeding, except
+that a saved bypass selection is restored only for a proven caller (see
+above).
 Same-agent children also inherit saved parent selections when the parent is
 not currently loaded.
 
@@ -245,6 +267,12 @@ When any event on a page was reduced, that page returns `truncated: true` and
 sit on an earlier page of a multi-page read, so treat the answer as complete
 only if no page you read had `truncated: true`; read the full text in the
 desktop transcript instead.
+`pendingInteractions` lists approvals waiting on the user. Very large tool-call
+payloads are shortened and marked `_poolside.truncated`, and the response then
+sets `truncated: true` and `pendingInteractionsTruncated: true`. If a response
+would still be too large, it may also drop conversation metadata
+(`conversationReduced: true`) or the joined `text` field (`textOmitted: true`,
+with `complete: false`; the text is still in `events`).
 UI-started turns can also be read by their original turn ID after a later turn
 starts, while their turn records and output remain retained in the helper.
 
@@ -283,6 +311,16 @@ The current CLI command surface is:
 - `worktrees list`, `inspect`, `create`, `remove`
 - `chat list`, `inspect`, `children`, `snapshot`, `spawn`, `config list`,
   `config set`, `send`, `steer`, `stop`, `poll`, `output`, `watch`
+
+`chat list` returns one summary row per conversation (id, title, workspace,
+agent, parent/root, status, turn, archived, updatedAt), most recently updated
+first. Archived conversations are left out unless you pass `--archived`.
+Results are paged: up to `--limit` rows per page (default 200, max 500); while
+`hasMore` is true, pass `nextCursor` back with `--cursor`. A page can end early
+if it gets large. Use `chat inspect` for full detail.
+
+`--workspace`, `--worktree`, `--project` and worktree path arguments may be
+relative; the CLI turns them into absolute paths before sending.
 - `skill show`, `skill setup`, `skill status`, `skill remove`
 - `cli install`
 

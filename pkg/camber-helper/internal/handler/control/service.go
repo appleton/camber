@@ -137,6 +137,15 @@ func (s *Service) Dispatch(ctx context.Context, params *methods.ControlDispatchP
 	if a.WaitMs < 0 || a.WaitMs > 30000 {
 		return nil, pkgerrors.Errorf("waitMs must be between 0 and 30000")
 	}
+	// Validate caller-supplied paths on the raw string, then use only the
+	// cleaned form downstream (registration checks and agent cwd alike).
+	var pathErr error
+	if a.WorkspacePath, pathErr = cleanControlPath("workspacePath", a.WorkspacePath); pathErr != nil {
+		return nil, pathErr
+	}
+	if a.ProjectPath, pathErr = cleanControlPath("projectPath", a.ProjectPath); pathErr != nil {
+		return nil, pathErr
+	}
 	// A resolved token proves the issuing conversation. Absent or unknown
 	// tokens leave the request unproven; most actions do not need proof.
 	caller := ""
@@ -186,9 +195,9 @@ func (s *Service) Dispatch(ctx context.Context, params *methods.ControlDispatchP
 	case "chat.spawn":
 		out, err = s.spawn(ctx, a, caller, g)
 	case "chat.send":
-		out, err = s.send(ctx, a, g)
+		out, err = s.send(ctx, a, caller, g)
 	case "chat.steer":
-		out, err = s.steer(ctx, a, g)
+		out, err = s.steer(ctx, a, caller, g)
 	case "chat.stop":
 		out, err = s.stop(ctx, a, g)
 	case "chat.poll", "chat.output", "chat.snapshot":
@@ -462,66 +471,53 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 		return nil, err
 	}
 	if _, err := s.nav.UpsertConversation(ctx, &methods.ACPNavUpsertConversationParams{Conversation: v.ACPNavConversation}, g); err != nil {
-		v.Status = "failed"
-		v.Error = err.Error()
-		_ = s.save(context.WithoutCancel(ctx), v)
-		return nil, err
+		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
 	if a.WorktreeName != "" {
 		p, err := s.nav.CreateWorktreeIsolated(ctx, &methods.ACPNavCreateWorktreeParams{ProjectPath: a.ProjectPath, WorktreeName: a.WorktreeName}, g)
 		if err != nil {
-			v.Status = "failed"
-			v.Error = err.Error()
 			if p.Path != "" {
 				v.WorkspacePath = p.Path
 				v.Cwd = p.Path
 				v.OwnsWorktree = true
 				_, _ = s.nav.UpsertConversation(context.WithoutCancel(ctx), &methods.ACPNavUpsertConversationParams{Conversation: v.ACPNavConversation}, g)
 			}
-			_ = s.save(context.WithoutCancel(ctx), v)
-			return nil, err
+			return nil, s.abandonSpawn(ctx, &v, err, false, g)
 		}
 		v.WorkspacePath = p.Path
 		v.Cwd = p.Path
 		v.WorkingDirectories = []string{p.Path}
 		v.OwnsWorktree = true
 		if err = s.save(ctx, v); err != nil {
-			return nil, err
+			return nil, s.abandonSpawn(ctx, &v, err, false, g)
 		}
 		if _, err = s.nav.UpsertConversation(ctx, &methods.ACPNavUpsertConversationParams{Conversation: v.ACPNavConversation}, g); err != nil {
-			return nil, err
+			return nil, s.abandonSpawn(ctx, &v, err, false, g)
 		}
 		settings, settingsErr := s.nav.GetProjectSettings(ctx, &methods.ACPNavGetProjectSettingsParams{Path: a.ProjectPath}, g)
 		if settingsErr == nil {
 			settingsErr = runWorktreeScript(ctx, v.Cwd, settings.Settings.SetupScript)
 		}
 		if settingsErr != nil {
-			v.Status = "failed"
-			v.Error = settingsErr.Error()
-			_ = s.save(context.WithoutCancel(ctx), v)
-			return nil, settingsErr
+			return nil, s.abandonSpawn(ctx, &v, settingsErr, false, g)
 		}
 	}
 	if _, err := s.nav.UpsertConversation(ctx, &methods.ACPNavUpsertConversationParams{Conversation: v.ACPNavConversation}, g); err != nil {
-		return nil, err
+		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
 	if err := s.initialize(ctx, a.AgentServer, g); err != nil {
-		v.Status = "failed"
-		v.Error = err.Error()
-		_ = s.save(context.WithoutCancel(ctx), v)
-		return nil, err
+		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
 	resp, err := s.agent.NewSession(ctx, &methods.ACPNewSessionParams{ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: a.AgentServer}, NewSessionRequest: acpsdk.NewSessionRequest{Cwd: v.Cwd, McpServers: []acpsdk.McpServer{}, Meta: map[string]any{acp.MetaKeySessionConversationID: id}}}, g)
 	if err != nil {
-		v.Status = "failed"
-		v.Error = err.Error()
-		_ = s.save(context.WithoutCancel(ctx), v)
-		return nil, err
+		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
+	// From here on the child has an open agent session: every failure must
+	// go through abandonSpawn so the session is closed and the status recorded.
 	v.SessionID = string(resp.SessionId)
 	v.ConfigOptions, v.Modes = captureConfig(resp)
 	if _, err = s.nav.UpsertConversation(ctx, &methods.ACPNavUpsertConversationParams{Conversation: v.ACPNavConversation}, g); err != nil {
-		return nil, err
+		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
 	if parent.AgentServer == v.AgentServer {
 		parentLive := false
@@ -536,18 +532,12 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 		}
 		if !parentLive {
 			if err = useSavedParentConfiguration(&parent); err != nil {
-				v.Status = "failed"
-				v.Error = err.Error()
-				_ = s.save(context.WithoutCancel(ctx), v)
-				return nil, err
+				return nil, s.abandonSpawn(ctx, &v, err, false, g)
 			}
 		}
 	}
 	if err = validateConfigKeys(v.ConfigOptions, a.Config); err != nil {
-		v.Status = "failed"
-		v.Error = err.Error()
-		_ = s.save(context.WithoutCancel(ctx), v)
-		return nil, err
+		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
 	// The selected model determines which effort and mode selections can be
 	// inherited. Apply it before filtering inherited dependent values.
@@ -557,7 +547,7 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 			modelID = o.ID
 			if explicit, ok := a.Config[o.ID].(string); ok {
 				if modelValue != "" && modelValue != explicit {
-					return nil, pkgerrors.Errorf("conflicting values for option %s", o.ID)
+					return nil, s.abandonSpawn(ctx, &v, pkgerrors.Errorf("conflicting values for option %s", o.ID), false, g)
 				}
 				modelValue = explicit
 			}
@@ -579,10 +569,7 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 			modelArgs = Args{Config: map[string]any{modelID: modelValue}}
 		}
 		if err = s.applyConfig(ctx, &v, modelArgs, g); err != nil {
-			v.Status = "failed"
-			v.Error = err.Error()
-			_ = s.save(context.WithoutCancel(ctx), v)
-			return nil, err
+			return nil, s.abandonSpawn(ctx, &v, err, false, g)
 		}
 	}
 	if parent.AgentServer == v.AgentServer {
@@ -619,10 +606,7 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
 	if err = s.applyConfig(ctx, &v, a, g); err != nil {
-		v.Status = "failed"
-		v.Error = err.Error()
-		_ = s.save(context.WithoutCancel(ctx), v)
-		return nil, err
+		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
 	// Preparation can take minutes; the parent may have been archived
 	// meanwhile. Never start a task under an archived parent.
@@ -636,7 +620,8 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 		}
 	}
 	if err = s.launch(ctx, &v, a, g); err != nil {
-		return nil, err
+		// launch fails only before the prompt starts, so the session is idle.
+		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
 	return map[string]any{"conversation": v, "turnId": v.TurnID, "cursor": v.Cursor, "configOptions": v.ConfigOptions}, nil
 }
@@ -733,7 +718,7 @@ func (s *Service) launch(ctx context.Context, v *View, a Args, g *glsp.Context) 
 	}()
 	return nil
 }
-func (s *Service) send(ctx context.Context, a Args, g *glsp.Context) (any, error) {
+func (s *Service) send(ctx context.Context, a Args, caller string, g *glsp.Context) (any, error) {
 	release, lockErr := s.lockConversation(ctx, a.ConversationID)
 	if lockErr != nil {
 		return nil, lockErr
@@ -744,6 +729,9 @@ func (s *Service) send(ctx context.Context, a Args, g *glsp.Context) (any, error
 	}
 	v, err := s.view(ctx, a.ConversationID, g)
 	if err != nil {
+		return nil, err
+	}
+	if err = archivedError(v); err != nil {
 		return nil, err
 	}
 	if a.RequestID != "" {
@@ -760,6 +748,11 @@ func (s *Service) send(ctx context.Context, a Args, g *glsp.Context) (any, error
 		}
 	}
 
+	// Gate before restoring, so an unproven caller can neither prompt a bypass
+	// conversation nor have a restore re-apply its saved bypass selection.
+	if err = s.checkPromptEscalation(ctx, v, caller, "sending to", g); err != nil {
+		return nil, err
+	}
 	if v.Status == "running" || s.log.Cursor(v.AgentServer, v.SessionID).TurnActive {
 		return nil, pkgerrors.Errorf("conversation already has a running turn")
 	}
@@ -778,7 +771,7 @@ func (s *Service) send(ctx context.Context, a Args, g *glsp.Context) (any, error
 	}
 	return map[string]any{"conversationId": v.ID, "turnId": v.TurnID, "cursor": v.Cursor}, nil
 }
-func (s *Service) steer(ctx context.Context, a Args, g *glsp.Context) (any, error) {
+func (s *Service) steer(ctx context.Context, a Args, caller string, g *glsp.Context) (any, error) {
 	if a.RequestID != "" {
 		return nil, pkgerrors.Errorf("steering does not support requestId; inspect the turn before retrying an uncertain delivery")
 	}
@@ -789,9 +782,18 @@ func (s *Service) steer(ctx context.Context, a Args, g *glsp.Context) (any, erro
 	if strings.TrimSpace(a.Text) == "" {
 		return nil, pkgerrors.Errorf("text is required")
 	}
+	if err = archivedError(v); err != nil {
+		return nil, err
+	}
+	if err = s.checkPromptEscalation(ctx, v, caller, "steering", g); err != nil {
+		return nil, err
+	}
 
 	return s.agent.Steer(ctx, &methods.ACPSteerParams{ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: v.AgentServer}, ACPSteerRequest: methods.ACPSteerRequest{SessionID: acpsdk.SessionId(v.SessionID), Prompt: content(a.Text), Meta: expectedTurnMeta(a.TurnID)}}, g)
 }
+
+// stop is unscoped and works on archived conversations: cancelling a turn
+// never grants an agent anything.
 func (s *Service) stop(ctx context.Context, a Args, g *glsp.Context) (any, error) {
 	v, err := s.view(ctx, a.ConversationID, g)
 	if err != nil {
@@ -800,6 +802,15 @@ func (s *Service) stop(ctx context.Context, a Args, g *glsp.Context) (any, error
 
 	_, err = s.agent.Cancel(ctx, &methods.ACPCancelParams{ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: v.AgentServer}, CancelNotification: acpsdk.CancelNotification{SessionId: acpsdk.SessionId(v.SessionID), Meta: expectedTurnMeta(a.TurnID)}}, g)
 	return map[string]any{"conversationId": v.ID, "cancelRequested": err == nil}, err
+}
+
+// archivedError rejects actions that would put an archived conversation back
+// to work.
+func archivedError(v View) error {
+	if v.Archived {
+		return pkgerrors.Errorf("conversation %s is archived; restore it first", v.ID)
+	}
+	return nil
 }
 
 func compactText(text string, max int) string {

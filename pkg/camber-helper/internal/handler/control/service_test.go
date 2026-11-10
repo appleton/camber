@@ -86,6 +86,20 @@ func (f *fakeAgent) Prompt(ctx context.Context, p *methods.ACPPromptParams, _ *g
 	}
 }
 
+func (f *fakeAgent) Steer(context.Context, *methods.ACPSteerParams, *glsp.Context) (*methods.ACPSteerOutput, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls = append(f.calls, "steer")
+	return &methods.ACPSteerOutput{}, nil
+}
+
+func (f *fakeAgent) Cancel(context.Context, *methods.ACPCancelParams, *glsp.Context) (*methods.ACPCancelOutput, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls = append(f.calls, "cancel")
+	return &methods.ACPCancelOutput{}, nil
+}
+
 // fakeCallers maps caller tokens to conversation ids, like acpproxy.
 type fakeCallers map[string]string
 
@@ -198,7 +212,7 @@ func TestInvalidConfigNeverStartsTask(t *testing.T) {
 	_, err := s.Dispatch(context.Background(), &methods.ControlDispatchParams{Command: "chat.spawn", Args: raw}, nil)
 	require.ErrorContains(t, err, "unsupported value")
 	agent.mu.Lock()
-	assert.Equal(t, []string{"new", "set:model"}, agent.calls)
+	assert.Equal(t, []string{"new", "set:model", "close:cancel"}, agent.calls, "the prepared session is closed")
 	agent.mu.Unlock()
 }
 func TestRequestIDRejectsDifferentTask(t *testing.T) {
@@ -270,7 +284,7 @@ func TestUnknownConfigDoesNotMutateAgent(t *testing.T) {
 	_, err := s.Dispatch(context.Background(), &methods.ControlDispatchParams{Command: "chat.spawn", Args: raw}, nil)
 	require.ErrorContains(t, err, "unknown configuration")
 	agent.mu.Lock()
-	assert.Equal(t, []string{"new"}, agent.calls)
+	assert.Equal(t, []string{"new", "close:cancel"}, agent.calls, "the prepared session is closed")
 	agent.mu.Unlock()
 }
 func TestOutputForCompletedTurnExcludesLaterUIEvents(t *testing.T) {

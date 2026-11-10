@@ -156,6 +156,27 @@ func conversationUsesWorktree(c methods.ACPNavConversation, root string) bool {
 	}
 	return false
 }
+
+// cleanControlPath validates a caller-supplied path on its raw form, before
+// any lexical cleaning, and returns the cleaned path to use from then on. A
+// ".." segment is rejected because cleaning would drop it lexically while the
+// kernel resolves it through a symlink, so "/proj/link/.." could pass the
+// registration check yet name a directory outside the project.
+func cleanControlPath(field, path string) (string, error) {
+	if path == "" {
+		return "", nil
+	}
+	if !filepath.IsAbs(path) {
+		return "", pkgerrors.Errorf("%s must be an absolute path: %s", field, path)
+	}
+	for _, segment := range strings.FieldsFunc(path, func(r rune) bool { return r == '/' || r == filepath.Separator }) {
+		if segment == ".." {
+			return "", pkgerrors.Errorf("%s must not contain \"..\" segments: %s", field, path)
+		}
+	}
+	return filepath.Clean(path), nil
+}
+
 func canonicalControlPath(path string) string {
 	if path == "" {
 		return ""

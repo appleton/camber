@@ -30,8 +30,10 @@ go_test(
     srcs = [
         "config_recovery_test.go",
         "lifecycle_test.go",
+        "list_test.go",
         "permission_test.go",
         "poll_test.go",
+        "scope_test.go",
         "service_test.go",
     ],
     embed = [":control"],
