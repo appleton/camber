@@ -7,6 +7,7 @@ import (
 	"time"
 
 	pkgerrors "github.com/pkg/errors"
+	"github.com/appleton/camber/pkg/camber-helper/internal/handler/remoteaccess"
 	"github.com/appleton/camber/pkg/camber-helper/methods"
 	"github.com/tliron/glsp"
 )
@@ -142,7 +143,9 @@ func (s *Service) poll(ctx context.Context, a Args, command string, g *glsp.Cont
 			status = "idle"
 		}
 		terminal := !running && !waiting
-		out := map[string]any{"events": page.Events, "cursor": page.Cursor, "nextCursor": page.NextCursor, "turnActive": running, "resetRequired": page.ResetRequired, "hasMore": page.HasMore, "conversation": v, "turnId": v.TurnID, "status": status, "result": v.Result, "error": v.Error, "terminal": terminal && !page.HasMore, "waitExpired": a.WaitMs > 0 && time.Now().After(deadline) && !terminal, "pendingInteractions": pending}
+		out := map[string]any{"events": page.Events, "cursor": page.Cursor, "nextCursor": page.NextCursor, "turnActive": running, "resetRequired": page.ResetRequired, "hasMore": page.HasMore, "conversation": v, "turnId": v.TurnID, "status": status, "result": v.Result, "error": v.Error, "terminal": terminal && !page.HasMore, "waitExpired": a.WaitMs > 0 && time.Now().After(deadline) && !terminal}
+		bounded, pendingTruncated := boundPendingInteractions(pending)
+		out["pendingInteractions"] = bounded
 		if page.ReducedEvents > 0 {
 			out["truncated"] = true
 			out["reducedEvents"] = page.ReducedEvents
@@ -182,6 +185,11 @@ func (s *Service) poll(ctx context.Context, a Args, command string, g *glsp.Cont
 				out["scope"] = "retained_session"
 			}
 		}
+		if pendingTruncated {
+			out["truncated"] = true
+			out["pendingInteractionsTruncated"] = true
+		}
+		fitPollResponse(out, pending)
 		return out, nil
 	}
 }
@@ -205,4 +213,113 @@ func (s *Service) observedTurn(ctx context.Context, v View, id string) (Record, 
 		record.EndCursor = s.log.CursorAt(v.AgentServer, v.SessionID, observed.Epoch, observed.EndSeq)
 	}
 	return record, true, nil
+}
+
+const (
+	// pendingInteractionCap bounds one pending interaction's encoding; a
+	// permission request carries the agent's raw tool call, which can hold a
+	// whole proposed file write.
+	pendingInteractionCap = 32 * 1024
+	// pendingInteractionsCap bounds all pending interactions on one page;
+	// interactions past it are reduced to identifying stubs.
+	pendingInteractionsCap = 96 * 1024
+	// pollResponseCap keeps a whole poll response well under the 1 MiB
+	// control frame limit.
+	pollResponseCap = 768 * 1024
+)
+
+// boundPendingInteractions reduces oversized pending interactions (marked
+// _poolside.truncated) and stubs those past the total budget, reporting
+// whether anything was cut.
+func boundPendingInteractions(pending []methods.ACPApproval) ([]any, bool) {
+	out := make([]any, 0, len(pending))
+	total, truncated := 0, false
+	for _, p := range pending {
+		var item any = p
+		enc, err := json.Marshal(p)
+		switch {
+		case err != nil:
+			item, truncated = pendingStub(p, 0), true
+		case len(enc) > pendingInteractionCap:
+			item, truncated = withApprovalIdentity(remoteaccess.ReduceControlValue(p, len(enc), pendingInteractionCap), p), true
+		}
+		size := encodedLen(item)
+		if total+size > pendingInteractionsCap {
+			item, truncated = pendingStub(p, len(enc)), true
+			size = encodedLen(item)
+		}
+		total += size
+		out = append(out, item)
+	}
+	return out, truncated
+}
+
+// fitPollResponse shrinks out until its encoding fits pollResponseCap:
+// first pending interactions become stubs, then the conversation drops its
+// bulky metadata, then the derived text (still present in events) goes.
+// Event pages are already bounded by the session log.
+func fitPollResponse(out map[string]any, pending []methods.ACPApproval) {
+	if encodedLen(out) <= pollResponseCap {
+		return
+	}
+	if len(pending) > 0 {
+		stubs := make([]any, 0, len(pending))
+		for _, p := range pending {
+			stubs = append(stubs, pendingStub(p, 0))
+		}
+		out["pendingInteractions"] = stubs
+		out["pendingInteractionsTruncated"] = true
+		out["truncated"] = true
+		if encodedLen(out) <= pollResponseCap {
+			return
+		}
+	}
+	if v, ok := out["conversation"].(View); ok {
+		v.Metadata, v.ConfigOptions, v.Modes = nil, nil, nil
+		if len(v.Task) > 1024 {
+			v.Task = strings.ToValidUTF8(v.Task[:1024], "")
+		}
+		out["conversation"] = v
+		out["conversationReduced"] = true
+		out["truncated"] = true
+		if encodedLen(out) <= pollResponseCap {
+			return
+		}
+	}
+	if text, ok := out["text"].(string); ok && text != "" {
+		out["text"] = ""
+		out["textOmitted"] = true
+		out["complete"] = false
+		out["truncated"] = true
+	}
+}
+
+// pendingStub keeps only what identifies a pending interaction.
+func pendingStub(p methods.ACPApproval, originalBytes int) map[string]any {
+	marker := map[string]any{"truncated": true, "omitted": true}
+	if originalBytes > 0 {
+		marker["originalBytes"] = originalBytes
+	}
+	return withApprovalIdentity(map[string]any{"_poolside": marker}, p).(map[string]any)
+}
+
+// withApprovalIdentity restores identifying fields a reduction may have cut.
+func withApprovalIdentity(reduced any, p methods.ACPApproval) any {
+	m, ok := reduced.(map[string]any)
+	if !ok {
+		m = map[string]any{"_poolside": map[string]any{"truncated": true}}
+	}
+	m["agentServer"], m["sessionId"], m["kind"], m["id"] = p.AgentServer, p.SessionID, p.Kind, p.ID
+	if p.CreatedAt != "" {
+		m["createdAt"] = p.CreatedAt
+	}
+	return m
+}
+
+func encodedLen(v any) int {
+	raw, err := json.Marshal(v)
+	if err != nil {
+		return 0
+	}
+	return len(raw)
 }

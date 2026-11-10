@@ -3,6 +3,7 @@ package control
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -10,6 +11,9 @@ import (
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/remoteaccess"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tliron/glsp"
+
+	"github.com/appleton/camber/pkg/camber-helper/methods"
 )
 
 func chunk(text string) map[string]any {
@@ -117,4 +121,88 @@ func TestNormalFinalPageIsCompleteAndNotTruncated(t *testing.T) {
 	assert.Equal(t, true, out["complete"])
 	assert.Equal(t, false, out["truncated"])
 	assert.Equal(t, false, out["agentTextTruncated"])
+}
+
+// approvalAgent reports fixed pending approvals, like acpproxy.
+type approvalAgent struct {
+	*fakeAgent
+	pending []methods.ACPApproval
+}
+
+func (a *approvalAgent) ListApprovals(context.Context, *struct{}, *glsp.Context) (methods.ACPApprovalsDidChangeParams, error) {
+	return methods.ACPApprovalsDidChangeParams{Pending: a.pending}, nil
+}
+
+func hugeApproval(id string) methods.ACPApproval {
+	content := strings.Repeat("z", 2<<20)
+	toolCall, _ := json.Marshal(map[string]any{
+		"toolCallId": "write-" + id, "title": "Write big.txt", "kind": "edit",
+		"rawInput": map[string]any{"file_path": "big.txt", "content": content},
+		"content":  []any{map[string]any{"type": "diff", "path": "big.txt", "newText": content}},
+	})
+	return methods.ACPApproval{
+		AgentServer: "test", SessionID: "session", Kind: "permission", ID: id,
+		Permission: &methods.ACPApprovalPermission{
+			ToolCall: toolCall,
+			Options:  json.RawMessage(`[{"optionId":"allow","name":"Allow","kind":"allow_once"}]`),
+		},
+	}
+}
+
+func TestHugePendingApprovalIsBounded(t *testing.T) {
+	for _, command := range []string{"chat.poll", "chat.output"} {
+		t.Run(command, func(t *testing.T) {
+			s, agent := fixture(t)
+			pending := []methods.ACPApproval{hugeApproval("a1"), hugeApproval("a2"), hugeApproval("a3"), hugeApproval("a4"), {AgentServer: "other", SessionID: "session", Kind: "permission", ID: "elsewhere"}}
+			s.agent = &approvalAgent{fakeAgent: agent, pending: pending}
+			spawn := invoke(t, s, "chat.spawn", Args{ParentID: "parent", Text: "task"})
+			<-agent.started
+			defer close(agent.finish)
+			id := spawn["conversation"].(map[string]any)["id"].(string)
+
+			raw, err := s.Dispatch(context.Background(), &methods.ControlDispatchParams{Command: command, Args: json.RawMessage(`{"conversationId":"` + id + `"}`)}, nil)
+			require.NoError(t, err)
+			assert.Less(t, len(raw), pollResponseCap)
+			var out map[string]any
+			require.NoError(t, json.Unmarshal(raw, &out))
+			assert.Equal(t, "waiting_for_input", out["status"])
+			assert.Equal(t, true, out["truncated"])
+			assert.Equal(t, true, out["pendingInteractionsTruncated"])
+			items, ok := out["pendingInteractions"].([]any)
+			require.True(t, ok)
+			require.Len(t, items, 4, "only this conversation's approvals")
+			first := items[0].(map[string]any)
+			assert.Equal(t, "a1", first["id"])
+			assert.Equal(t, "permission", first["kind"])
+			assert.Equal(t, true, first["_poolside"].(map[string]any)["truncated"])
+			enc, err := json.Marshal(first)
+			require.NoError(t, err)
+			assert.LessOrEqual(t, len(enc), pendingInteractionCap)
+			assert.Contains(t, string(enc), "allow_once", "options survive reduction")
+			assert.Contains(t, string(enc), "write-a1")
+			for i, item := range items {
+				assert.Equal(t, fmt.Sprintf("a%d", i+1), item.(map[string]any)["id"])
+			}
+		})
+	}
+}
+
+func TestSmallPendingApprovalIsVerbatim(t *testing.T) {
+	approval := methods.ACPApproval{AgentServer: "test", SessionID: "session", Kind: "permission", ID: "p1",
+		Permission: &methods.ACPApprovalPermission{ToolCall: json.RawMessage(`{"toolCallId":"t","rawInput":{"command":"ls"}}`), Options: json.RawMessage(`[]`)}}
+	bounded, truncated := boundPendingInteractions([]methods.ACPApproval{approval})
+	assert.False(t, truncated)
+	require.Len(t, bounded, 1)
+	assert.Equal(t, approval, bounded[0])
+}
+
+func TestPollResponseFitsCap(t *testing.T) {
+	v := View{Record: Record{Task: strings.Repeat("t", 4096), ConfigOptions: json.RawMessage(`"` + strings.Repeat("c", 500*1024) + `"`)}}
+	out := map[string]any{"conversation": v, "text": strings.Repeat("x", 400*1024), "pendingInteractions": []any{}}
+	fitPollResponse(out, nil)
+	assert.LessOrEqual(t, encodedLen(out), pollResponseCap)
+	assert.Equal(t, true, out["conversationReduced"])
+	assert.Equal(t, true, out["truncated"])
+	assert.NotContains(t, out, "textOmitted", "slimming the conversation was enough")
+	assert.Len(t, out["conversation"].(View).Task, 1024)
 }

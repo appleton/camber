@@ -220,6 +220,16 @@ func isAgentMessageChunk(params any) bool {
 // keeping identifying fields and agent message text while truncating bulky
 // payloads. The result is marked with _poolside.truncated.
 func reduceControlParams(params any, originalBytes int) any {
+	return ReduceControlValue(params, originalBytes, controlEventCap/2)
+}
+
+// ReduceControlValue returns a reduced copy of v whose encoding fits in
+// target bytes where possible: bulky strings are truncated with a marker,
+// media, _meta, rawInput, rawOutput and toolResponse payloads are omitted, and
+// long arrays are cut. Short identifying fields survive. Object results carry
+// _poolside.truncated; control output uses this for oversized events and
+// pending interactions alike.
+func ReduceControlValue(params any, originalBytes, target int) any {
 	raw, err := json.Marshal(params)
 	var tree any
 	if err == nil {
@@ -233,7 +243,7 @@ func reduceControlParams(params any, originalBytes int) any {
 		reduced := reduceNode(tree, level.text, level.str, "")
 		if m, ok := reduced.(map[string]any); ok {
 			m["_poolside"] = marker
-			if enc, e := json.Marshal(m); e == nil && len(enc) <= controlEventCap/2 {
+			if enc, e := json.Marshal(m); e == nil && len(enc) <= target {
 				return m
 			}
 		}
