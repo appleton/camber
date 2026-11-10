@@ -136,8 +136,8 @@ describe("filterUserFacing", () => {
   it("drops commits whose owned changes are only docs or lockfiles", () => {
     const commits = parseGitLog(
       log(
-        record("1".repeat(40), "Ada", "Tweak vscode readme (#547)", [
-          "ui/apps/vscode-assistant/readme.md",
+        record("1".repeat(40), "Ada", "Tweak desktop readme (#547)", [
+          "ui/apps/desktop/readme.md",
           "docs/getting-started.md",
         ]),
         record("2".repeat(40), "Ada", "Bump deps (#548)", ["pnpm-lock.yaml", "MODULE.bazel.lock"]),
@@ -235,7 +235,7 @@ describe("groupCommits", () => {
   it("reports when there are no commits", () => {
     const { release, slack } = groupCommits([], {
       repository: REPO,
-      prevTag: "vscode-assistant/v4.2.0",
+      prevTag: "desktop/v4.2.0",
       headSha: HEAD,
     });
     expect(release).toContain("## Changes since 4.2.0");

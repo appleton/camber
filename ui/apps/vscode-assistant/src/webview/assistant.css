@@ -1,6 +1,0 @@
-@import "./app.css";
-@import "@camber/assistant/theme.css";
-@import "@camber/assistant/syntax-theme.css";
-
-@source "../../../../packages/assistant";
-@source "../../../../packages/features";

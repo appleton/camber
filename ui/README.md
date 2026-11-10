@@ -9,8 +9,6 @@ shared chat shell.
 | ------------- | ------------------------------- | -------------------------------------- |
 | Desktop       | `@camber/desktop-assistant` | Tauri v2 standalone client             |
 | Mobile remote | `@camber/mobile-remote`     | Remote-control PWA for the desktop app |
-| VS Code       | `camber-assistant`            | VS Code extension                      |
-| Visual Studio | `@camber/vs-assistant`      | Webview embedded by the VS extension   |
 
 ## The shared packages
 
@@ -44,7 +42,7 @@ pnpm check:lint
 While iterating, scope commands to one package:
 
 ```sh
-pnpm -F camber-assistant test:unit
+pnpm -F @camber/desktop-assistant test:unit
 pnpm -F @camber/assistant test:unit
 pnpm -F @camber/desktop-assistant dev
 pnpm -F @camber/camberqa start
@@ -60,8 +58,6 @@ files; rerun the generator:
 ## Going deeper
 
 - Desktop app: [`apps/desktop-assistant/README.md`](apps/desktop-assistant/README.md)
-- VS Code extension: [`apps/vscode-assistant/readme.md`](apps/vscode-assistant/readme.md)
-- Visual Studio extension: [`apps/vs-assistant/README.md`](apps/vs-assistant/README.md)
 - Shared assistant shell: [`packages/assistant/README.md`](packages/assistant/README.md)
 - RPC contracts: [`packages/rpc/README.md`](packages/rpc/README.md)
 - Coding agents: [`AGENTS.md`](AGENTS.md)

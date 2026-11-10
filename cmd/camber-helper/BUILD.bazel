@@ -32,7 +32,7 @@ go_binary(
 )
 
 # Cross-compilation targets for release builds.
-# Linux and Windows use the Zig toolchain (hermetic_cc_toolchain).
+# Linux uses the Zig toolchain (hermetic_cc_toolchain).
 # Darwin is built natively on macOS runners.
 go_cross_binary(
     name = "camber-helper_linux_amd64",
@@ -44,20 +44,6 @@ go_cross_binary(
 go_cross_binary(
     name = "camber-helper_linux_arm64",
     platform = "//bazel/platforms:linux_arm64_musl",
-    tags = ["manual"],
-    target = ":camber-helper",
-)
-
-go_cross_binary(
-    name = "camber-helper_windows_amd64",
-    platform = "//bazel/platforms:windows_amd64",
-    tags = ["manual"],
-    target = ":camber-helper",
-)
-
-go_cross_binary(
-    name = "camber-helper_windows_arm64",
-    platform = "//bazel/platforms:windows_arm64",
     tags = ["manual"],
     target = ":camber-helper",
 )

@@ -139,7 +139,7 @@ jobs:
               echo "Runtime built and signed from \`${SOURCE_SHA}\`."
               echo
               echo "This helper release is produced by the product release pipeline and is the"
-              echo "durable source for VS Code, Desktop, Visual Studio, and local binary downloads."
+              echo "durable source for Desktop and local binary downloads."
             } > "$RUNNER_TEMP/helper-notes.md"
             gh release create "${TAG}" \
               --verify-tag \

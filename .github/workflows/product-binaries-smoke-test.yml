@@ -11,15 +11,7 @@ on:
 
 jobs:
   e2e-helper:
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          - windows-2022
-          - ubuntu-24.04
-          - macos-14
-    # Forks don't have the org's larger runners; fall back to a public macOS runner.
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-24.04
 
     defaults:
       run:
@@ -44,11 +36,8 @@ jobs:
       - name: Build binaries
         run: |
           set -euo pipefail
-          ext=""
-          if [[ "${RUNNER_OS:-}" == "Windows" ]]; then ext=".exe"; fi
-
-          go build -tags=fts5 -o "camber-helper${ext}" ./cmd/camber-helper
-          echo "HELPER_BIN=$PWD/camber-helper${ext}" >> "$GITHUB_ENV"
+          go build -tags=fts5 -o "camber-helper" ./cmd/camber-helper
+          echo "HELPER_BIN=$PWD/camber-helper" >> "$GITHUB_ENV"
 
       # the simplest of smoke tests fow now: does it start without crashing
       - name: Run helper smoke test
@@ -65,7 +54,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: history-${{ matrix.os }}
+          name: history-ubuntu
           path: |
             *-run.log
           retention-days: 7

@@ -17,7 +17,6 @@ import { handlePanelCommand } from "./commands/panels.js";
 import { handleReadCommand } from "./commands/read.js";
 import { DesktopTarget } from "./targets/desktop.js";
 import type { CamberQATarget, WindowBounds } from "./targets/types.js";
-import { VscodeTarget } from "./targets/vscode.js";
 import { CAMBER_DEV_PORT, stripQuotes } from "./utils.js";
 
 const AUTH_TOKEN = crypto.randomUUID();
@@ -121,7 +120,7 @@ const DESKTOP_BRIDGE_COMMANDS = new Set([
   "camberqaProfileRustCpu",
 ]);
 
-let target: CamberQATarget = new VscodeTarget();
+let target: CamberQATarget = new DesktopTarget();
 let isShuttingDown = false;
 
 function isDesktopBridgeTarget(candidate: CamberQATarget): candidate is CamberQATarget & {
@@ -393,57 +392,21 @@ async function findPort(): Promise<number> {
 
 async function launchTarget() {
   const args = process.argv.slice(2);
-  let targetKind: "vscode" | "desktop" = "vscode";
+
   const opts: {
-    project?: string;
-    dev?: boolean;
-    useProfile?: boolean;
-    colorTheme?: string;
     worktreeSlot?: number;
     worktreeId?: string;
-    agentMode?: "acp" | "classic";
-    extensionDir?: string;
     desktopDevPort?: number;
     desktopColor?: string;
   } = {};
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
-      case "--project":
-        opts.project = args[++i];
-        break;
       case "--target": {
         const nextTarget = args[++i];
-        if (nextTarget !== "vscode" && nextTarget !== "desktop") {
+        if (nextTarget !== "desktop") {
           throw new Error(`Invalid --target value: ${nextTarget}`);
         }
-        targetKind = nextTarget;
-        break;
-      }
-      case "--dev":
-        opts.dev = true;
-        break;
-      case "--use-profile":
-        opts.useProfile = true;
-        break;
-      case "--light":
-        opts.colorTheme = "Quiet Light";
-        break;
-      case "--dark":
-        opts.colorTheme = "Visual Studio Dark";
-        break;
-      case "--auth-clear":
-        // Legacy flag. Worktree setup clears the temp profile before first launch.
-        break;
-      case "--extension-dir":
-        opts.extensionDir = args[++i];
-        break;
-      case "--agent-mode": {
-        const agentMode = args[++i];
-        if (agentMode !== "acp" && agentMode !== "classic") {
-          throw new Error(`Invalid --agent-mode value: ${agentMode}`);
-        }
-        opts.agentMode = agentMode;
         break;
       }
       case "--desktop-dev-port":
@@ -460,7 +423,7 @@ async function launchTarget() {
     opts.worktreeId = process.env.CAMBER_WORKTREE_ID;
   }
 
-  target = targetKind === "desktop" ? new DesktopTarget() : new VscodeTarget();
+  target = new DesktopTarget();
 
   if (target.kind === "desktop") {
     await target.launch({
@@ -471,8 +434,6 @@ async function launchTarget() {
       bridgeUrl: `http://127.0.0.1:${CAMBERQA_PORT || process.env.CAMBERQA_PORT || "9500"}/desktop-bridge`,
       bridgeToken: AUTH_TOKEN,
     });
-  } else {
-    await target.launch(opts);
   }
 }
 
@@ -501,7 +462,6 @@ async function start() {
           status: "healthy",
           uptime: Math.floor((Date.now() - startTime) / 1000),
           target: target.kind,
-          vscodeRunning: alive,
           targetRunning: alive,
         }),
       );

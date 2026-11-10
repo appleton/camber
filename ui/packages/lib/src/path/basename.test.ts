@@ -10,7 +10,7 @@ describe("unix", () => {
   });
 
   it("should handle paths with trailing slashes", () => {
-    expect(basename("/Users/poolie/camber/")).toBe("poolside");
+    expect(basename("/Users/poolie/camber/")).toBe("camber");
   });
 
   it("should handle paths with dots", () => {
@@ -40,7 +40,7 @@ describe("windows", () => {
   });
 
   it("should handle paths with trailing backslashes", () => {
-    expect(basename("C:\\Users\\poolie\\camber\\")).toBe("poolside");
+    expect(basename("C:\\Users\\poolie\\camber\\")).toBe("camber");
   });
 });
 

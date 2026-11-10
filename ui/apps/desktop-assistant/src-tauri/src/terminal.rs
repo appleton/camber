@@ -806,7 +806,6 @@ fn shell_for_terminal(
     let use_zsh_integration = cfg!(target_os = "macos") && shell_name == "zsh";
 
     // Keep this shell→argv mapping in sync with `assistantTerminalCommandLaunch`
-    // in ui/apps/vscode-assistant/src/extension/rpc/assistantTerminalCommand.ts,
     // which implements the same `nonInteractive` contract for the VS Code host
     // (with one intentional divergence: this host runs cmd/PowerShell commands
     // natively above, while the VS Code host falls back to sendText for them).
@@ -842,7 +841,6 @@ fn shell_for_terminal(
 
 /// Shells known to parse the POSIX done-marker wrapper delivered with
 /// command terminals. Keep in sync with `POSIX_SHELLS` in
-/// ui/apps/vscode-assistant/src/extension/rpc/assistantTerminalCommand.ts.
 fn is_posix_shell(shell: &str) -> bool {
     let name = Path::new(shell)
         .file_name()

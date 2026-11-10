@@ -47,7 +47,6 @@ jobs:
       version: ${{ inputs.version }}
       tag_prefix: helper/
       ref: ${{ inputs.ref || github.sha }}
-      sign_windows: ${{ inputs.sign }}
       sign_darwin: ${{ inputs.sign }}
       embed_mobile_webui: true
     secrets: inherit

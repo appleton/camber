@@ -2,7 +2,7 @@
 
 Map, not encyclopedia. Small by design - follow the paths.
 
-This repository contains Camber Assistant: desktop and IDE assistant clients,
+This repository contains Camber Assistant: the macOS desktop client and its mobile remote companion,
 shared assistant UI packages, ACP support, and `camber-helper`.
 
 Scoped `AGENTS.md` files override this file for their subtree. Read the scoped
@@ -30,8 +30,6 @@ extension methods are defined in `pkg/acp/README.md`.
 | Helper ACP proxy | `pkg/camber-helper/internal/handler/acpproxy/` |
 | UI workspace | `ui/README.md`, `ui/AGENTS.md` |
 | Desktop assistant | `ui/apps/desktop-assistant/README.md` |
-| VS Code assistant | `ui/apps/vscode-assistant/readme.md` |
-| Visual Studio assistant | `ui/apps/vs-assistant/README.md` |
 | Shared assistant webview | `ui/packages/assistant/README.md` |
 | Shared ACP UI/state | `ui/packages/features/src/acp/` |
 | Mobile remote app | `ui/apps/mobile-remote/README.md` |
@@ -51,7 +49,7 @@ Common entry points:
 
 - Helper: `bazelisk test //pkg/camber-helper/...`
 - UI workspace: `pnpm test`, `pnpm build`
-- VS Code assistant: `pnpm -F camber-assistant test:unit`
+- Desktop unit tests: `pnpm -F @camber/desktop-assistant test:unit`
 - Desktop assistant: `pnpm -F @camber/desktop-assistant check:types`
 
 For UI changes, verify in the running app with camberqa and attach
@@ -81,7 +79,7 @@ workspace, Svelte patterns, and apps.
   `pnpm check:types`.
 - Fix formatting issues with `pnpm fix:format`.
 - Run unit tests with `pnpm test:unit` or a focused package command such as
-  `pnpm -F camber-assistant test:unit`.
+  `pnpm -F @camber/desktop-assistant test:unit`.
 - Run unit tests in watch mode with `pnpm test:unit:watch`, or scope the same
   script with `pnpm -F <package>`.
 - Run Storybook development servers with a scoped package command such as

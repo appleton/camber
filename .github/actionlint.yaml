@@ -1,5 +1,8 @@
 self-hosted-runner:
   labels:
+    # Public Intel label supported by GitHub but newer than pinned actionlint.
+    # https://docs.github.com/en/actions/reference/runners/github-hosted-runners
+    - macos-15-intel
     # Custom runners used by this repository.
     - macos-15-xlarge
 paths:

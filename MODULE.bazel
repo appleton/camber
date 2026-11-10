@@ -28,9 +28,6 @@ register_toolchains(
     # Glibc 2.17 (unconstrained): fallback for all other Linux platforms.
     "@zig_sdk//toolchain:linux_amd64_gnu.2.17",
     "@zig_sdk//toolchain:linux_arm64_gnu.2.17",
-    # Windows uses Zig's bundled MinGW CRT — no runtime changes needed
-    "@zig_sdk//toolchain:windows_amd64",
-    "@zig_sdk//toolchain:windows_arm64",
 )
 
 single_version_override(

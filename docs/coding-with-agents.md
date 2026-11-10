@@ -59,20 +59,18 @@ camberqa --help
 
 ## Start a target
 
-CamberQA drives either a **VS Code** window or the **desktop app**.
+CamberQA drives the **desktop app**.
 Pick one, or both. See [parallel worktrees](#parallel-worktrees-and-the-desktop-app)
 below.
 
 ```sh
-# VS Code with the extension loaded
-camberqa vscode up
 
 # Desktop app
 camberqa desktop up
 ```
 
 Each `up` starts a long-running process. Generic camberqa commands
-auto-select whichever target is running; pass `--vscode` or `--desktop`
+auto-select whichever target is running; pass `--desktop`
 if both are up.
 
 Check what's alive:
@@ -85,8 +83,6 @@ camberqa manage list
 When you're done, stop each target you started:
 
 ```sh
-# VS Code
-camberqa vscode down
 
 # Desktop app
 camberqa desktop down
@@ -145,7 +141,7 @@ camberqa newConversation
 camberqa stopGeneration
 camberqa approveAction once          # respond to a tool-approval dialog
 camberqa waitForApproval 30          # wait for one to appear
-camberqa restartHelper               # reload VS Code window
+camberqa restartHelper               # restart the desktop helper
 camberqa helperLogs 500              # last 500 lines of helper logs
 ```
 
@@ -205,8 +201,6 @@ camberqa desktop status
 camberqa desktop env
 ```
 
-If you run the VS Code target instead, use `camberqa vscode status` and
-`camberqa vscode env`.
 
 ## Managing background services
 

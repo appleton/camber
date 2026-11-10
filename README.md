@@ -1,16 +1,15 @@
 # Camber Assistant
 
-**An AI coding assistant for your editor and desktop.**
+**An AI coding assistant for macOS.**
 
-Camber Assistant is an open-source client for coding agents. Use it from the
-desktop app, VS Code, or Visual Studio.
+Camber Assistant is an open-source client for coding agents. Use it from the macOS desktop app.
 
 Connect agents that support the
 [Agent Client Protocol](https://agentclientprotocol.com/), including
 [pool](https://github.com/poolsideai/pool), Codex, Claude, and other compatible
 agents.
 
-Chat with your agent in one consistent UI across the surfaces you use.
+Chat with agents locally and control desktop sessions from your phone.
 
 ## Features
 
@@ -22,9 +21,6 @@ Chat with your agent in one consistent UI across the surfaces you use.
   [pool](https://github.com/poolsideai/pool), built around Poolside models
   trained specifically for software engineering and integrated into the
   assistant UI.
-- **Multiple surfaces.** Run Camber Assistant as a desktop app or as an
-  extension inside VS Code or Visual Studio, with a consistent assistant
-  experience across each surface.
 - **Desktop workflows for larger changes.** Use worktrees, GitHub awareness,
   built-in terminals, and change review tools from the desktop app.
 - **Optional on-device models.** In the desktop app on Apple Silicon,
@@ -43,8 +39,6 @@ the links below are the destinations for future releases.
 | Surface                             | Status    | Download                                                                                                      |
 | ----------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------- |
 | **Desktop** — macOS (Apple Silicon) | Planned | [Newest `desktop/v*` release](https://github.com/appleton/camber/releases?q=desktop%2Fv)                  |
-| **VS Code** extension               | Planned | [Newest `vscode-assistant/v*` release](https://github.com/appleton/camber/releases?q=vscode-assistant%2Fv) |
-| **Visual Studio** extension         | Planned | [Newest `vs-assistant/v*` release](https://github.com/appleton/camber/releases?q=vs-assistant%2Fv)        |
 
 For install instructions, see
 [Install a prebuilt release](./INSTALL.md#install-a-prebuilt-release). After

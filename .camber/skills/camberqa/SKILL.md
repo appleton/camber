@@ -2,7 +2,7 @@
 name: camberqa
 version: 0.2.0
 description: |
-  🧵 Interact with Camber VS Code and desktop app webviews via Playwright.
+  🧵 Interact with Camber desktop app webviews via Playwright.
   Snapshot the accessibility tree, click elements, fill inputs, send chat
   messages, and take screenshots. Use for QA testing Camber app surfaces.
   Also manages long-running services (storybook, etc.) — list, restart, and inspect logs.
@@ -14,8 +14,8 @@ allowed-tools:
 
 # 🧵 CamberQA: App QA + Process Manager
 
-Interacts with Camber VS Code and desktop app webviews via Playwright. The user starts
-a target with `camberqa vscode up` or `camberqa desktop up`; commands then execute in ~100ms.
+Interacts with Camber desktop app webviews via Playwright. The user starts
+a target with `camberqa desktop up`; commands then execute in ~100ms.
 
 Also includes a **process manager** for long-running services. Any command wrapped with
 `camberqa manage run` can be listed, restarted, and have its logs inspected — enabling
@@ -34,7 +34,6 @@ autonomous agents to recover crashed services without user intervention.
 
 | ID | Command | Description |
 |----|---------|-------------|
-| `camberqa-s<slot>` | `camberqa vscode up` (auto-managed) | The camberqa VS Code window. Restartable via `camberqa manage restart camberqa-s<slot>`. |
 | `desktop-s<slot>` | `camberqa desktop up` (auto-managed) | The camberqa desktop app target. Restartable via `camberqa manage restart desktop-s<slot>`. |
 | _(varies)_ | `camberqa manage run pnpm storybook` | Storybook dev server, or any other long-running dev service. |
 
@@ -59,19 +58,14 @@ The server must be running. **When any command fails:**
 - Check your current slot/ports with:
   - `camberqa worktree status`
   - `camberqa worktree env`
-- `camberqa vscode up --acp` starts the VS Code worktree profile with `camber.agentMode`
   set to `acp`; `--lsp` sets it to `classic`. Omitting both preserves the copied
-  VS Code setting.
 - `camberqa desktop up --color "#1f6feb" --worktree-name agent-name` starts a
   Tauri desktop app instance with a distinct title, bundle identifier, dev port,
   camberqa port, and visible color marker.
-- `camberqa worktree up` is a legacy alias for `camberqa vscode up`.
 - Generic commands such as `snapshot`, `screenshot`, `click`, `fill`, `text`, and
-  `js` auto-select the only running target. If both VS Code and desktop are
-  running in the current worktree, pass `--vscode` or `--desktop`.
+  `js` auto-select the only running target. Use `--desktop` to select it explicitly.
 - If camberqa renders garbled log output instead of the extension UI, restart the managed camberqa process:
   1. `camberqa manage list`
-  2. `camberqa manage restart <id>` (typically `camberqa-s<slot>`)
 
 ## Quick Start
 
@@ -91,9 +85,8 @@ camberqa screenshot -o /tmp/camberqa.png
 ### Meta
 | Command | Description |
 |---------|-------------|
-| `vscode up [--id <id>] [--fast] [--add-stable] [--api-url URL] [--acp\|--lsp]` | Start the VS Code target for this worktree |
 | `desktop up [--id <id>] [--fast] [--api-url URL] [--color HEX] [--worktree-name NAME]` | Start the desktop target for this worktree |
-| `vscode down [--all]` / `desktop down [--all]` | Stop that target's services for this worktree (`--all` stops both); the slot is released once nothing is left running |
+| `desktop down [--all]` | Stop that target's services for this worktree (`--all` stops both); the slot is released once nothing is left running |
 | `status` | Is the selected target running? Webview ready? |
 | `focusCamber` | Open the Camber sidebar |
 | `quit` | Shut down server |
@@ -101,8 +94,8 @@ camberqa screenshot -o /tmp/camberqa.png
 ### Snapshot
 | Command | Description |
 |---------|-------------|
-| `snapshot [-i] [-c] [-d N] [-D] [--vscode\|--desktop]` | Accessibility tree of webview with @refs |
-| `screenshot [-o PATH]` | Screenshot of full VS Code window |
+| `snapshot [-i] [-c] [-d N] [-D] [--desktop]` | Accessibility tree of webview with @refs |
+| `screenshot [-o PATH]` | Screenshot of desktop window |
 | `screenshot --webview [-o PATH]` | Screenshot of webview only |
 | `screenshotElement @ref [-p N] [-o PATH]` | Screenshot of single element with optional padding |
 
@@ -164,7 +157,7 @@ camberqa selectPanel "Camber" -- sendMessage "next prompt"
 | `waitForMessageCount <N> [timeout]` | Wait for N message pairs (user+response) |
 | `getLastResponse` | Get text of last assistant message |
 | `getMessageCount` | Get current message pair count |
-| `newConversation [--project NAME \| --worktree NAME]` | Click "New conversation". On VS Code: clicks the chat-header button (`aria-label="New conversation"`). On desktop: clicks the project- or worktree-scoped sidebar button (`aria-label="New conversation in {name}"`). With no args on desktop, defaults to the first project in the sidebar. |
+| `newConversation [--project NAME \| --worktree NAME]` | Click "New conversation". On desktop: clicks the project- or worktree-scoped sidebar button (`aria-label="New conversation in {name}"`). With no args on desktop, defaults to the first project in the sidebar. |
 | `archiveConversation "title-substring"` | Archive a sidebar conversation by case-insensitive title match. Errors if zero or >1 matches. |
 | `openHistory` / `closeHistory` | Open or close the archived-conversations overlay |
 | `deleteConversation "title-substring"` | Delete a conversation via the history overlay. Auto-opens history. Errors clearly if the agent does not support deletion. |
@@ -176,11 +169,10 @@ camberqa selectPanel "Camber" -- sendMessage "next prompt"
 | `approveAction [once\|always\|deny]` | Handle tool approval dialog |
 | `waitForApproval [timeout]` | Wait for approval dialog (default 30s) |
 | `getApprovalInfo` | Get pending approval details |
-| `listConversations` | List sidebar conversations (* = current). Desktop output is hierarchical (Project › Worktree › Conversation); VS Code output is a flat list. Both number from [0]. |
 | `selectConversation "title"` or `selectConversation --index N` | Switch conversation by case-insensitive title substring or by global index from `listConversations`. Errors on zero or ambiguous matches. |
 | `getCurrentConversation` | Title (and agent name) of the currently selected sidebar row, or "(no conversation is currently selected)". |
 | `restartACPServer "agent-server"` | Restart one ACP agent subprocess by configured server name, e.g. `codex-acp` or `poolside`. |
-| `restartHelper` | Restart camber-helper (reloads VS Code window) |
+| `restartHelper` | Restart camber-helper |
 | `helperLogs [lines]` | Get last N lines of helper logs (default 500) |
 | `selectCommand "name"` | Execute a slash command from menu |
 | `getConfigs` | List each session config option (Mode, Model, etc.) with its current value |
@@ -188,7 +180,7 @@ camberqa selectPanel "Camber" -- sendMessage "next prompt"
 
 ### Projects & worktrees (desktop only)
 
-These commands target the desktop sidebar tree (Project › Worktree › Conversation). They error if run against a VS Code target. Add-project is intentionally not exposed — it triggers a native OS folder picker that Playwright can't drive.
+These commands target the desktop sidebar tree (Project › Worktree › Conversation). Add-project is intentionally not exposed — it triggers a native OS folder picker that Playwright can't drive.
 
 | Command | Description |
 |---------|-------------|
@@ -201,13 +193,6 @@ These commands target the desktop sidebar tree (Project › Worktree › Convers
 | `removeWorktree "name"` | Hover the worktree row and click "Archive worktree X". No confirmation. |
 | `openWorktree "name"` | Click the worktree row main button (switches workspace). |
 
-### VS Code chrome (vscode only)
-
-| Command | Description |
-|---------|-------------|
-| `openChat` | Click the Camber activity bar icon; falls back to `Focus on Camber View` command palette entry. |
-| `focusChat` | Run the `Focus on Prompt Input` command (`cmd+escape` keybinding). |
-| `toggleSidebar` | Run the built-in `Toggle Primary Side Bar Visibility` command. |
 
 ### Manage (Process Manager)
 | Command | Description |

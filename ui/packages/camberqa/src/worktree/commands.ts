@@ -5,7 +5,6 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { manageStopWithOptions } from "../manage/client.js";
 import { isProcessAlive, listStates, logPath, readState } from "../manage/state.js";
-import { camberqaDataDirs } from "../targets/vscode.js";
 import { portsForSlot, targetCamberQAPort } from "./shared.js";
 import {
   claimOrReuseSlot,
@@ -75,12 +74,11 @@ function startManagedProcess(
   child.unref();
 }
 
-const TARGET_SERVICE_PATTERNS: Record<"vscode" | "desktop", RegExp[]> = {
-  vscode: [/^vite-s\d+$/, /^camberqa-s\d+$/],
+const TARGET_SERVICE_PATTERNS: Record<"desktop", RegExp[]> = {
   desktop: [/^desktop-vite-s\d+$/, /^desktop-s\d+$/, /^mobile-vite-s\d+$/],
 };
 
-export function servicePatternsForTargets(targets: Array<"vscode" | "desktop">): RegExp[] {
+export function servicePatternsForTargets(targets: Array<"desktop">): RegExp[] {
   return targets.flatMap((target) => TARGET_SERVICE_PATTERNS[target]);
 }
 
@@ -119,28 +117,6 @@ async function ensurePortFree(port: number, label: string): Promise<void> {
     );
     process.exit(1);
   }
-}
-
-function ensureVscodeDependenciesBuilt(worktreeRoot: string): void {
-  const extensionDist = path.join(worktreeRoot, "ui/apps/vscode-assistant/dist");
-  const viteConfigDist = path.join(worktreeRoot, "ui/config/vite/dist/index.js");
-  const svelteConfigDist = path.join(worktreeRoot, "ui/config/svelte/dist/index.js");
-  if (
-    fs.existsSync(extensionDist) &&
-    fs.existsSync(viteConfigDist) &&
-    fs.existsSync(svelteConfigDist)
-  ) {
-    return;
-  }
-
-  console.log(
-    "[worktree] VS Code assistant not built — running pnpm turbo build -F camber-assistant (first run takes a few minutes)...",
-  );
-  execFileSync("pnpm", ["turbo", "build", "-F", "camber-assistant"], {
-    cwd: worktreeRoot,
-    stdio: "inherit",
-  });
-  console.log("[worktree] VS Code assistant built successfully.");
 }
 
 function ensureDesktopDependenciesBuilt(worktreeRoot: string): void {
@@ -324,7 +300,7 @@ export function parseWorktreeUpOptions(args: string[]): WorktreeUpOptions {
   };
 }
 
-async function worktreeUp(args: string[], target: "vscode" | "desktop" = "vscode"): Promise<void> {
+async function worktreeUp(args: string[], target: "desktop" = "desktop"): Promise<void> {
   let opts: WorktreeUpOptions;
   try {
     opts = parseWorktreeUpOptions(args);
@@ -354,14 +330,14 @@ async function worktreeUp(args: string[], target: "vscode" | "desktop" = "vscode
       : `[worktree] Claimed slot ${slot} for ${id}`,
   );
   console.log(
-    `[worktree] Ports — VS Code Vite: ${ports.vite}, Desktop Vite: ${ports.desktopVite}, Mobile Vite: ${ports.mobileVite}, API: 8889, VS Code CamberQA: ${ports.camberqa}, Desktop CamberQA: ${ports.desktopCamberQA}, Remote: ${ports.remote}`,
+    `[worktree] Ports — Desktop Vite: ${ports.desktopVite}, Mobile Vite: ${ports.mobileVite}, API: 8889, Desktop CamberQA: ${ports.desktopCamberQA}, Remote: ${ports.remote}`,
   );
   if (opts.agentMode) {
     console.log(`[worktree] Camber agent mode: ${opts.agentMode}`);
   }
 
   const isMain = isMainWorkspace(id);
-  const selectedVitePort = target === "desktop" ? ports.desktopVite : ports.vite;
+  const selectedVitePort = ports.desktopVite;
   const selectedCamberQAPort = targetCamberQAPort(slot, target);
   const env: Record<string, string> = {
     VITE_DEV_PORT: String(selectedVitePort),
@@ -372,129 +348,17 @@ async function worktreeUp(args: string[], target: "vscode" | "desktop" = "vscode
   };
   // Clear stale server state and profile dirs, but never while the server for
   // this target is still alive (re-running `up` reuses it).
-  const serverName = target === "desktop" ? `desktop-s${slot}` : `camberqa-s${slot}`;
+  const serverName = `desktop-s${slot}`;
   if (!isManagedAlive(serverName)) {
     try {
       fs.unlinkSync(`/tmp/camberqa-server-${selectedCamberQAPort}.json`);
     } catch {}
-    if (target === "vscode") {
-      const dataDirs = camberqaDataDirs(PACKAGE_DIR);
-      fs.rmSync(dataDirs.userDir, { recursive: true, force: true });
-      fs.rmSync(dataDirs.extensionsDir, { recursive: true, force: true });
-    }
   }
 
   if (target === "desktop") {
     await desktopUp(slot, id, worktreeRoot, envData, opts, env);
     return;
   }
-
-  // Build the extension and its workspace dependencies up front: `turbo dev`
-  // would build them too, but a cold build takes minutes and would blow the
-  // startup health timeout below.
-  ensureVscodeDependenciesBuilt(worktreeRoot);
-
-  // Start Vite dev server
-  const viteName = `vite-s${slot}`;
-  const viteAppDir = path.join(worktreeRoot, "ui/apps/vscode-assistant");
-  if (isManagedAlive(viteName)) {
-    console.log(`[worktree] ${viteName} already running — reusing it.`);
-  } else {
-    await ensurePortFree(ports.vite, "VS Code Vite");
-    if (opts.fast) {
-      const viteBin = path.join(viteAppDir, "node_modules/.bin/vite");
-      startManagedProcess(viteName, [viteBin], viteAppDir, env);
-    } else {
-      startManagedProcess(
-        viteName,
-        ["pnpm", "turbo", "dev", "-F", "camber-assistant"],
-        worktreeRoot,
-        env,
-      );
-    }
-    console.log(
-      `[worktree] Started ${viteName}${opts.fast ? " (fast: skipping turbo ^build)" : ""}`,
-    );
-  }
-
-  try {
-    await waitForProcess(viteName, {
-      timeoutMs: 60_000,
-      healthUrl: `http://localhost:${ports.vite}/`,
-    });
-    const viteState = readState(viteName);
-    if (viteState) {
-      updateSlotOwner(slot, id, viteState.pid);
-      envData.pid = viteState.pid;
-      fs.writeFileSync(
-        path.join(worktreeRoot, ".worktree-env.json"),
-        JSON.stringify(envData, null, 2),
-      );
-    }
-  } catch (err) {
-    console.error(`[worktree] ${(err as Error).message}`);
-    // Stop the dev server we just spawned — a cold `turbo dev` keeps building
-    // (and eventually binds the port) even after we bail, leaving orphans.
-    await manageStopWithOptions(viteName, { tolerateMissing: true, tolerateErrors: true });
-    releaseSlot(slot);
-    try {
-      fs.unlinkSync(path.join(worktreeRoot, ".worktree-env.json"));
-    } catch {}
-    process.exit(1);
-  }
-
-  // Start camberqa server (launches VS Code)
-  const camberqaName = `camberqa-s${slot}`;
-  const camberqaTsx = resolveTsx(worktreeRoot);
-  const camberqaEnv: Record<string, string> = { ...env };
-  if (isManagedAlive(camberqaName)) {
-    console.log(`[worktree] ${camberqaName} already running — reusing it.`);
-  } else {
-    await ensurePortFree(ports.camberqa, "VS Code CamberQA");
-    startManagedProcess(
-      camberqaName,
-      [
-        camberqaTsx,
-        path.join(PACKAGE_DIR, "src/server.ts"),
-        "--dev",
-        "--use-profile",
-        "--auth-clear",
-        ...(opts.agentMode ? ["--agent-mode", opts.agentMode] : []),
-      ],
-      worktreeRoot,
-      camberqaEnv,
-    );
-    console.log(`[worktree] Started ${camberqaName}`);
-  }
-
-  try {
-    await waitForProcess(camberqaName, {
-      timeoutMs: 15000,
-      healthUrl: `http://localhost:${ports.camberqa}/health`,
-      stableMs: 2000,
-    });
-    const camberqaState = readState(camberqaName);
-    if (camberqaState) {
-      updateSlotOwner(slot, id, camberqaState.pid);
-      envData.pid = camberqaState.pid;
-      fs.writeFileSync(
-        path.join(worktreeRoot, ".worktree-env.json"),
-        JSON.stringify(envData, null, 2),
-      );
-    }
-  } catch (err) {
-    console.error(`[worktree] ${(err as Error).message}`);
-    // Stop everything we started before bailing
-    await manageStopWithOptions(camberqaName, { tolerateMissing: true, tolerateErrors: true });
-    await manageStopWithOptions(viteName, { tolerateMissing: true, tolerateErrors: true });
-    releaseSlot(slot);
-    try {
-      fs.unlinkSync(path.join(worktreeRoot, ".worktree-env.json"));
-    } catch {}
-    process.exit(1);
-  }
-
-  console.log(`[worktree] Services started`);
 }
 
 async function desktopUp(
@@ -622,9 +486,9 @@ async function desktopUp(
   console.log(`[worktree] Desktop started`);
 }
 
-async function worktreeDown(target: "vscode" | "desktop", args: string[]): Promise<void> {
+async function worktreeDown(target: "desktop", args: string[]): Promise<void> {
   const all = args.includes("--all");
-  const targets: Array<"vscode" | "desktop"> = all ? ["vscode", "desktop"] : [target];
+  const targets: Array<"desktop"> = all ? ["desktop"] : [target];
   const worktreeRoot = realpathSafe(resolveWorktreeRoot());
   const envFile = findWorktreeEnv(process.env.CAMBERQA_CALLER_CWD || process.cwd());
   let env: WorktreeEnv | null = null;
@@ -685,8 +549,8 @@ async function worktreeDown(target: "vscode" | "desktop", args: string[]): Promi
   }
 
   // Release the slot and env file only once nothing of this worktree is left
-  // running (e.g. `desktop down` keeps the slot while vscode is still up).
-  const allPatterns = servicePatternsForTargets(["vscode", "desktop"]);
+  // running.
+  const allPatterns = servicePatternsForTargets(["desktop"]);
   const remaining = listStates().filter(
     (s) =>
       allPatterns.some((pattern) => pattern.test(s.id)) &&
@@ -722,7 +586,7 @@ async function worktreeStatus(): Promise<void> {
   if (!envFile && !detected) {
     console.log("Not in a worktree (main workspace, slot 0)");
     console.log(
-      `Ports — VS Code Vite: 5173, Desktop Vite: 5177, Mobile Vite: 5179, API: 8889, VS Code CamberQA: 9500, Desktop CamberQA: 9505, Remote: 8737`,
+      `Ports — Desktop Vite: 5177, Mobile Vite: 5179, API: 8889, Desktop CamberQA: 9505, Remote: 8737`,
     );
   } else if (envFile) {
     const env: WorktreeEnv = JSON.parse(fs.readFileSync(envFile, "utf-8"));
@@ -731,14 +595,14 @@ async function worktreeStatus(): Promise<void> {
     const owner = slotOwnerId(env.slot);
     if (owner !== null && owner !== env.id) {
       console.log(
-        `⚠ Stale: slot ${env.slot} now belongs to "${owner}". Re-run 'camberqa vscode|desktop up' here.`,
+        `⚠ Stale: slot ${env.slot} now belongs to "${owner}". Re-run 'camberqa desktop up' here.`,
       );
     }
     console.log(`Profile: ${env.profile}`);
     // Older .worktree-env.json files predate the remote/mobileVite ports.
     const slotPorts = portsForSlot(env.slot);
     console.log(
-      `Ports — VS Code Vite: ${env.ports.vite}, Desktop Vite: ${env.ports.desktopVite}, Mobile Vite: ${env.ports.mobileVite ?? slotPorts.mobileVite}, API: 8889, VS Code CamberQA: ${env.ports.camberqa}, Desktop CamberQA: ${env.ports.desktopCamberQA}, Remote: ${env.ports.remote ?? slotPorts.remote}`,
+      `Ports — Desktop Vite: ${env.ports.desktopVite}, Mobile Vite: ${env.ports.mobileVite ?? slotPorts.mobileVite}, API: 8889, Desktop CamberQA: ${env.ports.desktopCamberQA}, Remote: ${env.ports.remote ?? slotPorts.remote}`,
     );
     console.log(`Agent mode override: ${env.agentMode ?? "none"}`);
   }
@@ -793,10 +657,7 @@ function worktreeEnvCmd(): void {
   console.log(`export CAMBER_MOBILE_VITE_PORT=${ports.mobileVite}`);
 }
 
-export async function handleTargetCommand(
-  target: "vscode" | "desktop",
-  args: string[],
-): Promise<void> {
+export async function handleTargetCommand(target: "desktop", args: string[]): Promise<void> {
   const sub = args[0];
 
   switch (sub) {
@@ -815,7 +676,7 @@ export async function handleTargetCommand(
     default:
       console.log(`Usage: camberqa ${target} <up|down|status|env>
 
-  up [--fast]${target === "vscode" ? " [--acp|--lsp]" : " [--color HEX] [--worktree-name NAME]"}
+  up [--fast]${target === "desktop" ? " [--acp|--lsp]" : " [--color HEX] [--worktree-name NAME]"}
                                             Start ${target} services for this worktree
   down [--all]                              Stop ${target} services (--all: both targets);
                                             releases the slot once nothing is left running

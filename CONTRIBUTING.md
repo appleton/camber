@@ -24,13 +24,9 @@ edit and the conventions that live there. `CLAUDE.md` files in this repo are
 symlinks to their sibling `AGENTS.md` — edit the `AGENTS.md`, and don't add a
 separate `CLAUDE.md` for your own agent.
 
-Each app has its own README. Read these before you start development. VS Code
-is a good starting point for general UI feature development, but many components
-are shared between apps.
+Read the desktop README before development. Shared components also serve the mobile remote companion.
 
 - **Desktop**: [`ui/apps/desktop-assistant/README.md`](./ui/apps/desktop-assistant/README.md)
-- **VS Code**: [`ui/apps/vscode-assistant/readme.md`](./ui/apps/vscode-assistant/readme.md)
-- **Visual Studio**: [`ui/apps/vs-assistant/README.md`](./ui/apps/vs-assistant/README.md)
 
 For shared UI workspace structure and package commands, use
 [`ui/README.md`](./ui/README.md).

@@ -4,8 +4,7 @@ Camber is maintained at https://github.com/appleton/camber. The Go module is
 `github.com/appleton/camber`; private UI workspace packages use `@camber`.
 The helper executable is `camber-helper`, the app CLI is `camber`, and the UI
 automation package/command is `camberqa`. Desktop builds use the bundle identifier
-`io.github.appleton.camber` and the `camber://` URL scheme. The proposed VS Code
-publisher is `appleton`; a marketplace account must be configured before publishing.
+`io.github.appleton.camber` and the `camber://` URL scheme. Only the macOS desktop app is distributed; the mobile web UI remains its remote companion.
 
 ## Compatibility references retained deliberately
 
@@ -28,7 +27,7 @@ attribution. These remaining references are intentional:
   user data. Skills also load from the new `.camber/skills` location.
 - Historical performance measurements and test cases exercising those contracts.
 
-The desktop bundle identity and VS Code settings namespace are new. Host-specific
+The desktop bundle identity is new. Host-specific
 preferences may therefore need to be imported separately; helper-owned session
 and configuration paths remain unchanged. Do not run both clients against the
 same state concurrently without checking their compatibility.

@@ -1,4 +1,0 @@
-{
-  "extends": "@camber/tsconfig/svelte",
-  "include": ["**/*.js", "**/*.ts", "**/*.svelte"]
-}

@@ -2,7 +2,6 @@ import { registryIconUrl, type ACPRegistryAgent } from "./agentRegistry";
 import { DEFAULT_AGENT_SERVER, LOCAL_AGENT_SERVER } from "./agentServers";
 
 // The filled Camber brand mark, copied verbatim from the app icon
-// (ui/apps/vscode-assistant/public/icon-{dark,light}.svg). Composed here into a
 // self-contained SVG so the first-party Camber agent (and its local, badged
 // variant) get an icon URL the same way registry agents do, and every surface
 // that masks an agent iconUrl renders it without special-casing. Consumed as a

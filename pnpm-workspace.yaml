@@ -1,6 +1,5 @@
 packages:
   - ui/apps/*
-  - ui/apps/*/app
   - ui/config/*
   - ui/packages/*
   - ui/scripts/*
@@ -46,7 +45,6 @@ catalog:
   tailwind-variants: ^3.2.2
   tailwindcss: ^4.1.16
   ts-deepmerge: ^7.0.3
-  tsdown: ^0.15.6
   tsx: ^4.20.3
   type-fest: ^5.3.0
   typescript: ^5.9.3

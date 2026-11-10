@@ -160,7 +160,6 @@ cat >"$FIRST_PARTY_PACKAGES" <<'JSON'
 [
   "desktop-assistant",
   "./.github/actions/sign-darwin-binary",
-  "./.github/actions/sign-windows-binary",
   "./.github/actions/ui-setup",
   "./.github/workflows/helper-build.yml",
   "./.github/workflows/helper-release.yml",

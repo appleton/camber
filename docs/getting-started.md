@@ -10,8 +10,6 @@ conversation from your project.
 Open Camber Assistant from the surface you installed:
 
 - **Desktop app**: Launch **Camber**, then open a project.
-- **VS Code**: Run **Camber: Show Sidebar** from the Command Palette.
-- **Visual Studio**: Open **Tools > Camber Assistant > Focus Input**.
 
 ## Step 2: Connect an agent
 
@@ -26,10 +24,6 @@ install it.
 
 1. With Camber Assistant open, start a new conversation:
    - **Desktop app**: Click **New conversation**.
-   - **VS Code**: Run **Camber: New Conversation** from the Command Palette,
-     or click the new conversation icon in the Camber Assistant panel.
-   - **Visual Studio**: Open **Tools > Camber Assistant > New Conversation**,
-     or click the new conversation icon in the Camber Assistant panel.
 2. In the conversation tab, click **Log in to Camber**.
 3. In the terminal opened by Camber Assistant, choose how you want to access
    Poolside models:
@@ -53,15 +47,9 @@ agents you trust, and review the command or binary before installing.
 1. With Camber Assistant open, go to **Settings > ACP Agents**:
    - **Desktop app**: Click **Settings** in the sidebar, then click
      **ACP Agents**.
-   - **VS Code and Visual Studio**: Click **Settings > ACP Agents** in the
-     bottom-right corner of the Camber Assistant panel.
 2. Click **Install** next to the agent you want to use.
 3. Start a new conversation:
    - **Desktop app**: Click **New conversation**.
-   - **VS Code**: Run **Camber: New Conversation** from the Command Palette,
-     or click the new conversation icon in the Camber Assistant panel.
-   - **Visual Studio**: Open **Tools > Camber Assistant > New Conversation**,
-     or click the new conversation icon in the Camber Assistant panel.
 4. In the prompt controls, select the agent you installed.
 
 ### Use a local model on your device
@@ -71,7 +59,7 @@ Camber Local runs models on your own machine with the
 models. Use it when you want the model runtime to stay on your device.
 
 Camber Local requires the desktop app on a Mac with Apple silicon. The
-**On-Device Models** settings are not available in VS Code or Visual Studio.
+**On-Device Models** settings run on the Mac hosting the desktop app.
 
 1. In the desktop app, click **Settings** in the sidebar, then click
    **On-Device Models**.
@@ -143,8 +131,6 @@ those systems.
 
 1. Open **Connectors**:
    - **Desktop app**: Click **Connectors** in the sidebar.
-   - **VS Code and Visual Studio**: Click **Settings** in the bottom-right
-     corner of the Camber Assistant panel, then click **Connectors**.
 2. Add one of the listed connectors, or add a custom connector.
 
 ## Related resources

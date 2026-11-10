@@ -14,10 +14,6 @@ runtime_dir="${1:?usage: verify-helper-runtime.sh <runtime-directory>}"
 expected=(
   camber-helper-darwin-amd64
   camber-helper-darwin-arm64
-  camber-helper-linux-amd64
-  camber-helper-linux-arm64
-  camber-helper-windows-amd64
-  camber-helper-windows-arm64
   camber-mlx-sidecar-darwin-arm64
   camber-whisper-server-darwin-arm64
 )

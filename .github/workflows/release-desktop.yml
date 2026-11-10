@@ -10,7 +10,7 @@ on:
         default: preview
         type: string
       sync_versions:
-        description: "Align with the highest VS Code/Desktop version"
+        description: "Use the desktop release version history"
         required: false
         default: true
         type: boolean

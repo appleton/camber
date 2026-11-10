@@ -31,7 +31,7 @@ export function portsForSlot(slot: number): WorktreePorts {
   };
 }
 
-export function targetCamberQAPort(slot: number, target: "vscode" | "desktop"): number {
+export function targetCamberQAPort(slot: number, target: "desktop"): number {
   const ports = portsForSlot(slot);
   return target === "desktop" ? ports.desktopCamberQA : ports.camberqa;
 }

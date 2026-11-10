@@ -58,7 +58,7 @@ test "\${HELPER_RELEASE_PUBLISHED:-}" = "true" && printf 'false\\n'
     git(repo, "config", "commit.gpgsign", "false");
     writeFileSync(
       resolve(repo, "projects.yml"),
-      "projects:\n  - name: vscode\n    tag: vscode-assistant\n    dirs: [app]\n  - name: desktop\n    tag: desktop\n    dirs: [desktop]\n",
+      "projects:\n  - name: desktop\n    tag: desktop\n    dirs: [app]\n  - name: desktop\n    tag: desktop\n    dirs: [desktop]\n",
     );
     writeFileSync(resolve(repo, "file.txt"), "first");
     git(repo, "add", ".");

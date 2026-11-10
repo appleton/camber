@@ -9,7 +9,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { manageList, manageLogs, manageRestart, manageStop } from "./manage/client.js";
 import { runWrapper } from "./manage/wrapper.js";
-import { CAMBER_DEV_PORT } from "./utils.js";
 import { portsForSlot, targetCamberQAPort } from "./worktree/shared.js";
 import {
   detectGitWorktreeInfo,
@@ -63,38 +62,8 @@ function isProcessAlive(pid: number): boolean {
   }
 }
 
-async function isCamberDevRunning(): Promise<boolean> {
-  try {
-    const resp = await fetch(`http://localhost:${CAMBER_DEV_PORT}/`, {
-      signal: AbortSignal.timeout(1000),
-    });
-    return resp.ok || resp.status === 404;
-  } catch {
-    return false;
-  }
-}
-
 async function getServerNotRunningMessage(): Promise<string> {
-  const devRunning = await isCamberDevRunning();
-
-  if (devRunning) {
-    return `[camberqa] Server is not running.
-
-To use camberqa, you need to run the following in another terminal window:
-  camberqa vscode up
-
-This will launch a VS Code window used by camberqa, don't close it.`;
-  }
-
-  return `[camberqa] Server is not running.
-
-1. First, you need the camber-assistant Vite dev server running.
-   Either launch "Launch Extension (with my profile)" in VS Code, or run in a separate terminal:
-     pnpm turbo dev -F camber-assistant
-
-2. Then, start camberqa itself in another terminal:
-     camberqa vscode up
-   This will launch a VS Code window used by camberqa, don't close it.`;
+  return "[camberqa] Server is not running. Start the desktop app with 'camberqa desktop up' in another terminal.";
 }
 
 async function requireServer(): Promise<ServerState> {
@@ -130,9 +99,8 @@ async function isHealthyState(state: ServerState | null): Promise<boolean> {
     const health = (await resp.json()) as {
       status?: string;
       targetRunning?: boolean;
-      vscodeRunning?: boolean;
     };
-    return health.status === "healthy" && (health.targetRunning ?? health.vscodeRunning ?? false);
+    return health.status === "healthy" && (health.targetRunning ?? false);
   } catch {
     return false;
   }
@@ -253,15 +221,11 @@ function readWorktreeEnv(startDir: string): WorktreeEnv | null {
   return JSON.parse(fs.readFileSync(envFile, "utf-8")) as WorktreeEnv;
 }
 
-function consumeTargetFlag(args: string[]): { target?: "vscode" | "desktop"; args: string[] } {
-  let target: "vscode" | "desktop" | undefined;
+function consumeTargetFlag(args: string[]): { target?: "desktop"; args: string[] } {
+  let target: "desktop" | undefined;
   const next: string[] = [];
   for (const arg of args) {
-    if (arg === "--vscode") {
-      if (target && target !== "vscode") throw new Error("Use only one of --vscode or --desktop.");
-      target = "vscode";
-    } else if (arg === "--desktop") {
-      if (target && target !== "desktop") throw new Error("Use only one of --vscode or --desktop.");
+    if (arg === "--desktop") {
       target = "desktop";
     } else {
       next.push(arg);
@@ -270,9 +234,9 @@ function consumeTargetFlag(args: string[]): { target?: "vscode" | "desktop"; arg
   return { target, args: next };
 }
 
-async function applyTargetEnvironment(target?: "vscode" | "desktop"): Promise<void> {
+async function applyTargetEnvironment(target?: "desktop"): Promise<void> {
   // CAMBERQA_STATE_FILE is the explicit per-invocation override (it is what
-  // `camberqa vscode|desktop env` prints). CAMBERQA_PORT alone is NOT an
+  // `camberqa desktop env` prints). CAMBERQA_PORT alone is NOT an
   // override inside a worktree: shells spawned from a camberqa-launched app
   // inherit it, and it points at the instance that spawned the shell — which
   // may be a different worktree entirely.
@@ -318,7 +282,7 @@ async function applyTargetEnvironment(target?: "vscode" | "desktop"): Promise<vo
     const slot = findSlotForWorktreeId(gitInfo.id);
     if (slot === null) {
       throw new Error(
-        `No running camberqa services for worktree "${gitInfo.id}"${inherited}. Start them with 'camberqa vscode up' or 'camberqa desktop up'.`,
+        `No running camberqa services for worktree "${gitInfo.id}"${inherited}. Start them with 'camberqa desktop up'.`,
       );
     }
     env = {
@@ -330,14 +294,13 @@ async function applyTargetEnvironment(target?: "vscode" | "desktop"): Promise<vo
     };
   }
 
-  const candidates: Array<{ target: "vscode" | "desktop"; port: number }> = [
-    { target: "vscode", port: targetCamberQAPort(env.slot, "vscode") },
+  const candidates: Array<{ target: "desktop"; port: number }> = [
     { target: "desktop", port: targetCamberQAPort(env.slot, "desktop") },
   ];
 
   let selected = target ? candidates.find((candidate) => candidate.target === target) : undefined;
   if (!selected) {
-    const healthy: Array<{ target: "vscode" | "desktop"; port: number }> = [];
+    const healthy: Array<{ target: "desktop"; port: number }> = [];
     for (const candidate of candidates) {
       if (await isHealthyState(readStateFromFile(stateFileForPort(candidate.port)))) {
         healthy.push(candidate);
@@ -345,7 +308,7 @@ async function applyTargetEnvironment(target?: "vscode" | "desktop"): Promise<vo
     }
     if (healthy.length > 1) {
       throw new Error(
-        `[camberqa] Multiple targets are running for this worktree. Re-run with --vscode or --desktop.`,
+        `[camberqa] Multiple targets are running for this worktree. Re-run with --desktop.`,
       );
     }
     selected = healthy[0] ?? candidates[0];
@@ -362,10 +325,10 @@ async function main() {
   const parsedTarget = consumeTargetFlag(process.argv.slice(2));
   const args = parsedTarget.args;
 
-  // Auto-detect worktree environment. Skip for lifecycle commands (vscode/desktop
+  // Auto-detect worktree environment. Skip for lifecycle commands (desktop
   // manage their own env) and for help, since detection can fail loudly when no
   // services are running for the current worktree.
-  const isTargetCommand = args[0] === "vscode" || args[0] === "desktop";
+  const isTargetCommand = args[0] === "desktop";
   const isManageCommand = args[0] === "manage";
   const isHelp = args.length === 0 || args[0] === "--help" || args[0] === "-h";
   if (!isTargetCommand && !isManageCommand && !isHelp) {
@@ -398,7 +361,7 @@ async function main() {
     return;
   }
 
-  if (args[0] === "vscode" || args[0] === "desktop") {
+  if (args[0] === "desktop") {
     const { handleTargetCommand } = await import("./worktree/commands.js");
     await handleTargetCommand(args[0], args.slice(1));
     return;
@@ -410,9 +373,8 @@ async function main() {
 Usage: camberqa <command> [args...] [-- <command2> [args...] ...]
 
 Target lifecycle:
-  vscode up [--light|--dark] [--fast] [--acp|--lsp]
   desktop up [--color HEX] [--worktree-name NAME] [--fast]
-  vscode|desktop down [--all] | status | env
+  desktop down [--all] | status | env
 
 Interaction:
   snapshot [-i] [-c] [-d N] [-D]    discover @e1, @e2... refs
@@ -471,14 +433,6 @@ Projects (desktop):
   removeWorktree "name"                      hover row, click "Delete worktree X"
   openWorktree "name"                        click worktree row to switch workspace
 
-Chrome (vscode):
-  openChat                                   click activity bar Camber icon (or focus view)
-  focusChat                                  focus the chat input
-  toggleSidebar                              toggle primary sidebar visibility
-
-Panels (vscode):
-  listPanels | selectPanel "name" | getCurrentPanel
-
 Debug / ACP:
   getACPDump [output.json] | loadACPDump "path-or-json"
   restartACPServer "agent-server"
@@ -493,7 +447,7 @@ Process management:
   manage logs <id> [--tail N]
 
 Target selection:
-  --vscode | --desktop              pick target when both are running
+  --desktop              select the desktop app
 
 Refs:
   After \`snapshot\`, use @e1, @e2... as selectors.`);

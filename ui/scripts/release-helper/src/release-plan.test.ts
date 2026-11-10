@@ -2,88 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   calculateAlignmentFloor,
-  calculateCoordinatedVersion,
   calculateLocalCandidate,
   calculateVersionPlan,
   isNumericReleaseVersion,
   versionMatchesChannel,
 } from "./release-plan.js";
-
-describe("calculateCoordinatedVersion", () => {
-  it("uses one highest candidate instead of depending on product release order", () => {
-    expect(
-      calculateCoordinatedVersion([
-        { product: "vscode", action: "release", version: "0.8.0" },
-        { product: "desktop", action: "release", version: "0.8.1" },
-      ]),
-    ).toEqual({
-      version: "0.8.1",
-      activeProducts: ["vscode", "desktop"],
-      recovering: false,
-    });
-  });
-
-  it("excludes unaffected products", () => {
-    expect(
-      calculateCoordinatedVersion([
-        { product: "vscode", action: "release", version: "0.9.4" },
-        { product: "desktop", action: "skip" },
-      ]),
-    ).toEqual({
-      version: "0.9.4",
-      activeProducts: ["vscode"],
-      recovering: false,
-    });
-  });
-
-  it("reuses an existing source reservation across a partial retry", () => {
-    expect(
-      calculateCoordinatedVersion([
-        {
-          product: "vscode",
-          action: "resume",
-          version: "0.9.5",
-          implicitRecovery: true,
-        },
-        { product: "desktop", action: "release", version: "0.9.5" },
-      ]),
-    ).toEqual({
-      version: "0.9.5",
-      activeProducts: ["vscode", "desktop"],
-      recovering: true,
-    });
-  });
-
-  it("fails closed when retry reservations disagree or have been overtaken", () => {
-    expect(() =>
-      calculateCoordinatedVersion([
-        {
-          product: "vscode",
-          action: "resume",
-          version: "0.9.5",
-          implicitRecovery: true,
-        },
-        {
-          product: "desktop",
-          action: "resume",
-          version: "0.9.6",
-          implicitRecovery: true,
-        },
-      ]),
-    ).toThrow("disagree");
-    expect(() =>
-      calculateCoordinatedVersion([
-        {
-          product: "vscode",
-          action: "resume",
-          version: "0.9.5",
-          implicitRecovery: true,
-        },
-        { product: "desktop", action: "release", version: "0.9.6" },
-      ]),
-    ).toThrow("above reserved coordinated version 0.9.5");
-  });
-});
 
 describe("release version validation", () => {
   it("accepts numeric versions and rejects prerelease/build metadata", () => {

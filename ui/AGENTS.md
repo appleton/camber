@@ -14,8 +14,6 @@ Prefer focused package commands over whole-workspace checks while iterating.
 | Helper API bindings | `ui/packages/helperapi/` |
 | Split-pane tabs (desktop) | `ui/packages/splits/` |
 | Desktop host | `ui/apps/desktop-assistant/` |
-| VS Code host | `ui/apps/vscode-assistant/` |
-| Visual Studio host | `ui/apps/vs-assistant/` |
 | Mobile remote host | `ui/apps/mobile-remote/` |
 | Remote WebSocket client | `ui/packages/remote-client/` |
 | UI automation | `ui/packages/camberqa/` |

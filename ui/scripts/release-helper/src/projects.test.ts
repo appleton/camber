@@ -20,9 +20,7 @@ const trackedFiles = execFileSync("git", ["ls-files"], {
   .split("\n");
 
 const appDirs: Record<string, string> = {
-  vscode: "ui/apps/vscode-assistant",
   desktop: "ui/apps/desktop-assistant",
-  vs: "ui/apps/vs-assistant",
 };
 const products = Object.keys(appDirs);
 
@@ -34,7 +32,7 @@ function dirsFor(name: string): string[] {
 
 describe("release project ownership", () => {
   it("contains only products managed by the coordinated release flow", () => {
-    expect(config.projects.map((project) => project.name)).toEqual(["vscode", "desktop", "vs"]);
+    expect(config.projects.map((project) => project.name)).toEqual(["desktop"]);
   });
 
   it.each(products)("covers the %s runtime dependency graph", (product) => {
@@ -80,8 +78,6 @@ describe("release project ownership", () => {
 
   it("assigns the Desktop-only MLX sidecar only to Desktop", () => {
     expect(dirsFor("desktop")).toContain("cmd/camber-mlx-sidecar");
-    expect(dirsFor("vscode")).not.toContain("cmd/camber-mlx-sidecar");
-    expect(dirsFor("vs")).not.toContain("cmd/camber-mlx-sidecar");
   });
 
   it.each(products)("does not treat %s release automation as product code", (product) => {

@@ -44,7 +44,7 @@ export interface WebIssue {
 }
 
 export interface CamberQATarget {
-  readonly kind: "vscode" | "desktop";
+  readonly kind: "desktop";
 
   launch(opts?: any): Promise<void>;
   close(): Promise<void>;

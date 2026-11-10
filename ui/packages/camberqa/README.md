@@ -1,8 +1,8 @@
 # `@camber/camberqa`
 
 CamberQA is Playwright-based UI automation for Camber Assistant development.
-It keeps a dedicated VS Code instance warm so tests and agents can inspect,
-click, type, and screenshot extension UI flows quickly.
+It connects to the desktop app so tests and agents can inspect, click, type,
+and screenshot application flows.
 
 ## Start
 
@@ -18,7 +18,7 @@ Then run:
 camberqa --help
 ```
 
-Use CamberQA for VS Code assistant UI QA, especially when reproducing and
+Use CamberQA for desktop assistant UI QA, especially when reproducing and
 verifying ACP interaction bugs.
 
 Use `camberqa webErrors` to inspect recent browser console errors and uncaught

@@ -2,15 +2,8 @@ import { describe, expect, test } from "vitest";
 import { isPathInside, parseWorktreeUpOptions, servicePatternsForTargets } from "./commands.js";
 
 describe("servicePatternsForTargets", () => {
-  const matches = (targets: Array<"vscode" | "desktop">, id: string) =>
+  const matches = (targets: Array<"desktop">, id: string) =>
     servicePatternsForTargets(targets).some((pattern) => pattern.test(id));
-
-  test("vscode covers vite and camberqa services only", () => {
-    expect(matches(["vscode"], "vite-s2")).toBe(true);
-    expect(matches(["vscode"], "camberqa-s2")).toBe(true);
-    expect(matches(["vscode"], "desktop-vite-s2")).toBe(false);
-    expect(matches(["vscode"], "desktop-s2")).toBe(false);
-  });
 
   test("desktop covers desktop services only", () => {
     expect(matches(["desktop"], "desktop-vite-s2")).toBe(true);
@@ -20,10 +13,10 @@ describe("servicePatternsForTargets", () => {
   });
 
   test("both targets cover every slot service but not unrelated processes", () => {
-    expect(matches(["vscode", "desktop"], "desktop-s10")).toBe(true);
-    expect(matches(["vscode", "desktop"], "vite-s10")).toBe(true);
-    expect(matches(["vscode", "desktop"], "sb-features")).toBe(false);
-    expect(matches(["vscode", "desktop"], "vite-s2-extra")).toBe(false);
+    expect(matches(["desktop"], "desktop-s10")).toBe(true);
+    expect(matches(["desktop"], "vite-s10")).toBe(false);
+    expect(matches(["desktop"], "sb-features")).toBe(false);
+    expect(matches(["desktop"], "vite-s2-extra")).toBe(false);
   });
 });
 

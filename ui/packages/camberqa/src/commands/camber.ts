@@ -10,7 +10,7 @@
 import { DEBUG_RPC_EVENTS, requestDebugRPCInWindow } from "@camber/assistant/debug-rpc";
 import { ACP_DEBUG_RPC_METHODS } from "@camber/assistant/debug-rpc/acp";
 import type { CamberQATarget } from "../targets/types.js";
-import { commandPalette, sleep, stripQuotes } from "../utils.js";
+import { sleep, stripQuotes } from "../utils.js";
 
 export const CAMBER_COMMANDS = new Set([
   "sendMessage",
@@ -49,9 +49,6 @@ export const CAMBER_COMMANDS = new Set([
   "createWorktree",
   "removeWorktree",
   "openWorktree",
-  "openChat",
-  "focusChat",
-  "toggleSidebar",
 ]);
 
 export async function handleCamberCommand(
@@ -101,7 +98,7 @@ export async function handleCamberCommand(
     case "restartACPServer":
       return handleRestartACPServer(args, mgr);
     case "restartHelper":
-      return handleRestartHelper(args, mgr);
+      return handleRestartHelper();
     case "helperLogs":
       return handleHelperLogs(args, mgr);
     case "getConfigs":
@@ -132,12 +129,6 @@ export async function handleCamberCommand(
       return handleRemoveWorktree(args, mgr);
     case "openWorktree":
       return handleOpenWorktree(args, mgr);
-    case "openChat":
-      return handleOpenChat(mgr);
-    case "focusChat":
-      return handleFocusChat(mgr);
-    case "toggleSidebar":
-      return handleToggleSidebar(mgr);
     default:
       throw new Error(`Unknown camber command: ${command}`);
   }
@@ -255,13 +246,6 @@ async function handleGetLastResponse(mgr: CamberQATarget): Promise<string> {
 
 async function handleNewConversation(args: string[], mgr: CamberQATarget): Promise<string> {
   const frame = mgr.getCamberWebviewFrame();
-
-  if (mgr.kind === "vscode") {
-    const button = frame.getByRole("button", { name: "New conversation", exact: true }).first();
-    await button.click({ timeout: 5000 });
-    await sleep(500);
-    return "Started new conversation";
-  }
 
   // Desktop: the chat-header "New conversation" button only renders when the
   // sidebar is collapsed. The user-driven path is the project- or worktree-
@@ -529,15 +513,8 @@ async function collectConversationEntries(mgr: CamberQATarget): Promise<Conversa
   }, kind);
 }
 
-function formatConversationList(entries: ConversationEntry[], kind: "vscode" | "desktop"): string {
+function formatConversationList(entries: ConversationEntry[], _kind: "desktop"): string {
   if (entries.length === 0) return "(no conversations)";
-  if (kind === "vscode") {
-    return entries
-      .map(
-        (e) => `${e.selected ? "*" : " "} [${e.index}] ${e.title}${e.agent ? ` (${e.agent})` : ""}`,
-      )
-      .join("\n");
-  }
 
   // desktop tree
   const lines: string[] = [];
@@ -719,17 +696,8 @@ async function handleRestartACPServer(args: string[], mgr: CamberQATarget): Prom
   return `ACP server restarted: ${agentServer}`;
 }
 
-async function handleRestartHelper(_args: string[], mgr: CamberQATarget): Promise<string> {
-  const page = mgr.getPage();
-  await commandPalette(page, "Developer: Reload Window");
-
-  // The window reload destroys all frames — wait for VS Code to come back
-  await sleep(3000);
-
-  // Re-acquire the webview frames after reload
-  await mgr.reacquireAfterReload();
-
-  return "camber-helper restarted (window reloaded)";
+async function handleRestartHelper(): Promise<string> {
+  throw new Error("restartHelper requires the desktop bridge");
 }
 
 function historyBackButton(mgr: CamberQATarget) {
@@ -869,42 +837,6 @@ function requireDesktop(mgr: CamberQATarget, command: string): void {
   if (mgr.kind !== "desktop") {
     throw new Error(`${command} is desktop-only (current target is ${mgr.kind})`);
   }
-}
-
-function requireVscode(mgr: CamberQATarget, command: string): void {
-  if (mgr.kind !== "vscode") {
-    throw new Error(`${command} is VS Code-only (current target is ${mgr.kind})`);
-  }
-}
-
-async function handleOpenChat(mgr: CamberQATarget): Promise<string> {
-  requireVscode(mgr, "openChat");
-  const page = mgr.getPage();
-  const activityIcon = page.locator('[aria-label*="Camber"]').first();
-  if (await activityIcon.isVisible().catch(() => false)) {
-    await activityIcon.click({ timeout: 5000 });
-    await sleep(400);
-    return "Opened Camber view (activity bar)";
-  }
-  // Fall back to the auto-generated "Focus on Camber View" command
-  await commandPalette(page, "Focus on Camber View");
-  return "Opened Camber view (command palette)";
-}
-
-async function handleFocusChat(mgr: CamberQATarget): Promise<string> {
-  requireVscode(mgr, "focusChat");
-  const page = mgr.getPage();
-  await commandPalette(page, "Focus on Prompt Input");
-  await sleep(200);
-  return "Focused chat input";
-}
-
-async function handleToggleSidebar(mgr: CamberQATarget): Promise<string> {
-  requireVscode(mgr, "toggleSidebar");
-  const page = mgr.getPage();
-  await commandPalette(page, "Toggle Primary Side Bar Visibility");
-  await sleep(200);
-  return "Toggled sidebar";
 }
 
 interface ProjectInfo {
