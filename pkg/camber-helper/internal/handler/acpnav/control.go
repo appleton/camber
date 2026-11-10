@@ -59,8 +59,7 @@ func (s *Server) WriteControlState(ctx context.Context, id string, value any) er
 	if err != nil {
 		return pkgerrors.WithStack(err)
 	}
-	_, err = s.store.db.ExecContext(ctx, `INSERT INTO metadata(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`, "control/"+id, string(raw))
-	return pkgerrors.WithStack(err)
+	return pkgerrors.WithStack(s.store.writeControlState(ctx, id, string(raw)))
 }
 
 // RemoveWorktreeSafely uses Git's normal dirty and lock guards for automation.

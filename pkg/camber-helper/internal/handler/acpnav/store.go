@@ -56,6 +56,16 @@ type Store struct {
 	// archivedSessionCloser closes sessions of descendants archived by the
 	// cascade; see Server.SetArchivedSessionCloser.
 	archivedSessionCloser atomic.Pointer[ArchivedSessionCloser]
+	// linksMu guards parentLinks, a lazily loaded cache of control-state
+	// parent/root links keyed by conversation id (nil until first load). It is
+	// kept coherent by writeControlState, the only writer of control state.
+	linksMu     sync.Mutex
+	parentLinks map[string]controlLink
+}
+
+type controlLink struct {
+	ParentID string `json:"parentId"`
+	RootID   string `json:"rootId"`
 }
 
 func Open(ctx context.Context, dbPath string) (*Store, error) {
@@ -1475,6 +1485,9 @@ func (s *Store) RestoreConversation(ctx context.Context, c methods.ACPNavConvers
 	if _, err := tx.ExecContext(ctx, `UPDATE conversations SET archived = 0 WHERE id = ?`, c.ID); err != nil {
 		return fmt.Errorf("restoring conversation: %w", err)
 	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO metadata(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`, restoredKey(c.ID), "1"); err != nil {
+		return fmt.Errorf("recording restore marker: %w", err)
+	}
 	return tx.Commit()
 }
 
@@ -1625,7 +1638,12 @@ WHERE workspace_path = ?3 AND session_id != ''
 			return fmt.Errorf("archiving worktree conversations: %w", err)
 		}
 	}
-	cascaded, _, err := archiveDescendantsTx(ctx, tx, archivedRoots)
+	for _, id := range archivedRoots {
+		if err := clearRestoredTx(ctx, tx, id); err != nil {
+			return err
+		}
+	}
+	cascaded, _, err := archiveDescendantsTx(ctx, tx, archivedRoots, false)
 	if err != nil {
 		return err
 	}
@@ -1663,6 +1681,11 @@ func (s *Store) ArchiveConversation(ctx context.Context, workspacePath, conversa
 		if _, err := tx.ExecContext(ctx, `UPDATE conversations SET active = 0, archived = 1, touched_at = ? WHERE `+where, append([]any{nowString()}, args...)...); err != nil {
 			return fmt.Errorf("archiving conversation: %w", err)
 		}
+		for _, id := range ids {
+			if err := clearRestoredTx(ctx, tx, id); err != nil {
+				return err
+			}
+		}
 		roots = append(roots, ids...)
 		return nil
 	}
@@ -1678,7 +1701,7 @@ func (s *Store) ArchiveConversation(ctx context.Context, workspacePath, conversa
 	if err != nil {
 		return err
 	}
-	cascaded, _, err := archiveDescendantsTx(ctx, tx, roots)
+	cascaded, _, err := archiveDescendantsTx(ctx, tx, roots, false)
 	if err != nil {
 		return err
 	}
@@ -1916,47 +1939,79 @@ FROM conversations
 		return nil, err
 	}
 	rows.Close()
-	return conversations, s.attachControlParents(ctx, id, conversations)
+	return conversations, s.attachControlParents(ctx, conversations)
 }
 
-// attachControlParents fills ParentID/RootID from control state with one query.
-// The control package owns the record shape; only the link fields are decoded.
-func (s *Store) attachControlParents(ctx context.Context, id string, conversations []methods.ACPNavConversation) error {
+// attachControlParents fills ParentID/RootID from the cached control-state
+// links. The control package owns the record shape; only the link fields are
+// decoded, and only once per record write (not per list).
+func (s *Store) attachControlParents(ctx context.Context, conversations []methods.ACPNavConversation) error {
 	if len(conversations) == 0 {
+		return nil
+	}
+	s.linksMu.Lock()
+	defer s.linksMu.Unlock()
+	if err := s.loadParentLinksLocked(ctx); err != nil {
+		return err
+	}
+	for i := range conversations {
+		l := s.parentLinks[conversations[i].ID]
+		conversations[i].ParentID, conversations[i].RootID = l.ParentID, l.RootID
+	}
+	return nil
+}
+
+func (s *Store) loadParentLinksLocked(ctx context.Context) error {
+	if s.parentLinks != nil {
 		return nil
 	}
 	// A key range (not LIKE, which cannot use the BINARY primary key index)
 	// keeps this off the never-pruned control/turn/ records.
-	query, args := `SELECT key, value FROM metadata WHERE key >= ? AND key < ?`, []any{"control/conversation/", "control/conversation0"}
-	if id != "" {
-		query, args = `SELECT key, value FROM metadata WHERE key = ?`, []any{"control/conversation/" + id}
-	}
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := s.db.QueryContext(ctx, `SELECT key, value FROM metadata WHERE key >= ? AND key < ?`, "control/conversation/", "control/conversation0")
 	if err != nil {
 		return fmt.Errorf("listing control state: %w", err)
 	}
 	defer rows.Close()
-	type link struct {
-		ParentID string `json:"parentId"`
-		RootID   string `json:"rootId"`
-	}
-	links := map[string]link{}
+	links := map[string]controlLink{}
 	for rows.Next() {
 		var key, raw string
 		if err := rows.Scan(&key, &raw); err != nil {
 			return fmt.Errorf("scanning control state: %w", err)
 		}
-		var l link
-		if json.Unmarshal([]byte(raw), &l) == nil && (l.ParentID != "" || l.RootID != "") {
+		if l, ok := decodeControlLink(raw); ok {
 			links[strings.TrimPrefix(key, "control/conversation/")] = l
 		}
 	}
 	if err := rows.Err(); err != nil {
 		return err
 	}
-	for i := range conversations {
-		l := links[conversations[i].ID]
-		conversations[i].ParentID, conversations[i].RootID = l.ParentID, l.RootID
+	s.parentLinks = links
+	return nil
+}
+
+func decodeControlLink(raw string) (controlLink, bool) {
+	var l controlLink
+	ok := json.Unmarshal([]byte(raw), &l) == nil && (l.ParentID != "" || l.RootID != "")
+	return l, ok
+}
+
+// writeControlState upserts a control-state record and keeps the parent-link
+// cache coherent. The lock spans the write so concurrent writers to one key
+// cannot leave the cache disagreeing with the row.
+func (s *Store) writeControlState(ctx context.Context, id, raw string) error {
+	s.linksMu.Lock()
+	defer s.linksMu.Unlock()
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO metadata(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`, "control/"+id, raw); err != nil {
+		return err
+	}
+	convID, ok := strings.CutPrefix(id, "conversation/")
+	if !ok || s.parentLinks == nil {
+		return nil
+	}
+	if l, ok := decodeControlLink(raw); ok {
+		s.parentLinks[convID] = l
+	} else {
+		delete(s.parentLinks, convID)
 	}
 	return nil
 }

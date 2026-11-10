@@ -29,7 +29,12 @@ type archivedSession struct {
 // roots through control-state parent links, transitively and cycle-safe. Roots
 // themselves are never touched. It returns the sessions of the newly archived
 // descendants and how many rows it archived.
-func archiveDescendantsTx(ctx context.Context, tx *sql.Tx, roots []string) ([]archivedSession, int, error) {
+//
+// With skipRestored, conversations carrying a restore marker (see
+// RestoreConversation) are neither archived nor walked through: the user
+// deliberately revived them while an ancestor stayed archived. Live archive
+// cascades pass false so archiving the parent again re-archives them.
+func archiveDescendantsTx(ctx context.Context, tx *sql.Tx, roots []string, skipRestored bool) ([]archivedSession, int, error) {
 	if len(roots) == 0 {
 		return nil, 0, nil
 	}
@@ -56,6 +61,16 @@ func archiveDescendantsTx(ctx context.Context, tx *sql.Tx, roots []string) ([]ar
 				continue
 			}
 			visited[child] = true
+			if skipRestored {
+				var one int
+				err := tx.QueryRowContext(ctx, `SELECT 1 FROM metadata WHERE key = ?`, restoredKey(child)).Scan(&one)
+				if err == nil {
+					continue
+				}
+				if err != sql.ErrNoRows {
+					return nil, 0, fmt.Errorf("reading restore marker: %w", err)
+				}
+			}
 			queue = append(queue, child)
 			var archived int
 			var agentServer, sessionID string
@@ -69,6 +84,9 @@ func archiveDescendantsTx(ctx context.Context, tx *sql.Tx, roots []string) ([]ar
 			if _, err := tx.ExecContext(ctx, `UPDATE conversations SET active = 0, archived = 1, touched_at = ? WHERE id = ?`, now, child); err != nil {
 				return nil, 0, fmt.Errorf("archiving descendant conversation: %w", err)
 			}
+			if err := clearRestoredTx(ctx, tx, child); err != nil {
+				return nil, 0, err
+			}
 			count++
 			if sessionID != "" {
 				sessions = append(sessions, archivedSession{AgentServer: agentServer, SessionID: sessionID})
@@ -76,6 +94,18 @@ func archiveDescendantsTx(ctx context.Context, tx *sql.Tx, roots []string) ([]ar
 		}
 	}
 	return sessions, count, nil
+}
+
+// restoredKey names the metadata marker recording that a conversation was
+// explicitly restored, so open-time reconcile leaves it unarchived even though
+// an ancestor is still archived.
+func restoredKey(id string) string { return "acpnav/restored/" + id }
+
+func clearRestoredTx(ctx context.Context, tx *sql.Tx, id string) error {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM metadata WHERE key = ?`, restoredKey(id)); err != nil {
+		return fmt.Errorf("clearing restore marker: %w", err)
+	}
+	return nil
 }
 
 // controlChildren maps parent conversation id to child ids from control state.
@@ -118,7 +148,7 @@ func (s *Store) reconcileArchivedOrphans(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	_, count, err := archiveDescendantsTx(ctx, tx, roots)
+	_, count, err := archiveDescendantsTx(ctx, tx, roots, true)
 	if err != nil {
 		return 0, err
 	}

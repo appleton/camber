@@ -220,3 +220,77 @@ func TestInsertUnderArchivedParentIsArchivedAndClosed(t *testing.T) {
 		t.Fatal("closer not invoked for child inserted under archived parent")
 	}
 }
+
+func TestRestoredSubAgentSurvivesReopenUntilParentArchivedAgain(t *testing.T) {
+	ctx := context.Background()
+	ws := t.TempDir()
+	dbPath := filepath.Join(t.TempDir(), "nav.db")
+	store, err := Open(ctx, dbPath)
+	require.NoError(t, err)
+	server := NewServer()
+	server.SetStore(store)
+	_, err = store.UpsertProject(ctx, methods.ACPNavUpsertProjectParams{Path: ws})
+	require.NoError(t, err)
+	conversation := func(id string) methods.ACPNavConversation {
+		return methods.ACPNavConversation{ID: id, WorkspacePath: ws, Cwd: ws, AgentServer: "agent", SessionID: "s-" + id, UpdatedAt: "2026-01-01T00:00:00Z"}
+	}
+	for _, id := range []string{"p", "c", "g"} {
+		require.NoError(t, store.UpsertConversation(ctx, conversation(id)))
+	}
+	link(t, server, "c", "p")
+	link(t, server, "g", "c")
+	_, err = server.ArchiveConversation(ctx, &methods.ACPNavArchiveConversationParams{ConversationID: "p"}, nil)
+	require.NoError(t, err)
+	require.NoError(t, store.RestoreConversation(ctx, conversation("c")))
+	require.NoError(t, server.Close())
+
+	store, err = Open(ctx, dbPath)
+	require.NoError(t, err)
+	server = NewServer()
+	server.SetStore(store)
+	t.Cleanup(func() { _ = server.Close() })
+	assert.Equal(t, map[string]bool{"p": true, "c": false, "g": true}, archivedSet(t, store))
+
+	// Archiving the parent again re-archives the child and clears the marker.
+	_, err = server.ArchiveConversation(ctx, &methods.ACPNavArchiveConversationParams{ConversationID: "p"}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]bool{"p": true, "c": true, "g": true}, archivedSet(t, store))
+	var n int
+	require.NoError(t, store.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM metadata WHERE key = ?`, restoredKey("c")).Scan(&n))
+	assert.Zero(t, n)
+	_, err = store.reconcileArchivedOrphans(ctx)
+	require.NoError(t, err)
+	assert.True(t, archivedSet(t, store)["c"])
+}
+
+func TestParentLinkCacheStaysCoherentAfterControlWrite(t *testing.T) {
+	ctx := context.Background()
+	server, store := cascadeFixture(t, filepath.Join(t.TempDir(), "nav.db"), "p", "q", "c")
+	parentOf := func() (string, string) {
+		state, err := store.List(ctx)
+		require.NoError(t, err)
+		for _, c := range state.Conversations {
+			if c.ID == "c" {
+				return c.ParentID, c.RootID
+			}
+		}
+		return "?", "?"
+	}
+	parent, root := parentOf() // loads the cache
+	assert.Empty(t, parent)
+	assert.Empty(t, root)
+
+	require.NoError(t, server.WriteControlState(ctx, "conversation/c", map[string]string{"parentId": "p", "rootId": "p"}))
+	parent, root = parentOf()
+	assert.Equal(t, "p", parent)
+	assert.Equal(t, "p", root)
+
+	require.NoError(t, server.WriteControlState(ctx, "conversation/c", map[string]string{"parentId": "q", "rootId": "p"}))
+	parent, _ = parentOf()
+	assert.Equal(t, "q", parent)
+
+	require.NoError(t, server.WriteControlState(ctx, "conversation/c", map[string]string{"note": "no links"}))
+	parent, root = parentOf()
+	assert.Empty(t, parent)
+	assert.Empty(t, root)
+}
