@@ -15,7 +15,8 @@ attribution. These remaining references are intentional:
 - The upstream `poolside` ACP registry entry, `pool` executable, upstream model
   IDs (`poolside/Laguna-*`), download URLs, provider account descriptions, and the `POOLSIDE_STANDALONE_*` /
   `POOLSIDE_API_KEY` environment variables passed to that external agent.
-  This rebrand does not implement the separate Pi-default migration.
+  The current default agent ID is still `poolside`; `default` remains a legacy
+  alias. This documentation cleanup does not implement the separate Pi-default migration.
 - `_poolside/*` ACP extension methods understood by the upstream agent. Camber's
   own helper methods use `camber/*`; embedded upstream extension names stay intact.
 - External `github.com/poolsideai/acp-go-sdk` and `github.com/poolsideai/glsp`
@@ -32,6 +33,13 @@ preferences may therefore need to be imported separately; helper-owned session
 and configuration paths remain unchanged. Do not run both clients against the
 same state concurrently without checking their compatibility.
 
+## Configuration paths
+
+The default agent configuration file is `~/.config/poolside/assistant.json`.
+With `XDG_CONFIG_HOME` set, it is
+`$XDG_CONFIG_HOME/poolside/assistant.json`. `CAMBER_ASSISTANT_CONFIG_PATH`
+overrides the full path in both the desktop app and helper.
+
 ## Publishing
 
 The old desktop update endpoint and signing public key are removed. Update checks
@@ -40,9 +48,9 @@ disabled until a new signing key and feed are configured. Release jobs are gated
 on the repository variable `CAMBER_RELEASES_ENABLED=true`; this should remain
 unset until personal publishing credentials and destinations are configured.
 
-Helper downloads now target this fork. Until it has `helper/v*` releases, build
-from source with `CAMBER_DESKTOP_LOCAL_HELPER=1` instead of downloading old
-upstream binaries, which speak the previous helper protocol.
+Helper downloads target this fork, which publishes `helper/v*` runtime releases.
+Use `CAMBER_DESKTOP_LOCAL_HELPER=1` to build from source instead. Old upstream
+binaries speak the previous helper protocol and are not compatible.
 
 ## Remaining visual work
 

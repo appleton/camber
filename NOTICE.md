@@ -30,12 +30,4 @@ Licensed under the SIL Open Font License, Version 1.1.
 
 ---
 
-This product includes Visual Studio Code declaration copies.
-
-Copyright (c) Microsoft Corporation. All rights reserved.
-
-Licensed under the MIT License.
-
----
-
 Full third-party license details are available in THIRD-PARTY-LICENSES.md.

@@ -2,18 +2,20 @@
 
 ## About
 
-This is the shared Svelte assistant shell used by the desktop app and IDE
-extensions.
+This is the shared Svelte assistant shell used by the desktop app and its
+mobile remote companion.
 
 ## Building and running from source
 
-1. Node and pnpm versions are specified in `.tool-versions`. Make sure you have the correct versions
-   installed.
-2. Ensure that you're in the repository root.
-3. Run `pnpm install`.
-4. In a new shell, run `code .`.
-5. When VS Code loads, press **F5** with the **Launch Extension** configuration
-   selected to open a development window with the extension loaded.
+Follow the repository [build-from-source instructions](../../../INSTALL.md#build-from-source),
+then run the desktop app from the repository root:
+
+```sh
+pnpm -F @camber/desktop-assistant dev
+```
+
+See the [desktop README](../../apps/desktop-assistant/README.md) for native build
+requirements and runtime configuration.
 
 ## Tests
 
@@ -30,5 +32,5 @@ rendering the main panel UI.
   is named `index.test.ts`.
 
 ```sh
-pnpm run test
+pnpm -F @camber/assistant test:unit
 ```

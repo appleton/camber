@@ -6,8 +6,7 @@ Camber Assistant is an open-source client for coding agents. Use it from the mac
 
 Connect agents that support the
 [Agent Client Protocol](https://agentclientprotocol.com/), including
-[pool](https://github.com/poolsideai/pool), Codex, Claude, and other compatible
-agents.
+Codex, Claude, and other compatible agents.
 
 Chat with agents locally and control desktop sessions from your phone.
 
@@ -17,10 +16,6 @@ Chat with agents locally and control desktop sessions from your phone.
   Cursor, install community agents from the
   [Agent Client Protocol](https://agentclientprotocol.com/) registry, or bring
   your own agent.
-- **Upstream agent compatibility.** The existing integration with
-  [pool](https://github.com/poolsideai/pool), built around Poolside models
-  trained specifically for software engineering and integrated into the
-  assistant UI.
 - **Desktop workflows for larger changes.** Use worktrees, GitHub awareness,
   built-in terminals, and change review tools from the desktop app.
 - **Optional on-device models.** In the desktop app on Apple Silicon,
@@ -45,10 +40,6 @@ For install instructions, see
 installing, see
 [Getting started with Camber Assistant](./docs/getting-started.md) to choose
 an agent and start a conversation.
-
-Need a build for another platform?
-[Start a discussion](https://github.com/appleton/camber/discussions) or
-[build Camber Assistant from source](./INSTALL.md#build-from-source).
 
 ## Issues and discussions
 
@@ -87,8 +78,8 @@ their own licenses and terms.
 
 ## Origin
 
-Camber is an independent fork of Poolside Assistant, maintained by
+Camber was forked from the Poolside Assistants and is independently maintained by
 [Andy Appleton](https://github.com/appleton). Original copyright notices and
-third-party licenses are retained. Camber is not affiliated with Poolside.
+third-party licenses are retained.
 
 See [the rebrand notes](docs/camber-rebrand.md) for compatibility details.

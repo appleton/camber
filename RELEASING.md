@@ -1,8 +1,7 @@
 # Releasing Camber
 
 Camber ships a macOS desktop application and a versioned helper runtime.
-The mobile remote UI is embedded in the helper. IDE extensions and Windows
-packages are no longer built or published.
+The mobile remote UI is embedded in the helper.
 
 ## Helper runtime
 
@@ -32,7 +31,7 @@ lineage creation. The workflow verifies all runtime assets before packaging.
 
 Desktop publication stays gated by `CAMBER_RELEASES_ENABLED`, signing secrets,
 and the configured distribution destination. This project currently supports
-macOS only. No Windows, Visual Studio, or VS Code publishing credentials are needed.
+macOS only.
 
 For development, `CAMBER_DESKTOP_LOCAL_HELPER=1` builds the helper locally;
 `CAMBER_HELPER_VERSION=helper/vM.m.p` pins a downloaded release.

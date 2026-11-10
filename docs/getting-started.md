@@ -7,35 +7,12 @@ conversation from your project.
 
 ## Step 1: Open Camber Assistant
 
-Open Camber Assistant from the surface you installed:
-
-- **Desktop app**: Launch **Camber**, then open a project.
+Launch **Camber**, then open a project.
 
 ## Step 2: Connect an agent
 
-Choose the agent or agents you want Camber Assistant to run. You can use the
-default Camber agent, install another ACP-compatible agent, or configure a
-custom agent.
-
-### Use the Camber agent
-
-The Camber agent is bundled and available by default. You do not need to
-install it.
-
-1. With Camber Assistant open, start a new conversation:
-   - **Desktop app**: Click **New conversation**.
-2. In the conversation tab, click **Log in to Camber**.
-3. In the terminal opened by Camber Assistant, choose how you want to access
-   Poolside models:
-   - Use Camber Platform for free (recommended)
-   - Use your organization's Camber deployment
-   - Use your OpenRouter account
-   - Use another OpenAI-compatible provider
-
-   For more information, see
-   [Log in to Poolside](https://docs.poolside.ai/get-started/log-in) in the upstream documentation.
-
-4. Return to the conversation tab and click **I am logged in**.
+Install an ACP-compatible agent or configure a custom agent, then select it
+when starting a conversation.
 
 ### Use any ACP-compatible agent
 
@@ -55,8 +32,7 @@ agents you trust, and review the command or binary before installing.
 ### Use a local model on your device
 
 Camber Local runs models on your own machine with the
-[MLX framework](https://mlx-framework.org) instead of using Camber cloud
-models. Use it when you want the model runtime to stay on your device.
+[MLX framework](https://mlx-framework.org). Use it when you want the model runtime to stay on your device.
 
 Camber Local requires the desktop app on a Mac with Apple silicon. The
 **On-Device Models** settings run on the Mac hosting the desktop app.
@@ -109,8 +85,7 @@ code.
 - Type `/` in the prompt to open commands and session controls. The available
   commands depend on the selected agent.
 - Type `$` in the prompt to open skills, if the selected agent or workspace
-  provides any. For examples, see
-  [Poolside skills](https://github.com/poolsideai/skills).
+  provides any.
 - Add project context by mentioning files, folders, or other relevant details in
   the prompt.
 - Use the prompt controls to adjust the mode, change the model, or use voice

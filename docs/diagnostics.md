@@ -11,7 +11,4 @@ can inspect when troubleshooting:
   Errors reported by the assistant webview and startup diagnostics are appended
   to the same file as `webview-diag:` lines, so webview and helper activity
   interleave chronologically.
-- **VS Code extension**: the Camber output channel, one JSON line per event.
-- **Visual Studio extension**: the "Camber Assistant Diagnostics" output
-  window pane. The helper's own output is in the "Camber Helper Logs" pane.
 - **Mobile remote**: the browser console only.

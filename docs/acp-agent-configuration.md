@@ -10,13 +10,10 @@ such as a development build of an agent.
 
 ## Configuration file
 
-Camber reads `assistant.json` from:
-
-- **macOS/Linux**: `~/.config/camber/assistant.json`
-- **Windows**: `%USERPROFILE%\.config\camber\assistant.json`
-
-If `XDG_CONFIG_HOME` is set, Camber uses
-`$XDG_CONFIG_HOME/camber/assistant.json` instead.
+Camber retains the inherited configuration directory so existing settings stay
+available. See [configuration paths](./camber-rebrand.md#configuration-paths)
+for its exact location and the `XDG_CONFIG_HOME` override. Set
+`CAMBER_ASSISTANT_CONFIG_PATH` to use an explicit file path instead.
 
 New configuration files include the published
 [JSON Schema](../schemas/assistant/v1.json):
@@ -72,25 +69,22 @@ explicitly:
 }
 ```
 
-### Run a development build of Poolside Agent
+### Run a development build of an agent
 
-The registry-managed Poolside Agent remains available as `poolside`. Give a
-development executable a different name so both versions are available:
+Give a development executable its own name so it can coexist with an installed
+registry agent:
 
 ```json
 {
   "$schema": "https://raw.githubusercontent.com/appleton/camber/main/schemas/assistant/v1.json",
   "agent_servers": {
-    "pool-main": {
+    "my-agent-dev": {
       "type": "custom",
-      "command": "/Users/me/.local/bin/pool",
-      "args": ["acp"],
-      "default_config_options": {
-        "mode": "always-allow"
-      }
+      "command": "/Users/me/projects/my-agent/bin/agent",
+      "args": ["acp"]
     }
   },
-  "default_agent_server": "pool-main"
+  "default_agent_server": "my-agent-dev"
 }
 ```
 
@@ -123,7 +117,7 @@ registry entry. Install the agent through the UI instead.
 | Field | Type | Behavior |
 | --- | --- | --- |
 | `agent_servers` | object | Maps display names to ACP agent configurations. |
-| `default_agent_server` | string | Selects the agent for new conversations. Defaults to `poolside`. |
+| `default_agent_server` | string | Selects the agent for new conversations. Set this to the ID of your chosen agent. |
 | `type` | `custom`, `registry`, or `local` | `custom` starts your command, `registry` uses a UI-managed registry installation, and `local` is reserved for Camber Local. A custom entry may omit `type`. |
 | `command` | string | Executable name or path for a custom agent. Required for custom agents. |
 | `args` | string array | Arguments passed verbatim to the custom agent. |
@@ -134,8 +128,8 @@ registry entry. Install the agent through the UI instead.
 the agent advertises a matching select option and valid value. Use the option
 IDs and values shown by that agent in the conversation controls.
 
-The old agent name `default` is accepted as an alias for `poolside`, but new
-configuration should use `poolside`.
+For inherited defaults and legacy agent aliases, see the
+[compatibility notes](./camber-rebrand.md).
 
 ## Environment variables and secrets
 
@@ -162,6 +156,5 @@ conversation composer. Fix the file, then select **Retry** in that banner.
 - Fields used by other ACP clients are not necessarily supported. For example,
   Camber ignores Zed's `favorite_config_option_values`, but the schema accepts
   it for compatibility.
-- Use separate names for registry and development builds, such as `poolside`
-  and `pool-main`.
+- Use a distinct name such as `my-agent-dev` for a development build.
 - If an executable is not found, use its absolute path.

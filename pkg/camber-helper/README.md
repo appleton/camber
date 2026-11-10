@@ -1,12 +1,12 @@
 # Camber Helper
 
-Camber Helper is a daemon process which can be started by an editor assistant
+Camber Helper is a daemon process started by the desktop app
 to provide common functionality to Camber Assistant clients. This directory
 holds packages either implementing or relating to Helper. Helper client
 implementors should use this README, `methods/`, and the generated helper API
 bindings in `../../ui/packages/helperapi`.
 
-Communication between the editor and the camber-helper happens over
+Communication between the desktop app and camber-helper happens over
 [JSON-RPC](https://www.jsonrpc.org) and implements the [base
 protocol](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#base-protocol)
 defined by LSP. While some LSP features may be implemented, the methods supported by
@@ -49,26 +49,17 @@ launch, host transport and the client's subsequent navigation reads.
 
 ## Release
 
-Every VS Code or Desktop release allocates or reuses an independent
-`helper/vM.m.p` patch version. A new helper version is built and signed from
-the exact product source SHA and published as a permanent GitHub release before
-the product may publish. Retries reuse the published assets without rebuilding,
-and every live product package consumes those immutable assets. Coordinated
-product releases build that runtime once and share it.
+Desktop releases consume an immutable `helper/vM.m.p` runtime published in
+this fork. Publish and verify the helper assets before packaging the desktop
+app; see [Releasing Camber](../../RELEASING.md) for the build and release steps.
 
-The product manifests do not pin helper versions. Fresh local binary installs
-and Visual Studio resolve the highest published `helper/v*` version; set
-`CAMBER_HELPER_VERSION=helper/vM.m.p` to reproduce an exact one. Cached
-Desktop binary installs remain offline-safe and can be explicitly refreshed.
+Fresh local binary installs resolve the highest published `helper/v*` version;
+set `CAMBER_HELPER_VERSION=helper/vM.m.p` to reproduce an exact one. Cached
+desktop binary installs remain offline-safe and can be explicitly refreshed.
 Local binary downloads use `appleton/camber`, including when working in a
 fork. Set `CAMBER_HELPER_REPOSITORY=owner/repo` to resolve and download a
-runtime from another repository.
-VS Code debug sessions run the helper from local Go source. Desktop development
-can opt into a local helper build with `CAMBER_DESKTOP_LOCAL_HELPER=1`.
-
-Use the manual **Release · Helper** workflow only when a helper-only release is
-needed. Release workflows own `helper/v*` creation; do not push these tags by
-hand.
+runtime from another repository. Desktop development can opt into a local
+helper build with `CAMBER_DESKTOP_LOCAL_HELPER=1`.
 
 ## Adding methods
 
@@ -227,32 +218,13 @@ encoding (which may be neither of UTF-8 or UTF-16).
 JSON-RPC handlers dispatched through `internal/handler/` receive a non-nil
 request context in `(*glsp.Context).Context`.
 
-## Debugging
+## Debugging and building locally
 
-### VS Code
+Use `CAMBER_DESKTOP_LOCAL_HELPER=1` when starting desktop development to build
+the helper from the current checkout. See the [desktop README](../../ui/apps/desktop-assistant/README.md)
+for launch commands and [diagnostics](../../docs/diagnostics.md) for log locations.
 
-1. Set `camberHelper.dlvBinary` in `settings.json`. It should point to `delve` command, e.g. `dlv`.
-   - if you don't have Delve installed: `go install github.com/go-delve/delve/cmd/dlv@latest`
-2. Run `Launch Extension` debug config.
-   - this will start the extension and launch headless Delve debugger listening on port `21370`
-   - output in `camber` tab should show:
-
-   ```json
-   { "port": 21370, "message": "debugging camber Helper via delve, connect debugger on port" }
-   ```
-
-   - there should be no output from helper yet - it has started (give it a sec or two), but delve is waiting for a client to connect
-
-3. Run `Debug: attach to Helper` config.
-   - this will attach debugging client to the running dlv/helper process
-   - once successful, you should start seeing logs from helper in `camber Helper` tab
-
-If you make changes to the code, you must restart the debug session and reconnect.
-
-## Building locally
-
-1. Have some form of GCC installed (e.g. `MinGW`).
-2. Make sure to set the `CGO_ENABLED=1` environment variable when compiling.
+Native builds require the Xcode Command Line Tools and `CGO_ENABLED=1`.
 
 ## Profiling
 
