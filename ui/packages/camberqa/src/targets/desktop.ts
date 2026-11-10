@@ -514,7 +514,7 @@ export class DesktopTarget {
       descendants.find(
         (row) =>
           row.command.includes("/src-tauri/target/debug/") ||
-          row.command.includes("target/debug/Camber"),
+          row.command.includes("target/debug/camber-desktop"),
       ) ?? null
     );
   }
