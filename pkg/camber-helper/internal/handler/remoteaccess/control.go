@@ -21,6 +21,11 @@ type ControlPoll struct {
 	TurnActive    bool           `json:"turnActive"`
 	ResetRequired bool           `json:"resetRequired"`
 	HasMore       bool           `json:"hasMore"`
+	// ReducedEvents counts events on this page that were size-reduced.
+	ReducedEvents int `json:"reducedEvents"`
+	// AgentTextReduced is true when an agent_message_chunk on this page was
+	// reduced, so its text may have been cut.
+	AgentTextReduced bool `json:"agentTextReduced"`
 }
 
 const (
@@ -109,10 +114,12 @@ func (l *SessionLog) PollBetween(agent, session, cursor, end string) (ControlPol
 			if err != nil {
 				return out, pkgerrors.WithStack(err)
 			}
+			reduced := false
 			if len(encoded) > controlEventCap {
 				// Reduce a copy for the control view; the stored log keeps the
 				// original for remote clients.
 				item.Params = reduceControlParams(event.params, len(encoded))
+				reduced = true
 				if encoded, err = json.Marshal(item); err != nil {
 					return out, pkgerrors.WithStack(err)
 				}
@@ -122,6 +129,12 @@ func (l *SessionLog) PollBetween(agent, session, cursor, end string) (ControlPol
 			if len(out.Events) > 0 && size+len(encoded) > controlPageCap {
 				out.HasMore = true
 				break
+			}
+			if reduced {
+				out.ReducedEvents++
+				if isAgentMessageChunk(event.params) {
+					out.AgentTextReduced = true
+				}
 			}
 			size += len(encoded)
 			out.Events = append(out.Events, item)
@@ -183,6 +196,25 @@ func (l *SessionLog) CursorAt(agent, session, epoch string, seq int64) string {
 
 // ProcessEpoch identifies the helper lifetime that owns preparation work.
 func (l *SessionLog) ProcessEpoch() string { return l.epoch }
+
+// isAgentMessageChunk reports whether params carry an agent_message_chunk
+// session update, wherever the stamped envelope nests it.
+func isAgentMessageChunk(params any) bool {
+	raw, err := json.Marshal(params)
+	if err != nil {
+		return false
+	}
+	var p struct {
+		Message struct {
+			Params struct {
+				Update struct {
+					SessionUpdate string `json:"sessionUpdate"`
+				} `json:"update"`
+			} `json:"params"`
+		} `json:"message"`
+	}
+	return json.Unmarshal(raw, &p) == nil && p.Message.Params.Update.SessionUpdate == "agent_message_chunk"
+}
 
 // reduceControlParams returns a reduced copy of params for control output,
 // keeping identifying fields and agent message text while truncating bulky

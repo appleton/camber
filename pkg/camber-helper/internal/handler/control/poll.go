@@ -143,6 +143,10 @@ func (s *Service) poll(ctx context.Context, a Args, command string, g *glsp.Cont
 		}
 		terminal := !running && !waiting
 		out := map[string]any{"events": page.Events, "cursor": page.Cursor, "nextCursor": page.NextCursor, "turnActive": running, "resetRequired": page.ResetRequired, "hasMore": page.HasMore, "conversation": v, "turnId": v.TurnID, "status": status, "result": v.Result, "error": v.Error, "terminal": terminal && !page.HasMore, "waitExpired": a.WaitMs > 0 && time.Now().After(deadline) && !terminal, "pendingInteractions": pending}
+		if page.ReducedEvents > 0 {
+			out["truncated"] = true
+			out["reducedEvents"] = page.ReducedEvents
+		}
 		if command == "chat.output" || command == "chat.snapshot" {
 			var b strings.Builder
 			for _, event := range page.Events {
@@ -167,8 +171,12 @@ func (s *Service) poll(ctx context.Context, a Args, command string, g *glsp.Cont
 			// text covers only this page's agent message chunks; concatenating
 			// it across pages (following nextCursor) yields the full message.
 			out["text"] = b.String()
-			out["complete"] = !page.ResetRequired && !page.HasMore && terminal
-			out["truncated"] = page.ResetRequired || page.HasMore
+			// A reduced agent message chunk means text was cut: never claim a
+			// complete answer, and flag the page truncated.
+			out["complete"] = !page.ResetRequired && !page.HasMore && terminal && !page.AgentTextReduced
+			out["truncated"] = page.ResetRequired || page.HasMore || page.ReducedEvents > 0
+			out["reducedEvents"] = page.ReducedEvents
+			out["agentTextTruncated"] = page.AgentTextReduced
 			out["scope"] = "latest_turn"
 			if command == "chat.snapshot" {
 				out["scope"] = "retained_session"

@@ -1,9 +1,11 @@
 package control
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/remoteaccess"
 	"github.com/stretchr/testify/assert"
@@ -76,4 +78,43 @@ func extractText(enc []byte) string {
 		return ""
 	}
 	return p.Message.Params.Update.Content.Text
+}
+
+func TestReducedAgentTextIsNotReportedComplete(t *testing.T) {
+	for _, command := range []string{"chat.output", "chat.snapshot"} {
+		t.Run(command, func(t *testing.T) {
+			s, agent := fixture(t)
+			spawn := invoke(t, s, "chat.spawn", Args{ParentID: "parent", Text: "task"})
+			<-agent.started
+			id := spawn["conversation"].(map[string]any)["id"].(string)
+			turn := spawn["turnId"].(string)
+			s.log.Publish("test", "session", "", false, chunk(strings.Repeat("y", 300*1024)))
+			close(agent.finish)
+			require.Eventually(t, func() bool { v, e := s.view(context.Background(), id, nil); return e == nil && v.Status == "completed" }, time.Second, time.Millisecond*10)
+
+			out := invoke(t, s, command, Args{ConversationID: id, TurnID: turn})
+			assert.Equal(t, false, out["hasMore"])
+			assert.Equal(t, true, out["truncated"])
+			assert.Equal(t, false, out["complete"])
+			assert.Equal(t, true, out["agentTextTruncated"])
+			assert.EqualValues(t, 1, out["reducedEvents"])
+			assert.Contains(t, out["text"], "[truncated ")
+		})
+	}
+}
+
+func TestNormalFinalPageIsCompleteAndNotTruncated(t *testing.T) {
+	s, agent := fixture(t)
+	spawn := invoke(t, s, "chat.spawn", Args{ParentID: "parent", Text: "task"})
+	<-agent.started
+	id := spawn["conversation"].(map[string]any)["id"].(string)
+	turn := spawn["turnId"].(string)
+	s.log.Publish("test", "session", "", false, chunk("short answer"))
+	close(agent.finish)
+	require.Eventually(t, func() bool { v, e := s.view(context.Background(), id, nil); return e == nil && v.Status == "completed" }, time.Second, time.Millisecond*10)
+
+	out := invoke(t, s, "chat.output", Args{ConversationID: id, TurnID: turn})
+	assert.Equal(t, true, out["complete"])
+	assert.Equal(t, false, out["truncated"])
+	assert.Equal(t, false, out["agentTextTruncated"])
 }
