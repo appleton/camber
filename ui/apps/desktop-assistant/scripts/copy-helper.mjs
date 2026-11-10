@@ -17,9 +17,9 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const appDir = join(scriptDir, "..");
 const repoRoot = join(appDir, "..", "..", "..");
 const binaryDir = join(appDir, "src-tauri", "binaries");
-const helperRepository = process.env.POOLSIDE_HELPER_REPOSITORY || "poolsideai/assistants";
+const helperRepository = process.env.CAMBER_HELPER_REPOSITORY || "appleton/camber";
 
-const runtimeArtifactDir = process.env.POOLSIDE_RUNTIME_ARTIFACT_DIR;
+const runtimeArtifactDir = process.env.CAMBER_RUNTIME_ARTIFACT_DIR;
 if (runtimeArtifactDir && !existsSync(runtimeArtifactDir)) {
   throw new Error(`Release runtime artifact directory does not exist: ${runtimeArtifactDir}`);
 }
@@ -28,10 +28,10 @@ const { refresh, targetInput } = parseArguments(process.argv.slice(2));
 const targetTriple = targetTripleFromInput(targetInput);
 const target = helperTarget(targetTriple);
 const needsPublishedRuntime =
-  process.env.POOLSIDE_DESKTOP_LOCAL_HELPER !== "1" ||
+  process.env.CAMBER_DESKTOP_LOCAL_HELPER !== "1" ||
   supportsMLXSidecar(targetTriple) ||
   supportsWhisperServer(targetTriple);
-const explicitHelperVersion = process.env.POOLSIDE_HELPER_VERSION;
+const explicitHelperVersion = process.env.CAMBER_HELPER_VERSION;
 const cachedHelperVersion =
   runtimeArtifactDir || explicitHelperVersion || refresh || !needsPublishedRuntime
     ? undefined
@@ -39,7 +39,7 @@ const cachedHelperVersion =
 const helperVersion = runtimeArtifactDir
   ? undefined
   : (cachedHelperVersion ?? (needsPublishedRuntime ? resolveHelperVersion() : undefined));
-const runtimeVersion = process.env.POOLSIDE_RUNTIME_VERSION ?? helperVersion ?? "source/unknown";
+const runtimeVersion = process.env.CAMBER_RUNTIME_VERSION ?? helperVersion ?? "source/unknown";
 const downloadRuntimeAsset = runtimeArtifactDir
   ? copyReleaseRuntimeArtifact
   : downloadGitHubReleaseAsset;
@@ -52,25 +52,25 @@ if (cachedHelperVersion) {
   );
 }
 
-if (process.env.POOLSIDE_DESKTOP_LOCAL_HELPER === "1") {
+if (process.env.CAMBER_DESKTOP_LOCAL_HELPER === "1") {
   installLocalBazelBinary({
-    binary: "poolside-helper",
-    label: "//cmd/poolside-helper:poolside-helper",
-    installedName: `poolside-helper-${targetTriple}${target.extension}`,
+    binary: "camber-helper",
+    label: "//cmd/camber-helper:camber-helper",
+    installedName: `camber-helper-${targetTriple}${target.extension}`,
   });
 } else {
   await installBinary({
-    binary: "poolside-helper",
+    binary: "camber-helper",
     version: runtimeVersion,
     download: downloadRuntimeAsset,
-    archiveName: `poolside-helper-${target.platform}-${target.arch}.tar.gz`,
-    extractedName: `poolside-helper-${target.platform}-${target.arch}${target.extension}`,
-    installedName: `poolside-helper-${targetTriple}${target.extension}`,
+    archiveName: `camber-helper-${target.platform}-${target.arch}.tar.gz`,
+    extractedName: `camber-helper-${target.platform}-${target.arch}${target.extension}`,
+    installedName: `camber-helper-${targetTriple}${target.extension}`,
   });
 }
-// Keep the Swift/MLX build explicit: normal desktop dev and spoolside launches
+// Keep the Swift/MLX build explicit: normal desktop dev and camberqa launches
 // should consume the prebuilt release sidecar.
-if (process.env.POOLSIDE_DESKTOP_LOCAL_MLX_SIDECAR === "1") {
+if (process.env.CAMBER_DESKTOP_LOCAL_MLX_SIDECAR === "1") {
   installLocalMLXSidecar({ target, targetTriple });
 } else {
   await installReleaseMLXSidecar({ target, targetTriple });
@@ -143,7 +143,7 @@ function installLocalBazelBinary({ binary, label, installedName }) {
   const hostTriple = targetTripleFromInput();
   if (hostTriple !== targetTriple) {
     throw new Error(
-      `POOLSIDE_DESKTOP_LOCAL_HELPER=1 only supports host builds; host is ${hostTriple}, target is ${targetTriple}`,
+      `CAMBER_DESKTOP_LOCAL_HELPER=1 only supports host builds; host is ${hostTriple}, target is ${targetTriple}`,
     );
   }
 
@@ -182,7 +182,7 @@ function installLocalBazelBinary({ binary, label, installedName }) {
 // regression. Warn rather than fail: most desktop work does not need the
 // mobile UI, and building it is a ~6k-module Vite build.
 function warnIfMobileWebUIMissing() {
-  const embedDir = join(repoRoot, "pkg/poolside-helper/internal/handler/remoteaccess/webui/dist");
+  const embedDir = join(repoRoot, "pkg/camber-helper/internal/handler/remoteaccess/webui/dist");
   let entries = [];
   try {
     entries = readdirSync(embedDir).filter(
@@ -195,12 +195,12 @@ function warnIfMobileWebUIMissing() {
   console.warn(
     "\nwarning: no mobile-remote UI bundle is embedded; this helper will serve\n" +
       "         a placeholder page for remote access. Build one first with:\n" +
-      "           pnpm -F @poolsideai/mobile-remote embed\n",
+      "           pnpm -F @camber/mobile-remote embed\n",
   );
 }
 
 async function installReleaseMLXSidecar({ target, targetTriple }) {
-  const installedName = `poolside-mlx-sidecar-${targetTriple}${target.extension}`;
+  const installedName = `camber-mlx-sidecar-${targetTriple}${target.extension}`;
   if (!supportsMLXSidecar(targetTriple)) {
     installPlaceholderBinary({
       installedName,
@@ -212,28 +212,28 @@ async function installReleaseMLXSidecar({ target, targetTriple }) {
 
   try {
     await installBinary({
-      binary: "poolside-mlx-sidecar",
+      binary: "camber-mlx-sidecar",
       version: runtimeVersion,
       download: downloadRuntimeAsset,
-      archiveName: `poolside-mlx-sidecar-${target.platform}-${target.arch}.tar.gz`,
-      extractedName: `poolside-mlx-sidecar-${target.platform}-${target.arch}${target.extension}`,
+      archiveName: `camber-mlx-sidecar-${target.platform}-${target.arch}.tar.gz`,
+      extractedName: `camber-mlx-sidecar-${target.platform}-${target.arch}${target.extension}`,
       installedName,
       requiredSiblings: ["default.metallib", "mlx.metallib"],
     });
   } catch (error) {
     if (runtimeArtifactDir) throw error;
-    console.warn(`Unable to install poolside-mlx-sidecar from ${runtimeVersion}: ${error.message}`);
+    console.warn(`Unable to install camber-mlx-sidecar from ${runtimeVersion}: ${error.message}`);
     installPlaceholderBinary({
       installedName,
       version: `missing:${runtimeVersion}`,
-      reason: `poolside-mlx-sidecar is not present in ${runtimeVersion}`,
+      reason: `camber-mlx-sidecar is not present in ${runtimeVersion}`,
     });
   }
 }
 
 function installLocalMLXSidecar({ targetTriple }) {
   const target = helperTarget(targetTriple);
-  const installedName = `poolside-mlx-sidecar-${targetTriple}${target.extension}`;
+  const installedName = `camber-mlx-sidecar-${targetTriple}${target.extension}`;
   if (!supportsMLXSidecar(targetTriple)) {
     installPlaceholderBinary({
       installedName,
@@ -243,8 +243,8 @@ function installLocalMLXSidecar({ targetTriple }) {
     return;
   }
 
-  const packagePath = join(repoRoot, "cmd", "poolside-mlx-sidecar");
-  console.log("Building local poolside-mlx-sidecar from cmd/poolside-mlx-sidecar");
+  const packagePath = join(repoRoot, "cmd", "camber-mlx-sidecar");
+  console.log("Building local camber-mlx-sidecar from cmd/camber-mlx-sidecar");
   // build.sh shares a SwiftPM scratch path across worktrees, serializes
   // concurrent builds, and installs the binary and metallibs into binaryDir
   // while it still holds the build lock (so a rebuild from another worktree
@@ -254,7 +254,7 @@ function installLocalMLXSidecar({ targetTriple }) {
     stdio: ["ignore", "ignore", "inherit"],
   });
 
-  const builtPath = join(binaryDir, "poolside-mlx-sidecar");
+  const builtPath = join(binaryDir, "camber-mlx-sidecar");
   if (!existsSync(builtPath)) {
     throw new Error(`Expected ${builtPath} after Swift build`);
   }
@@ -264,11 +264,11 @@ function installLocalMLXSidecar({ targetTriple }) {
   renameSync(builtPath, installedPath);
   execFileSync("chmod", ["+x", installedPath], { stdio: "inherit" });
   writeFileSync(`${installedPath}.version`, "local\n");
-  console.log(`Installed poolside-mlx-sidecar as ${installedName} from local Swift build`);
+  console.log(`Installed camber-mlx-sidecar as ${installedName} from local Swift build`);
 }
 
 async function installReleaseWhisperServer({ target, targetTriple }) {
-  const installedName = `poolside-whisper-server-${targetTriple}${target.extension}`;
+  const installedName = `camber-whisper-server-${targetTriple}${target.extension}`;
   if (!supportsWhisperServer(targetTriple)) {
     installPlaceholderBinary({
       installedName,
@@ -280,22 +280,22 @@ async function installReleaseWhisperServer({ target, targetTriple }) {
 
   try {
     await installBinary({
-      binary: "poolside-whisper-server",
+      binary: "camber-whisper-server",
       version: runtimeVersion,
       download: downloadRuntimeAsset,
-      archiveName: `poolside-whisper-server-${target.platform}-${target.arch}.tar.gz`,
-      extractedName: `poolside-whisper-server-${target.platform}-${target.arch}${target.extension}`,
+      archiveName: `camber-whisper-server-${target.platform}-${target.arch}.tar.gz`,
+      extractedName: `camber-whisper-server-${target.platform}-${target.arch}${target.extension}`,
       installedName,
     });
   } catch (error) {
     if (runtimeArtifactDir) throw error;
     console.warn(
-      `Unable to install poolside-whisper-server from ${runtimeVersion}: ${error.message}`,
+      `Unable to install camber-whisper-server from ${runtimeVersion}: ${error.message}`,
     );
     installPlaceholderBinary({
       installedName,
       version: `missing:${runtimeVersion}`,
-      reason: `poolside-whisper-server is not present in ${runtimeVersion}`,
+      reason: `camber-whisper-server is not present in ${runtimeVersion}`,
     });
   }
 }
@@ -352,15 +352,15 @@ function resolveHelperVersion() {
 
 function findCachedHelperVersion() {
   const installedNames = [
-    `poolside-helper-${targetTriple}${target.extension}`,
+    `camber-helper-${targetTriple}${target.extension}`,
     ...(supportsMLXSidecar(targetTriple)
-      ? [`poolside-mlx-sidecar-${targetTriple}${target.extension}`]
+      ? [`camber-mlx-sidecar-${targetTriple}${target.extension}`]
       : []),
     ...(supportsWhisperServer(targetTriple)
-      ? [`poolside-whisper-server-${targetTriple}${target.extension}`]
+      ? [`camber-whisper-server-${targetTriple}${target.extension}`]
       : []),
   ];
-  if (process.env.POOLSIDE_DESKTOP_LOCAL_HELPER === "1") {
+  if (process.env.CAMBER_DESKTOP_LOCAL_HELPER === "1") {
     installedNames.shift();
   }
 
@@ -406,7 +406,7 @@ function copyReleaseRuntimeArtifact({ archiveName, archivePath }) {
 }
 
 function parseArguments(args) {
-  const refresh = args.includes("--refresh") || process.env.POOLSIDE_HELPER_REFRESH === "1";
+  const refresh = args.includes("--refresh") || process.env.CAMBER_HELPER_REFRESH === "1";
   const positional = args.filter((arg) => arg !== "--refresh");
   if (positional.length > 1) {
     throw new Error(`Unexpected arguments: ${positional.slice(1).join(" ")}`);

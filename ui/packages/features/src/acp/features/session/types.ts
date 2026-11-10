@@ -8,7 +8,7 @@ import type {
   SessionId,
   SessionModeState,
 } from "@agentclientprotocol/sdk";
-import type { ACPNavPrepareConversationHandoffParams } from "@poolsideai/helperapi/schemas";
+import type { ACPNavPrepareConversationHandoffParams } from "@camber/helperapi/schemas";
 import type { ACPRequestError } from "../../errors";
 import type { ACPResolvedSessionInfo } from "../../sessionInfo";
 import type { SessionEvent } from "../../TurnMaterializer";
@@ -27,7 +27,7 @@ export const ACP_DEFAULT_MODE_ID = "default";
 /**
  * Category agents use for the option that says how the agent works
  * (build vs plan) as opposed to what it is allowed to do without asking —
- * Codex publishes it as `collaboration_mode`, Poolside as `agent_mode`. It is
+ * Codex publishes it as `collaboration_mode`, Camber as `agent_mode`. It is
  * not part of the SDK's category union yet, so it travels as a plain string
  * and is matched by category rather than by id.
  */
@@ -36,7 +36,7 @@ export const ACP_COLLABORATION_MODE_CATEGORY = "collaboration_mode";
 /**
  * How a collaboration option should be surfaced.
  *
- * - `plan-toggle`: two values, one of them plan (Poolside's build/plan, Codex's
+ * - `plan-toggle`: two values, one of them plan (Camber's build/plan, Codex's
  *   default/plan). It reduces to on/off, so it rides on `/plan` and the plan
  *   chip rather than costing a picker in the promptbox footer.
  * - `picker`: an agent offering modes a two-way toggle could not reach, so the
@@ -60,7 +60,7 @@ export interface ACPPendingPermissionRequest {
   options: PermissionOption[];
   /**
    * Set for requests reconciled from the helper's approval store: answering
-   * goes through poolside/acp/approvals/respond with this identity instead of
+   * goes through camber/acp/approvals/respond with this identity instead of
    * resolving a local promise, and removal arrives via the next didChange
    * push. Absent on legacy (SDK-delivered) and debug-dump requests.
    */

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { InfoMessageType } from "@poolsideai/rpc";
-  import { formatError } from "@poolsideai/lib/errors";
+  import { InfoMessageType } from "@camber/rpc";
+  import { formatError } from "@camber/lib/errors";
   import { onMount } from "svelte";
   import type { Attachment } from "svelte/attachments";
   import ArchivedConversationPreviewDialog from "./ArchivedConversationPreviewDialog.svelte";

@@ -1,5 +1,5 @@
 import type { Plan } from "@agentclientprotocol/sdk";
-import type { ACPNavConversationLeg } from "@poolsideai/helperapi/schemas";
+import type { ACPNavConversationLeg } from "@camber/helperapi/schemas";
 import type { SessionEvent, TurnMetadata } from "../../TurnMaterializer";
 
 export const HANDOFF_HISTORY_SCHEMA_VERSION = 1;

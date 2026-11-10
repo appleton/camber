@@ -3,13 +3,13 @@
     markInsideToolCallGroup,
     type SessionEventGroupItem,
   } from "../../SessionEventsState.svelte";
-  import { Boundary } from "@poolsideai/components/boundary";
+  import { Boundary } from "@camber/components/boundary";
   import ToolCall from "../ToolCall.svelte";
   import AgentMessage from "../AgentMessage.svelte";
   import AgentThought from "../AgentThought.svelte";
   import UserMessage from "../UserMessage.svelte";
-  import Icon from "@poolsideai/components/icon";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import Icon from "@camber/components/icon";
+  import type { WorkspaceFolder } from "@camber/rpc";
   import type { TurnMetadata } from "../../../TurnMaterializer";
   import { summarizeLiveToolGroup, summarizeToolGroup } from "./toolGroupSummary";
 

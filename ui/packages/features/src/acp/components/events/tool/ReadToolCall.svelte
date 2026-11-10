@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import type { WorkspaceFolder } from "@camber/rpc";
   import ToolRoot from "../../shared/ToolRoot.svelte";
   import ToolHeader from "../../shared/ToolHeader.svelte";
   import type { ToolCall } from "../../../types";

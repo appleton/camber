@@ -1,7 +1,7 @@
 import type {
   SearchSymbolDefinitionsOutput,
   SearchSymbolDefinitionsParams,
-} from "@poolsideai/helperapi/schemas";
+} from "@camber/helperapi/schemas";
 import * as vscode from "vscode";
 
 export async function searchSymbolDefinitions(

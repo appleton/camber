@@ -70,7 +70,7 @@ This is a second paragraph with no code at all.`,
 });
 
 describe("hasPromptChipHtml", () => {
-  it("matches actual Poolside chip HTML by class", () => {
+  it("matches actual Camber chip HTML by class", () => {
     expect(hasPromptChipHtml('<span class="chip-node" data-clipboard="`file.ts`"></span>')).toBe(
       true,
     );

@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { Collapsible } from "@poolsideai/components/collapsible";
-  import { Diff } from "@poolsideai/components/diff";
+  import { Collapsible } from "@camber/components/collapsible";
+  import { Diff } from "@camber/components/diff";
   import {
     ClipboardProvider,
     DisplayProvider,
     EnvironmentProvider,
     LogProvider,
-  } from "@poolsideai/components/providers";
+  } from "@camber/components/providers";
   import type { ToolCall } from "../../types";
   import ToolCallContents from "./ToolCallContents.svelte";
 

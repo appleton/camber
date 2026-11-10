@@ -13,7 +13,7 @@ const base = {
     name: "@storybook/svelte-vite",
     options: {},
   },
-  staticDirs: ["../node_modules/@poolsideai/tailwind-config/public"],
+  staticDirs: ["../node_modules/@camber/tailwind-config/public"],
   previewHead: (head) => `${head}
 <link
   rel="preload"

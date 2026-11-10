@@ -1,8 +1,8 @@
 ﻿using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using Poolside.Assistant.ChatWindow;
-using Poolside.Assistant.WebViewInfrastructure;
+using Camber.Assistant.ChatWindow;
+using Camber.Assistant.WebViewInfrastructure;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Tasks
+namespace Camber.Assistant.Tasks
 {
     [Guid(TasksToolWindowId)]
     public class TasksToolWindow : ToolWindowPane
@@ -20,8 +20,8 @@ namespace Poolside.Assistant.Tasks
 
         // The task and version for the next created tool window, used, to work around the lack of way to pass a
         // constructor parameter to the tool window pane.
-        private static PoolsideTaskDTO taskForNewToolWindow;
-        private static PoolsideTaskVersionDTO taskVersionForNewToolWindow;
+        private static CamberTaskDTO taskForNewToolWindow;
+        private static CamberTaskVersionDTO taskVersionForNewToolWindow;
 
         internal string TaskId { get; set; }
 
@@ -46,7 +46,7 @@ namespace Poolside.Assistant.Tasks
             public TasksToolWindow toolWindow;
         }
 
-        internal static async Task HandleTaskChange(PoolsideTaskDTO currentTask)
+        internal static async Task HandleTaskChange(CamberTaskDTO currentTask)
         {
             // If there is only a single window and it matches this task, shortcut the message
             // passing without a switch to the UI thread.
@@ -57,7 +57,7 @@ namespace Poolside.Assistant.Tasks
             }
 
             // In other cases, consider open task windows. For this, we need to be on the UI thread.
-            var package = PoolsideAssistantPackage.GetInstance();
+            var package = CamberAssistantPackage.GetInstance();
             await package.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             var foundToolWindowForTask = FindToolWindowForTask(currentTask.id);
@@ -67,9 +67,9 @@ namespace Poolside.Assistant.Tasks
             }
         }
 
-        internal static async Task ShowTaskVersion(PoolsideTaskDTO task, string versionId)
+        internal static async Task ShowTaskVersion(CamberTaskDTO task, string versionId)
         {
-            var package = PoolsideAssistantPackage.GetInstance();
+            var package = CamberAssistantPackage.GetInstance();
             await package.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             // If there is a tool window for the task, the dispatch version switch message.
@@ -89,10 +89,10 @@ namespace Poolside.Assistant.Tasks
             }
         }
 
-        private static async Task CreateTaskWindow(PoolsideTaskDTO task, string versionId)
+        private static async Task CreateTaskWindow(CamberTaskDTO task, string versionId)
         {
             // Put options for new window in place and create it.
-            var package = PoolsideAssistantPackage.GetInstance();
+            var package = CamberAssistantPackage.GetInstance();
             taskForNewToolWindow = task;
             taskVersionForNewToolWindow = task.versions.FirstOrDefault(v => v.id == versionId);
             await package.ShowToolWindowAsync(typeof(TasksToolWindow), Math.Abs(task.id.GetHashCode()),
@@ -117,7 +117,7 @@ namespace Poolside.Assistant.Tasks
 
         internal static async Task CloseAllTaskWindows()
         {
-            await PoolsideAssistantPackage.GetInstance().JoinableTaskFactory.SwitchToMainThreadAsync();
+            await CamberAssistantPackage.GetInstance().JoinableTaskFactory.SwitchToMainThreadAsync();
             foreach (var window in GetAllOpenTaskToolWindows())
             {
                 window.frame?.CloseFrame((uint)__FRAMECLOSE.FRAMECLOSE_NoSave);
@@ -126,7 +126,7 @@ namespace Poolside.Assistant.Tasks
 
         internal static async Task CloseTaskWindow(string taskId)
         {
-            await PoolsideAssistantPackage.GetInstance().JoinableTaskFactory.SwitchToMainThreadAsync();
+            await CamberAssistantPackage.GetInstance().JoinableTaskFactory.SwitchToMainThreadAsync();
             GetAllOpenTaskToolWindows().FirstOrDefault(t => t.toolWindow.TaskId == taskId)?.frame?.CloseFrame((uint)__FRAMECLOSE.FRAMECLOSE_NoSave);
         }
 

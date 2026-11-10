@@ -8,7 +8,7 @@ export function openTerminal(system: System, command?: string, cwd?: string) {
   let terminal = terminalsByCwd.get(key);
   if (!terminal) {
     terminal = vscode.window.createTerminal({
-      name: "poolside",
+      name: "camber",
       cwd: cwd || undefined,
       iconPath: {
         dark: vscode.Uri.parse(system.context.asAbsolutePath("./dist/resources/icon-dark.svg")),

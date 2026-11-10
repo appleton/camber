@@ -22,10 +22,10 @@ fn ensure_debug_sidecar_placeholder() {
         ""
     };
     std::fs::create_dir_all(&binary_dir).expect("failed to create Tauri sidecar binary dir");
-    write_debug_sidecar_placeholder(&binary_dir, &format!("poolside-helper-{target}{extension}"));
+    write_debug_sidecar_placeholder(&binary_dir, &format!("camber-helper-{target}{extension}"));
     write_debug_sidecar_placeholder(
         &binary_dir,
-        &format!("poolside-mlx-sidecar-{target}{extension}"),
+        &format!("camber-mlx-sidecar-{target}{extension}"),
     );
     write_debug_resource_placeholder(&binary_dir, "default.metallib");
     write_debug_resource_placeholder(&binary_dir, "mlx.metallib");

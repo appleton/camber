@@ -1,5 +1,5 @@
 import type { SessionConfigOption, SessionConfigSelectOption } from "@agentclientprotocol/sdk";
-import type { LocalInferenceModel, LocalInferenceState } from "@poolsideai/helperapi/schemas";
+import type { LocalInferenceModel, LocalInferenceState } from "@camber/helperapi/schemas";
 import { LOCAL_AGENT_SERVER, normalizeAgentServerName } from "./agentServers";
 import { isExternalLocalInferenceRuntime } from "./localInferenceRuntime";
 

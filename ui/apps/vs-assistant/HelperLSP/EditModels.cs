@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 
-namespace Poolside.Assistant.HelperLSP
+namespace Camber.Assistant.HelperLSP
 {
     public class TaskWorkspaceEdit
     {

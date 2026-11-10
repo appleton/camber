@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { Tooltip } from "@poolsideai/components/assistant-ui";
-  import Icon, { type IconName } from "@poolsideai/components/icon";
-  import { Switch } from "@poolsideai/components/switch";
+  import { Tooltip } from "@camber/components/assistant-ui";
+  import Icon, { type IconName } from "@camber/components/icon";
+  import { Switch } from "@camber/components/switch";
   import { onMount } from "svelte";
-  import type { SplitNode } from "@poolsideai/splits";
+  import type { SplitNode } from "@camber/splits";
   import {
     clearStoredDefaultDesktopLayout,
     DESKTOP_DEFAULT_LAYOUT_CHANGED_EVENT,

@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Manifest, ManifestChunk } from "vite";
 import * as vscode from "vscode";
-import { getPoolsideConfigurationSection } from "../api/configuration";
+import { getCamberConfigurationSection } from "../api/configuration";
 import { getExtensionIdentity } from "../extensionIdentity";
 import { getInitialAppStateAsJSON } from "../state";
 import type { System } from "../system";
@@ -79,8 +79,8 @@ export async function getWebviewHtml(
       : vscode.env.asExternalUri(vscode.Uri.parse(`http://localhost:${devPort}/`)),
   ]);
   const editorConfig = vscode.workspace.getConfiguration("editor");
-  const poolsideConfig = getPoolsideConfigurationSection();
-  const customCodeFontSize = poolsideConfig.get<number>("codeFontSize") ?? 0;
+  const camberConfig = getCamberConfigurationSection();
+  const customCodeFontSize = camberConfig.get<number>("codeFontSize") ?? 0;
   const editorFontSize =
     customCodeFontSize > 0 ? customCodeFontSize : (editorConfig.get<number>("fontSize") ?? 14);
 
@@ -115,8 +115,8 @@ export async function getWebviewHtml(
     src = entryChunk.file;
     riveUri = "resources/roundel-spinner.riv";
     riveThinUri = "resources/roundel-spinner-thin.riv";
-    logoUri = "resources/poolside-logo.glb";
-    logoFaceUri = "resources/poolside-logo-face.glb";
+    logoUri = "resources/camber-logo.glb";
+    logoFaceUri = "resources/camber-logo-face.glb";
   } else {
     // Convert local Vite server URL to externally accessible URL for compatibility with remote port
     // forwarding used for remote tunnel access
@@ -125,8 +125,8 @@ export async function getWebviewHtml(
     src = `/src/webview/${entry}.main.ts`;
     riveUri = "/roundel-spinner.riv";
     riveThinUri = "/roundel-spinner-thin.riv";
-    logoUri = "/poolside-logo.glb";
-    logoFaceUri = "/poolside-logo-face.glb";
+    logoUri = "/camber-logo.glb";
+    logoFaceUri = "/camber-logo-face.glb";
   }
 
   const notificationIconUri = webview
@@ -145,7 +145,7 @@ export async function getWebviewHtml(
         --editor-line-height: ${editorLineHeight}px;
         min-height: 100vh;
       }
-      .poolside-dev-badge {
+      .camber-dev-badge {
         position: fixed;
         top: 8px;
         right: 10px;
@@ -161,7 +161,7 @@ export async function getWebviewHtml(
     </style>
   </head>
   <body>
-    ${identity.isDev ? '<div class="poolside-dev-badge">DEV</div>' : ""}
+    ${identity.isDev ? '<div class="camber-dev-badge">DEV</div>' : ""}
     <div id="app"></div>
     <script>
       (function() {
@@ -172,7 +172,7 @@ export async function getWebviewHtml(
           return JSON.parse(json);
         }
 
-        this.POOLSIDE_INITIAL_STATE = decode("${encode(initialAppState)}");
+        this.CAMBER_INITIAL_STATE = decode("${encode(initialAppState)}");
         ${initialStates.map((s) => `this.${s.key} = decode("${encode(JSON.stringify(s.value))}");`).join("\n")};
       }).call(this);
 
@@ -202,8 +202,8 @@ function encode(data: string) {
 
 export async function updateEditorConfig(system: System, webview: vscode.Webview) {
   const editorConfig = vscode.workspace.getConfiguration("editor");
-  const poolsideConfig = getPoolsideConfigurationSection();
-  const customCodeFontSize = poolsideConfig.get<number>("codeFontSize") ?? 0;
+  const camberConfig = getCamberConfigurationSection();
+  const customCodeFontSize = camberConfig.get<number>("codeFontSize") ?? 0;
   const editorFontSize =
     customCodeFontSize > 0 ? customCodeFontSize : (editorConfig.get<number>("fontSize") ?? 14);
 

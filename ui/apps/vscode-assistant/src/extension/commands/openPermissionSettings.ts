@@ -2,7 +2,7 @@ import {
   type RuntimeFilesOutput,
   type RuntimeFilesParams,
   RuntimeFilesKey,
-} from "@poolsideai/helperapi/schemas";
+} from "@camber/helperapi/schemas";
 import * as vscode from "vscode";
 import { getHelperSingleton } from "../helper";
 import { System } from "../system";
@@ -12,18 +12,16 @@ export async function openPermissionSettings(system: System) {
   try {
     const client = await getHelperSingleton(system);
     const params: RuntimeFilesParams = {};
-    res = await client.sendRequest<RuntimeFilesOutput>("poolside/runtimeFiles", params);
+    res = await client.sendRequest<RuntimeFilesOutput>("camber/runtimeFiles", params);
   } catch {
-    vscode.window.showErrorMessage(
-      `poolside: Failed to request poolside permission settings file.`,
-    );
+    vscode.window.showErrorMessage(`camber: Failed to request camber permission settings file.`);
     return;
   }
 
   const settingsFile = res.files.find((f) => f.key === RuntimeFilesKey.user_settings_yaml);
 
   if (!settingsFile || settingsFile.path === "") {
-    vscode.window.showErrorMessage(`poolside: Failed to find poolside permission settings file.`);
+    vscode.window.showErrorMessage(`camber: Failed to find camber permission settings file.`);
     return;
   }
 
@@ -34,7 +32,7 @@ export async function openPermissionSettings(system: System) {
       await vscode.window.showTextDocument(document);
     } catch {
       vscode.window.showErrorMessage(
-        `poolside: An error occured opening poolside permission settings file.`,
+        `camber: An error occured opening camber permission settings file.`,
       );
     }
     return;
@@ -48,7 +46,7 @@ export async function openPermissionSettings(system: System) {
     await vscode.window.showTextDocument(document);
   } catch {
     vscode.window.showErrorMessage(
-      `poolside: An error occured opening poolside permission settings file.`,
+      `camber: An error occured opening camber permission settings file.`,
     );
   }
 

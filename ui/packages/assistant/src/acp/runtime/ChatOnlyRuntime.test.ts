@@ -1,4 +1,4 @@
-import { appState, initializeACPHostRpc } from "@poolsideai/features/acp";
+import { appState, initializeACPHostRpc } from "@camber/features/acp";
 import { get } from "svelte/store";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatOnlyRuntime } from "./ChatOnlyRuntime.svelte";
@@ -17,7 +17,7 @@ describe("ChatOnlyRuntime", () => {
       },
     });
     vi.stubGlobal("acquireVsCodeApi", () => ({ setState: vi.fn() }));
-    window.POOLSIDE_INITIAL_ACP_CHAT_STATE = undefined;
+    window.CAMBER_INITIAL_ACP_CHAT_STATE = undefined;
     initializeACPHostRpc(vi.fn().mockResolvedValue(undefined));
   });
 
@@ -60,7 +60,7 @@ describe("ChatOnlyRuntime", () => {
     expect(runtime.addingProject).toBe(false);
   });
 
-  it("falls back to the Poolside agent when no default agent is configured", async () => {
+  it("falls back to the Camber agent when no default agent is configured", async () => {
     const hostSender = vi.fn().mockResolvedValue({ path: "/new-project", name: "New project" });
     initializeACPHostRpc(hostSender);
     const core = createCore({ defaultAgentServer: "" });
@@ -98,7 +98,7 @@ describe("ChatOnlyRuntime", () => {
 
     runtime.handleShowAgentSettings();
 
-    expect(hostSender).toHaveBeenCalledWith("openSettings", ["poolside.agentServers"]);
+    expect(hostSender).toHaveBeenCalledWith("openSettings", ["camber.agentServers"]);
   });
 });
 

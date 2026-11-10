@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CollapsibleContent } from "@poolsideai/components/collapsible";
+  import { CollapsibleContent } from "@camber/components/collapsible";
   import ToolRoot from "../../shared/ToolRoot.svelte";
   import ToolBody from "../../shared/ToolBody.svelte";
   import ToolFooter from "../../shared/ToolFooter.svelte";

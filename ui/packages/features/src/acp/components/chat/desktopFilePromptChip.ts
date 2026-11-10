@@ -1,4 +1,4 @@
-export const DESKTOP_FILE_PROMPT_CHIP_EVENT = "poolside:desktop-file-prompt-chip";
+export const DESKTOP_FILE_PROMPT_CHIP_EVENT = "camber:desktop-file-prompt-chip";
 
 export interface DesktopFilePromptChipEventDetail {
   path: string;
@@ -13,7 +13,7 @@ export function requestDesktopFilePromptChip(path: string): boolean {
   );
 }
 
-export const DESKTOP_IMAGE_ATTACHMENT_EVENT = "poolside:desktop-image-attachment";
+export const DESKTOP_IMAGE_ATTACHMENT_EVENT = "camber:desktop-image-attachment";
 
 export interface DesktopImageAttachmentEventDetail {
   name: string;

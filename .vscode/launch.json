@@ -23,10 +23,10 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": [
         "-F",
-        "@poolsideai/desktop-assistant",
+        "@camber/desktop-assistant",
         "dev",
         "--config",
-        "{\"identifier\":\"ai.poolside.desktop-assistant.dev\",\"productName\":\"Poolside Dev\",\"mainBinaryName\":\"Poolside Dev\"}"
+        "{\"identifier\":\"io.github.appleton.camber.dev\",\"productName\":\"Camber Dev\",\"mainBinaryName\":\"Camber Dev\"}"
       ],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
@@ -38,9 +38,9 @@
       "preLaunchTask": "vscode-assistant-dev",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/ui/apps/vscode-assistant",
-        "--disable-extension=poolside-ai.acp-assistant",
+        "--disable-extension=appleton.acp-assistant",
         "--profile=local-development",
-        "${workspaceFolder}/../poolside-books-api-demo/",
+        "${workspaceFolder}/../camber-books-api-demo/",
         "${workspaceFolder}"
       ],
       "outFiles": [
@@ -54,8 +54,8 @@
       "preLaunchTask": "vscode-assistant-dev",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}/ui/apps/vscode-assistant",
-        "--disable-extension=poolside-ai.acp-assistant",
-        "${workspaceFolder}/../poolside-books-api-demo",
+        "--disable-extension=appleton.acp-assistant",
+        "${workspaceFolder}/../camber-books-api-demo",
         "${workspaceFolder}"
       ],
       "outFiles": [

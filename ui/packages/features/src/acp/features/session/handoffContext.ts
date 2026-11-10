@@ -2,8 +2,8 @@ import type { ContentBlock, Plan } from "@agentclientprotocol/sdk";
 import type { SessionEvent } from "../../types";
 import type { ACPSessionMetadataSnapshot } from "./SessionMetadata";
 
-export const HANDOFF_CONTEXT_RESOURCE_URI_PREFIX = "poolside://handoff/";
-export const HANDOFF_CONTEXT_TAG = "poolside-handoff";
+export const HANDOFF_CONTEXT_RESOURCE_URI_PREFIX = "camber://handoff/";
+export const HANDOFF_CONTEXT_TAG = "camber-handoff";
 
 const MAX_TRANSCRIPT_MESSAGES = 12;
 const MAX_MESSAGE_CHARS = 2_000;
@@ -51,7 +51,7 @@ export function handoffResourceUri(sourceSessionId: string): string {
 
 export function handoffContextText(source: ACPHandoffSource, targetAgentServer: string): string {
   const sections = [
-    `# Poolside ACP Session Handoff`,
+    `# Camber ACP Session Handoff`,
     [
       `This is a semantic handoff from ACP agent \`${source.agentServer}\` (session \`${source.sessionId}\`) to \`${targetAgentServer}\`.`,
       `The repository and the user's original requests are authoritative. Treat the prior agent's work as historical context to verify.`,

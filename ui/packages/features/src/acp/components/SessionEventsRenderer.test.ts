@@ -25,7 +25,7 @@ describe("SessionEventsRenderer", () => {
       },
     });
 
-    expect(screen.getByText("Poolside")).toBeInTheDocument();
+    expect(screen.getByText("Camber")).toBeInTheDocument();
     expect(screen.getByText("codex-acp")).toBeInTheDocument();
     expect(screen.getByText("Session handed off")).toBeInTheDocument();
     expect(container.querySelectorAll("[data-handoff-agent]")).toHaveLength(2);

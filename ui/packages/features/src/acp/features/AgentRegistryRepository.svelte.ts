@@ -1,5 +1,5 @@
-import { fromPromise, isSuccess, loading, type AsyncState } from "@poolsideai/lib/async-state";
-import { toError } from "@poolsideai/lib/errors";
+import { fromPromise, isSuccess, loading, type AsyncState } from "@camber/lib/async-state";
+import { toError } from "@camber/lib/errors";
 import { createContext } from "svelte";
 import {
   ACP_AGENT_REGISTRY_URL,
@@ -9,7 +9,7 @@ import {
   type ACPRegistryAgent,
 } from "../agentRegistry";
 
-const ACP_AGENT_REGISTRY_CACHE_KEY = "poolside.acp.agentRegistry";
+const ACP_AGENT_REGISTRY_CACHE_KEY = "camber.acp.agentRegistry";
 
 export class AcpAgentRegistryRepository {
   state = $state<AsyncState<ACPRegistryAgent[]>>(loading);

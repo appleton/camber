@@ -13,8 +13,8 @@ bazel-fmt: ## Run BUILD file code formatting
 go-fmt: ## Check Go formatting (run go-fmt-fix to apply)
 	@unformatted=$$(gofmt -l $$(find . -name '*.go' \
 		-not -path './third_party/*' \
-		-not -path './pkg/poolside-helper/gopls/*' \
-		-not -path './pkg/poolside-helper/internal/gopls/*')); \
+		-not -path './pkg/camber-helper/gopls/*' \
+		-not -path './pkg/camber-helper/internal/gopls/*')); \
 	if [ -n "$$unformatted" ]; then \
 		echo "The following files are not gofmt'd:"; \
 		echo "$$unformatted"; \
@@ -24,6 +24,6 @@ go-fmt: ## Check Go formatting (run go-fmt-fix to apply)
 go-fmt-fix: ## Fix Go formatting
 	@find . -name '*.go' \
 		-not -path './third_party/*' \
-		-not -path './pkg/poolside-helper/gopls/*' \
-		-not -path './pkg/poolside-helper/internal/gopls/*' \
+		-not -path './pkg/camber-helper/gopls/*' \
+		-not -path './pkg/camber-helper/internal/gopls/*' \
 		| xargs gofmt -w

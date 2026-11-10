@@ -2,7 +2,7 @@ using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Newtonsoft.Json.Linq;
-using Poolside.Assistant.HelperLSP;
+using Camber.Assistant.HelperLSP;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.ChatWindow
+namespace Camber.Assistant.ChatWindow
 {
     // One MDI (document-area) window per ACP conversation, hosting the acp-chat
     // webview. The assistant sidebar opens these via the openAcpChat host RPC.
@@ -60,7 +60,7 @@ namespace Poolside.Assistant.ChatWindow
 
         public AcpChatToolWindow() : base(null)
         {
-            this.Caption = string.IsNullOrEmpty(titleForNewToolWindow) ? "Poolside" : titleForNewToolWindow;
+            this.Caption = string.IsNullOrEmpty(titleForNewToolWindow) ? "Camber" : titleForNewToolWindow;
             this.ConversationId = initialForNewToolWindow.conversationId;
             this.AgentServer = initialForNewToolWindow.agentServer;
             this.SessionId = initialForNewToolWindow.sessionId;
@@ -104,7 +104,7 @@ namespace Poolside.Assistant.ChatWindow
         internal static async Task OpenSessionAsync(OpenAcpChatOptions opts)
         {
             opts = opts ?? new OpenAcpChatOptions();
-            var package = PoolsideAssistantPackage.GetInstance();
+            var package = CamberAssistantPackage.GetInstance();
             await package.JoinableTaskFactory.SwitchToMainThreadAsync();
 
             var conversationId = opts.conversationId;
@@ -135,7 +135,7 @@ namespace Poolside.Assistant.ChatWindow
                 cwd = opts.cwd,
                 workingDirectories = opts.workingDirectories,
             };
-            titleForNewToolWindow = opts.sessionTitle ?? opts.agentName ?? "Poolside";
+            titleForNewToolWindow = opts.sessionTitle ?? opts.agentName ?? "Camber";
 
             // create: true reveals the existing window for this id or creates one.
             await package.ShowToolWindowAsync(typeof(AcpChatToolWindow),
@@ -162,7 +162,7 @@ namespace Poolside.Assistant.ChatWindow
                 return;
             }
 
-            var package = PoolsideAssistantPackage.GetInstance();
+            var package = CamberAssistantPackage.GetInstance();
             await package.JoinableTaskFactory.SwitchToMainThreadAsync();
             if (window.Frame is IVsWindowFrame frame)
             {
@@ -173,7 +173,7 @@ namespace Poolside.Assistant.ChatWindow
         public const string DefaultAgentServer = "poolside";
 
         // Associate the helper-assigned sessionId with the window for a conversation
-        // (called after a successful poolside/acp/session/new), so inbound ACP frames
+        // (called after a successful camber/acp/session/new), so inbound ACP frames
         // can be routed back to it by (agentServer, sessionId).
         internal static void AttachSession(string conversationId, string agentServer, string sessionId)
         {
@@ -289,7 +289,7 @@ namespace Poolside.Assistant.ChatWindow
             }
             if (titles.Count == 0) return;
 
-            await PoolsideAssistantPackage.GetInstance().JoinableTaskFactory.SwitchToMainThreadAsync();
+            await CamberAssistantPackage.GetInstance().JoinableTaskFactory.SwitchToMainThreadAsync();
             foreach (var kv in titles)
             {
                 if (windows.TryGetValue(kv.Key, out var window))
@@ -300,12 +300,12 @@ namespace Poolside.Assistant.ChatWindow
         }
 
         // Tell the helper which conversation's view is active (its window is open) so it
-        // can track unread/active state (poolside/acpNav/setConversationViewState).
+        // can track unread/active state (camber/acpNav/setConversationViewState).
         private static void SetConversationViewState(AcpChatToolWindow window, bool active)
         {
             if (window == null || string.IsNullOrEmpty(window.SessionId)) return;
             var agentServer = string.IsNullOrEmpty(window.AgentServer) ? DefaultAgentServer : window.AgentServer;
-            _ = HelperLSPService.Instance.SendRequest("poolside/acpNav/setConversationViewState",
+            _ = HelperLSPService.Instance.SendRequest("camber/acpNav/setConversationViewState",
                 new { agentServer, sessionId = window.SessionId, active });
         }
 

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Settings
+namespace Camber.Assistant.Settings
 {
     public class WebViewConfiguration
     {

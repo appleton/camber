@@ -9,7 +9,7 @@
 // spacing follow) plus the chat font variables via the onChange callback.
 // Layout coordinates stay 1:1 with the viewport, so popups stay anchored.
 
-const ZOOM_STORAGE_KEY = "poolside-desktop-zoom-level";
+const ZOOM_STORAGE_KEY = "camber-desktop-zoom-level";
 const ZOOM_MIN = 0.7;
 const ZOOM_MAX = 1.6;
 const ZOOM_STEP = 0.1;

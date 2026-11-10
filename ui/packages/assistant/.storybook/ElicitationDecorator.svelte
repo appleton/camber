@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { ACPConversationStatusRepositoryWriter } from "@poolsideai/features/acp";
-  import { setElicitationContext } from "@poolsideai/features/elicitation";
+  import { ACPConversationStatusRepositoryWriter } from "@camber/features/acp";
+  import { setElicitationContext } from "@camber/features/elicitation";
   import type { Snippet } from "svelte";
 
   interface Props {

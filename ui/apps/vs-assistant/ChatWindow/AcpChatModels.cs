@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Poolside.Assistant.ChatWindow
+namespace Camber.Assistant.ChatWindow
 {
     // Mirrors OpenAcpChatOptions in ui/packages/rpc/src/host.ts. The assistant
     // sidebar calls the openAcpChat host RPC with these to reveal or create the
@@ -41,7 +41,7 @@ namespace Poolside.Assistant.ChatWindow
         public bool? allowCustomMcp { get; set; }
     }
 
-    // Injected into the acp-chat webview as POOLSIDE_INITIAL_ACP_CHAT_STATE so
+    // Injected into the acp-chat webview as CAMBER_INITIAL_ACP_CHAT_STATE so
     // AcpChatApp knows which conversation/session it renders. Mirrors
     // AcpChatPanelInitialState in the VSCode extension. camelCase keys match the
     // webview's expected shape; null fields are dropped on serialization.

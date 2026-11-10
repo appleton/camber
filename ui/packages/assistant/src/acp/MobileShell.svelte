@@ -1,12 +1,12 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import {
     AcpChatPane,
     AssistantTerminalView,
     getAssistantTerminalRepo,
     MobileSideBar,
     type ACPConversationSummary,
-  } from "@poolsideai/features/acp";
+  } from "@camber/features/acp";
   import { tick } from "svelte";
 
   import ACPAgentUpdateBanner from "./AgentUpdateBanner.svelte";
@@ -77,13 +77,13 @@
     return summary?.title || "New conversation";
   });
 
-  // Spoolside worktree instance (dev only): the list top bar shows the
+  // CamberQA worktree instance (dev only): the list top bar shows the
   // worktree's name — preferring its sidebar nickname, like the desktop's
   // title chip — on the slot colour, instead of the host name.
-  const spoolsideWorktreeLabel = $derived.by(() => {
-    const worktreeName = hostStatus?.spoolside?.worktreeName?.trim();
+  const camberqaWorktreeLabel = $derived.by(() => {
+    const worktreeName = hostStatus?.camberqa?.worktreeName?.trim();
     if (!worktreeName) return null;
-    // The longest-path match mirrors DesktopSideBar.spoolsideWorktreeProject:
+    // The longest-path match mirrors DesktopSideBar.camberqaWorktreeProject:
     // several projects can share a worktree name; the deepest is the newest.
     let match: { nickname?: string; path: string } | null = null;
     for (const project of core.acpProjectRepo.projects) {
@@ -92,8 +92,8 @@
     }
     return match?.nickname || worktreeName;
   });
-  const spoolsideWorktreeColor = $derived(
-    spoolsideWorktreeLabel ? hostStatus?.spoolside?.color?.trim() || undefined : undefined,
+  const camberqaWorktreeColor = $derived(
+    camberqaWorktreeLabel ? hostStatus?.camberqa?.color?.trim() || undefined : undefined,
   );
 
   function showList() {
@@ -363,8 +363,8 @@
     {#snippet children(page)}
       {#if page === "list"}
         <MobileTopBar
-          title={spoolsideWorktreeLabel || hostStatus?.name || "Conversations"}
-          titleColor={spoolsideWorktreeColor}
+          title={camberqaWorktreeLabel || hostStatus?.name || "Conversations"}
+          titleColor={camberqaWorktreeColor}
           showLogo
           tone="panel"
           connected={hostStatus ? hostStatus.connected : undefined}
@@ -392,7 +392,7 @@
           <MobileSideBar
             activeConversationId={core.activeConversationId}
             {activeSession}
-            spoolside={hostStatus?.spoolside ?? null}
+            camberqa={hostStatus?.camberqa ?? null}
             onShowChat={() => {
               view = "chat";
             }}

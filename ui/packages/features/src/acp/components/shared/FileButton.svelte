@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Button, type ButtonProps } from "@poolsideai/components/button";
-  import { isAppleUser } from "@poolsideai/components";
-  import Icon from "@poolsideai/components/icon";
+  import { Button, type ButtonProps } from "@camber/components/button";
+  import { isAppleUser } from "@camber/components";
+  import Icon from "@camber/components/icon";
   import { get } from "svelte/store";
   import { appState } from "../../hostAdapter";
   import { markdownHost } from "../../markdownHost";

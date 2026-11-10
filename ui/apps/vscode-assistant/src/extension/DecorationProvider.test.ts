@@ -110,7 +110,7 @@ describe("DecorationProvider", () => {
       });
     });
 
-    it("sets hover message with poolside branding", async () => {
+    it("sets hover message with camber branding", async () => {
       const locations = new Map([
         [
           mockEditor.document.uri.fsPath,
@@ -128,7 +128,7 @@ describe("DecorationProvider", () => {
         expect.arrayContaining([
           expect.objectContaining({
             hoverMessage: expect.objectContaining({
-              value: "$(poolside-roundel) Edited by poolside",
+              value: "$(camber-roundel) Edited by camber",
             }),
           }),
         ]),

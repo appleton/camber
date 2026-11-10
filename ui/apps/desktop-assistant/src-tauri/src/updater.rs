@@ -171,6 +171,18 @@ async fn check_channel_update(
     app: &AppHandle,
     channel: DesktopUpdateChannel,
 ) -> Result<Option<(Version, Update)>, String> {
+    // A personal fork has no update service until one is explicitly configured.
+    if app
+        .config()
+        .plugins
+        .0
+        .get("updater")
+        .and_then(|config| config.get("endpoints"))
+        .and_then(|endpoints| endpoints.as_array())
+        .is_none_or(|endpoints| endpoints.is_empty())
+    {
+        return Ok(None);
+    }
     let updater = build_updater(app, channel, false)?;
     let Some(update) = updater.check().await.map_err(|err| err.to_string())? else {
         return Ok(None);
@@ -263,7 +275,7 @@ async fn download_update(app: &AppHandle, update: &Update) -> Result<Vec<u8>, St
             move |chunk, content_length| {
                 downloaded += chunk;
                 let _ = app.emit(
-                    "poolside:desktop-update-progress",
+                    "camber:desktop-update-progress",
                     DesktopUpdateProgress {
                         downloaded,
                         content_length,
@@ -590,18 +602,18 @@ mod tests {
     }
 
     #[test]
-    fn the_production_public_key_decodes_for_archive_verification() {
-        // The pubkey shipped in tauri.conf.json must decode through the same
-        // helpers verify_archive uses, or cached archives would never verify
-        // and every install would silently fall back to a re-download.
+    fn unconfigured_fork_has_no_update_feed_or_trusted_key() {
         let config: serde_json::Value =
             serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
-        let pubkey = config["plugins"]["updater"]["pubkey"].as_str().unwrap();
-        let decoded = base64::engine::general_purpose::STANDARD
-            .decode(pubkey)
-            .unwrap();
-        PublicKey::decode(std::str::from_utf8(&decoded).unwrap()).unwrap();
+        assert!(config["plugins"]["updater"]["endpoints"]
+            .as_array()
+            .unwrap()
+            .is_empty());
+        assert_eq!(config["plugins"]["updater"]["pubkey"].as_str().unwrap(), "");
     }
+
+    // Public verification fixture, independent of the app's release configuration.
+    const TEST_PUBLIC_KEY: &str = "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJBRUQ5ODRERjk1MTkxNjkKUldScGtWSDVUWmp0dXY1Z3E2YU9HNjNoV2RmcTFCRS9ZNU1DUWdtMVlvaW9QUjZ2dHZjVnFobXkK";
 
     /// A well-formed minisign signature (74-byte packet: algorithm, key id,
     /// signature) carrying a bogus Ed25519 signature. `Signature::decode`
@@ -623,9 +635,7 @@ mod tests {
 
     #[test]
     fn tampered_archives_fail_verification() {
-        let config: serde_json::Value =
-            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
-        let pubkey = config["plugins"]["updater"]["pubkey"].as_str().unwrap();
+        let pubkey = TEST_PUBLIC_KEY;
         // The key id of the shipped public key, so verification gets past the
         // key-id check and actually evaluates the signature.
         let our_key_id = [0x69, 0x91, 0x51, 0xf9, 0x4d, 0x98, 0xed, 0xba];
@@ -662,10 +672,8 @@ mod tests {
             .unwrap();
         let signature = Signature::decode(std::str::from_utf8(&decoded).unwrap()).unwrap();
 
-        let config: serde_json::Value =
-            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
         let pubkey_decoded = base64::engine::general_purpose::STANDARD
-            .decode(config["plugins"]["updater"]["pubkey"].as_str().unwrap())
+            .decode(TEST_PUBLIC_KEY)
             .unwrap();
         let public_key = PublicKey::decode(std::str::from_utf8(&pubkey_decoded).unwrap()).unwrap();
 

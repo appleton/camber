@@ -7,15 +7,15 @@
   <key>UIDesignRequiresCompatibility</key>
   <false/>
   <key>NSMicrophoneUsageDescription</key>
-  <string>Poolside uses the microphone to transcribe your voice into the prompt.</string>
+  <string>Camber uses the microphone to transcribe your voice into the prompt.</string>
   <key>CFBundleURLTypes</key>
   <array>
     <dict>
       <key>CFBundleURLName</key>
-      <string>ai.poolside.assistant</string>
+      <string>io.github.appleton.camber</string>
       <key>CFBundleURLSchemes</key>
       <array>
-        <string>poolside</string>
+        <string>camber</string>
       </array>
       <key>CFBundleTypeRole</key>
       <string>Viewer</string>

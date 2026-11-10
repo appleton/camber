@@ -1,9 +1,9 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import type { Snippet } from "svelte";
 
   // Per-page navigation bar for the mobile shell. Root pages show the
-  // remote-access mark (the controlled laptop, badged with the poolside
+  // remote-access mark (the controlled laptop, badged with the camber
   // roundel); pushed pages show a back button and center their title between
   // equal-width side slots so it stays optically centered.
   interface Props {
@@ -17,7 +17,7 @@
     /** When set, a status dot before the title shows transport liveness. */
     connected?: boolean;
     /** When set, the title renders as a chip on this background colour —
-     * spoolside worktree instances match the desktop app's title chip. */
+     * camberqa worktree instances match the desktop app's title chip. */
     titleColor?: string;
     /** Right-aligned icon buttons. */
     actions?: Snippet;

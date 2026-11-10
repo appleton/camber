@@ -1,6 +1,6 @@
 <script module lang="ts">
   import { defineMeta } from "@storybook/addon-svelte-csf";
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import AcpChatEmptyState from "./ChatEmptyState.svelte";
 
   const { Story } = defineMeta({

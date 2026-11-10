@@ -32,7 +32,7 @@ if (process.argv.includes("--clean")) {
         "--platform=node",
         "--format=cjs",
         "--external:vscode",
-        `--outfile=/tmp/poolside-l6-${phase}.cjs`,
+        `--outfile=/tmp/camber-l6-${phase}.cjs`,
       ],
       { stdio: "inherit" },
     );

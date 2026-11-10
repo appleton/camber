@@ -110,7 +110,7 @@ cat >"$NPM_OVERRIDES" <<'JSON'
 }
 JSON
 
-# Swift Package Manager pins (cmd/poolside-mlx-sidecar/Package.resolved) carry
+# Swift Package Manager pins (cmd/camber-mlx-sidecar/Package.resolved) carry
 # no license metadata Syft can use, so record the licenses declared by each
 # upstream repository. Keyed by package identity; applies to any pinned version.
 SWIFT_OVERRIDES="${TMP_DIR}/swift-overrides.json"

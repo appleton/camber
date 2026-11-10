@@ -71,7 +71,7 @@
     if (!frame?.contentWindow || event.source !== frame.contentWindow) return;
     const data = event.data;
     if (
-      data?.type !== "poolside:visualization-size" ||
+      data?.type !== "camber:visualization-size" ||
       typeof data.height !== "number" ||
       !Number.isFinite(data.height)
     )

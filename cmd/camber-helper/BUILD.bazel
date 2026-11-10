@@ -1,0 +1,63 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_cross_binary", "go_library")
+
+go_library(
+    name = "camber-helper_lib",
+    srcs = [
+        "main.go",
+        "openapi.go",
+        "root_command.go",
+        "tail.go",
+    ],
+    importpath = "github.com/appleton/camber/cmd/camber-helper",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/common/version",
+        "//pkg/camber-helper/helpercli",
+        "//pkg/camber-helper/logging",
+        "//pkg/camber-helper/server",
+        "@com_github_danielgtaylor_huma_v2//:huma",
+        "@com_github_dustin_go_humanize//:go-humanize",
+        "@com_github_spf13_cobra//:cobra",
+    ],
+)
+
+go_binary(
+    name = "camber-helper",
+    embed = [":camber-helper_lib"],
+    gc_linkopts = [
+        "-s",
+        "-w",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Cross-compilation targets for release builds.
+# Linux and Windows use the Zig toolchain (hermetic_cc_toolchain).
+# Darwin is built natively on macOS runners.
+go_cross_binary(
+    name = "camber-helper_linux_amd64",
+    platform = "//bazel/platforms:linux_amd64_musl",
+    tags = ["manual"],
+    target = ":camber-helper",
+)
+
+go_cross_binary(
+    name = "camber-helper_linux_arm64",
+    platform = "//bazel/platforms:linux_arm64_musl",
+    tags = ["manual"],
+    target = ":camber-helper",
+)
+
+go_cross_binary(
+    name = "camber-helper_windows_amd64",
+    platform = "//bazel/platforms:windows_amd64",
+    tags = ["manual"],
+    target = ":camber-helper",
+)
+
+go_cross_binary(
+    name = "camber-helper_windows_arm64",
+    platform = "//bazel/platforms:windows_arm64",
+    tags = ["manual"],
+    target = ":camber-helper",
+)

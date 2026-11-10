@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve Poolside Assistant.
+Thanks for helping improve Camber Assistant.
 
 ## Development
 
@@ -15,7 +15,7 @@ conversations must be resolved.
 - **[`docs/getting-started.md`](./docs/getting-started.md)**: Choose or
   configure an agent and start using the assistant.
 - **[`docs/coding-with-agents.md`](./docs/coding-with-agents.md)**: Work on
-  Poolside Assistant with coding agents, including spoolside, parallel
+  Camber Assistant with coding agents, including camberqa, parallel
   worktrees, snapshots, and screenshots.
 
 Before opening a large PR, read the relevant scoped
@@ -39,7 +39,7 @@ For shared UI workspace structure and package commands, use
 
 Bugs, feature requests, agent compatibility reports, rough edges, and questions —
 we'd like to hear all of it. Please start in
-[GitHub Discussions](https://github.com/poolsideai/assistants/discussions)
+[GitHub Discussions](https://github.com/appleton/camber/discussions)
 rather than opening an issue directly.
 
 We keep the issue tracker for accepted, well-understood work that's ready to pick

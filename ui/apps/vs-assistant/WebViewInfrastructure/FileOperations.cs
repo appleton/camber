@@ -1,7 +1,7 @@
 ﻿using EnvDTE;
 using Microsoft.VisualStudio.Shell;
-using Poolside.Assistant.EditHighlights;
-using Poolside.Assistant.HelperLSP;
+using Camber.Assistant.EditHighlights;
+using Camber.Assistant.HelperLSP;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.WebViewInfrastructure
+namespace Camber.Assistant.WebViewInfrastructure
 {
     public static class FileOperations
     {
@@ -48,7 +48,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
 
         public static async Task ApplyTaskWorkspaceEdit(TaskWorkspaceEdit edit)
         {
-            var package = PoolsideAssistantPackage.GetInstance();
+            var package = CamberAssistantPackage.GetInstance();
             await package.JoinableTaskFactory.SwitchToMainThreadAsync();
             var workspace = package.GetWorkspace();
             var highlightInputByPath = new Dictionary<string, EditHighlightsInput>();
@@ -123,7 +123,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
             var fileUri = new Uri(uri);
             return fileUri.LocalPath;
         }
-        
+
         private static (string, string) ApplyEditsToPath(List<TextEdit> edits, string path, bool save = false)
         {
             // Prefer to apply it to the editor if open, otherwise modity the file.

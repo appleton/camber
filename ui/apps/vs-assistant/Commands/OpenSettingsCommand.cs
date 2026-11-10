@@ -1,17 +1,17 @@
 using Microsoft.VisualStudio.Shell;
-using Poolside.Assistant.Settings;
+using Camber.Assistant.Settings;
 using System;
 using System.ComponentModel.Design;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Commands
+namespace Camber.Assistant.Commands
 {
     /// <summary>
-    /// Opens the Poolside Assistant options page. Mirrors VS Code's view/title
+    /// Opens the Camber Assistant options page. Mirrors VS Code's view/title
     /// "Settings" action (the openSettings command) so the sidebar toolbar exposes
     /// the same New Conversation + Settings pair.
     /// </summary>
-    internal class OpenSettingsCommand : BaseSignedInPoolsideCommand
+    internal class OpenSettingsCommand : BaseSignedInCamberCommand
     {
         public const int CommandId = 0x0160;
 
@@ -36,7 +36,7 @@ namespace Poolside.Assistant.Commands
         protected override void Execute(object sender, EventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            PoolsideAssistantPackage.GetInstance().ShowOptionPage(typeof(PoolsideSettings));
+            CamberAssistantPackage.GetInstance().ShowOptionPage(typeof(CamberSettings));
         }
     }
 }

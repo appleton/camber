@@ -2,7 +2,7 @@ const vscode = require("vscode");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 exports.run = async () => {
-  const extension = vscode.extensions.getExtension("poolside-ai.poolside-assistant");
+  const extension = vscode.extensions.getExtension("appleton.camber-assistant");
   assert(extension);
   const start = performance.now();
   await extension.activate();
@@ -18,13 +18,13 @@ exports.run = async () => {
     "openPermissionSettings",
     "openSettings",
   ];
-  for (const command of expected) assert(commands.includes(`poolside.${command}`), command);
-  await vscode.commands.executeCommand("poolside.togglePlanMode");
-  const configuration = vscode.workspace.getConfiguration("poolside");
+  for (const command of expected) assert(commands.includes(`camber.${command}`), command);
+  await vscode.commands.executeCommand("camber.togglePlanMode");
+  const configuration = vscode.workspace.getConfiguration("camber");
   assert.equal(configuration.get("notifyOnApproval"), true);
   assert.equal(configuration.get("toolActivity"), "grouped");
   fs.writeFileSync(
-    process.env.POOLSIDE_B4_RESULT,
+    process.env.CAMBER_B4_RESULT,
     JSON.stringify({
       activationMs,
       commands: expected,

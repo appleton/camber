@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import type { IconName } from "@poolsideai/components/icon";
+  import type { IconName } from "@camber/components/icon";
 
   export interface MobileSelectOption {
     id: string;
@@ -29,7 +29,7 @@
 </script>
 
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
 
   import RegistryAgentIcon from "../RegistryAgentIcon.svelte";
 

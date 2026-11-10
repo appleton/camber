@@ -1,5 +1,5 @@
 {
-  "extends": "@poolsideai/tsconfig/dom",
+  "extends": "@camber/tsconfig/dom",
   "compilerOptions": {
     "module": "nodenext",
     "moduleResolution": "nodenext"

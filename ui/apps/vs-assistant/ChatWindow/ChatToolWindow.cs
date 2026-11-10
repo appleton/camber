@@ -1,9 +1,9 @@
 ﻿using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using Poolside.Assistant.Commands;
-using Poolside.Assistant.EditHighlights;
-using Poolside.Assistant.WebViewInfrastructure;
+using Camber.Assistant.Commands;
+using Camber.Assistant.EditHighlights;
+using Camber.Assistant.WebViewInfrastructure;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,7 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 
-namespace Poolside.Assistant.ChatWindow
+namespace Camber.Assistant.ChatWindow
 {
     /// <summary>
     /// This class implements the tool window exposed by this package and hosts a user control.
@@ -58,7 +58,7 @@ namespace Poolside.Assistant.ChatWindow
         /// </summary>
         private readonly ContentControl holder;
 
-        // Mirrors IDSymbol "PoolsideSidebarToolbar" in PoolsideAssistantPackage.vsct.
+        // Mirrors IDSymbol "CamberSidebarToolbar" in CamberAssistantPackage.vsct.
         private const int SidebarToolbarId = 0x0030;
 
         /// <summary>
@@ -66,12 +66,12 @@ namespace Poolside.Assistant.ChatWindow
         /// </summary>
         public ChatToolWindow() : base(null)
         {
-            this.Caption = "Poolside Assistant";
+            this.Caption = "Camber Assistant";
 
             // Attach the sidebar toolbar declared in the .vsct; this surfaces the
             // New Conversation "+" action at the top of the tool window (mirroring
             // VS Code's native view-title new-conversation button).
-            this.ToolBar = new CommandID(BasePoolsideToolsCommand.CommandSet, SidebarToolbarId);
+            this.ToolBar = new CommandID(BaseCamberToolsCommand.CommandSet, SidebarToolbarId);
 
             // This is the user control hosted by the tool window; Note that, even if this class implements IDisposable,
             // we are not calling Dispose on this object. This is because ToolWindowPane calls Dispose on
@@ -105,12 +105,12 @@ namespace Poolside.Assistant.ChatWindow
             {
                 throw new NotSupportedException("Cannot create tool window");
             }
-            if (!(window is ChatToolWindow poolsideWindow))
+            if (!(window is ChatToolWindow camberWindow))
             {
                 throw new InvalidOperationException("Wrong tool window type encountered");
             }
-            poolsideWindow.EnsureVisibilityTracker();
-            return poolsideWindow;
+            camberWindow.EnsureVisibilityTracker();
+            return camberWindow;
         }
 
         public static async Task<ChatToolWindow> GetAndShowAsync(AsyncPackage package)
@@ -121,12 +121,12 @@ namespace Poolside.Assistant.ChatWindow
             {
                 throw new NotSupportedException("Cannot create tool window");
             }
-            if (!(window is ChatToolWindow poolsideWindow))
+            if (!(window is ChatToolWindow camberWindow))
             {
                 throw new InvalidOperationException("Wrong tool window type encountered");
             }
-            poolsideWindow.EnsureVisibilityTracker();
-            return poolsideWindow;
+            camberWindow.EnsureVisibilityTracker();
+            return camberWindow;
         }
 
         protected override void OnClose()

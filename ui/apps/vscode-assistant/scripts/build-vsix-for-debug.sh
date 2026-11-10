@@ -39,8 +39,8 @@ cd "$REPO_ROOT"
 # build steps
 node_modules/.bin/turbo build --filter=./ui/apps/vscode-assistant
 
-# Build poolside-helper for the specified OS/architecture.
-scripts/helper-build-cross-platform.sh poolside-helper "$OS_ARCH"
+# Build camber-helper for the specified OS/architecture.
+scripts/helper-build-cross-platform.sh camber-helper "$OS_ARCH"
 
 # Extract OS from OS_ARCH for file pattern matching
 OS_NAME=$(echo "$OS_ARCH" | cut -d'/' -f1)
@@ -60,12 +60,12 @@ case "$OS_ARCH" in
 esac
 
 # Move binaries to VSCode extension dist folder
-mv poolside-helper-"${OS_NAME}"-* ui/apps/vscode-assistant/dist/
+mv camber-helper-"${OS_NAME}"-* ui/apps/vscode-assistant/dist/
 
 # package VSIX with platform target
 VERSION=$(jq -r .version ui/apps/vscode-assistant/package.json)
-VSIX_FILE="$REPO_ROOT/ui/apps/vscode-assistant/poolside-assistant-${VERSION}-${VSCE_TARGET}.vsix"
-pnpm -F poolside-assistant exec vsce package --no-dependencies --allow-missing-repository --target "$VSCE_TARGET" \
+VSIX_FILE="$REPO_ROOT/ui/apps/vscode-assistant/camber-assistant-${VERSION}-${VSCE_TARGET}.vsix"
+pnpm -F camber-assistant exec vsce package --no-dependencies --allow-missing-repository --target "$VSCE_TARGET" \
   -o "$VSIX_FILE"
 
 if [[ ! -f "$VSIX_FILE" ]]; then

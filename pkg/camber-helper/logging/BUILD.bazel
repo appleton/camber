@@ -1,0 +1,16 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "logging",
+    srcs = ["logging.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/logging",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/camber-helper/methods"],
+)
+
+go_test(
+    name = "logging_test",
+    srcs = ["logging_test.go"],
+    embed = [":logging"],
+    deps = ["//pkg/camber-helper/methods"],
+)

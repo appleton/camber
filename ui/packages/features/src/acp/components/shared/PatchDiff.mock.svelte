@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Test stand-in for @poolsideai/components/file-diff PatchDiff: jsdom
+  // Test stand-in for @camber/components/file-diff PatchDiff: jsdom
   // cannot host @pierre/diffs' shadow-DOM renderer, so render the new-side
   // text (or raw patch) so assertions still see the diff content.
   interface MockFileContents {

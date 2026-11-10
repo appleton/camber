@@ -44,21 +44,21 @@ function registry(
 }
 
 describe("agent config menu helpers", () => {
-  it("falls back to the default Poolside agent when no agent servers are configured", () => {
+  it("falls back to the default Camber agent when no agent servers are configured", () => {
     expect(agentServerOptions(repo({ agents: { agentServerNames: [] } }))).toEqual(["poolside"]);
     expect(selectedAgentServer(scope({ activeAgentServer: "" }))).toBe("poolside");
   });
 
-  it("uses Poolside and registry display names for agent labels", () => {
+  it("uses Camber and registry display names for agent labels", () => {
     const agents = registry({ codex: "Codex CLI" });
 
-    expect(agentName(agents, "poolside")).toBe("Poolside");
-    expect(agentName(agents, "local")).toBe("Poolside Local");
+    expect(agentName(agents, "poolside")).toBe("Camber");
+    expect(agentName(agents, "local")).toBe("Camber Local");
     expect(agentName(agents, "codex")).toBe("Codex CLI");
     expect(agentName(agents, "unknown")).toBe("unknown");
   });
 
-  it("returns picker-only brand colours for Poolside and Anthropic agent icons", () => {
+  it("returns picker-only brand colours for Camber and Anthropic agent icons", () => {
     const agents = registry({
       aliasedClaude: { id: "claude-acp", name: "Claude Agent" },
       codex: { id: "codex-acp", name: "Codex" },

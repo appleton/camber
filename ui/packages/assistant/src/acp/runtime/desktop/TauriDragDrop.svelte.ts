@@ -1,7 +1,4 @@
-import {
-  requestDesktopFilePromptChip,
-  requestDesktopImageAttachment,
-} from "@poolsideai/features/acp";
+import { requestDesktopFilePromptChip, requestDesktopImageAttachment } from "@camber/features/acp";
 import { onMount } from "svelte";
 
 export interface TauriDragDropCallbacks {

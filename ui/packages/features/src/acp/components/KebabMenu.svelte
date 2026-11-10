@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createDropdownMenu, melt } from "@melt-ui/svelte";
-  import Icon from "@poolsideai/components/icon";
-  import type { IconName } from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
+  import type { IconName } from "@camber/components/icon";
   import { setContext, type Snippet } from "svelte";
 
   interface Props {

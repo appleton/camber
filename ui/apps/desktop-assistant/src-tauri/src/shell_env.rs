@@ -6,7 +6,7 @@
 //! launch provides all of them. That asymmetry makes features work in dev and
 //! silently break in the released bundle. Capturing the login shell's
 //! environment once at startup and folding it into the process closes the gap
-//! for this process and for everything it spawns (including poolside-helper,
+//! for this process and for everything it spawns (including camber-helper,
 //! which additionally repairs its own environment for IDE hosts).
 
 use std::{
@@ -17,8 +17,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-const MARKER_START: &str = "__POOLSIDE_ENV_START__";
-const MARKER_END: &str = "__POOLSIDE_ENV_END__";
+const MARKER_START: &str = "__CAMBER_ENV_START__";
+const MARKER_END: &str = "__CAMBER_ENV_END__";
 /// Generous on purpose: shell inits that source version managers (nvm in
 /// particular) routinely take over two seconds, and this runs once at startup.
 const CAPTURE_TIMEOUT: Duration = Duration::from_secs(5);
@@ -53,7 +53,7 @@ pub fn apply_user_shell_env() {
     // launchd replays the $SHELL recorded when the login session started, so
     // a `chsh` since then (zsh → fish, say) leaves every GUI launch with a
     // stale value. Repair it before anything inherits it — terminals,
-    // poolside-helper, and the keep-alive `exec "$SHELL"` hand-off all
+    // camber-helper, and the keep-alive `exec "$SHELL"` hand-off all
     // consult it. Unlike the capture below, this is independent of how the
     // app was launched: a customized GUI PATH does not make $SHELL fresh.
     if env::var("SHELL").ok().as_deref() != Some(shell.as_str()) {
@@ -358,17 +358,17 @@ fn shell_fingerprint(shell: &str) -> String {
 }
 
 /// Overridable so tests and the measurement harness can isolate the cache.
-/// The default lives in the shared poolside cache dir rather than a
+/// The default lives in the shared camber cache dir rather than a
 /// per-identifier app dir: the login-shell environment is a property of the
 /// user, not of one app bundle.
 fn cache_path() -> Option<PathBuf> {
-    if let Ok(path) = env::var("POOLSIDE_SHELL_ENV_CACHE_PATH") {
+    if let Ok(path) = env::var("CAMBER_SHELL_ENV_CACHE_PATH") {
         return Some(PathBuf::from(path));
     }
     let home = env::var("HOME").ok()?;
     Some(
         Path::new(&home)
-            .join("Library/Caches/poolside")
+            .join("Library/Caches/camber")
             .join("shell-env.json"),
     )
 }
@@ -465,11 +465,7 @@ const REFRESH_DELAY: Duration = Duration::from_secs(15);
 /// Re-captures the login-shell environment off the startup path and rewrites
 /// the cache when it drifted, so the next launch picks up changes the
 /// fingerprint cannot observe. Never touches this process's environment.
-fn refresh_cache_in_background(
-    shell: String,
-    fingerprint: String,
-    cached: Vec<(String, String)>,
-) {
+fn refresh_cache_in_background(shell: String, fingerprint: String, cached: Vec<(String, String)>) {
     std::thread::spawn(move || {
         std::thread::sleep(REFRESH_DELAY);
         let Some(output) = capture_login_shell_output(&shell) else {
@@ -562,7 +558,7 @@ mod tests {
         assert!(is_usable_shell("/bin/sh"));
         assert!(!is_usable_shell(""));
         assert!(!is_usable_shell("zsh"));
-        assert!(!is_usable_shell("/nonexistent-poolside-test-shell"));
+        assert!(!is_usable_shell("/nonexistent-camber-test-shell"));
         assert!(!is_usable_shell("/tmp"));
     }
 
@@ -586,7 +582,10 @@ mod tests {
     fn live_capture_overwrites_but_cached_apply_preserves_existing() {
         let entries = vec![
             ("EDITOR".to_string(), "nvim".to_string()),
-            ("SSH_AUTH_SOCK".to_string(), "/old/session/agent".to_string()),
+            (
+                "SSH_AUTH_SOCK".to_string(),
+                "/old/session/agent".to_string(),
+            ),
         ];
         let current = [("SSH_AUTH_SOCK", "/fresh/session/agent")];
 
@@ -595,7 +594,10 @@ mod tests {
             live,
             vec![
                 ("EDITOR".to_string(), "nvim".to_string()),
-                ("SSH_AUTH_SOCK".to_string(), "/old/session/agent".to_string()),
+                (
+                    "SSH_AUTH_SOCK".to_string(),
+                    "/old/session/agent".to_string()
+                ),
             ]
         );
 
@@ -638,7 +640,11 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("shell-env-perm-test-{}", std::process::id()));
         let path = dir.join("shell-env.json");
 
-        store_cached_env_at(&path, "fp", &[("SECRET_TOKEN".to_string(), "s".to_string())]);
+        store_cached_env_at(
+            &path,
+            "fp",
+            &[("SECRET_TOKEN".to_string(), "s".to_string())],
+        );
 
         let mode = std::fs::metadata(&path).unwrap().permissions().mode();
         assert_eq!(mode & 0o777, 0o600, "captured env can carry secrets");

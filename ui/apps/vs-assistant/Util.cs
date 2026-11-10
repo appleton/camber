@@ -7,8 +7,8 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.TextManager.Interop;
-using Poolside.Assistant.ChatWindow;
-using Poolside.Assistant.Telemetry;
+using Camber.Assistant.ChatWindow;
+using Camber.Assistant.Telemetry;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -19,7 +19,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant
+namespace Camber.Assistant
 {
     internal static class Util
     {
@@ -48,8 +48,8 @@ namespace Poolside.Assistant
                 type == "error" ? KnownMonikers.StatusError : KnownMonikers.StatusInformation,
                 isCloseButtonVisible: true
             );
-            var poolsideToolWindow = await ChatToolWindow.GetAndShowAsync(PoolsideAssistantPackage.GetInstance());
-            poolsideToolWindow.AddInfoBar(infoBarFactory.CreateInfoBar(infoBarModel));
+            var camberToolWindow = await ChatToolWindow.GetAndShowAsync(CamberAssistantPackage.GetInstance());
+            camberToolWindow.AddInfoBar(infoBarFactory.CreateInfoBar(infoBarModel));
         }
 
         public static System.Windows.Media.Color ToWindowsMediaColor(this System.Drawing.Color color)
@@ -65,7 +65,7 @@ namespace Poolside.Assistant
         public static IEnumerable<IVsWindowFrame> GetAllWindowFrames()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            if (PoolsideAssistantPackage.GetGlobalService(typeof(SVsUIShell)) is not IVsUIShell uiShell)
+            if (CamberAssistantPackage.GetGlobalService(typeof(SVsUIShell)) is not IVsUIShell uiShell)
                 yield break;
             // Tool windows (Solution Explorer, Output, etc.) and document windows are enumerated
             // separately via different IVsUIShell methods; we want both.
@@ -348,7 +348,7 @@ namespace Poolside.Assistant
         internal static void FocusMainWindow()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var dte = (DTE)PoolsideAssistantPackage.GetGlobalService(typeof(DTE));
+            var dte = (DTE)CamberAssistantPackage.GetGlobalService(typeof(DTE));
             dte.MainWindow.Activate();
         }
 
@@ -380,7 +380,7 @@ namespace Poolside.Assistant
 
             if (toolWindow == null)
             {
-                toolWindow = await ChatToolWindow.GetInstanceAsync(PoolsideAssistantPackage.GetInstance());
+                toolWindow = await ChatToolWindow.GetInstanceAsync(CamberAssistantPackage.GetInstance());
             }
 
             var infoBar = infoBarFactory.CreateInfoBar(infoBarModel);
@@ -436,7 +436,7 @@ namespace Poolside.Assistant
                 }
                 catch (Exception ex)
                 {
-                    PoolsideTelemetryLogger.Instance.reportException(ex);
+                    CamberTelemetryLogger.Instance.reportException(ex);
                     tcs.TrySetException(ex);
                 }
             }
@@ -448,7 +448,7 @@ namespace Poolside.Assistant
                 _ = toObserve.ContinueWith(result =>
                 {
                     if (result.IsFaulted)
-                        PoolsideTelemetryLogger.Instance.reportException(result.Exception);
+                        CamberTelemetryLogger.Instance.reportException(result.Exception);
                 }, TaskScheduler.Default);
         }
 
@@ -465,7 +465,7 @@ namespace Poolside.Assistant
                     }
                     catch (Exception ex)
                     {
-                        PoolsideTelemetryLogger.Instance.reportException(ex);
+                        CamberTelemetryLogger.Instance.reportException(ex);
                         yield break;
                     }
                     if (!moved)

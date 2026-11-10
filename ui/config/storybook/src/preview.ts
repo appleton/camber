@@ -149,7 +149,7 @@ const base = {
  * Deliberately not called `definePreview`: Storybook decides whether a preview
  * uses CSF Factories by scanning `.storybook/preview.ts` for an import named
  * `definePreview` from any module specifier containing "storybook" — which
- * `@poolsideai/storybook-config` does. It then generates
+ * `@camber/storybook-config` does. It then generates
  * `preview.default.composed`, and because this returns a plain annotations
  * object there is no `composed`, so no renderer annotations load and every
  * story fails with MissingRenderToCanvasError. `@storybook/svelte` does not

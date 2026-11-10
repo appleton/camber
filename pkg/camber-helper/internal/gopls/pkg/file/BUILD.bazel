@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "file",
+    srcs = [
+        "file.go",
+        "hash.go",
+        "kind.go",
+        "modification.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/pkg/file",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/camber-helper/gopls/pkg/protocol"],
+)

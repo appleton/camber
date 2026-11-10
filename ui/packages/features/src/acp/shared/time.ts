@@ -2,7 +2,7 @@ import {
   formatRelativeTime as baseFormatRelativeTime,
   sleep,
   withTimeout,
-} from "@poolsideai/components/assistant-ui";
+} from "@camber/components/assistant-ui";
 
 export { sleep, withTimeout };
 

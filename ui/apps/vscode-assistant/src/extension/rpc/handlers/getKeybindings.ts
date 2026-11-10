@@ -1,4 +1,4 @@
-import type { Keybindings } from "@poolsideai/rpc";
+import type { Keybindings } from "@camber/rpc";
 import * as fs from "fs/promises";
 import JSON5 from "json5";
 import path from "path";
@@ -24,7 +24,7 @@ const extensionKeyBindings: Keybinding[] = packageJson.contributes.keybindings;
  * @returns {Promise<Keybinding[]>} A promise for a list of resolved keybindings
  */
 export async function getKeybindings(commands: string[]) {
-  const showKeybindings = getConfiguration("poolside.showKeybindings");
+  const showKeybindings = getConfiguration("camber.showKeybindings");
   if (!showKeybindings) return {};
 
   const userKeyBindings = await loadUserKeyBindings();

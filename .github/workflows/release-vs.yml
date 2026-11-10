@@ -51,7 +51,7 @@ permissions:
 jobs:
   plan:
     name: Plan
-    if: github.repository == 'poolsideai/assistants'
+    if: github.repository == 'appleton/camber' && vars.CAMBER_RELEASES_ENABLED == 'true'
     runs-on: ubuntu-latest
     outputs:
       needs_release: ${{ steps.plan.outputs.needs_release || 'false' }}
@@ -170,7 +170,7 @@ jobs:
           if [[ "${SCHEDULED}" == "true" ]]; then
             args+=(--scheduled --skip-if-no-changes)
           fi
-          pnpm -s -F @poolsideai/release-helper find-version "${args[@]}" > "$RUNNER_TEMP/release-plan.json"
+          pnpm -s -F @camber/release-helper find-version "${args[@]}" > "$RUNNER_TEMP/release-plan.json"
 
       - name: Refuse to overtake an incomplete release
         if: steps.gate.outputs.proceed == 'true'
@@ -264,16 +264,16 @@ jobs:
         env:
           VERSION: ${{ needs.plan.outputs.version }}
           CHANNEL: ${{ needs.plan.outputs.channel }}
-        run: pnpm -F @poolsideai/vs-assistant make-release-manifest --version "${VERSION}" --channel "${CHANNEL}"
+        run: pnpm -F @camber/vs-assistant make-release-manifest --version "${VERSION}" --channel "${CHANNEL}"
 
       - name: Build webview
-        run: pnpm exec turbo build --filter=@poolsideai/vs-assistant
+        run: pnpm exec turbo build --filter=@camber/vs-assistant
 
       - name: Download pinned helper
         env:
           GH_REPO: ${{ github.repository }}
-          POOLSIDE_HELPER_VERSION: ${{ inputs.helper_tag }}
-        run: pnpm -F @poolsideai/vs-assistant download:binaries
+          CAMBER_HELPER_VERSION: ${{ inputs.helper_tag }}
+        run: pnpm -F @camber/vs-assistant download:binaries
 
       - name: Generate release notes
         shell: bash
@@ -285,9 +285,9 @@ jobs:
           mkdir -p ui/apps/vs-assistant/release-notes
           args=(changelog vs --head "${RELEASE_SHA}")
           [[ -n "${CHANGELOG_TAG}" ]] && args+=(--prev "${CHANGELOG_TAG}")
-          pnpm -s -F @poolsideai/release-helper find-version "${args[@]}" \
+          pnpm -s -F @camber/release-helper find-version "${args[@]}" \
             > ui/apps/vs-assistant/release-notes/notes.md
-          pnpm -s -F @poolsideai/release-helper find-version "${args[@]}" --slack \
+          pnpm -s -F @camber/release-helper find-version "${args[@]}" --slack \
             > ui/apps/vs-assistant/release-notes/slack.txt
 
       # The archive is rooted at the extension directory, so the Windows job
@@ -299,7 +299,7 @@ jobs:
           path: |
             ui/apps/vs-assistant/app/dist
             ui/apps/vs-assistant/app/package.json
-            ui/apps/vs-assistant/helper/poolside-helper.exe
+            ui/apps/vs-assistant/helper/camber-helper.exe
             ui/apps/vs-assistant/source.extension.vsixmanifest
             ui/apps/vs-assistant/ReleaseNotes.html
             ui/apps/vs-assistant/release-notes
@@ -327,13 +327,13 @@ jobs:
         uses: NuGet/setup-nuget@b26b823c478ee115be5c9403e62c90b0bf943843 # v3.1.0
 
       - name: Restore NuGet packages
-        run: nuget restore ui/apps/vs-assistant/poolside-assistant.sln
+        run: nuget restore ui/apps/vs-assistant/camber-assistant.sln
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       - name: Build solution
-        run: msbuild ui/apps/vs-assistant/poolside-assistant.sln /p:Configuration=Release
+        run: msbuild ui/apps/vs-assistant/camber-assistant.sln /p:Configuration=Release
 
       # The packaging wildcards fail open, so assert on the built VSIX rather
       # than on the inputs: the runtime-resolved webview and helper paths, the
@@ -344,7 +344,7 @@ jobs:
           VERSION: ${{ needs.plan.outputs.version }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $vsix = 'ui/apps/vs-assistant/bin/Release/net472/poolside-assistant.vsix'
+          $vsix = 'ui/apps/vs-assistant/bin/Release/net472/camber-assistant.vsix'
           if (-not (Test-Path $vsix)) {
             throw "No VSIX at $vsix"
           }
@@ -372,7 +372,7 @@ jobs:
           $required = @(
             'app/dist/assistant.html'
             'app/dist/acp-chat.html'
-            'helper/poolside-helper.exe'
+            'helper/camber-helper.exe'
           )
           $missing = @($required | Where-Object { $entries -notcontains $_ })
           if ($missing.Count -gt 0) {
@@ -398,7 +398,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir release-artifacts
-          cp ui/apps/vs-assistant/bin/Release/net472/poolside-assistant.vsix \
+          cp ui/apps/vs-assistant/bin/Release/net472/camber-assistant.vsix \
             "release-artifacts/vs-assistant-${VERSION}.vsix"
           cp ui/apps/vs-assistant/release-notes/notes.md release-artifacts/
           cp ui/apps/vs-assistant/release-notes/slack.txt release-artifacts/
@@ -535,7 +535,7 @@ jobs:
     needs: [plan, payload, vsix, publish]
     if: >-
       always() &&
-      github.repository == 'poolsideai/assistants'
+      github.repository == 'appleton/camber'
     runs-on: ubuntu-latest
     steps:
       - name: Determine terminal outcome

@@ -1,4 +1,4 @@
-import base, { mergeConfigs } from "@poolsideai/vite-config";
+import base, { mergeConfigs } from "@camber/vite-config";
 import { defineConfig } from "vite";
 
 export default defineConfig((env) =>

@@ -1,15 +1,15 @@
 import type { ToolCall } from "../../../types";
 
 // Titles that identify a fetch even when the agent does not tag the call with
-// kind "fetch" (e.g. Poolside reports `web_fetch` as kind "execute").
+// kind "fetch" (e.g. Camber reports `web_fetch` as kind "execute").
 const FETCH_TITLES = new Set(["fetch", "web fetch", "fetch url", "fetch web page", "open page"]);
 
 /**
- * Matches fetch tool calls from Codex and Poolside ACP so they can render with a
+ * Matches fetch tool calls from Codex and Camber ACP so they can render with a
  * dedicated header that surfaces the requested URL.
  *
- * Confirmed shapes (captured live via spoolside):
- * - Poolside: kind "execute", title "web_fetch", rawInput `{ objective, url }`.
+ * Confirmed shapes (captured live via camberqa):
+ * - Camber: kind "execute", title "web_fetch", rawInput `{ objective, url }`.
  * - Codex: kind "fetch", title "Opening: <url>", rawInput
  *   `{ action: { type: "open_page", url }, query }`. A plain web search arrives
  *   as kind "fetch" with no URL — that stays on the generic renderer.

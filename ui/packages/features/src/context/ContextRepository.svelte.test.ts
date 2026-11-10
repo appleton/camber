@@ -1,4 +1,4 @@
-import type { AttachedUrl } from "@poolsideai/rpc";
+import type { AttachedUrl } from "@camber/rpc";
 import { describe, expect, it } from "vitest";
 import { ContextRepositoryWriter } from "./ContextRepository.svelte";
 

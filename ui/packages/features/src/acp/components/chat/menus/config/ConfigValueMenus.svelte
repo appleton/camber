@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { SessionConfigOption } from "@agentclientprotocol/sdk";
-  import * as Prompt from "@poolsideai/components/prompt";
-  import Icon from "@poolsideai/components/icon";
+  import * as Prompt from "@camber/components/prompt";
+  import Icon from "@camber/components/icon";
   import { getACPAgentRegistryRepo } from "../../../../features/AgentRegistryRepository.svelte";
   import { getACPAgentServersRepo } from "../../../../features/AgentServersRepository.svelte";
   import { getACPSessionRepo } from "../../../../features/SessionRepository.svelte";
@@ -31,7 +31,7 @@
     configMenuValue,
     isAgentPickerOptionId,
   } from "../menus";
-  import { Badge } from "@poolsideai/components/badge";
+  import { Badge } from "@camber/components/badge";
   import DefaultStarButton from "./DefaultStarButton.svelte";
 
   interface Props {

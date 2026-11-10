@@ -4,8 +4,8 @@
 const vscodeAPI = acquireVsCodeApi<any>();
 globalThis.acquireVsCodeApi = (() => vscodeAPI) as typeof acquireVsCodeApi;
 
+import { SidebarOnlyPanel, init } from "@camber/assistant";
 import { messageHandler } from "@estruyf/vscode/dist/client";
-import { SidebarOnlyPanel, init } from "@poolsideai/assistant";
 import { mount } from "svelte";
 import "./assistant.css";
 

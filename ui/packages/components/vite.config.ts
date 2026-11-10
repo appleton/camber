@@ -1,4 +1,4 @@
-import base, { mergeConfigs } from "@poolsideai/vite-config";
+import base, { mergeConfigs } from "@camber/vite-config";
 import { defineConfig } from "vite";
 import { visualizationCommands } from "./tests/visualizationCommands.js";
 
@@ -24,7 +24,7 @@ export default defineConfig((env) =>
         "svelte-copy",
         "shiki",
         "shiki/wasm",
-        "@poolsideai/tailwind-config > tailwind-variants",
+        "@camber/tailwind-config > tailwind-variants",
       ],
     },
   }),

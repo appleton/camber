@@ -1,18 +1,18 @@
-import { poolsideLocalInferenceGetState } from "@poolsideai/helperapi";
-import type { LocalInferenceState } from "@poolsideai/helperapi/schemas";
+import { camberLocalInferenceGetState } from "@camber/helperapi";
+import type { LocalInferenceState } from "@camber/helperapi/schemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocalInferenceRepository } from "./LocalInferenceRepository.svelte";
 
-vi.mock("@poolsideai/helperapi", () => ({
-  poolsideLocalInferenceCancelDownload: vi.fn(),
-  poolsideLocalInferenceDeleteModel: vi.fn(),
-  poolsideLocalInferenceDownloadModel: vi.fn(),
-  poolsideLocalInferenceGetState: vi.fn(),
-  poolsideLocalInferenceSearchModels: vi.fn(),
-  poolsideLocalInferenceSetDefaultModel: vi.fn(),
+vi.mock("@camber/helperapi", () => ({
+  camberLocalInferenceCancelDownload: vi.fn(),
+  camberLocalInferenceDeleteModel: vi.fn(),
+  camberLocalInferenceDownloadModel: vi.fn(),
+  camberLocalInferenceGetState: vi.fn(),
+  camberLocalInferenceSearchModels: vi.fn(),
+  camberLocalInferenceSetDefaultModel: vi.fn(),
 }));
 
-const getState = vi.mocked(poolsideLocalInferenceGetState);
+const getState = vi.mocked(camberLocalInferenceGetState);
 
 describe("LocalInferenceRepository", () => {
   it("notifies listeners with the new and previous state", () => {

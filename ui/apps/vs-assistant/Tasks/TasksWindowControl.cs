@@ -1,17 +1,17 @@
 ﻿using CefSharp;
-using Poolside.Assistant.HelperLSP;
-using Poolside.Assistant.WebViewInfrastructure;
+using Camber.Assistant.HelperLSP;
+using Camber.Assistant.WebViewInfrastructure;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Tasks
+namespace Camber.Assistant.Tasks
 {
     internal class TasksWindowControl : WebViewControl
     {
-        internal TasksWindowControl(PoolsideTaskDTO task, PoolsideTaskVersionDTO version)
+        internal TasksWindowControl(CamberTaskDTO task, CamberTaskVersionDTO version)
             : base("tasks.html", browser => new TasksWebViewCommunicator(browser, task, version))
         {
         }

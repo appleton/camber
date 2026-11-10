@@ -20,7 +20,7 @@ No other verified issues or reportable suspicions were found. The independent re
 - 108 assistant shell/runtime/focus tests and 62 sidebar/chat tests pass after the fix.
 - Feature type checking reports zero errors/warnings; focused production lint and formatting pass.
 - A headless Chromium/WebKit fixture imports the actual Svelte sidebar controller and uses synthetic repositories. Before the fix, a delayed restore changes selection back to the saved conversation. After the fix, the new draft, its text, and focus remain intact. Neither browser reports page errors. [Results](review-navigation-results.json).
-- The browser fixture illustrates controller behavior with synthetic UI. Spoolside reports its server unavailable, so this follow-up does not establish native compositor behavior.
+- The browser fixture illustrates controller behavior with synthetic UI. CamberQA reports its server unavailable, so this follow-up does not establish native compositor behavior.
 
 | WebKit before                                                                   | WebKit after                                                           |
 | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |

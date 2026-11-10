@@ -1,4 +1,4 @@
-import type { IconName, IconProps } from "@poolsideai/components/icon";
+import type { IconName, IconProps } from "@camber/components/icon";
 import type { ToolCall } from "../../types";
 import { isMcpToolCall, isSkillToolCall } from "../events/tool/toolCategory";
 import { getToolPath, isDirectoryListing } from "./toolPaths";

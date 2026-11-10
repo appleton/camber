@@ -2,15 +2,15 @@
 using System.ComponentModel.Design;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Shell;
-using Poolside.Assistant.ChatWindow;
-using Poolside.Assistant.Telemetry;
+using Camber.Assistant.ChatWindow;
+using Camber.Assistant.Telemetry;
 
-namespace Poolside.Assistant.Commands
+namespace Camber.Assistant.Commands
 {
     /// <summary>
     ///  Command handler
     /// </summary>
-    internal class NewConversationCommand : BaseSignedInPoolsideCommand
+    internal class NewConversationCommand : BaseSignedInCamberCommand
     {
         public const int CommandId = 0x0101;
 
@@ -51,7 +51,7 @@ namespace Poolside.Assistant.Commands
             }
             catch (Exception ex)
             {
-                PoolsideTelemetryLogger.Instance.reportException(ex);
+                CamberTelemetryLogger.Instance.reportException(ex);
             }
         }
     }

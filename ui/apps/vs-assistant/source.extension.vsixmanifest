@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="vs-acp-assistant" Version="1.4.0" Language="en-US" Publisher="Poolside" />
-        <DisplayName>Poolside Assistant</DisplayName>
-        <Description xml:space="preserve">The power of Poolside, right in your editor</Description>
-        <MoreInfo>https://poolside.ai/</MoreInfo>
+        <Identity Id="vs-acp-assistant" Version="1.4.0" Language="en-US" Publisher="Camber" />
+        <DisplayName>Camber Assistant</DisplayName>
+        <Description xml:space="preserve">The power of Camber, right in your editor</Description>
+        <MoreInfo>https://github.com/appleton/camber/</MoreInfo>
         <License>License.txt</License>
         <ReleaseNotes>ReleaseNotes.html</ReleaseNotes>
         <Icon>extension-icon.png</Icon>

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import type { LocalInferenceDownloadState } from "@poolsideai/helperapi/schemas";
-  import { formatError } from "@poolsideai/lib/errors";
-  import { InfoMessageType } from "@poolsideai/rpc";
+  import Icon from "@camber/components/icon";
+  import type { LocalInferenceDownloadState } from "@camber/helperapi/schemas";
+  import { formatError } from "@camber/lib/errors";
+  import { InfoMessageType } from "@camber/rpc";
   import { onMount } from "svelte";
   import { getLocalInferenceRepo } from "../../features/LocalInferenceRepository.svelte";
   import { rpc } from "../../hostRpc";

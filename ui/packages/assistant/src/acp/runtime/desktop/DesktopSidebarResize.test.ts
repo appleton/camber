@@ -12,22 +12,22 @@ describe("DesktopSidebarResize", () => {
 
     resize.setWidth(100);
     expect(resize.width).toBe(resize.DESKTOP_SIDEBAR_MIN_WIDTH);
-    expect(window.localStorage.getItem("poolside.desktop.sidebarWidth")).toBe("220");
+    expect(window.localStorage.getItem("camber.desktop.sidebarWidth")).toBe("220");
 
     resize.setWidth(1_000);
     expect(resize.width).toBe(resize.DESKTOP_SIDEBAR_MAX_WIDTH);
-    expect(window.localStorage.getItem("poolside.desktop.sidebarWidth")).toBe("640");
+    expect(window.localStorage.getItem("camber.desktop.sidebarWidth")).toBe("640");
   });
 
   it("loads a saved width and ignores invalid saved values", () => {
-    window.localStorage.setItem("poolside.desktop.sidebarWidth", "512");
+    window.localStorage.setItem("camber.desktop.sidebarWidth", "512");
     const resize = new DesktopSidebarResize({ isDesktop: () => true });
 
     resize.loadSavedWidth();
 
     expect(resize.width).toBe(512);
 
-    window.localStorage.setItem("poolside.desktop.sidebarWidth", "not-a-number");
+    window.localStorage.setItem("camber.desktop.sidebarWidth", "not-a-number");
     resize.loadSavedWidth();
 
     expect(resize.width).toBe(260);

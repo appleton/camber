@@ -1,7 +1,7 @@
 //! Native confirmation and error dialogs for the webview's ConfirmationDialog.
 //!
 //! macOS only: shows an `NSAlert` carrying the app icon (the per-worktree
-//! spoolside icon when launched under spoolside) and a red destructive-styled
+//! camberqa icon when launched under camberqa) and a red destructive-styled
 //! confirm button where requested — neither of which `tauri-plugin-dialog`'s
 //! `ask()` supports. Other platforms return an error and the webview falls
 //! back to the plugin dialog.
@@ -107,7 +107,7 @@ unsafe fn new_alert(title: &str, description: &str) -> Retained<AnyObject> {
     let _: () = msg_send![&*alert, setMessageText: &*NSString::from_str(title)];
     let _: () = msg_send![&*alert, setInformativeText: &*NSString::from_str(description)];
     // NSAlert falls back to a generic icon for unbundled dev binaries; set the
-    // live app icon explicitly (the spoolside per-worktree icon when set).
+    // live app icon explicitly (the camberqa per-worktree icon when set).
     if let Some(icon) = crate::desktop_notification::notification_icon_image() {
         let icon_ref: &AnyObject = &icon;
         let _: () = msg_send![&*alert, setIcon: icon_ref];

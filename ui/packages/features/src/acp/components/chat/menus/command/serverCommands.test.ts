@@ -16,7 +16,7 @@ describe("skill commands", () => {
       isSkillCommand({
         name: "piano",
         description: "Compose music",
-        _meta: { "poolside/slash_command_category": "skill" },
+        _meta: { "camber/slash_command_category": "skill" },
       }),
     ).toBe(true);
     expect(isSkillCommand({ name: "help", description: "Show help" })).toBe(false);

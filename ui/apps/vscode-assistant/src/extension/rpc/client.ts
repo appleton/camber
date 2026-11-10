@@ -3,7 +3,7 @@ import {
   type AssistantClient,
   type AssistantError,
   type AssistantResponse,
-} from "@poolsideai/rpc/assistant";
+} from "@camber/rpc/assistant";
 import { randomUUID } from "crypto";
 import type { Event } from "vscode";
 

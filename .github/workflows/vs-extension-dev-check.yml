@@ -34,7 +34,7 @@ jobs:
         uses: ./.github/actions/ui-setup
 
       - name: Build webview
-        run: pnpm exec turbo build --filter=@poolsideai/vs-assistant
+        run: pnpm exec turbo build --filter=@camber/vs-assistant
 
       - name: Download helper
         env:
@@ -42,8 +42,8 @@ jobs:
           # PRs use the base repository's published runtime, which also lets
           # the migration PR validate before the public repo has releases.
           # Pushes (including in forks) use the public canonical repository.
-          POOLSIDE_HELPER_REPOSITORY: ${{ github.event.pull_request.base.repo.full_name || 'poolsideai/assistants' }}
-        run: pnpm -F @poolsideai/vs-assistant download:binaries
+          CAMBER_HELPER_REPOSITORY: ${{ github.event.pull_request.base.repo.full_name || 'appleton/camber' }}
+        run: pnpm -F @camber/vs-assistant download:binaries
 
       # The archive is rooted at the least common ancestor of the paths below,
       # which is the extension directory — so the Windows job restores both
@@ -56,7 +56,7 @@ jobs:
           name: vs-assistant-payload
           path: |
             ui/apps/vs-assistant/app/dist
-            ui/apps/vs-assistant/helper/poolside-helper.exe
+            ui/apps/vs-assistant/helper/camber-helper.exe
           if-no-files-found: error
           # Transport between the two jobs, consumed minutes later in the same
           # run. One day still covers re-running the failed job.
@@ -80,13 +80,13 @@ jobs:
         uses: NuGet/setup-nuget@b26b823c478ee115be5c9403e62c90b0bf943843 # v3.1.0
 
       - name: Restore NuGet packages
-        run: nuget restore ui/apps/vs-assistant/poolside-assistant.sln
+        run: nuget restore ui/apps/vs-assistant/camber-assistant.sln
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       - name: Build solution
-        run: msbuild ui/apps/vs-assistant/poolside-assistant.sln /p:Configuration=Release
+        run: msbuild ui/apps/vs-assistant/camber-assistant.sln /p:Configuration=Release
 
       # The packaging wildcards fail open, so assert on the built VSIX rather
       # than on the inputs: an empty package is the failure this job exists to
@@ -95,7 +95,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $vsix = 'ui/apps/vs-assistant/bin/Release/net472/poolside-assistant.vsix'
+          $vsix = 'ui/apps/vs-assistant/bin/Release/net472/camber-assistant.vsix'
           if (-not (Test-Path $vsix)) {
             throw "No VSIX at $vsix"
           }
@@ -112,14 +112,14 @@ jobs:
 
           # The paths the extension resolves at runtime, so the check fails on
           # the same thing the user would: WebViewRequestHandler serves
-          # `poolside-app://app/<file>` out of `app\dist`, and HelperProcess
-          # spawns `helper\poolside-helper.exe`. The two webview files and the
+          # `camber-app://app/<file>` out of `app\dist`, and HelperProcess
+          # spawns `helper\camber-helper.exe`. The two webview files and the
           # helper each arrive through a separate csproj wildcard, so any one of
           # them can go missing on its own.
           $required = @(
             'app/dist/assistant.html'
             'app/dist/acp-chat.html'
-            'helper/poolside-helper.exe'
+            'helper/camber-helper.exe'
           )
           $missing = @($required | Where-Object { $entries -notcontains $_ })
           if ($missing.Count -gt 0) {
@@ -137,7 +137,7 @@ jobs:
       - name: Upload VSIX
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: poolside-assistant-vsix
-          path: ui/apps/vs-assistant/bin/Release/net472/poolside-assistant.vsix
+          name: camber-assistant-vsix
+          path: ui/apps/vs-assistant/bin/Release/net472/camber-assistant.vsix
           if-no-files-found: error
           retention-days: 7

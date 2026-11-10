@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 // Startup diagnostics for debugging launches that never leave the startup
 // frame. Captures webview errors and a periodic snapshot of the initial-screen
-// gate, appending everything to the current poolside-helper session log (via
+// gate, appending everything to the current camber-helper session log (via
 // the record_startup_diagnostic command) so one log file tells the whole
 // story, interleaved with helper activity.
 //
@@ -105,8 +105,8 @@ export function initStartupDiagnostics(): void {
   teardowns.push(() => document.removeEventListener("visibilitychange", onVisibilityChange));
 
   const globals = globalThis as StartupDiagnosticsGlobals;
-  globals.__poolsideStartupDiag = logStartupDiagnostic;
-  globals.__poolsideRegisterStartupProbe = registerStartupProbe;
+  globals.__camberStartupDiag = logStartupDiagnostic;
+  globals.__camberRegisterStartupProbe = registerStartupProbe;
 }
 
 // Called once the app has revealed: startup capture has served its purpose, so
@@ -124,8 +124,8 @@ export function completeStartupDiagnostics(): void {
 }
 
 interface StartupDiagnosticsGlobals {
-  __poolsideStartupDiag?: (event: string, data?: unknown) => void;
-  __poolsideRegisterStartupProbe?: (name: string, probe: () => unknown) => void;
+  __camberStartupDiag?: (event: string, data?: unknown) => void;
+  __camberRegisterStartupProbe?: (name: string, probe: () => unknown) => void;
 }
 
 // Samples `probe` once per second, logging on change (heartbeat otherwise),

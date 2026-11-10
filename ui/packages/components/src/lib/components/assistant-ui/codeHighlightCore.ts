@@ -27,8 +27,8 @@ export interface HighlightWorkerResponse {
   error?: string;
 }
 
-const POOLSIDE_THEME = createCssVariablesTheme({
-  name: "poolside-code",
+const CAMBER_THEME = createCssVariablesTheme({
+  name: "camber-code",
   variablePrefix: "--psx-shiki-",
   variableDefaults: {
     foreground: "var(--psx-foreground-primary)",
@@ -57,7 +57,7 @@ function getHighlighter() {
   // code block. The wasm binary is a lazy chunk loaded on first highlight;
   // environments whose CSP forbids wasm keep the JS engine.
   return (highlighterPromise ??= createHighlighterCore({
-    themes: [POOLSIDE_THEME],
+    themes: [CAMBER_THEME],
     langs: [],
     engine: canUseShikiWasmEngine()
       ? createOnigurumaEngine(import("shiki/wasm"))
@@ -86,7 +86,7 @@ export async function highlightToHtml(code: string, language: string | undefined
   try {
     await loadLanguage(lang);
     const highlighter = await getHighlighter();
-    const result = highlighter.codeToTokens(code, { lang, theme: "poolside-code" });
+    const result = highlighter.codeToTokens(code, { lang, theme: "camber-code" });
     return result.tokens
       .map((line) =>
         line

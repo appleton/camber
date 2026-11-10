@@ -1,8 +1,0 @@
-load("@rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "semtok",
-    srcs = ["semtok.go"],
-    importpath = "github.com/poolsideai/assistant/pkg/poolside-helper/gopls/pkg/protocol/semtok",
-    visibility = ["//visibility:public"],
-)

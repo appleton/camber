@@ -1,6 +1,6 @@
-import { getOrSet } from "@poolsideai/lib/map";
-import { generateId } from "@poolsideai/lib/string";
-import type { BaseEntity, EntityCollection, EntityRelation } from "@poolsideai/lib/types";
+import { getOrSet } from "@camber/lib/map";
+import { generateId } from "@camber/lib/string";
+import type { BaseEntity, EntityCollection, EntityRelation } from "@camber/lib/types";
 import { TextSelection, type Command, type EditorState } from "prosemirror-state";
 import { getContext, onMount, setContext, tick } from "svelte";
 import { derived, get, writable, type Readable, type Writable } from "svelte/store";

@@ -1,4 +1,4 @@
-import { type PromptContextFacet } from "@poolsideai/rpc";
+import { type PromptContextFacet } from "@camber/rpc";
 import {
   getGitBranchCommitMessagesContext,
   getGitBranchNamesContext,

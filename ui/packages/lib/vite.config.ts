@@ -1,3 +1,3 @@
-import config from "@poolsideai/vite-config";
+import config from "@camber/vite-config";
 
 export default config;

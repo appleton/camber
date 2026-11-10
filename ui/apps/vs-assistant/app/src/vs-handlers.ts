@@ -1,4 +1,4 @@
-import type { RPCError } from "@poolsideai/rpc/generics";
+import type { RPCError } from "@camber/rpc/generics";
 
 declare var extensionOperations: any;
 

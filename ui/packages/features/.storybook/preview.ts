@@ -1,5 +1,5 @@
-import { Providers } from "@poolsideai/components/storybook";
-import { definePreviewConfig } from "@poolsideai/storybook-config";
+import { Providers } from "@camber/components/storybook";
+import { definePreviewConfig } from "@camber/storybook-config";
 import ACPContextDecorator from "./ACPContextDecorator.svelte";
 import ElicitationDecorator from "./ElicitationDecorator.svelte";
 import "./globals.css";

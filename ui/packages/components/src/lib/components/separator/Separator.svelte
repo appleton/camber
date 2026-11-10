@@ -2,7 +2,7 @@
   import type { HTMLAttributes } from "svelte/elements";
   import type { Orientation } from "../../types/orientation.js";
   import type { Except } from "type-fest";
-  import { cn } from "@poolsideai/tailwind-config/tv";
+  import { cn } from "@camber/tailwind-config/tv";
 
   interface Props extends Except<HTMLAttributes<HTMLDivElement>, "children"> {
     orientation?: Orientation;

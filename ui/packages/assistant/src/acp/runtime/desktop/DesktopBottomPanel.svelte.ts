@@ -1,5 +1,5 @@
 // Owns desktop bottom-panel height persistence and resize gesture state.
-const HEIGHT_STORAGE_KEY = "poolside.desktop.bottomPanelHeight";
+const HEIGHT_STORAGE_KEY = "camber.desktop.bottomPanelHeight";
 const DEFAULT_HEIGHT = 280;
 const MIN_HEIGHT = 180;
 const MAX_HEIGHT = 640;

@@ -1,4 +1,4 @@
-import { INFO_MESSAGE_EVENT, InfoMessageType } from "@poolsideai/rpc";
+import { INFO_MESSAGE_EVENT, InfoMessageType } from "@camber/rpc";
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";

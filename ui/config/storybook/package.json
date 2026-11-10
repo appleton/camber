@@ -1,5 +1,5 @@
 {
-  "name": "@poolsideai/storybook-config",
+  "name": "@camber/storybook-config",
   "version": "2.3.53",
   "private": true,
   "description": "Common storybook configuration",
@@ -24,7 +24,7 @@
       "prettier --ignore-unknown --write"
     ]
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "dependencies": {
     "@chromatic-com/storybook": "catalog:",
     "@storybook/addon-a11y": "catalog:",
@@ -34,10 +34,10 @@
     "ts-deepmerge": "catalog:"
   },
   "devDependencies": {
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
-    "@poolsideai/vite-config": "workspace:*",
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
+    "@camber/vite-config": "workspace:*",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:",

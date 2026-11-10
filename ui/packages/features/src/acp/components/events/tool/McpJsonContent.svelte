@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { memoizedHighlight } from "@poolsideai/components/assistant-ui";
+  import { memoizedHighlight } from "@camber/components/assistant-ui";
 
   interface Props {
     text: string;

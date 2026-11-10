@@ -4,7 +4,7 @@ import {
   type ReorderDragMoveDetail,
   type ReorderDropTarget,
   type ReorderItemRect,
-} from "@poolsideai/dnd";
+} from "@camber/dnd";
 
 export interface ReorderMotionPreview<T> {
   item: T;

@@ -1,4 +1,4 @@
-using Poolside.Assistant.Telemetry;
+using Camber.Assistant.Telemetry;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
-namespace Poolside.Assistant.WebViewInfrastructure
+namespace Camber.Assistant.WebViewInfrastructure
 {
     // Wire shape the webview expects back from the assistant-terminal RPC methods.
     public class AssistantTerminalTab
@@ -25,7 +25,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
     // Visual Studio has no embedded-terminal API, so we cannot mirror the VSCode /
     // desktop terminal panel. Instead each terminal is a separate `cmd.exe /k <command>`
     // console window. This is enough for the only flow that reaches these methods in VS:
-    // ACP agent "terminal" authentication (e.g. the Poolside agent advertising `pool login`).
+    // ACP agent "terminal" authentication (e.g. the Camber agent advertising `pool login`).
     //
     // The webview drives this as create-then-write: createAssistantTerminal(worktree, env)
     // returns a tab with no process yet, then writeAssistantTerminal(id, "<command>\n") sends
@@ -70,7 +70,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
                 Tab = new AssistantTerminalTab
                 {
                     id = Guid.NewGuid().ToString(),
-                    title = "Poolside",
+                    title = "Camber",
                     cwd = workingDirectory,
                     worktreePath = worktreePath,
                     createdAt = DateTime.UtcNow.ToString("o"),
@@ -170,7 +170,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
             }
             catch (Exception ex)
             {
-                PoolsideTelemetryLogger.Instance.reportException(ex);
+                CamberTelemetryLogger.Instance.reportException(ex);
             }
         }
 

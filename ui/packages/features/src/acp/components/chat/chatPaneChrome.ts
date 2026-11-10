@@ -1,4 +1,4 @@
-import type { AssistantTerminalTab } from "@poolsideai/rpc";
+import type { AssistantTerminalTab } from "@camber/rpc";
 import type {
   AssistantTerminalCommandMode,
   AssistantTerminalPlacement,

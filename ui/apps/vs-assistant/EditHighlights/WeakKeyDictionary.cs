@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.EditHighlights
+namespace Camber.Assistant.EditHighlights
 {
     /* Dictionary with weak keys. Used because ConditionalWeakTable isn't iterable. */
     public class WeakKeyDictionary<TKey, TValue> where TKey : class

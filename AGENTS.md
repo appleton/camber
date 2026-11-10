@@ -2,8 +2,8 @@
 
 Map, not encyclopedia. Small by design - follow the paths.
 
-This repository contains Poolside Assistant: desktop and IDE assistant clients,
-shared assistant UI packages, ACP support, and `poolside-helper`.
+This repository contains Camber Assistant: desktop and IDE assistant clients,
+shared assistant UI packages, ACP support, and `camber-helper`.
 
 Scoped `AGENTS.md` files override this file for their subtree. Read the scoped
 file before editing a domain you have not touched before. `CLAUDE.md` files are
@@ -15,19 +15,19 @@ New to the repo? Set up with [`INSTALL.md`](INSTALL.md#build-from-source)
 
 ## The protocol
 
-Poolside Assistant is a client for agents speaking the
+Camber Assistant is a client for agents speaking the
 [Agent Client Protocol](https://agentclientprotocol.com/) (ACP). Upstream
-protocol and schema documentation live there. Poolside's `_poolside/*`
+protocol and schema documentation live there. Camber's `_poolside/*`
 extension methods are defined in `pkg/acp/README.md`.
 
 ## Repository map
 
 | Area | Where |
 | --- | --- |
-| Helper entry point | `cmd/poolside-helper/readme.md` |
-| Helper implementation and JSON-RPC handlers | `pkg/poolside-helper/README.md` |
+| Helper entry point | `cmd/camber-helper/readme.md` |
+| Helper implementation and JSON-RPC handlers | `pkg/camber-helper/README.md` |
 | ACP types and extensions | `pkg/acp/README.md` |
-| Helper ACP proxy | `pkg/poolside-helper/internal/handler/acpproxy/` |
+| Helper ACP proxy | `pkg/camber-helper/internal/handler/acpproxy/` |
 | UI workspace | `ui/README.md`, `ui/AGENTS.md` |
 | Desktop assistant | `ui/apps/desktop-assistant/README.md` |
 | VS Code assistant | `ui/apps/vscode-assistant/readme.md` |
@@ -36,11 +36,11 @@ extension methods are defined in `pkg/acp/README.md`.
 | Shared ACP UI/state | `ui/packages/features/src/acp/` |
 | Mobile remote app | `ui/apps/mobile-remote/README.md` |
 | Remote client transport | `ui/packages/remote-client/README.md` |
-| Helper remote access server | `pkg/poolside-helper/internal/handler/remoteaccess/` |
+| Helper remote access server | `pkg/camber-helper/internal/handler/remoteaccess/` |
 | Host/webview RPC | `ui/packages/rpc/README.md` |
 | Helper API bindings | `ui/packages/helperapi/README.md` |
-| UI automation | `ui/packages/spoolside/README.md` |
-| Working with coding agents (spoolside, worktrees) | `docs/coding-with-agents.md` |
+| UI automation | `ui/packages/camberqa/README.md` |
+| Working with coding agents (camberqa, worktrees) | `docs/coding-with-agents.md` |
 
 ## Build and test
 
@@ -49,12 +49,12 @@ the area touched.
 
 Common entry points:
 
-- Helper: `bazelisk test //pkg/poolside-helper/...`
+- Helper: `bazelisk test //pkg/camber-helper/...`
 - UI workspace: `pnpm test`, `pnpm build`
-- VS Code assistant: `pnpm -F poolside-assistant test:unit`
-- Desktop assistant: `pnpm -F @poolsideai/desktop-assistant check:types`
+- VS Code assistant: `pnpm -F camber-assistant test:unit`
+- Desktop assistant: `pnpm -F @camber/desktop-assistant check:types`
 
-For UI changes, verify in the running app with spoolside and attach
+For UI changes, verify in the running app with camberqa and attach
 before/after screenshots as PR evidence — see
 [`docs/coding-with-agents.md`](docs/coding-with-agents.md).
 
@@ -73,7 +73,7 @@ workspace, Svelte patterns, and apps.
 - This project uses Node.js and pnpm. Check the root `.tool-versions` file for
   versions.
 - Always use `pnpm`, never `npm`.
-- Prefer scoped installs such as `pnpm install --filter @poolsideai/<app>...`
+- Prefer scoped installs such as `pnpm install --filter @camber/<app>...`
   (note the trailing `...`) over a top-level install when working on one app or
   package.
 - Read the relevant README under `ui/` before working there.
@@ -81,11 +81,11 @@ workspace, Svelte patterns, and apps.
   `pnpm check:types`.
 - Fix formatting issues with `pnpm fix:format`.
 - Run unit tests with `pnpm test:unit` or a focused package command such as
-  `pnpm -F poolside-assistant test:unit`.
+  `pnpm -F camber-assistant test:unit`.
 - Run unit tests in watch mode with `pnpm test:unit:watch`, or scope the same
   script with `pnpm -F <package>`.
 - Run Storybook development servers with a scoped package command such as
-  `pnpm -F @poolsideai/assistant storybook`, or with
+  `pnpm -F @camber/assistant storybook`, or with
   `pnpm exec turbo storybook --affected` when using the Turbo task directly.
   Run Storybook tests with `pnpm test:storybook` and watch mode with
   `pnpm test:storybook:watch`.

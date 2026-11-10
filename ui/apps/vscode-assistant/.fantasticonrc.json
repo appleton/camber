@@ -3,8 +3,8 @@
   "outputDir": "./public/font",
   "fontTypes": ["woff"],
   "assetTypes": [],
-  "name": "poolside",
-  "prefix": "poolside",
+  "name": "camber",
+  "prefix": "camber",
   "codepoints": {
     "a": 59648,
     "b": 59649,

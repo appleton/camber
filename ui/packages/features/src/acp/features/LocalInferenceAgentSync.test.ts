@@ -1,4 +1,4 @@
-import type { LocalInferenceModel, LocalInferenceState } from "@poolsideai/helperapi/schemas";
+import type { LocalInferenceModel, LocalInferenceState } from "@camber/helperapi/schemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   LocalInferenceAgentSync,

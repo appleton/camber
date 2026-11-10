@@ -63,7 +63,7 @@ describe("ConnectorCatalog", () => {
     await fireEvent.input(search, { target: { value: " Slack " } });
     const card = screen.getByRole("button", { name: "Connect Slack" });
     expect(
-      within(card).getByText("Pending approval — only works for Poolside staff for now"),
+      within(card).getByText("Pending approval — only works for Camber staff for now"),
     ).toBeInTheDocument();
   });
 
@@ -180,7 +180,7 @@ describe("ConnectorCatalog", () => {
     ).toBeInTheDocument();
   });
 
-  it("uses Poolside's pre-registered public OAuth client for Slack", async () => {
+  it("uses Camber's pre-registered public OAuth client for Slack", async () => {
     const onPick = vi.fn();
     render(ConnectorCatalog, { props: { ...defaultProps, onPick } });
 
@@ -196,7 +196,7 @@ describe("ConnectorCatalog", () => {
         url: "https://mcp.slack.com/mcp",
         authMode: "oauth",
         oauthClientID: SLACK_OAUTH_CLIENT_ID,
-        // Deep-link only: no loopback port, poolside://oauth/callback redirect.
+        // Deep-link only: no loopback port, camber://oauth/callback redirect.
         oauthCallbackPort: 0,
         oauthDeepLink: true,
         oauthScopes: expect.stringContaining("search:read.public"),

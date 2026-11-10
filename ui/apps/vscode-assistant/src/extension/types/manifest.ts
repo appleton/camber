@@ -5,16 +5,16 @@ type Contributes = typeof packageJson.contributes;
 type Properties = Contributes["configuration"]["properties"];
 type Command = Contributes["commands"][number];
 
-export type PoolsideCommand = Command["command"];
-export type PoolsideWhenClause = NonNullable<AllUnionFields<Command>["enablement"]>;
+export type CamberCommand = Command["command"];
+export type CamberWhenClause = NonNullable<AllUnionFields<Command>["enablement"]>;
 
-export type PoolsideConfigurationProperty = keyof Properties;
-export type PoolsideConfigurationProperties = {
-  [K in PoolsideConfigurationProperty]: LiteralToPrimitive<Properties[K]["default"]>;
+export type CamberConfigurationProperty = keyof Properties;
+export type CamberConfigurationProperties = {
+  [K in CamberConfigurationProperty]: LiteralToPrimitive<Properties[K]["default"]>;
 };
 
-export type PoolsideContextKey = Extract<PoolsideWhenClause, `poolside.${string}`>;
+export type CamberContextKey = Extract<CamberWhenClause, `camber.${string}`>;
 
-export type PoolsideContextKeys = {
-  [K in PoolsideContextKey]: K extends `poolside.can${string}` ? boolean : any;
+export type CamberContextKeys = {
+  [K in CamberContextKey]: K extends `camber.can${string}` ? boolean : any;
 };

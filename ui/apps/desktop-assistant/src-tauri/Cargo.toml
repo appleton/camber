@@ -1,8 +1,8 @@
 [package]
 name = "desktop-assistant"
 version = "0.1.0"
-description = "The Poolside desktop assistant shell."
-authors = ["Poolside <hello@poolside.ai>"]
+description = "The Camber desktop assistant shell."
+authors = ["Andy Appleton"]
 publish = false
 license = "Apache-2.0"
 edition = "2021"
@@ -12,7 +12,7 @@ name = "desktop_assistant_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [features]
-spoolside-profiling = []
+camberqa-profiling = []
 
 [build-dependencies]
 tauri-build = { version = "2", features = ["isolation"] }
@@ -86,7 +86,7 @@ tauri-plugin-updater = { version = "2", default-features = false, features = [
 # Used by src/desktop_notification.rs to send clickable, cancellable native notifications.
 mac-notification-sys = "0.6"
 # Used by src/dock.rs to set a per-worktree dock icon + dock-hover name at
-# runtime when launched under spoolside (see SPOOLSIDE_DOCK_ICON_COLOR / _APP_NAME),
+# runtime when launched under camberqa (see CAMBERQA_DOCK_ICON_COLOR / _APP_NAME),
 # and by src/desktop_notification.rs for macOS notification activation interop.
 objc2 = "0.6"
 objc2-app-kit = { version = "0.3", default-features = false, features = [

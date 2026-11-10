@@ -8,18 +8,18 @@ import type {
   SessionNotification,
 } from "@agentclientprotocol/sdk";
 import {
-  poolsideAcpApprovalsList,
-  poolsideAcpApprovalsRespond,
-  poolsideAcpNavGetConversationHistory,
-  poolsideAcpSessionClose,
+  camberAcpApprovalsList,
+  camberAcpApprovalsRespond,
+  camberAcpNavGetConversationHistory,
+  camberAcpSessionClose,
   type ACPApproval,
-} from "@poolsideai/helperapi";
+} from "@camber/helperapi";
 import type {
   ACPCompactionNotification,
   ACPTurnEndedNotification,
   LocalInferenceState,
-} from "@poolsideai/helperapi/schemas";
-import { isLoading, isSuccess, loading, success } from "@poolsideai/lib/async-state";
+} from "@camber/helperapi/schemas";
+import { isLoading, isSuccess, loading, success } from "@camber/lib/async-state";
 import { createContext, untrack } from "svelte";
 import { SvelteMap } from "svelte/reactivity";
 import type { ElicitationRepository } from "../../elicitation/ElicitationRepository.svelte";
@@ -623,8 +623,8 @@ export class ACPSessionRepositoryWriter {
   }
 
   /**
-   * Stage an idle Poolside conversation for another ACP agent. ACP session ids
-   * remain agent-local; the Poolside conversation id is the stable identity
+   * Stage an idle Camber conversation for another ACP agent. ACP session ids
+   * remain agent-local; the Camber conversation id is the stable identity
    * shared by both legs.
    *
    * Confirmation only freezes the source transcript and routes a local target
@@ -958,7 +958,7 @@ export class ACPSessionRepositoryWriter {
 
   private async hydrateConversationHistory(session: ACPSession, gen: number): Promise<void> {
     try {
-      const history = await poolsideAcpNavGetConversationHistory({
+      const history = await camberAcpNavGetConversationHistory({
         conversationId: session.conversationId,
       });
       if (gen !== session.generation) return;
@@ -1190,7 +1190,7 @@ export class ACPSessionRepositoryWriter {
   }
 
   private closeAgentSession(agentServer: string, sessionId: SessionId): Promise<boolean> {
-    return poolsideAcpSessionClose({ agentServer, sessionId }).then(
+    return camberAcpSessionClose({ agentServer, sessionId }).then(
       () => true,
       (e: unknown) => {
         console.warn("acp: failed to close agent session", e);
@@ -1378,7 +1378,7 @@ export class ACPSessionRepositoryWriter {
       const approval = storeBacked.approval;
       const approvalsRevision = this.approvalsRevision;
       this.removeStoreBackedRequest(requestId);
-      void poolsideAcpApprovalsRespond({
+      void camberAcpApprovalsRespond({
         ...approval,
         optionId: String(optionId),
         ...(overrideRules && overrideRules.length > 0 ? { overrideRules } : {}),
@@ -1478,7 +1478,7 @@ export class ACPSessionRepositoryWriter {
    */
   async refreshApprovals(): Promise<void> {
     try {
-      const { pending } = await poolsideAcpApprovalsList();
+      const { pending } = await camberAcpApprovalsList();
       this.reconcileApprovals(pending ?? []);
     } catch (error) {
       console.debug("acp: approvals list failed", error);

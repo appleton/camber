@@ -2,14 +2,14 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import base, { mergeConfigs } from "@poolsideai/vite-config";
+import base, { mergeConfigs } from "@camber/vite-config";
 import { defineConfig, type Plugin } from "vite";
 
-// Mirror spoolside's portsForSlot (ui/packages/spoolside/src/worktree/shared.ts)
+// Mirror camberqa's portsForSlot (ui/packages/camberqa/src/worktree/shared.ts)
 // so each worktree's dev server and helper get distinct ports.
-const slot = Number(process.env.POOLSIDE_WORKTREE_SLOT ?? "0") || 0;
+const slot = Number(process.env.CAMBER_WORKTREE_SLOT ?? "0") || 0;
 const devPort = 5179 + slot * 10;
-const remotePort = Number(process.env.POOLSIDE_REMOTE_PORT ?? "0") || 8737 + slot * 10;
+const remotePort = Number(process.env.CAMBER_REMOTE_PORT ?? "0") || 8737 + slot * 10;
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -43,7 +43,7 @@ export default defineConfig((env) =>
         // inverse: the helper proxies UI traffic here — see
         // remoteaccess/server.go devServerHandler.)
         "/api": {
-          target: process.env.POOLSIDE_REMOTE_API ?? `http://127.0.0.1:${remotePort}`,
+          target: process.env.CAMBER_REMOTE_API ?? `http://127.0.0.1:${remotePort}`,
           ws: true,
         },
       },

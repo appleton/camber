@@ -3,14 +3,14 @@ import { debounce } from "lodash";
 import { serializeError } from "serialize-error";
 import * as vscode from "vscode";
 import { executeSetContextCommand, registerCommand } from "./api/commands";
-import { affectsConfiguration, getPoolsideConfigurationSection } from "./api/configuration";
+import { affectsConfiguration, getCamberConfigurationSection } from "./api/configuration";
 import * as apiProposals from "./apiProposals";
 import { openPermissionSettings } from "./commands/openPermissionSettings";
-import { getPoolsideConfig } from "./configuration";
+import { getCamberConfig } from "./configuration";
 import { sendActiveFileContext } from "./context";
 import { DecorationProvider } from "./DecorationProvider";
 import { ExtensionEnv, mapContextToExtensionMode } from "./env";
-import { configureExtensionIdentity, POOLSIDE } from "./extensionIdentity";
+import { CAMBER, configureExtensionIdentity } from "./extensionIdentity";
 import { getHelperSingleton, initializeHelperClient, updateHelperConfig } from "./helper";
 import { getLanguages, serializeLanguages } from "./languages";
 import { getKeybindingsWatchPaths } from "./rpc/handlers/getKeybindings";
@@ -20,7 +20,7 @@ import { createStatusBarItem } from "./statusBar";
 import { System } from "./system";
 import { TelemetryLogger } from "./telemetry/TelemetryLogger";
 import { getActiveTheme, getParsedFileIconTheme } from "./theme";
-import { AcpChatPanelSerializer, POOLSIDE_ACP_CHAT_VIEW_TYPE } from "./views/acpChatPanels";
+import { AcpChatPanelSerializer, CAMBER_ACP_CHAT_VIEW_TYPE } from "./views/acpChatPanels";
 import { updateEditorConfig } from "./views/getWebviewHtml";
 
 /**
@@ -51,7 +51,7 @@ async function doActivate(system: System) {
 
   system.context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer(
-      POOLSIDE_ACP_CHAT_VIEW_TYPE,
+      CAMBER_ACP_CHAT_VIEW_TYPE,
       new AcpChatPanelSerializer(system.acpChatPanels),
     ),
   );
@@ -70,7 +70,7 @@ async function doActivate(system: System) {
 
   vscode.workspace.onDidChangeConfiguration((e) => {
     handleConfigurationChange(e).catch((err) => {
-      console.error("[poolside] handleConfigurationChange error:", err);
+      console.error("[camber] handleConfigurationChange error:", err);
     });
   });
 
@@ -94,7 +94,7 @@ async function doActivate(system: System) {
   });
 
   registerCommand("resetConfiguration", (_this) => {
-    const workspaceConfig = getPoolsideConfigurationSection();
+    const workspaceConfig = getCamberConfigurationSection();
 
     if (!workspaceConfig) {
       return;
@@ -118,17 +118,17 @@ async function doActivate(system: System) {
       system.telemetry.reportError(new Error("failed to enable proposed apis", { cause: err }));
 
       vscode.window.showErrorMessage(
-        `poolside: There was an error enabling proposed VSCode APIs in your ~/.vscode/argv.json: ${err.message}`,
+        `camber: There was an error enabling proposed VSCode APIs in your ~/.vscode/argv.json: ${err.message}`,
       );
     });
   }
 
-  // start poolside Helper
+  // start camber Helper
   getHelperSingleton(system).catch((err) => {
-    telemetry.reportError(new Error("failed to start poolside Helper", { cause: err }));
+    telemetry.reportError(new Error("failed to start camber Helper", { cause: err }));
 
     vscode.window.showErrorMessage(
-      "poolside: There was an error starting poolside Helper, a required component. Functionality will be limited",
+      "camber: There was an error starting camber Helper, a required component. Functionality will be limited",
     );
   });
 
@@ -160,7 +160,7 @@ async function doActivate(system: System) {
   });
 
   // This context key gates webview-only shortcuts until the assistant reports focus.
-  executeSetContextCommand(`${POOLSIDE}.webviewFocus`, false);
+  executeSetContextCommand(`${CAMBER}.webviewFocus`, false);
 }
 
 async function setActiveFileIconTheme() {
@@ -182,15 +182,15 @@ async function setColorTheme() {
  * @param e
  */
 async function handleConfigurationChange(e: vscode.ConfigurationChangeEvent) {
-  const poolsideConfig = getPoolsideConfig();
+  const camberConfig = getCamberConfig();
 
-  if (e.affectsConfiguration(POOLSIDE)) {
-    system.assistant.rpc.setConfiguration(poolsideConfig);
-    system.acpChatPanels.setConfiguration(poolsideConfig);
+  if (e.affectsConfiguration(CAMBER)) {
+    system.assistant.rpc.setConfiguration(camberConfig);
+    system.acpChatPanels.setConfiguration(camberConfig);
     await updateHelperConfig(system);
   }
 
-  if (affectsConfiguration(e, "poolside.showKeybindings")) {
+  if (affectsConfiguration(e, "camber.showKeybindings")) {
     await sendKeybindings();
   }
 
@@ -205,7 +205,7 @@ async function handleConfigurationChange(e: vscode.ConfigurationChangeEvent) {
   if (
     e.affectsConfiguration("editor.fontSize") ||
     e.affectsConfiguration("editor.lineHeight") ||
-    affectsConfiguration(e, "poolside.codeFontSize")
+    affectsConfiguration(e, "camber.codeFontSize")
   ) {
     // FIXME: This needs to be tidied up
     if (system.assistant.webviewView === undefined) return;

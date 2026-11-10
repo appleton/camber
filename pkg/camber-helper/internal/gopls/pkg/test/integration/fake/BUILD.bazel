@@ -1,0 +1,47 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "fake",
+    testonly = True,
+    srcs = [
+        "client.go",
+        "doc.go",
+        "edit.go",
+        "editor.go",
+        "proxy.go",
+        "sandbox.go",
+        "workdir.go",
+        "workdir_windows.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/pkg/test/integration/fake",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/camber-helper/gopls/pkg/protocol",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/diff",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2/servertest",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/proxydir",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/robustio",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/testenv",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/xcontext",
+        "//pkg/camber-helper/internal/gopls/pkg/test/integration/fake/glob",
+        "//pkg/camber-helper/internal/gopls/pkg/util/bug",
+        "//pkg/camber-helper/internal/gopls/pkg/util/pathutil",
+        "//pkg/camber-helper/internal/gopls/pkg/util/slices",
+        "@org_golang_x_tools//txtar",
+    ],
+)
+
+go_test(
+    name = "fake_test",
+    srcs = [
+        "edit_test.go",
+        "editor_test.go",
+        "workdir_test.go",
+    ],
+    embed = [":fake"],
+    deps = [
+        "//pkg/camber-helper/gopls/pkg/protocol",
+        "@com_github_google_go_cmp//cmp",
+    ],
+)

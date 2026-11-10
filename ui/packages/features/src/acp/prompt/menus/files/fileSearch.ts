@@ -1,6 +1,6 @@
-import { poolsideSearchFiles } from "@poolsideai/helperapi";
-import type { SearchFilesOutput } from "@poolsideai/helperapi/schemas";
-import { classifyQuery, type ClassifiedQuery } from "@poolsideai/lib/path-query";
+import { camberSearchFiles } from "@camber/helperapi";
+import type { SearchFilesOutput } from "@camber/helperapi/schemas";
+import { classifyQuery, type ClassifiedQuery } from "@camber/lib/path-query";
 import type { AppState } from "../../../hostAdapter";
 import { acpWorkspaceFolders } from "../../../workspaceScope";
 import { isWindowsOperatingSystem } from "./pathRewrites";
@@ -55,7 +55,7 @@ export async function searchProjectFiles({
     workspaces: acpWorkspaceFolders(appState, workspaceRoot),
     excludeOpenFilesOutsideWorkspaces,
   };
-  const response = await poolsideSearchFiles(searchFilesParams);
+  const response = await camberSearchFiles(searchFilesParams);
 
   return {
     kind: "ok",

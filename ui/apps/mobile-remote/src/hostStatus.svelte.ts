@@ -1,19 +1,19 @@
 // Reactive MobileHostStatus implementation: main.ts mutates it (socket status
-// callbacks, the /api/me host name and spoolside worktree identity) and the
+// callbacks, the /api/me host name and camberqa worktree identity) and the
 // mounted shell re-renders.
 
-import type { MobileHostStatus, MobileSpoolsideInstance } from "@poolsideai/assistant";
+import type { MobileCamberQAInstance, MobileHostStatus } from "@camber/assistant";
 
 export interface MutableHostStatus extends MobileHostStatus {
   name: string | null;
   connected: boolean;
-  spoolside: MobileSpoolsideInstance | null;
+  camberqa: MobileCamberQAInstance | null;
 }
 
 export function createHostStatus(): MutableHostStatus {
   let name = $state<string | null>(null);
   let connected = $state(false);
-  let spoolside = $state<MobileSpoolsideInstance | null>(null);
+  let camberqa = $state<MobileCamberQAInstance | null>(null);
   return {
     get name() {
       return name;
@@ -27,11 +27,11 @@ export function createHostStatus(): MutableHostStatus {
     set connected(value) {
       connected = value;
     },
-    get spoolside() {
-      return spoolside;
+    get camberqa() {
+      return camberqa;
     },
-    set spoolside(value) {
-      spoolside = value;
+    set camberqa(value) {
+      camberqa = value;
     },
   };
 }

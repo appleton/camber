@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Badge } from "@poolsideai/components/badge";
-  import Icon from "@poolsideai/components/icon";
+  import { Badge } from "@camber/components/badge";
+  import Icon from "@camber/components/icon";
 
   interface Props {
     count: number;

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import * as Prompt from "@poolsideai/components/prompt";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import * as Prompt from "@camber/components/prompt";
+  import { Spinner } from "@camber/components/spinner";
   import { getSecretsContext } from "../../../../secrets";
-  import type { SecretSummary } from "@poolsideai/helperapi/schemas";
-  import { isRPCError, isUserConfigInvalidError } from "@poolsideai/rpc/generics";
+  import type { SecretSummary } from "@camber/helperapi/schemas";
+  import { isRPCError, isUserConfigInvalidError } from "@camber/rpc/generics";
   import { tick } from "svelte";
   import { menus } from "../menus";
   import { selectSecretForEdit, selectNewSecret } from "./secretsMenuState.svelte";

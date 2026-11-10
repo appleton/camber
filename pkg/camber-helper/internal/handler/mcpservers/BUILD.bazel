@@ -1,0 +1,47 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mcpservers",
+    srcs = [
+        "huggingface.go",
+        "pool_settings.go",
+        "probe.go",
+        "resolver.go",
+        "server.go",
+        "store.go",
+        "watcher.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/handler/mcpservers",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/common/userconfig",
+        "//pkg/camber-helper/gopls/pkg/protocol",
+        "//pkg/camber-helper/internal/mcp",
+        "//pkg/camber-helper/methods",
+        "@com_github_coder_acp_go_sdk//:acp-go-sdk",
+        "@com_github_pkg_errors//:errors",
+        "@com_github_tliron_glsp//:glsp",
+        "@in_gopkg_yaml_v3//:yaml_v3",
+    ],
+)
+
+go_test(
+    name = "mcpservers_test",
+    srcs = [
+        "huggingface_test.go",
+        "pool_settings_test.go",
+        "probe_test.go",
+        "resolver_test.go",
+        "server_test.go",
+        "store_test.go",
+    ],
+    embed = [":mcpservers"],
+    deps = [
+        "//pkg/camber-helper/internal/mcp",
+        "//pkg/camber-helper/methods",
+        "@com_github_coder_acp_go_sdk//:acp-go-sdk",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@in_gopkg_yaml_v3//:yaml_v3",
+    ],
+)

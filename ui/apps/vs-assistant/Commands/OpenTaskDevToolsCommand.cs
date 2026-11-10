@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.Shell;
-using Poolside.Assistant.Tasks;
+using Camber.Assistant.Tasks;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
@@ -7,9 +7,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Commands
+namespace Camber.Assistant.Commands
 {
-    internal class OpenTaskDevToolsCommand : BasePoolsideHelpCommand
+    internal class OpenTaskDevToolsCommand : BaseCamberHelpCommand
     {
         public const int CommandId = 0x0110;
 

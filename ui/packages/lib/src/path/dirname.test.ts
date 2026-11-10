@@ -2,7 +2,7 @@ import { dirname } from "./dirname.js";
 
 describe("unix", () => {
   it("should handle absolute paths", () => {
-    expect(dirname("/Users/poolie/poolside/file.ts")).toBe("/Users/poolie/poolside");
+    expect(dirname("/Users/poolie/camber/file.ts")).toBe("/Users/poolie/camber");
   });
 
   it("should handle root directory", () => {
@@ -10,17 +10,17 @@ describe("unix", () => {
   });
 
   it("should handle paths with trailing slashes", () => {
-    expect(dirname("/Users/poolie/poolside/")).toBe("/Users/poolie");
+    expect(dirname("/Users/poolie/camber/")).toBe("/Users/poolie");
   });
 
   it("should handle paths with dots", () => {
-    expect(dirname("/Users/poolie/../poolside/file.ts")).toBe("/Users/poolie/../poolside");
+    expect(dirname("/Users/poolie/../camber/file.ts")).toBe("/Users/poolie/../camber");
   });
 });
 
 describe("win", () => {
   it("should handle absolute paths", () => {
-    expect(dirname("C:\\Users\\poolie\\poolside\\file.ts")).toBe("C:/Users/poolie/poolside");
+    expect(dirname("C:\\Users\\poolie\\camber\\file.ts")).toBe("C:/Users/poolie/camber");
   });
 
   it("should handle drive root", () => {

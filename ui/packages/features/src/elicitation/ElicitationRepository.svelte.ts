@@ -1,6 +1,6 @@
 import type { SessionId } from "@agentclientprotocol/sdk";
-import { poolsideAcpApprovalsRespond, type ACPApproval } from "@poolsideai/helperapi";
-import type { ACPElicitationOutput, ACPElicitationParams } from "@poolsideai/helperapi/schemas";
+import { camberAcpApprovalsRespond, type ACPApproval } from "@camber/helperapi";
+import type { ACPElicitationOutput, ACPElicitationParams } from "@camber/helperapi/schemas";
 import { find } from "lodash";
 import type { ACPConversationStatusRepository } from "../acp";
 import type { FieldValue } from "./types";
@@ -11,7 +11,7 @@ interface PendingElicitation {
   resolve?: (response: ACPElicitationOutput) => void;
   /**
    * Store-backed elicitations (reconciled from the helper's approval store)
-   * answer through poolside/acp/approvals/respond instead; removal arrives
+   * answer through camber/acp/approvals/respond instead; removal arrives
    * with the next didChange push.
    */
   approval?: { agentServer: string; sessionId: string; kind: "elicitation"; id: string };
@@ -184,7 +184,7 @@ export class ElicitationRepository {
       // authoritative removal arrives with the next didChange push. A losing
       // race answer reports already_resolved, which lands on the same removal.
       const approvalsRevision = this.approvalsRevision;
-      void poolsideAcpApprovalsRespond({
+      void camberAcpApprovalsRespond({
         ...entry.approval,
         action: response.action as "accept" | "decline" | "cancel",
         ...(response.content ? { content: response.content } : {}),

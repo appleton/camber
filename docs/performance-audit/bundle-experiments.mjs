@@ -1,6 +1,6 @@
 // Historical experiment: use a clean checkout of the audited baseline below.
 // Build the desktop app's dependencies in that checkout:
-// pnpm exec turbo build --filter='@poolsideai/desktop-assistant^...'
+// pnpm exec turbo build --filter='@camber/desktop-assistant^...'
 // node /path/to/this/script.mjs baseline|logos|splash|combined --root /path/to/baseline
 // See performance-audit-2026-09-07.md for complete worktree/setup commands.
 // Experiments change Vite's in-memory inputs, never product source files.
@@ -60,7 +60,7 @@ const checkoutCommit = execFileSync("git", ["rev-parse", "HEAD"], {
   cwd: root,
   encoding: "utf8",
 }).trim();
-const output = fs.mkdtempSync(path.join(os.tmpdir(), `poolside-audit-${variant}-`));
+const output = fs.mkdtempSync(path.join(os.tmpdir(), `camber-audit-${variant}-`));
 const dist = path.join(output, "dist");
 const require = createRequire(path.join(app, "package.json"));
 const { build } = await import(require.resolve("vite"));
@@ -108,7 +108,7 @@ await build({
         if (!["splash", "combined"].includes(variant)) return;
         if (id !== path.join(app, "src/DesktopStartupFrame.svelte")) return;
         const original =
-          'import { POOLSIDE_ROUNDEL_ICON_URL, StreamingIndicator } from "@poolsideai/features/acp";';
+          'import { CAMBER_ROUNDEL_ICON_URL, StreamingIndicator } from "@camber/features/acp";';
         if (!code.includes(original))
           throw new Error("Splash import changed; review this experiment");
         narrowedSplash = true;
@@ -116,7 +116,7 @@ await build({
         return code.replace(
           original,
           [
-            `import { POOLSIDE_ROUNDEL_ICON_URL } from ${JSON.stringify(path.join(root, "ui/packages/features/dist/acp/localAgentIcon.js"))};`,
+            `import { CAMBER_ROUNDEL_ICON_URL } from ${JSON.stringify(path.join(root, "ui/packages/features/dist/acp/localAgentIcon.js"))};`,
             `import StreamingIndicator from ${JSON.stringify(path.join(root, "ui/packages/features/dist/acp/components/ui/StreamingIndicator.svelte"))};`,
           ].join("\n"),
         );

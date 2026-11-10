@@ -6,11 +6,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Poolside.Assistant.ChatWindow;
-using Poolside.Assistant.Context;
-using Poolside.Assistant.HelperLSP;
+using Camber.Assistant.ChatWindow;
+using Camber.Assistant.Context;
+using Camber.Assistant.HelperLSP;
 
-namespace Poolside.Assistant.Listeners
+namespace Camber.Assistant.Listeners
 {
     class RunningDocumentTableEventHandler : IVsRunningDocTableEvents, IDisposable
     {

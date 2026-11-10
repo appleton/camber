@@ -1,4 +1,4 @@
-import type { AssistantTerminalTab } from "@poolsideai/rpc";
+import type { AssistantTerminalTab } from "@camber/rpc";
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { Terminal } from "@xterm/xterm";
 import { beforeAll, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";

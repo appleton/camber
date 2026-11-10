@@ -1,4 +1,4 @@
-import type { SaveTextFileOptions } from "@poolsideai/rpc";
+import type { SaveTextFileOptions } from "@camber/rpc";
 import * as vscode from "vscode";
 
 export async function saveTextFile(options: SaveTextFileOptions): Promise<string | undefined> {

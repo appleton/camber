@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { ToolCall } from "../../types";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import type { WorkspaceFolder } from "@camber/rpc";
   import ToolCallContentRenderer from "./ToolCallContentRenderer.svelte";
-  import { CollapsibleContent } from "@poolsideai/components/collapsible";
+  import { CollapsibleContent } from "@camber/components/collapsible";
 
   interface Props {
     tool: ToolCall;

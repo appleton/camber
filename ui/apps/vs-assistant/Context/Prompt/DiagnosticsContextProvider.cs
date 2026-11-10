@@ -12,7 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Context.Prompt
+namespace Camber.Assistant.Context.Prompt
 {
     internal class DiagnosticsContextProvider : IPromptContextProvider
     {
@@ -30,7 +30,7 @@ namespace Poolside.Assistant.Context.Prompt
                 return null;
 
             // Create a tag aggregator, to obtain tags.
-            var componentModel = PoolsideAssistantPackage.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
+            var componentModel = CamberAssistantPackage.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
             var tagAggregatorFactoryService = componentModel?.GetService<IViewTagAggregatorFactoryService>();
             if (tagAggregatorFactoryService == null)
                 return null;
@@ -73,12 +73,12 @@ namespace Poolside.Assistant.Context.Prompt
 
         public IWpfTextView GetCurrentTextView()
         {
-            if (!(PoolsideAssistantPackage.GetGlobalService(typeof(SVsTextManager)) is IVsTextManager textManager))
+            if (!(CamberAssistantPackage.GetGlobalService(typeof(SVsTextManager)) is IVsTextManager textManager))
                 return null;
             textManager.GetActiveView(1, null, out IVsTextView currentTextView);
             if (currentTextView == null)
                 return null;
-            var componentModel = PoolsideAssistantPackage.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
+            var componentModel = CamberAssistantPackage.GetGlobalService(typeof(SComponentModel)) as IComponentModel;
             var editorAdaptersFactoryService = componentModel?.GetService<IVsEditorAdaptersFactoryService>();
             return editorAdaptersFactoryService?.GetWpfTextView(currentTextView);
         }

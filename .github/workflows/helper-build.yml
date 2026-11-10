@@ -1,10 +1,10 @@
-# Builds poolside-helper cross-platform using Bazel + Zig cross-compilation.
+# Builds camber-helper cross-platform using Bazel + Zig cross-compilation.
 # Can be triggered directly for testing or called from helper and product releases.
 #
 # To trigger a test build without tagging a release, run:
 #
-#   gh workflow run poolside-helper-build --ref <YOUR_BRANCH> -f 'tag=0.0.1-build.1'
-name: poolside-helper-build
+#   gh workflow run camber-helper-build --ref <YOUR_BRANCH> -f 'tag=0.0.1-build.1'
+name: camber-helper-build
 on:
   workflow_call:
     inputs:
@@ -41,8 +41,8 @@ jobs:
   build:
     uses: ./.github/workflows/reusable-bazel-build.yml
     with:
-      bazel_target: //cmd/poolside-helper:poolside-helper
-      binary_name: poolside-helper
+      bazel_target: //cmd/camber-helper:camber-helper
+      binary_name: camber-helper
       tag: ${{ inputs.tag || github.ref_name }}
       version: ${{ inputs.version }}
       tag_prefix: helper/
@@ -71,15 +71,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cmd/poolside-mlx-sidecar/scripts/build.sh dist >/dev/null
-          mv dist/poolside-mlx-sidecar dist/poolside-mlx-sidecar-darwin-arm64
-          chmod u+w dist/poolside-mlx-sidecar-darwin-arm64
+          cmd/camber-mlx-sidecar/scripts/build.sh dist >/dev/null
+          mv dist/camber-mlx-sidecar dist/camber-mlx-sidecar-darwin-arm64
+          chmod u+w dist/camber-mlx-sidecar-darwin-arm64
 
       - name: Sign macOS sidecar
         if: inputs.sign
         uses: ./.github/actions/sign-darwin-binary
         with:
-          BINARY_PATH: dist/poolside-mlx-sidecar-darwin-arm64
+          BINARY_PATH: dist/camber-mlx-sidecar-darwin-arm64
           ASC_ISSUER_ID: "e628afce-10f7-40a3-82aa-94b7dea7a697"
           ASC_KEY_ID: "Y96B9U9WSZ"
           MACOS_DEVID_P12_B64: ${{ secrets.MACOS_DEVID_P12_B64 }}
@@ -91,16 +91,16 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
-          tar -czf poolside-mlx-sidecar-darwin-arm64.tar.gz poolside-mlx-sidecar-darwin-arm64 default.metallib mlx.metallib
-          shasum -a 256 poolside-mlx-sidecar-darwin-arm64.tar.gz > poolside-mlx-sidecar-darwin-arm64.checksum
+          tar -czf camber-mlx-sidecar-darwin-arm64.tar.gz camber-mlx-sidecar-darwin-arm64 default.metallib mlx.metallib
+          shasum -a 256 camber-mlx-sidecar-darwin-arm64.tar.gz > camber-mlx-sidecar-darwin-arm64.checksum
 
       - name: Upload MLX sidecar artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: artifact-poolside-mlx-sidecar-darwin-arm64
+          name: artifact-camber-mlx-sidecar-darwin-arm64
           path: |
-            dist/poolside-mlx-sidecar-darwin-arm64.tar.gz
-            dist/poolside-mlx-sidecar-darwin-arm64.checksum
+            dist/camber-mlx-sidecar-darwin-arm64.tar.gz
+            dist/camber-mlx-sidecar-darwin-arm64.checksum
           retention-days: 7
 
   whisper-server:
@@ -140,14 +140,14 @@ jobs:
             -DWHISPER_BUILD_EXAMPLES=ON
           cmake --build whisper.cpp/build --config Release -j 4 --target whisper-server
           mkdir -p dist
-          cp whisper.cpp/build/bin/whisper-server dist/poolside-whisper-server-darwin-arm64
-          chmod u+w dist/poolside-whisper-server-darwin-arm64
+          cp whisper.cpp/build/bin/whisper-server dist/camber-whisper-server-darwin-arm64
+          chmod u+w dist/camber-whisper-server-darwin-arm64
 
       - name: Sign macOS whisper-server
         if: inputs.sign
         uses: ./.github/actions/sign-darwin-binary
         with:
-          BINARY_PATH: dist/poolside-whisper-server-darwin-arm64
+          BINARY_PATH: dist/camber-whisper-server-darwin-arm64
           ASC_ISSUER_ID: "e628afce-10f7-40a3-82aa-94b7dea7a697"
           ASC_KEY_ID: "Y96B9U9WSZ"
           MACOS_DEVID_P12_B64: ${{ secrets.MACOS_DEVID_P12_B64 }}
@@ -159,14 +159,14 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
-          tar -czf poolside-whisper-server-darwin-arm64.tar.gz poolside-whisper-server-darwin-arm64
-          shasum -a 256 poolside-whisper-server-darwin-arm64.tar.gz > poolside-whisper-server-darwin-arm64.checksum
+          tar -czf camber-whisper-server-darwin-arm64.tar.gz camber-whisper-server-darwin-arm64
+          shasum -a 256 camber-whisper-server-darwin-arm64.tar.gz > camber-whisper-server-darwin-arm64.checksum
 
       - name: Upload whisper-server artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: artifact-poolside-whisper-server-darwin-arm64
+          name: artifact-camber-whisper-server-darwin-arm64
           path: |
-            dist/poolside-whisper-server-darwin-arm64.tar.gz
-            dist/poolside-whisper-server-darwin-arm64.checksum
+            dist/camber-whisper-server-darwin-arm64.tar.gz
+            dist/camber-whisper-server-darwin-arm64.checksum
           retention-days: 7

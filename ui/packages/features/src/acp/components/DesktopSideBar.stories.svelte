@@ -1,7 +1,7 @@
 <script module lang="ts">
   import { defineMeta } from "@storybook/addon-svelte-csf";
-  import type { LocalInferenceState } from "@poolsideai/helperapi/schemas";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import type { LocalInferenceState } from "@camber/helperapi/schemas";
+  import type { WorkspaceFolder } from "@camber/rpc";
   import DesktopSideBar from "./DesktopSideBar.svelte";
   import SidebarStoryHarness from "./SidebarStoryHarness.svelte";
   import type { ACPNavConversation, ACPNavProject } from "../navTypes";
@@ -83,8 +83,8 @@
       busy: "deleting",
     },
     {
-      path: "/Users/poolie/code/poolside-books-api-demo",
-      name: "poolside-books-api-demo",
+      path: "/Users/poolie/code/camber-books-api-demo",
+      name: "camber-books-api-demo",
       isWorktree: false,
       collapsed: false,
       displayOrder: 1,
@@ -144,15 +144,15 @@
     },
     {
       id: "conv-5",
-      workspacePath: "/Users/poolie/code/poolside-books-api-demo",
+      workspacePath: "/Users/poolie/code/camber-books-api-demo",
       agentServer: "poolside",
       sessionId: "session-acp-5",
-      cwd: "/Users/poolie/code/poolside-books-api-demo",
+      cwd: "/Users/poolie/code/camber-books-api-demo",
       title: "Add Book description field",
       updatedAt: minutesAgo(60 * 6),
       active: true,
       archived: false,
-      workingDirectories: ["/Users/poolie/code/poolside-books-api-demo"],
+      workingDirectories: ["/Users/poolie/code/camber-books-api-demo"],
     },
   ];
 
@@ -170,7 +170,7 @@
   // unload countdown, and the reclaim-memory action).
   const GIB = 1024 ** 3;
   const localModelLoaded: LocalInferenceState = {
-    modelsDirectory: "/Users/poolie/.config/poolside/models",
+    modelsDirectory: "/Users/poolie/.config/camber/models",
     catalog: [
       {
         id: "poolside/Laguna-XS-2.1-NVFP4-mlx",

@@ -1,4 +1,4 @@
-import base, { mergeConfigs } from "@poolsideai/vite-config";
+import base, { mergeConfigs } from "@camber/vite-config";
 import { execa } from "execa";
 import console from "node:console";
 import path from "node:path";
@@ -53,7 +53,7 @@ function vscode(): PluginOption {
 
   return [
     {
-      name: "@poolsideai:vscode",
+      name: "@camber:vscode",
       apply: "serve",
       config: handleConfig,
       configResolved(_config) {
@@ -84,7 +84,7 @@ function vscode(): PluginOption {
       },
     },
     {
-      name: "@poolsideai:vscode",
+      name: "@camber:vscode",
       apply: "build",
       enforce: "post",
       config: handleConfig,
@@ -103,7 +103,7 @@ function vscode(): PluginOption {
        * host. The following allows vitest to mock this package even though it does not exist in the
        * test context.
        */
-      name: "@poolsideai:vscode",
+      name: "@camber:vscode",
       resolveId(id) {
         if (id === "vscode") {
           return "virtual:vscode";

@@ -6,7 +6,7 @@ import ToolCallContentsHarness from "./ToolCallContents.test.svelte";
 // jsdom cannot host @pierre/diffs' shadow-DOM renderer; swap PatchDiff for a
 // stub that renders the new-side text so assertions still see each block's
 // own content.
-vi.mock("@poolsideai/components/file-diff", async () => ({
+vi.mock("@camber/components/file-diff", async () => ({
   PatchDiff: (await import("./PatchDiff.mock.svelte")).default,
 }));
 

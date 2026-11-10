@@ -1,8 +1,4 @@
-import {
-  FILE_PATH_REGEX,
-  isFilePath,
-  parseFilePathWithLine,
-} from "@poolsideai/components/markdown";
+import { FILE_PATH_REGEX, isFilePath, parseFilePathWithLine } from "@camber/components/markdown";
 import { describe, expect, it } from "vitest";
 
 describe("isFilePath", () => {

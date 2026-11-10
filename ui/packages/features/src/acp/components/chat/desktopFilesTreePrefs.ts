@@ -15,7 +15,7 @@ export interface DesktopFilesTreePrefs {
   expandedDirectoryPaths: string[];
 }
 
-const STORAGE_KEY = "poolside.desktop.filesTreePrefs.v1";
+const STORAGE_KEY = "camber.desktop.filesTreePrefs.v1";
 const MAX_WORKTREES = 30;
 const MAX_EXPANDED_PATHS = 500;
 

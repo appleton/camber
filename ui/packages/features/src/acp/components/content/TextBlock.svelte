@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { MarkdownBlock } from "@poolsideai/components/markdown";
+  import { MarkdownBlock } from "@camber/components/markdown";
   import type { TextContent } from "@agentclientprotocol/sdk";
   import { markdownHost } from "../../markdownHost";
   import { getOptionalACPChatSessionScope } from "../../features/ChatSessionScope.svelte";

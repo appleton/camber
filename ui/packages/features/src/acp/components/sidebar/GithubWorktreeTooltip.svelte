@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { onMount, tick } from "svelte";
   import type { Attachment } from "svelte/attachments";
   import type { GitHubWorktreeStatus } from "../../github/githubStatus";

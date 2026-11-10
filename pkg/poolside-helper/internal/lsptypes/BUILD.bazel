@@ -1,9 +1,0 @@
-load("@rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "lsptypes",
-    srcs = ["workspace_methods.go"],
-    importpath = "github.com/poolsideai/assistant/pkg/poolside-helper/internal/lsptypes",
-    visibility = ["//pkg/poolside-helper:__subpackages__"],
-    deps = ["//pkg/poolside-helper/gopls/pkg/protocol"],
-)

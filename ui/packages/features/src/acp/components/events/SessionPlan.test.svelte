@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Plan } from "@agentclientprotocol/sdk";
-  import { DisplayProvider } from "@poolsideai/components/providers";
+  import { DisplayProvider } from "@camber/components/providers";
   import SessionPlan from "./SessionPlan.svelte";
 
   interface Props {

@@ -1,4 +1,4 @@
-# `@poolsideai/assistant`
+# `@camber/assistant`
 
 ## About
 

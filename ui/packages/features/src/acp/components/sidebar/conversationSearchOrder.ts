@@ -1,4 +1,4 @@
-const RECENTLY_VIEWED_CONVERSATIONS_STORAGE_KEY = "poolside.desktop.recentlyViewedConversations.v1";
+const RECENTLY_VIEWED_CONVERSATIONS_STORAGE_KEY = "camber.desktop.recentlyViewedConversations.v1";
 const RECENTLY_VIEWED_CONVERSATIONS_LIMIT = 100;
 
 type ConversationRecencyStorage = Pick<Storage, "getItem" | "setItem">;

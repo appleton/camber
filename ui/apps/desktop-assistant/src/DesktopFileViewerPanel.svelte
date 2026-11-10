@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { isPreviewableImagePath, Tooltip } from "@poolsideai/components/assistant-ui";
-  import { FileCodeView, type GitGutterDecorations } from "@poolsideai/components/file-diff";
-  import Icon from "@poolsideai/components/icon";
-  import { MarkdownBlock } from "@poolsideai/components/markdown";
+  import { isPreviewableImagePath, Tooltip } from "@camber/components/assistant-ui";
+  import { FileCodeView, type GitGutterDecorations } from "@camber/components/file-diff";
+  import Icon from "@camber/components/icon";
+  import { MarkdownBlock } from "@camber/components/markdown";
   import {
     buildDesktopImageContextMenuItems,
     DESKTOP_GIT_CHANGED_EVENT,
@@ -15,13 +15,9 @@
     type DesktopImageContextMenuRPC,
     type DesktopFileViewerPanelProps,
     type DesktopOpenDiffTabEventDetail,
-  } from "@poolsideai/features/acp";
-  import {
-    poolsideGitDiffFile,
-    poolsideGitStatus,
-    type GitStatusOutput,
-  } from "@poolsideai/helperapi";
-  import { getUnknownErrorMessage } from "@poolsideai/lib/errors";
+  } from "@camber/features/acp";
+  import { camberGitDiffFile, camberGitStatus, type GitStatusOutput } from "@camber/helperapi";
+  import { getUnknownErrorMessage } from "@camber/lib/errors";
   import { onMount, tick, untrack } from "svelte";
 
   import {
@@ -147,7 +143,7 @@
       if (isPreviewableImagePath(nextPath)) {
         const image = await getImageFileData(nextPath);
         if (version !== loadVersion) return;
-        if (!image) throw new Error("Image files of this type cannot be opened in Poolside.");
+        if (!image) throw new Error("Image files of this type cannot be opened in Camber.");
 
         codeContent = "";
         imageSrc = `data:${image.mimeType};base64,${image.data}`;
@@ -201,7 +197,7 @@
 
     let status: GitStatusOutput;
     try {
-      status = await poolsideGitStatus({ path: worktree });
+      status = await camberGitStatus({ path: worktree });
     } catch {
       if (token !== gitDecorationsToken || path !== currentPath) return;
       gitDecorations = emptyGitDecorations();
@@ -227,7 +223,7 @@
     }
 
     try {
-      const diff = await poolsideGitDiffFile({
+      const diff = await camberGitDiffFile({
         path: worktree,
         file: relative,
         head: !isUntracked,

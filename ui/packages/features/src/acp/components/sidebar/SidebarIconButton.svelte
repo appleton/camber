@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon, { type IconName } from "@poolsideai/components/icon";
+  import Icon, { type IconName } from "@camber/components/icon";
   import { suppressContextMenu } from "./contextMenuHelpers";
 
   interface Props {

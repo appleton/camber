@@ -1,5 +1,5 @@
 {
-  "name": "@poolsideai/svelte-config",
+  "name": "@camber/svelte-config",
   "version": "2.3.53",
   "private": true,
   "description": "Common svelte configuration",
@@ -21,15 +21,15 @@
       "prettier --ignore-unknown --write"
     ]
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "dependencies": {
     "@melt-ui/pp": "catalog:",
     "@sveltejs/vite-plugin-svelte": "catalog:"
   },
   "devDependencies": {
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"

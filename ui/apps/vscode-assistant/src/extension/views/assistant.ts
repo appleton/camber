@@ -1,17 +1,17 @@
-import { countAttentionConversations, type ACPNavConversation } from "@poolsideai/features/acp/nav";
-import type { AssistantClient } from "@poolsideai/rpc/assistant";
+import { countAttentionConversations, type ACPNavConversation } from "@camber/features/acp/nav";
+import type { AssistantClient } from "@camber/rpc/assistant";
 import EventEmitter from "events";
 import * as vscode from "vscode";
-import { getPoolsideConfig } from "../configuration";
+import { getCamberConfig } from "../configuration";
 import { sendActiveFileContext } from "../context";
-import { POOLSIDE } from "../extensionIdentity";
+import { CAMBER } from "../extensionIdentity";
 import { createRpcClient } from "../rpc/client";
 import { HostRPCServer } from "../rpc/server";
 import type { System } from "../system";
 import { getWebviewHtml } from "./getWebviewHtml";
 
-const POOLSIDE_WEBVIEW_VIEW_ID = `${POOLSIDE}-webview`;
-const POOLSIDE_WEBVIEW_FOCUS_COMMAND = `${POOLSIDE_WEBVIEW_VIEW_ID}.focus`;
+const CAMBER_WEBVIEW_VIEW_ID = `${CAMBER}-webview`;
+const CAMBER_WEBVIEW_FOCUS_COMMAND = `${CAMBER_WEBVIEW_VIEW_ID}.focus`;
 
 export enum AssistantState {
   // The webview has not yet been resolved or was disposed
@@ -23,7 +23,7 @@ export enum AssistantState {
 }
 
 /**
- * Assistant encapsulates the initialization of the poolside assistant webview, mediates RPC
+ * Assistant encapsulates the initialization of the camber assistant webview, mediates RPC
  * communication and keeps track of the state.
  *
  * Always displayed in the sidebar as a WebviewView.
@@ -40,7 +40,7 @@ export class Assistant implements vscode.WebviewViewProvider {
     this.instance = new Assistant(system);
 
     system.context.subscriptions.push(
-      vscode.window.registerWebviewViewProvider(POOLSIDE_WEBVIEW_VIEW_ID, this.instance, {
+      vscode.window.registerWebviewViewProvider(CAMBER_WEBVIEW_VIEW_ID, this.instance, {
         webviewOptions: { retainContextWhenHidden: true },
       }),
     );
@@ -91,9 +91,9 @@ export class Assistant implements vscode.WebviewViewProvider {
       if (!webviewView.visible) this.system.decorationProvider.deleteAllInserts();
       sendActiveFileContext(this.system);
 
-      const poolsideConfig = getPoolsideConfig();
-      this.rpc.setConfiguration(poolsideConfig);
-      this.system.acpChatPanels.setConfiguration(poolsideConfig);
+      const camberConfig = getCamberConfig();
+      this.rpc.setConfiguration(camberConfig);
+      this.system.acpChatPanels.setConfiguration(camberConfig);
     });
   }
 
@@ -124,17 +124,17 @@ export class Assistant implements vscode.WebviewViewProvider {
   }
 
   /**
-   * show ensures that the poolside assistant webview is visible and ready to receive RPC messages.
+   * show ensures that the camber assistant webview is visible and ready to receive RPC messages.
    *
    * @returns a promise which resolves when the assistant webview is ready to receive RPC messages.
    */
   async show() {
     if (this.isReady) {
-      return await vscode.commands.executeCommand(POOLSIDE_WEBVIEW_FOCUS_COMMAND);
+      return await vscode.commands.executeCommand(CAMBER_WEBVIEW_FOCUS_COMMAND);
     }
 
     const readyPromise = this.waitForReady();
-    await vscode.commands.executeCommand(POOLSIDE_WEBVIEW_FOCUS_COMMAND);
+    await vscode.commands.executeCommand(CAMBER_WEBVIEW_FOCUS_COMMAND);
     return readyPromise;
   }
 

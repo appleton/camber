@@ -1,7 +1,7 @@
 import * as os from "os";
 import * as vscode from "vscode";
 import packageJSON from "../../package.json";
-import { getPoolsideConfig } from "./configuration";
+import { getCamberConfig } from "./configuration";
 import { getDefaultCwd, getWorkspaces } from "./context";
 import { mapContextToExtensionMode } from "./env";
 import { getLanguages, serializeLanguages } from "./languages";
@@ -25,7 +25,7 @@ const capabilities = {
  */
 /**
  * getEnvironment builds the local (no-network) environment descriptor used for
- * the poolside Helper LSP handshake and as part of the webview initial state.
+ * the camber Helper LSP handshake and as part of the webview initial state.
  */
 export function getEnvironment(system: System) {
   // indicate when we're running a development version, vs a packaged version
@@ -48,7 +48,7 @@ export function getInitialKeybindings() {
 }
 
 export async function getInitialAppState(system: System) {
-  const poolsideConfig = getPoolsideConfig();
+  const camberConfig = getCamberConfig();
 
   const workspaces = getWorkspaces();
   const defaultCwd = getDefaultCwd();
@@ -60,7 +60,7 @@ export async function getInitialAppState(system: System) {
   ]);
 
   return {
-    userSettings: poolsideConfig,
+    userSettings: camberConfig,
     workspaces,
     homeDirectory: os.homedir(),
     defaultCwd,

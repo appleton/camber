@@ -3,7 +3,7 @@
   import { onMount, type Snippet } from "svelte";
   import { createList } from "../context/list.js";
   import type { HTMLAttributes } from "svelte/elements";
-  import { cn } from "@poolsideai/tailwind-config/tv";
+  import { cn } from "@camber/tailwind-config/tv";
   import { childrenObserver } from "../../../attachments/childrenObserver.js";
 
   interface Props extends HTMLAttributes<HTMLDivElement> {

@@ -1,7 +1,7 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
-  import { CollapsibleTrigger } from "@poolsideai/components/collapsible";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
+  import { CollapsibleTrigger } from "@camber/components/collapsible";
   import { getToolContext } from "../../shared/ToolRoot.svelte";
 
   let { title }: { title?: string } = $props();

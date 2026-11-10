@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { ContentBlock } from "@agentclientprotocol/sdk";
-  import { getChips, getPrompt, type ChipNodeAttrs } from "@poolsideai/components/prompt";
-  import { generateId } from "@poolsideai/lib/string";
+  import { getChips, getPrompt, type ChipNodeAttrs } from "@camber/components/prompt";
+  import { generateId } from "@camber/lib/string";
   import { onMount } from "svelte";
   import { get } from "svelte/store";
   import {

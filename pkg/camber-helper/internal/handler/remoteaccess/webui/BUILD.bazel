@@ -1,0 +1,22 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+# embedsrcs globs dist/ so Bazel embeds whatever is there at build time: the
+# committed placeholders on a plain checkout (the helper then serves the
+# "no mobile UI bundle" fallback page), or the real mobile-remote bundle when
+# ui/apps/mobile-remote/scripts/embed-webui.mjs has copied one in — release
+# builds do this via the embed_mobile_webui input of reusable-bazel-build.yml.
+# The glob (kept from gazelle, which would enumerate files) means the
+# content-hashed bundle never requires regenerating this file.
+go_library(
+    name = "webui",
+    srcs = ["webui.go"],
+    embedsrcs = glob(["dist/**"]),  # keep
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/handler/remoteaccess/webui",
+    visibility = ["//pkg/camber-helper:__subpackages__"],
+)
+
+go_test(
+    name = "webui_test",
+    srcs = ["webui_test.go"],
+    embed = [":webui"],
+)

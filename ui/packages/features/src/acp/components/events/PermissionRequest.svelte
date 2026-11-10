@@ -1,15 +1,15 @@
 <script lang="ts">
   import type { PermissionOption, ToolKind } from "@agentclientprotocol/sdk";
   import type { ToolCall } from "../../types";
-  import { insideModalOverlay, isAppleUser } from "@poolsideai/components";
+  import { insideModalOverlay, isAppleUser } from "@camber/components";
   import { getACPAgentRegistryRepo } from "../../features/AgentRegistryRepository.svelte";
   import { DEFAULT_AGENT_SERVER } from "../../agentServers";
   import { agentName as getAgentName } from "../chat/menus/config/agentConfig";
-  import { Button } from "@poolsideai/components/button";
-  import Icon from "@poolsideai/components/icon";
-  import Kbd from "@poolsideai/components/kbd";
+  import { Button } from "@camber/components/button";
+  import Icon from "@camber/components/icon";
+  import Kbd from "@camber/components/kbd";
   import { createDropdownMenu, melt } from "@melt-ui/svelte";
-  import { HighlightedShellCommand } from "@poolsideai/components/assistant-ui";
+  import { HighlightedShellCommand } from "@camber/components/assistant-ui";
   import type { ACPPendingPermissionRequest } from "../../features/Session.svelte";
   import { ACP_PERMISSION_SUGGESTED_RULES_META_KEY } from "../../permissionMeta";
   import { getToolCommand, getToolCommandLabel, getToolDescription } from "../shared/toolStatus";
@@ -86,7 +86,7 @@
   );
 
   // Broader glob variants for each suggested rule (e.g. "gh pr checks 31268 *"
-  // -> ["gh pr checks *", "gh pr *", "gh *"]). Poolside ACP can persist the
+  // -> ["gh pr checks *", "gh pr *", "gh *"]). Camber ACP can persist the
   // selected override via RequestPermissionOutcomeSelected._meta.
   let suggestedRuleAlternatives = $derived.by(() => {
     const seen = new Set<string>(suggestedRules);

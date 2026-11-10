@@ -1,4 +1,4 @@
-# @poolsideai/dnd
+# @camber/dnd
 
 Framework-agnostic drag-and-drop primitives built on **pointer events** (not
 the native HTML5 drag-and-drop API).
@@ -22,7 +22,7 @@ framework.
 
 ```svelte
 <script lang="ts">
-  import { reorderable, moveItem, type ReorderDropTarget } from "@poolsideai/dnd";
+  import { reorderable, moveItem, type ReorderDropTarget } from "@camber/dnd";
 
   let items = $state([
     { id: "one", label: "One" },
@@ -68,7 +68,7 @@ framework.
 ## Non-Svelte usage
 
 ```ts
-import { createReorderable } from "@poolsideai/dnd";
+import { createReorderable } from "@camber/dnd";
 
 const handle = createReorderable(containerEl, { onReorder });
 // ...later

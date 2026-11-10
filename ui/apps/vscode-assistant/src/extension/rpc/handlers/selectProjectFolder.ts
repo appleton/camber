@@ -1,4 +1,4 @@
-import type { ProjectFolder } from "@poolsideai/rpc";
+import type { ProjectFolder } from "@camber/rpc";
 import * as path from "path";
 import * as vscode from "vscode";
 

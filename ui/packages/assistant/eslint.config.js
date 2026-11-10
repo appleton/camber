@@ -1,4 +1,4 @@
-import { defineConfig } from "@poolsideai/eslint-config";
+import { defineConfig } from "@camber/eslint-config";
 import acpRules from "./eslint-acp-rules.js";
 
 export default defineConfig(

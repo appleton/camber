@@ -81,7 +81,7 @@ cleanup-codex/
 tmp/
 fb/
 
-poolside-helper-*
+camber-helper-*
 
 /.release-env
 
@@ -99,3 +99,5 @@ license-check-output/
 # Go code coverage report
 coverage.out
 /.codex
+
+.camber/settings.local.yaml

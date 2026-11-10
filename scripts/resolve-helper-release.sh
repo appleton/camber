@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 
 # Resolve the highest published version in the independent helper/v* lineage.
-# Set POOLSIDE_HELPER_VERSION to pin an exact release for a reproducible local
+# Set CAMBER_HELPER_VERSION to pin an exact release for a reproducible local
 # build or to test a specific helper.
 
 set -euo pipefail
 
-helper_version="${POOLSIDE_HELPER_VERSION:-}"
-repository="${POOLSIDE_HELPER_REPOSITORY:-poolsideai/assistants}"
+helper_version="${CAMBER_HELPER_VERSION:-}"
+repository="${CAMBER_HELPER_REPOSITORY:-appleton/camber}"
 
 if [[ -n "${helper_version}" ]]; then
   [[ "${helper_version}" =~ ^helper/v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
-    echo "POOLSIDE_HELPER_VERSION must look like helper/v1.2.3" >&2
+    echo "CAMBER_HELPER_VERSION must look like helper/v1.2.3" >&2
     exit 1
   }
   printf '%s\n' "${helper_version}"

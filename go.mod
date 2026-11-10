@@ -1,4 +1,4 @@
-module github.com/poolsideai/assistant
+module github.com/appleton/camber
 
 go 1.26.1
 

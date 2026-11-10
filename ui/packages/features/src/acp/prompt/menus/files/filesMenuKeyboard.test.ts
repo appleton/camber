@@ -1,4 +1,4 @@
-import { classifyQuery } from "@poolsideai/lib/path-query";
+import { classifyQuery } from "@camber/lib/path-query";
 import { describe, expect, it } from "vitest";
 import { decideFilePickerAction, type KeyboardSnapshot } from "./filesMenuKeyboard.js";
 import type { FileLike } from "./pathRewrites.js";

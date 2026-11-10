@@ -1,4 +1,4 @@
-import { CodedError, formatError, toError } from "@poolsideai/lib/errors";
+import { CodedError, formatError, toError } from "@camber/lib/errors";
 
 export type ErrorResponse = {
   code: number;

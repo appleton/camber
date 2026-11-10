@@ -4,9 +4,9 @@ using EnvDTE;
 using Microsoft.VisualStudio.PlatformUI;
 using Microsoft.VisualStudio.Shell;
 using Newtonsoft.Json;
-using Poolside.Assistant.Context;
-using Poolside.Assistant.Settings;
-using Poolside.Assistant.Telemetry;
+using Camber.Assistant.Context;
+using Camber.Assistant.Settings;
+using Camber.Assistant.Telemetry;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -21,7 +21,7 @@ using System.Xml;
 
 #pragma warning disable VSTHRD200 // Use "Async" suffix for async methods
 
-namespace Poolside.Assistant.WebViewInfrastructure
+namespace Camber.Assistant.WebViewInfrastructure
 {
     public class WebViewCommunicator : IDisposable
     {
@@ -157,7 +157,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
                 new HostRPCServerWithResponseMethods(outstandingRequests, this), isAsync: true,
                 new BindingOptions { Binder = new NewtonsoftJsonBinder() });
             VSColorTheme.ThemeChanged += OnThemeChanged;
-            PoolsideAssistantPackage.GetInstance().GetSettings().PropertyChanged += OnSettingsChanged;
+            CamberAssistantPackage.GetInstance().GetSettings().PropertyChanged += OnSettingsChanged;
             readyTaskSource = new TaskCompletionSource<Nothing>();
             readyTask = readyTaskSource.Task;
         }
@@ -174,7 +174,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
             }
             catch (Exception ex)
             {
-                Telemetry.PoolsideTelemetryLogger.Instance.reportException(ex);
+                Telemetry.CamberTelemetryLogger.Instance.reportException(ex);
             }
         }
 
@@ -183,12 +183,12 @@ namespace Poolside.Assistant.WebViewInfrastructure
         {
             try
             {
-                var configuration = PoolsideAssistantPackage.GetInstance().GetSettings().GetWebViewConfiguration();
+                var configuration = CamberAssistantPackage.GetInstance().GetSettings().GetWebViewConfiguration();
                 await this.CallWebView("setConfiguration", new object[] { configuration });
             }
             catch (Exception ex)
             {
-                PoolsideTelemetryLogger.Instance.reportException(ex);
+                CamberTelemetryLogger.Instance.reportException(ex);
             }
         }
 
@@ -242,7 +242,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
             return $@"
                 <script>
                 (function() {{
-                    this.POOLSIDE_INITIAL_STATE = {InitialStateJson()};
+                    this.CAMBER_INITIAL_STATE = {InitialStateJson()};
                     {extraInitialization ?? ""}
                 }}).call(this);
                 document.addEventListener(""DOMContentLoaded"", function() {{
@@ -289,7 +289,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
         private string InitialStateJson()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var settings = PoolsideAssistantPackage.GetInstance().GetSettings();
+            var settings = CamberAssistantPackage.GetInstance().GetSettings();
             return JsonConvert.SerializeObject(new InitialState
             {
                 userSettings = settings.GetWebViewConfiguration(),
@@ -311,8 +311,8 @@ namespace Poolside.Assistant.WebViewInfrastructure
         private static readonly string CommandSetGuid = "{08c5ffe7-6ce9-4f03-afc5-39cf2c5cba53}";
         private static readonly (string webViewName, int commandId)[] KeyboundCommands = new[]
         {
-            ("poolside.focusInput", 0x0106), // FocusInputPoolsideCommandId
-            ("poolside.togglePlanMode", 0x0150), // TogglePlanModePoolsideCommandId
+            ("camber.focusInput", 0x0106), // FocusInputCamberCommandId
+            ("camber.togglePlanMode", 0x0150), // TogglePlanModeCamberCommandId
         };
 
         private static Dictionary<string, string> GetKeybindings()
@@ -396,7 +396,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
         private static (string, string) GetIDENameAndVersion()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var dte = PoolsideAssistantPackage.GetGlobalService(typeof(DTE)) as DTE;
+            var dte = CamberAssistantPackage.GetGlobalService(typeof(DTE)) as DTE;
             var devenvInfo = FileVersionInfo.GetVersionInfo(dte.FullName);
             return (devenvInfo.FileDescription, devenvInfo.ProductVersion);
         }
@@ -424,7 +424,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
         public void Dispose()
         {
             VSColorTheme.ThemeChanged -= OnThemeChanged;
-            PoolsideAssistantPackage.GetInstance().GetSettings().PropertyChanged -= OnSettingsChanged;
+            CamberAssistantPackage.GetInstance().GetSettings().PropertyChanged -= OnSettingsChanged;
         }
     }
 }

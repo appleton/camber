@@ -1,4 +1,4 @@
-import { type ACPAgentServerConfig } from "@poolsideai/rpc";
+import { type ACPAgentServerConfig } from "@camber/rpc";
 
 // Full SemVer: version core with optional dot-separated prerelease and build
 // metadata, both of which may contain hyphens (1.2.3-beta-1+build.2).

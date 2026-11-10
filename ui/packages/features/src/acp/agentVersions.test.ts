@@ -1,4 +1,4 @@
-import { type ACPAgentServerConfig } from "@poolsideai/rpc";
+import { type ACPAgentServerConfig } from "@camber/rpc";
 import { describe, expect, it } from "vitest";
 import {
   versionFromArchiveReference,

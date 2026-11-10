@@ -754,7 +754,7 @@ function buildHelperReleasePlan(
   const action = existing ? (published ? "reuse" : "resume") : "release";
   const tagAnnotation = JSON.stringify({
     schema: 1,
-    kind: "poolside-helper-release",
+    kind: "camber-helper-release",
     tag,
     version,
     sourceSha,
@@ -1081,7 +1081,7 @@ program
   .option(
     "--repository <owner/repo>",
     "GitHub repository for commit/compare links",
-    process.env.GITHUB_REPOSITORY || "poolsideai/assistants",
+    process.env.GITHUB_REPOSITORY || "appleton/camber",
   )
   .option("--slack", "Emit the truncated Slack variant instead of the release markdown", false)
   .action(

@@ -31,7 +31,7 @@
 use serde::Serialize;
 use tauri::AppHandle;
 
-pub const SYSTEM_ACCENT_CHANGED_EVENT: &str = "poolside:desktop-system-accent-changed";
+pub const SYSTEM_ACCENT_CHANGED_EVENT: &str = "camber:desktop-system-accent-changed";
 
 /// The accent-derived colours for both appearances. `None` off macOS, where
 /// there is no system accent to follow.

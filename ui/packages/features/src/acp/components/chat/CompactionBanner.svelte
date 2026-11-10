@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Spinner } from "@poolsideai/components/spinner";
+  import { Spinner } from "@camber/components/spinner";
   import { slide } from "svelte/transition";
   import { getACPChatSessionScope } from "../../features/ChatSessionScope.svelte";
 

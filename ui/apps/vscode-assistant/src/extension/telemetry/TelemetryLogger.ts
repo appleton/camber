@@ -1,4 +1,4 @@
-import { TelemetryEventInputEventType, type TelemetryEventInputMetadata } from "@poolsideai/rpc";
+import { TelemetryEventInputEventType, type TelemetryEventInputMetadata } from "@camber/rpc";
 import { DateTime } from "luxon";
 import { serializeError, type ErrorObject } from "serialize-error";
 import * as vscode from "vscode";

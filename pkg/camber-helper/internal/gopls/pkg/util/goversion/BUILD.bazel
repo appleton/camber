@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "goversion",
+    srcs = ["goversion.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/pkg/util/goversion",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "goversion_test",
+    srcs = ["goversion_test.go"],
+    deps = [":goversion"],
+)

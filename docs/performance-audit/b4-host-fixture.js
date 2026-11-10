@@ -1,4 +1,4 @@
-window.POOLSIDE_INITIAL_STATE = {
+window.CAMBER_INITIAL_STATE = {
   environment: {
     assistantHost: "vscode",
     assistantEnv: "test",
@@ -15,8 +15,8 @@ window.POOLSIDE_INITIAL_STATE = {
 };
 window.riveUri = "resources/roundel-spinner.riv";
 window.riveThinUri = "resources/roundel-spinner-thin.riv";
-window.logoUri = "resources/poolside-logo.glb";
-window.logoFaceUri = "resources/poolside-logo-face.glb";
+window.logoUri = "resources/camber-logo.glb";
+window.logoFaceUri = "resources/camber-logo-face.glb";
 window.__b4 = { requests: [], errors: [], start: performance.now() };
 window.addEventListener("error", (e) => window.__b4.errors.push(String(e.error ?? e.message)));
 window.addEventListener("unhandledrejection", (e) => window.__b4.errors.push(String(e.reason)));
@@ -39,7 +39,7 @@ window.acquireVsCodeApi = () => ({
     let result = {};
     if (message.command === "jsonrpc") {
       const [method, params] = message.payload;
-      if (method === "poolside/acpNav/list")
+      if (method === "camber/acpNav/list")
         result = {
           projects: [],
           conversations: [
@@ -56,15 +56,15 @@ window.acquireVsCodeApi = () => ({
             },
           ],
         };
-      else if (method === "poolside/acpNav/listAgentServers") result = { agentServers: {} };
-      else if (method === "poolside/acp/initialize")
+      else if (method === "camber/acpNav/listAgentServers") result = { agentServers: {} };
+      else if (method === "camber/acp/initialize")
         result = {
           protocolVersion: 1,
           agentCapabilities: {},
           authMethods: [],
           agentInfo: { name: "poolside", version: "fixture" },
         };
-      else if (method === "poolside/acp/session/new") result = { sessionId: "fixture-session" };
+      else if (method === "camber/acp/session/new") result = { sessionId: "fixture-session" };
       else if (method.includes("approvals/list")) result = { approvals: [] };
     }
     queueMicrotask(() =>

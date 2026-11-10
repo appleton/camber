@@ -14,7 +14,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace Poolside.Assistant.WebViewInfrastructure
+namespace Camber.Assistant.WebViewInfrastructure
 {
     internal static class WebViewTheme
     {

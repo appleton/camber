@@ -14,13 +14,9 @@
  -->
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { IconProvider, type IconContext } from "@poolsideai/components/icon";
-  import { basename, extname } from "@poolsideai/lib/path";
-  import {
-    getLanguages,
-    getThemeContext,
-    type FileIconTheme,
-  } from "@poolsideai/components/providers";
+  import { IconProvider, type IconContext } from "@camber/components/icon";
+  import { basename, extname } from "@camber/lib/path";
+  import { getLanguages, getThemeContext, type FileIconTheme } from "@camber/components/providers";
   interface Props {
     children: Snippet;
   }

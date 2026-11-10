@@ -57,7 +57,7 @@ describe("ACPDebugLog collection", () => {
       method: "session/new",
       params: {
         cwd: "/repo",
-        _meta: { "poolside/conversation_id": "conversation-1" },
+        _meta: { "camber/conversation_id": "conversation-1" },
       },
     });
     log.record("agent", "incoming", {
@@ -118,7 +118,7 @@ describe("ACPDebugLog collection", () => {
       method: "session/new",
       params: {
         cwd: "/repo",
-        _meta: { "poolside/conversation_id": "other" },
+        _meta: { "camber/conversation_id": "other" },
       },
     });
     log.record("agent", "incoming", {

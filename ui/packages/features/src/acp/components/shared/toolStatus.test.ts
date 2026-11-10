@@ -146,11 +146,11 @@ EOF
     expect(getToolCommandLabel(tool)).toBe("git");
   });
 
-  it("prefers Poolside command head metadata over raw input and title fallbacks", () => {
+  it("prefers Camber command head metadata over raw input and title fallbacks", () => {
     const tool = {
       kind: "execute",
       title: 'Change directory and greet: cd ./ && echo "hello"',
-      _meta: { "poolside/permission_command_heads": ["cd", "echo"] },
+      _meta: { "camber/permission_command_heads": ["cd", "echo"] },
       rawInput: { cmd: 'cd ./ && echo "hello"', commands: ["cd"] },
     } as const;
 

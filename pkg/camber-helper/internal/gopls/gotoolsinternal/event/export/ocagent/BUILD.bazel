@@ -1,0 +1,38 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "ocagent",
+    srcs = [
+        "metrics.go",
+        "ocagent.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/event/export/ocagent",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/core",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/export",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/export/metric",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/export/ocagent/wire",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/keys",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/label",
+    ],
+)
+
+go_test(
+    name = "ocagent_test",
+    srcs = [
+        "metrics_test.go",
+        "ocagent_test.go",
+        "trace_test.go",
+    ],
+    deps = [
+        ":ocagent",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/core",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/export",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/export/metric",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/keys",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/event/label",
+    ],
+)

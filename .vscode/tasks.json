@@ -4,7 +4,7 @@
     {
       "label": "vscode-assistant-dev",
       "type": "shell",
-      "command": "pnpm turbo dev -F poolside-assistant",
+      "command": "pnpm turbo dev -F camber-assistant",
       "problemMatcher": {
         "owner": "typescript",
         "fileLocation": "relative",
@@ -34,7 +34,7 @@
     {
       "label": "desktop-assistant-dev",
       "type": "shell",
-      "command": "pnpm -F @poolsideai/desktop-assistant dev",
+      "command": "pnpm -F @camber/desktop-assistant dev",
       "isBackground": true,
       "problemMatcher": {
         "owner": "typescript",

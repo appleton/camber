@@ -4,7 +4,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 
-namespace Poolside.Assistant.EditHighlights
+namespace Camber.Assistant.EditHighlights
 {
     [Export(typeof(IWpfTextViewCreationListener))]
     [ContentType("text")]
@@ -13,7 +13,7 @@ namespace Poolside.Assistant.EditHighlights
     {
         // Register the adornment layer.
         [Export(typeof(AdornmentLayerDefinition))]
-        [Name("PoolsideEditHighlightLayer")]
+        [Name("CamberEditHighlightLayer")]
         [Order(Before = PredefinedAdornmentLayers.Selection, After = PredefinedAdornmentLayers.TextMarker)]
         private AdornmentLayerDefinition editHighlightsAdornmentLayer;
 

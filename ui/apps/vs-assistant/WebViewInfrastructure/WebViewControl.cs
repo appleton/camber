@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows.Input;
 
-namespace Poolside.Assistant.WebViewInfrastructure
+namespace Camber.Assistant.WebViewInfrastructure
 {
     /// <summary>
     /// Interaction logic for WebViewControl.
@@ -116,7 +116,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
             this.InitializeComponent();
             Communicator = communicatorFactory(browser);
             browser.PreviewMouseWheel += Browser_PreviewMouseWheel;
-            browser.Address = "poolside-app://app/" + entrypoint;
+            browser.Address = "camber-app://app/" + entrypoint;
             browser.MenuHandler = new CustomContextMenuHandler(GetContextMenuItems);
 
             // Visual Studio tool windows can be floated and docked, and when that happens they are

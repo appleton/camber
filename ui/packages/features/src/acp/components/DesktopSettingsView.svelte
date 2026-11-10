@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { KeyboardShortcutsSection } from "../../keybindings";
   import BadgedIcon from "./BadgedIcon.svelte";
   import { appState } from "../hostAdapter";
@@ -62,7 +62,7 @@
   );
   let headerTitle = $derived(sectionNav ? SETTINGS_HEADINGS.all.title : heading.title);
   let headerSubtitle = $derived(
-    !sectionNav || section === "all" ? heading.subtitle : "Configure Poolside Assistant.",
+    !sectionNav || section === "all" ? heading.subtitle : "Configure Camber Assistant.",
   );
   let frameBreadcrumbs = $derived(
     section === "all"

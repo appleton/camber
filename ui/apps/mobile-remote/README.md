@@ -1,14 +1,14 @@
-# @poolsideai/mobile-remote
+# @camber/mobile-remote
 
-Mobile remote-control PWA for the Poolside desktop assistant, served by
-poolside-helper over Tailscale (see
-`pkg/poolside-helper/internal/handler/remoteaccess/`).
+Mobile remote-control PWA for the Camber desktop assistant, served by
+camber-helper over Tailscale (see
+`pkg/camber-helper/internal/handler/remoteaccess/`).
 
 The app is deliberately thin. It renders no chat UI of its own:
 
-- **Shared UI** comes from `@poolsideai/assistant` (`MobilePanel` →
-  `MobileShell`) and `@poolsideai/features` (dedicated `Mobile*` components).
-- **Transport** comes from `@poolsideai/remote-client` (WebSocket JSON-RPC,
+- **Shared UI** comes from `@camber/assistant` (`MobilePanel` →
+  `MobileShell`) and `@camber/features` (dedicated `Mobile*` components).
+- **Transport** comes from `@camber/remote-client` (WebSocket JSON-RPC,
   sequenced session-event gating, device-token auth recovery, the webview
   host adapter). Read that package's README for the architecture and the
   future desktop-over-WebSocket story.
@@ -29,15 +29,15 @@ settings, and caches. These entries include:
   features) — a fallback when the registry cannot be fetched.
 
 User state that needs to be shared with the desktop belongs helper-side in the
-acpNav sidebar DB via `poolside/acpNav/*` methods. Do not add new mobile-app
+acpNav sidebar DB via `camber/acpNav/*` methods. Do not add new mobile-app
 `localStorage` keys.
 
 ## Running
 
-- `pnpm dev:helper` — builds and spawns poolside-helper with remote access
+- `pnpm dev:helper` — builds and spawns camber-helper with remote access
   enabled against this app's dev server, prints a pairing URL.
 - `pnpm dev` — the Vite dev server alone (the helper proxies to it when
-  `POOLSIDE_REMOTE_DEV_SERVER` is set).
+  `CAMBER_REMOTE_DEV_SERVER` is set).
 - `pnpm embed` — builds the bundle and copies it into the helper's
   `//go:embed` dir so the UI ships inside the helper binary.
 - `pnpm test:unit`, `pnpm check:types` — the usual checks.

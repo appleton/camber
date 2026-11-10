@@ -8,7 +8,7 @@ main() {
   local schema_url="http://${addr}/openapi.yaml"
 
   # go runs the server as a subprocess of itself, so kill the server via lsof
-  HELPER_OPENAPI_ADDR="${addr}" go run -tags=fts5 ../../../cmd/poolside-helper openapi &
+  HELPER_OPENAPI_ADDR="${addr}" go run -tags=fts5 ../../../cmd/camber-helper openapi &
   trap "cleanup" EXIT SIGINT SIGTERM
 
   while ! curl --fail --silent --output /dev/null "${schema_url}"; do
@@ -17,7 +17,7 @@ main() {
   done
 
   # Intentionally not using turbo because it doesn't know about changes in the source go files
-  LOCAL_SCHEMA="${schema_url}" pnpm -F @poolsideai/helperapi codegen
+  LOCAL_SCHEMA="${schema_url}" pnpm -F @camber/helperapi codegen
   cleanup
 }
 

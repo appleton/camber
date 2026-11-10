@@ -1,44 +1,41 @@
 import vscode from "vscode";
-import { poolsideConfigurationKey, poolsideConfigurationSection } from "../extensionIdentity";
-import type {
-  PoolsideConfigurationProperties,
-  PoolsideConfigurationProperty,
-} from "../types/manifest";
+import { camberConfigurationKey, camberConfigurationSection } from "../extensionIdentity";
+import type { CamberConfigurationProperties, CamberConfigurationProperty } from "../types/manifest";
 
-function getConfigurationSections(key: PoolsideConfigurationProperty | string) {
-  const resolvedKey = poolsideConfigurationKey(key);
+function getConfigurationSections(key: CamberConfigurationProperty | string) {
+  const resolvedKey = camberConfigurationKey(key);
   const lastDotIndex = resolvedKey.lastIndexOf(".");
   if (lastDotIndex === -1) return undefined;
   return [resolvedKey.substring(0, lastDotIndex), resolvedKey.substring(lastDotIndex + 1)] as const;
 }
 
-export function getConfiguration<K extends PoolsideConfigurationProperty>(
+export function getConfiguration<K extends CamberConfigurationProperty>(
   key: K,
-): PoolsideConfigurationProperties[K] | undefined;
-export function getConfiguration<K extends PoolsideConfigurationProperty>(
+): CamberConfigurationProperties[K] | undefined;
+export function getConfiguration<K extends CamberConfigurationProperty>(
   key: K,
-  defaultValue: PoolsideConfigurationProperties[K],
-): PoolsideConfigurationProperties[K];
-export function getConfiguration<K extends PoolsideConfigurationProperty>(
+  defaultValue: CamberConfigurationProperties[K],
+): CamberConfigurationProperties[K];
+export function getConfiguration<K extends CamberConfigurationProperty>(
   key: K,
-  defaultValue?: PoolsideConfigurationProperties[K],
+  defaultValue?: CamberConfigurationProperties[K],
 ) {
   const sections = getConfigurationSections(key);
   if (!sections) return defaultValue;
   const [base, section] = sections;
   return vscode.workspace
     .getConfiguration(base)
-    .get(section, defaultValue) as PoolsideConfigurationProperties[K];
+    .get(section, defaultValue) as CamberConfigurationProperties[K];
 }
 
 export function affectsConfiguration(
   event: vscode.ConfigurationChangeEvent,
-  key: PoolsideConfigurationProperty | string,
+  key: CamberConfigurationProperty | string,
   scope?: vscode.ConfigurationScope,
 ) {
-  return event.affectsConfiguration(poolsideConfigurationKey(key), scope);
+  return event.affectsConfiguration(camberConfigurationKey(key), scope);
 }
 
-export function getPoolsideConfigurationSection(): vscode.WorkspaceConfiguration {
-  return poolsideConfigurationSection();
+export function getCamberConfigurationSection(): vscode.WorkspaceConfiguration {
+  return camberConfigurationSection();
 }

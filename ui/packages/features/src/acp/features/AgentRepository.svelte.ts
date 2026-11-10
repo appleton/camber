@@ -11,15 +11,15 @@ import type {
   SessionNotification,
 } from "@agentclientprotocol/sdk";
 import {
+  camberAcpNavGetConfigCache,
+  camberAcpNavListAgentServers,
+  camberAcpNavSetAgentServers,
+  camberAcpNavUpsertConfigCache,
+  camberAcpSessionClose,
   initializeStatefulModule as initializeHelperApi,
-  poolsideAcpNavGetConfigCache,
-  poolsideAcpNavListAgentServers,
-  poolsideAcpNavSetAgentServers,
-  poolsideAcpNavUpsertConfigCache,
-  poolsideAcpSessionClose,
-} from "@poolsideai/helperapi";
-import type { LocalInferenceState } from "@poolsideai/helperapi/schemas";
-import type { ACPAgentServers } from "@poolsideai/rpc";
+} from "@camber/helperapi";
+import type { LocalInferenceState } from "@camber/helperapi/schemas";
+import type { ACPAgentServers } from "@camber/rpc";
 import { get } from "svelte/store";
 import {
   DEFAULT_AGENT_SERVER,
@@ -698,7 +698,7 @@ export class ACPAgentRepository {
     if (pinned !== undefined) this.defaultAgentServerPinned = pinned;
     return this.#enqueueAgentServersPersist(async () => {
       try {
-        const state = await poolsideAcpNavListAgentServers({});
+        const state = await camberAcpNavListAgentServers({});
         const agentServers = (state.agentServers ?? {}) as ACPAgentServers;
         // An absent pin param marks the last-used follow (setDefaultAgentServer):
         // its callers gate on an in-memory pin mirror that can be stale — a
@@ -714,7 +714,7 @@ export class ACPAgentRepository {
           this.defaultAgentServerPinned = true;
           return { agentServers, defaultAgentServer: state.defaultAgentServer };
         }
-        const res = await poolsideAcpNavSetAgentServers({
+        const res = await camberAcpNavSetAgentServers({
           agentServers,
           defaultAgentServer: normalized,
           default_agent_server_pinned: pinned,
@@ -753,7 +753,7 @@ export class ACPAgentRepository {
     previousDefaults: Record<string, Record<string, string>>,
   ): Promise<void> {
     try {
-      const state = await poolsideAcpNavListAgentServers({});
+      const state = await camberAcpNavListAgentServers({});
       const current = (state.agentServers ?? {}) as ACPAgentServers;
       const resolved = resolveAgentServers(current);
       const base = resolved[agentServer];
@@ -771,7 +771,7 @@ export class ACPAgentRepository {
           },
         },
       };
-      const res = await poolsideAcpNavSetAgentServers({
+      const res = await camberAcpNavSetAgentServers({
         agentServers: next,
       });
       const savedAgentServers = (res.agentServers ?? {}) as ACPAgentServers;
@@ -895,7 +895,7 @@ export class ACPAgentRepository {
       this.pinnedConfigOptionsByAgentServer = previousPinned;
     };
     try {
-      const state = await poolsideAcpNavListAgentServers({});
+      const state = await camberAcpNavListAgentServers({});
       const current = (state.agentServers ?? {}) as ACPAgentServers;
       const resolved = resolveAgentServers(current);
       const base = resolved[agentServer];
@@ -932,7 +932,7 @@ export class ACPAgentRepository {
       }
       // An empty pin list is dropped entirely rather than persisted as [].
       if (nextPinned.length > 0) nextConfig.pinned_config_options = nextPinned;
-      const res = await poolsideAcpNavSetAgentServers({
+      const res = await camberAcpNavSetAgentServers({
         agentServers: { ...current, [agentServer]: nextConfig },
       });
       const savedAgentServers = (res.agentServers ?? {}) as ACPAgentServers;
@@ -1198,7 +1198,7 @@ export class ACPAgentRepository {
   // surfaces its own failure.
   async #isPinnedInStore(agentServer: string, configId: string): Promise<boolean> {
     try {
-      const state = await poolsideAcpNavListAgentServers({});
+      const state = await camberAcpNavListAgentServers({});
       const resolved = resolveAgentServers((state.agentServers ?? {}) as ACPAgentServers);
       return resolved[agentServer]?.pinned_config_options?.includes(configId) ?? false;
     } catch {
@@ -1220,7 +1220,7 @@ export class ACPAgentRepository {
    *
    * The set runs through the caller-supplied transport (the host RPC's
    * setACPAgentServers) rather than the helperapi call the default writers
-   * use. Both land on the helper's same `poolside/acpNav/setAgentServers`
+   * use. Both land on the helper's same `camber/acpNav/setAgentServers`
    * store method — which is why one queue serializes them — but the host RPC
    * also performs host-side effects the panel save must keep: the desktop
    * host re-caches its initial webview state and both the desktop and VS Code
@@ -1234,7 +1234,7 @@ export class ACPAgentRepository {
     set: (agentServers: ACPAgentServers) => Promise<void>,
   ): Promise<ACPAgentServers> {
     return this.#enqueueAgentServersPersist(async () => {
-      const state = await poolsideAcpNavListAgentServers({});
+      const state = await camberAcpNavListAgentServers({});
       const current = (state.agentServers ?? {}) as ACPAgentServers;
       const next: ACPAgentServers = Object.fromEntries(
         Object.entries(agentServers).map(([name, config]) => {
@@ -1323,7 +1323,7 @@ export class ACPAgentRepository {
     const cached = this.configCacheByAgentServer[agentServer];
     if (cached) return cached;
     try {
-      const state = normalizeConfigCacheState(await poolsideAcpNavGetConfigCache({ agentServer }));
+      const state = normalizeConfigCacheState(await camberAcpNavGetConfigCache({ agentServer }));
       const entry = state.entry ?? null;
       if (!entry) return null;
       this.configCacheByAgentServer = {
@@ -1360,7 +1360,7 @@ export class ACPAgentRepository {
         mcpServers: [],
         // Mark this as a config probe so the helper skips user-connector
         // injection (keep the key in sync with acpproxy's configProbeMetaKey).
-        _meta: { "poolside/configProbe": true },
+        _meta: { "camber/configProbe": true },
       });
       const previousProbeSessionId = this.configProbeSessionIds.get(agentServer);
       this.configProbeSessionIds.set(agentServer, res.sessionId);
@@ -1439,7 +1439,7 @@ export class ACPAgentRepository {
   }
 
   #closeProbeSession(agentServer: string, sessionId: SessionId): Promise<void> {
-    return poolsideAcpSessionClose({ agentServer, sessionId })
+    return camberAcpSessionClose({ agentServer, sessionId })
       .then(() => {})
       .catch((e: unknown) => console.debug("Failed to close ACP config probe", e));
   }
@@ -1474,7 +1474,7 @@ export class ACPAgentRepository {
       ...this.configCacheByAgentServer,
       [agentServer]: merged,
     };
-    void poolsideAcpNavUpsertConfigCache({
+    void camberAcpNavUpsertConfigCache({
       agentServer,
       configOptions: merged.configOptions,
       availableCommands: merged.availableCommands,
@@ -1544,7 +1544,7 @@ export class ACPAgentRepository {
     };
     try {
       const state = normalizeConfigCacheState(
-        await poolsideAcpNavUpsertConfigCache({
+        await camberAcpNavUpsertConfigCache({
           agentServer,
           configOptions: snapshot.configOptions,
           availableCommands: snapshot.availableCommands,

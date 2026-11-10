@@ -6,7 +6,7 @@ go_library(
         "doc.go",
         "path.go",
     ],
-    importpath = "github.com/poolsideai/assistant/pkg/common/userconfig",
+    importpath = "github.com/appleton/camber/pkg/common/userconfig",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_adrg_xdg//:xdg",

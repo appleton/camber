@@ -23,13 +23,13 @@ use tauri_plugin_shell::{
     ShellExt,
 };
 
-const HELPER_SIDECAR: &str = "poolside-helper";
-const MLX_SIDECAR: &str = "poolside-mlx-sidecar";
-const MLX_SIDECAR_ENV: &str = "POOLSIDE_MLX_SIDECAR";
-const MLX_SIDECAR_DISABLE_DEV_BUILD_ENV: &str = "POOLSIDE_MLX_SIDECAR_DISABLE_DEV_BUILD";
+const HELPER_SIDECAR: &str = "camber-helper";
+const MLX_SIDECAR: &str = "camber-mlx-sidecar";
+const MLX_SIDECAR_ENV: &str = "CAMBER_MLX_SIDECAR";
+const MLX_SIDECAR_DISABLE_DEV_BUILD_ENV: &str = "CAMBER_MLX_SIDECAR_DISABLE_DEV_BUILD";
 const REPO_ROOT_FROM_CARGO_MANIFEST_DIR: usize = 4;
-const HELPER_JSONRPC_REQUEST_EVENT: &str = "poolside:helper-jsonrpc-request";
-const HELPER_JSONRPC_NOTIFICATION_BATCH_EVENT: &str = "poolside:helper-jsonrpc-notification-batch";
+const HELPER_JSONRPC_REQUEST_EVENT: &str = "camber:helper-jsonrpc-request";
+const HELPER_JSONRPC_NOTIFICATION_BATCH_EVENT: &str = "camber:helper-jsonrpc-notification-batch";
 const HELPER_NOTIFICATION_QUEUE_CAPACITY: usize = 64;
 const HELPER_NOTIFICATION_BATCH_CAPACITY: usize = 64;
 const HELPER_NOTIFICATION_BATCH_MAX_BYTES: usize = 512 * 1024;
@@ -211,7 +211,7 @@ impl HelperState {
                 let mut inner = self.inner.lock().await;
                 if inner.ready {
                     return inner.helper.clone().ok_or_else(|| {
-                        HelperJsonRpcError::transport("poolside-helper is not running")
+                        HelperJsonRpcError::transport("camber-helper is not running")
                     });
                 }
                 if let Some(error) = &inner.startup_error {
@@ -228,7 +228,7 @@ impl HelperState {
                 Some(Err(error)) => return Err(error),
                 None => {
                     return Err(HelperJsonRpcError::transport(
-                        "poolside-helper readiness wait failed",
+                        "camber-helper readiness wait failed",
                     ))
                 }
             }
@@ -245,7 +245,7 @@ impl HelperState {
         }
 
         Err(HelperJsonRpcError::transport(
-            "poolside-helper is not running",
+            "camber-helper is not running",
         ))
     }
 
@@ -287,7 +287,7 @@ pub fn start_on_setup(app: &mut App) {
     async_runtime::spawn(async move {
         crate::startup_timing::mark("native.helperSpawnBegin");
         if let Err(err) = start_helper(&app_handle, state).await {
-            eprintln!("failed to start poolside-helper: {err}");
+            eprintln!("failed to start camber-helper: {err}");
         }
     });
 }
@@ -384,7 +384,7 @@ pub(crate) async fn send_helper_request(
 #[tauri::command]
 pub async fn restart_helper(app_handle: AppHandle) -> Result<(), HelperJsonRpcError> {
     let state = app_handle.state::<HelperState>().inner().clone();
-    append_helper_log(&app_handle, "\n--- restarting poolside-helper ---\n");
+    append_helper_log(&app_handle, "\n--- restarting camber-helper ---\n");
     state.shutdown().await;
     start_helper_with_options(&app_handle, state, None).await
 }
@@ -398,7 +398,7 @@ pub async fn restart_helper_debug(
     let state = app_handle.state::<HelperState>().inner().clone();
     append_helper_log(
         &app_handle,
-        &format!("\n--- restarting poolside-helper under Delve on port {port} ---\n"),
+        &format!("\n--- restarting camber-helper under Delve on port {port} ---\n"),
     );
     state.shutdown().await;
     start_helper_with_options(
@@ -452,7 +452,7 @@ pub fn open_helper_logs(app_handle: &AppHandle) -> Result<(), String> {
         fs::create_dir_all(parent).map_err(|err| err.to_string())?;
     }
     if !path.exists() {
-        fs::write(&path, "poolside-helper log is empty.\n").map_err(|err| err.to_string())?;
+        fs::write(&path, "camber-helper log is empty.\n").map_err(|err| err.to_string())?;
     }
     tauri_plugin_opener::open_path(path, None::<&str>).map_err(|err| err.to_string())
 }
@@ -492,14 +492,14 @@ async fn start_helper_with_options(
         Ok(helper) => {
             state.set_starting(helper.clone()).await;
             if let Err(err) = helper.initialize().await {
-                let message = format!("failed to initialize poolside-helper: {err}");
+                let message = format!("failed to initialize camber-helper: {err}");
                 eprintln!("{message}");
                 append_helper_log(app_handle, &format!("{message}\n"));
                 state.mark_error(err.clone()).await;
                 helper.shutdown().await;
                 Err(err)
             } else {
-                append_helper_log(app_handle, "--- poolside-helper started ---\n");
+                append_helper_log(app_handle, "--- camber-helper started ---\n");
                 state.mark_ready().await;
                 crate::startup_timing::mark("native.helperReady");
                 Ok(())
@@ -508,7 +508,7 @@ async fn start_helper_with_options(
         Err(err) => {
             append_helper_log(
                 app_handle,
-                &format!("failed to start poolside-helper: {err}\n"),
+                &format!("failed to start camber-helper: {err}\n"),
             );
             state
                 .mark_error(HelperJsonRpcError::transport(err.clone()))
@@ -549,7 +549,7 @@ impl HelperCommandSpec {
 
         Self {
             program: "go".to_string(),
-            args: ["run", "-tags=fts5", "./cmd/poolside-helper/..."]
+            args: ["run", "-tags=fts5", "./cmd/camber-helper/..."]
                 .into_iter()
                 .map(str::to_string)
                 .collect(),
@@ -567,7 +567,7 @@ impl HelperCommandSpec {
 
     /// Dev builds serve the mobile-remote UI live: the helper proxies UI
     /// traffic to its Vite dev server (slot-offset ports, mirroring
-    /// spoolside's portsForSlot) and falls back to the on-disk bundle, so UI
+    /// camberqa's portsForSlot) and falls back to the on-disk bundle, so UI
     /// changes apply without re-embedding or restarting. Explicit env set by
     /// the launcher wins.
     fn remote_access_dev_env(manifest_dir: &Path) -> Vec<(String, String)> {
@@ -579,19 +579,19 @@ impl HelperCommandSpec {
         lookup: impl Fn(&str) -> Option<String>,
     ) -> Vec<(String, String)> {
         let mut env = Vec::new();
-        if lookup("POOLSIDE_REMOTE_DEV_SERVER").is_none() {
-            let slot = lookup("POOLSIDE_WORKTREE_SLOT")
+        if lookup("CAMBER_REMOTE_DEV_SERVER").is_none() {
+            let slot = lookup("CAMBER_WORKTREE_SLOT")
                 .and_then(|v| v.parse::<u32>().ok())
                 .unwrap_or(0);
             env.push((
-                "POOLSIDE_REMOTE_DEV_SERVER".to_string(),
+                "CAMBER_REMOTE_DEV_SERVER".to_string(),
                 format!("http://127.0.0.1:{}", 5179 + slot * 10),
             ));
         }
-        if lookup("POOLSIDE_REMOTE_STATIC").is_none() {
+        if lookup("CAMBER_REMOTE_STATIC").is_none() {
             if let Some(root) = repo_root(manifest_dir) {
                 env.push((
-                    "POOLSIDE_REMOTE_STATIC".to_string(),
+                    "CAMBER_REMOTE_STATIC".to_string(),
                     root.join("ui/apps/mobile-remote/dist")
                         .to_string_lossy()
                         .into_owned(),
@@ -649,8 +649,8 @@ impl HelperCommandSpec {
                 "--api-version=2".to_string(),
                 "--accept-multiclient".to_string(),
                 "--build-flags=-tags=fts5".to_string(),
-                format!("--log-dest=/tmp/poolside-helper-dlv-{}.log", debug.port),
-                "./cmd/poolside-helper".to_string(),
+                format!("--log-dest=/tmp/camber-helper-dlv-{}.log", debug.port),
+                "./cmd/camber-helper".to_string(),
                 "--".to_string(),
                 "--stdin".to_string(),
             ]
@@ -723,7 +723,7 @@ fn file_exists_and_is_non_empty(path: &Path) -> bool {
 }
 
 fn helper_log_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
-    if let Ok(path) = std::env::var("POOLSIDE_DESKTOP_HELPER_LOG_FILE") {
+    if let Ok(path) = std::env::var("CAMBER_DESKTOP_HELPER_LOG_FILE") {
         return Ok(PathBuf::from(path));
     }
 
@@ -736,7 +736,7 @@ fn helper_log_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
         // UTC with millisecond precision so names sort chronologically even
         // across DST changes and same-second relaunches get distinct files.
         format!(
-            "poolside-helper-{}.log",
+            "camber-helper-{}.log",
             chrono::Utc::now().format("%Y-%m-%dT%H-%M-%S%.3f")
         )
     });
@@ -746,7 +746,7 @@ fn helper_log_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
 fn prune_helper_session_logs(dir: &Path, keep: usize) {
     // The pre-session-split single log file; delete it so it does not linger
     // forever after the format change.
-    let _ = fs::remove_file(dir.join("poolside-helper.log"));
+    let _ = fs::remove_file(dir.join("camber-helper.log"));
 
     let Ok(entries) = fs::read_dir(dir) else {
         return;
@@ -757,7 +757,7 @@ fn prune_helper_session_logs(dir: &Path, keep: usize) {
         .filter(|path| {
             path.file_name()
                 .and_then(|name| name.to_str())
-                .is_some_and(|name| name.starts_with("poolside-helper-") && name.ends_with(".log"))
+                .is_some_and(|name| name.starts_with("camber-helper-") && name.ends_with(".log"))
         })
         .collect();
     // Timestamped names sort lexicographically in chronological order.
@@ -766,7 +766,7 @@ fn prune_helper_session_logs(dir: &Path, keep: usize) {
     for path in &sessions[..excess] {
         if let Err(err) = fs::remove_file(path) {
             eprintln!(
-                "failed to remove old poolside-helper log {}: {err}",
+                "failed to remove old camber-helper log {}: {err}",
                 path.display()
             );
         }
@@ -775,22 +775,22 @@ fn prune_helper_session_logs(dir: &Path, keep: usize) {
 
 fn append_helper_log(app_handle: &AppHandle, message: &str) {
     let Ok(path) = helper_log_path(app_handle) else {
-        eprintln!("failed to resolve poolside-helper log path");
+        eprintln!("failed to resolve camber-helper log path");
         return;
     };
     if let Some(parent) = path.parent() {
         if let Err(err) = fs::create_dir_all(parent) {
-            eprintln!("failed to create poolside-helper log directory: {err}");
+            eprintln!("failed to create camber-helper log directory: {err}");
             return;
         }
     }
     match OpenOptions::new().create(true).append(true).open(&path) {
         Ok(mut file) => {
             if let Err(err) = file.write_all(message.as_bytes()) {
-                eprintln!("failed to write poolside-helper log: {err}");
+                eprintln!("failed to write camber-helper log: {err}");
             }
         }
-        Err(err) => eprintln!("failed to open poolside-helper log: {err}"),
+        Err(err) => eprintln!("failed to open camber-helper log: {err}"),
     }
 }
 
@@ -857,7 +857,7 @@ impl HelperProcess {
             json!({
                 "processId": std::process::id(),
                 "clientInfo": {
-                    "name": "Poolside",
+                    "name": "Camber",
                     "version": app_version.clone()
                 },
                 "capabilities": {
@@ -870,15 +870,15 @@ impl HelperProcess {
                 },
                 "initializationOptions": {
                     "agentServers": {},
-                    // The desktop app registers the poolside:// URL scheme and
-                    // forwards poolside://oauth/callback deep links back to the
-                    // helper (poolside/mcpOAuthCallback), so OAuth flows may use
+                    // The desktop app registers the camber:// URL scheme and
+                    // forwards camber://oauth/callback deep links back to the
+                    // helper (camber/mcpOAuthCallback), so OAuth flows may use
                     // the deep-link redirect instead of the loopback server.
                     //
                     // Gated to release builds only. macOS Launch Services routes
-                    // poolside:// to a bundle by identifier and cannot address a
+                    // camber:// to a bundle by identifier and cannot address a
                     // specific dev instance; with several same-identity debug
-                    // builds (spoolside worktrees) it delivers the callback to
+                    // builds (camberqa worktrees) it delivers the callback to
                     // the wrong process, whose helper has no matching flow. Dev
                     // builds therefore fall back to the 127.0.0.1 loopback flow
                     // for connectors whose provider has a loopback redirect
@@ -940,7 +940,7 @@ impl HelperProcess {
 
         let message = rx.recv().await.ok_or_else(|| {
             HelperJsonRpcError::transport(format!(
-                "poolside-helper closed before responding to {method}"
+                "camber-helper closed before responding to {method}"
             ))
         })?;
         if let Some(error) = message.get("error") {
@@ -1002,7 +1002,7 @@ impl HelperProcess {
         let mut child = self.child.lock().await;
         let child = child
             .as_mut()
-            .ok_or_else(|| HelperJsonRpcError::transport("poolside-helper is not running"))?;
+            .ok_or_else(|| HelperJsonRpcError::transport("camber-helper is not running"))?;
         child
             .write(&frame)
             .map_err(|err| HelperJsonRpcError::transport(err.to_string()))
@@ -1051,8 +1051,8 @@ impl HelperProcess {
             WorkspaceConfiguration::METHOD => Some(json!([])),
             WorkDoneProgressCreate::METHOD => Some(json!(null)),
             "client/registerCapability" => Some(json!(null)),
-            "poolside/searchSymbolDefinitions" => Some(json!({ "defs": [] })),
-            "poolside/getDiagnostics" => Some(json!({ "diagnostics": [] })),
+            "camber/searchSymbolDefinitions" => Some(json!({ "defs": [] })),
+            "camber/getDiagnostics" => Some(json!({ "diagnostics": [] })),
             _ => None,
         };
 
@@ -1098,7 +1098,7 @@ impl HelperProcess {
         };
 
         if let Err(err) = response_result {
-            eprintln!("failed to respond to poolside-helper request {method}: {err}");
+            eprintln!("failed to respond to camber-helper request {method}: {err}");
         }
     }
 
@@ -1121,7 +1121,7 @@ impl HelperProcess {
                 .await
                 .is_err()
             {
-                eprintln!("failed to queue poolside-helper notification {method}");
+                eprintln!("failed to queue camber-helper notification {method}");
             } else {
                 self.notifications_enqueued.fetch_add(1, Ordering::Release);
             }
@@ -1233,7 +1233,7 @@ async fn forward_helper_notifications(
             ) {
                 state.notification_acks.lock().await.remove(&batch_id);
                 eprintln!(
-                    "failed to forward poolside-helper notification batch {batch_id}; retrying: {err}"
+                    "failed to forward camber-helper notification batch {batch_id}; retrying: {err}"
                 );
                 tokio::time::sleep(HELPER_NOTIFICATION_RETRY_DELAY).await;
                 continue;
@@ -1252,7 +1252,7 @@ async fn forward_helper_notifications(
                         break;
                     }
                     eprintln!(
-                        "poolside-helper notification batch {batch_id} applied {applied}/{notification_count}; retrying the remaining {} notifications",
+                        "camber-helper notification batch {batch_id} applied {applied}/{notification_count}; retrying the remaining {} notifications",
                         notifications.len()
                     );
                     // The payload changes after a partial result, so use a new
@@ -1263,7 +1263,7 @@ async fn forward_helper_notifications(
                 Ok(None) | Err(_) => {
                     state.notification_acks.lock().await.remove(&batch_id);
                     eprintln!(
-                        "poolside-helper notification batch {batch_id} was not acknowledged ({notification_count} notifications, {bytes} bytes); retrying"
+                        "camber-helper notification batch {batch_id} was not acknowledged ({notification_count} notifications, {bytes} bytes); retrying"
                     );
                     tokio::time::sleep(HELPER_NOTIFICATION_RETRY_DELAY).await;
                 }
@@ -1316,18 +1316,18 @@ fn notification_batch_has_capacity(count: usize, bytes: usize, next_bytes: usize
 fn should_forward_helper_request(method: &str) -> bool {
     matches!(
         method,
-        "poolside/acp/elicitation/create" | "poolside/jsonrpc/request"
+        "camber/acp/elicitation/create" | "camber/jsonrpc/request"
     )
 }
 
-// Forward every poolside/* notification to the TS host (host.ts), which owns
+// Forward every camber/* notification to the TS host (host.ts), which owns
 // the routing decision via the shared helper-notification table in
-// @poolsideai/rpc. A hand-maintained method list here silently dropped
-// notifications the webview needed (poolside/acp/serverDidExit never reached
+// @camber/rpc. A hand-maintained method list here silently dropped
+// notifications the webview needed (camber/acp/serverDidExit never reached
 // the desktop webview); prefix forwarding makes an unrouted notification a
 // visible console.debug in ONE place instead of an invisible gap in two.
 fn should_forward_helper_notification(method: &str) -> bool {
-    method.starts_with("poolside/")
+    method.starts_with("camber/")
 }
 
 async fn read_events(helper: Arc<HelperProcess>, mut rx: async_runtime::Receiver<CommandEvent>) {
@@ -1341,22 +1341,22 @@ async fn read_events(helper: Arc<HelperProcess>, mut rx: async_runtime::Receiver
                     }
                 }
                 Err(err) => {
-                    eprintln!("failed to parse poolside-helper LSP message: {err}");
+                    eprintln!("failed to parse camber-helper LSP message: {err}");
                     framer.clear();
                 }
             },
             CommandEvent::Stderr(bytes) => {
-                let message = format!("poolside-helper: {}", String::from_utf8_lossy(&bytes));
+                let message = format!("camber-helper: {}", String::from_utf8_lossy(&bytes));
                 eprint!("{message}");
                 append_helper_log(&helper.app_handle, &message);
             }
             CommandEvent::Error(err) => {
-                let message = format!("poolside-helper process error: {err}\n");
+                let message = format!("camber-helper process error: {err}\n");
                 eprint!("{message}");
                 append_helper_log(&helper.app_handle, &message);
             }
             CommandEvent::Terminated(payload) => {
-                let message = format!("poolside-helper terminated: {payload:?}\n");
+                let message = format!("camber-helper terminated: {payload:?}\n");
                 eprint!("{message}");
                 append_helper_log(&helper.app_handle, &message);
                 break;
@@ -1490,7 +1490,7 @@ mod tests {
         assert_eq!(spec.program, "go");
         assert_eq!(
             spec.args,
-            vec!["run", "-tags=fts5", "./cmd/poolside-helper/..."]
+            vec!["run", "-tags=fts5", "./cmd/camber-helper/..."]
         );
         assert_eq!(spec.cwd, Some(PathBuf::from("/repo")));
         assert!(!spec.sidecar);
@@ -1499,7 +1499,7 @@ mod tests {
             .iter()
             .any(|(name, value)| { name == MLX_SIDECAR_DISABLE_DEV_BUILD_ENV && value == "1" }));
         // spec.env comes from remote_access_dev_env, which defers to any
-        // POOLSIDE_REMOTE_* already present in the ambient environment (as in
+        // CAMBER_REMOTE_* already present in the ambient environment (as in
         // shells descended from a running desktop's helper), plus local
         // inference env, so the full contents are asserted only in the
         // controlled-lookup tests below.
@@ -1510,18 +1510,18 @@ mod tests {
         let manifest_dir = Path::new("/repo/ui/apps/desktop-assistant/src-tauri");
 
         let env = HelperCommandSpec::remote_access_dev_env_with(manifest_dir, |name| match name {
-            "POOLSIDE_WORKTREE_SLOT" => Some("3".to_string()),
+            "CAMBER_WORKTREE_SLOT" => Some("3".to_string()),
             _ => None,
         });
         assert_eq!(
             env,
             vec![
                 (
-                    "POOLSIDE_REMOTE_DEV_SERVER".to_string(),
+                    "CAMBER_REMOTE_DEV_SERVER".to_string(),
                     "http://127.0.0.1:5209".to_string()
                 ),
                 (
-                    "POOLSIDE_REMOTE_STATIC".to_string(),
+                    "CAMBER_REMOTE_STATIC".to_string(),
                     "/repo/ui/apps/mobile-remote/dist".to_string()
                 ),
             ]
@@ -1529,8 +1529,8 @@ mod tests {
 
         // Launcher-provided env wins: nothing is injected on top of it.
         let env = HelperCommandSpec::remote_access_dev_env_with(manifest_dir, |name| match name {
-            "POOLSIDE_REMOTE_DEV_SERVER" => Some("http://127.0.0.1:9999".to_string()),
-            "POOLSIDE_REMOTE_STATIC" => Some("/elsewhere".to_string()),
+            "CAMBER_REMOTE_DEV_SERVER" => Some("http://127.0.0.1:9999".to_string()),
+            "CAMBER_REMOTE_STATIC" => Some("/elsewhere".to_string()),
             _ => None,
         });
         assert!(env.is_empty());
@@ -1541,7 +1541,7 @@ mod tests {
         let manifest_dir = Path::new("/repo/ui/apps/desktop-assistant/src-tauri");
         let sidecar = manifest_dir
             .join("binaries")
-            .join("poolside-mlx-sidecar-aarch64-apple-darwin");
+            .join("camber-mlx-sidecar-aarch64-apple-darwin");
 
         let env = HelperCommandSpec::local_inference_dev_env_with(
             manifest_dir,
@@ -1574,7 +1574,7 @@ mod tests {
             Some("aarch64-apple-darwin"),
             |name| {
                 if name == MLX_SIDECAR_ENV {
-                    Some("/custom/poolside-mlx-sidecar".to_string())
+                    Some("/custom/camber-mlx-sidecar".to_string())
                 } else {
                     None
                 }
@@ -1613,8 +1613,8 @@ mod tests {
                 "--api-version=2",
                 "--accept-multiclient",
                 "--build-flags=-tags=fts5",
-                "--log-dest=/tmp/poolside-helper-dlv-21375.log",
-                "./cmd/poolside-helper",
+                "--log-dest=/tmp/camber-helper-dlv-21375.log",
+                "./cmd/camber-helper",
                 "--",
                 "--stdin"
             ]
@@ -1640,7 +1640,7 @@ mod tests {
     fn production_command_uses_sidecar() {
         let spec = HelperCommandSpec::production();
 
-        assert_eq!(spec.program, "poolside-helper");
+        assert_eq!(spec.program, "camber-helper");
         assert!(spec.args.is_empty());
         assert_eq!(spec.cwd, None);
         assert!(spec.sidecar);
@@ -1650,19 +1650,19 @@ mod tests {
     #[test]
     fn forwards_local_inference_notifications() {
         assert!(should_forward_helper_notification(
-            "poolside/localInference/didChange"
+            "camber/localInference/didChange"
         ));
     }
 
     #[test]
-    fn forwards_every_poolside_notification_and_nothing_else() {
-        // The TS host routes; this layer only guards against non-poolside
+    fn forwards_every_camber_notification_and_nothing_else() {
+        // The TS host routes; this layer only guards against non-camber
         // traffic reaching the webview event bus.
         assert!(should_forward_helper_notification(
-            "poolside/acp/serverDidExit"
+            "camber/acp/serverDidExit"
         ));
         assert!(should_forward_helper_notification(
-            "poolside/acpNav/didChange"
+            "camber/acpNav/didChange"
         ));
         assert!(!should_forward_helper_notification("window/logMessage"));
         assert!(!should_forward_helper_notification(""));
@@ -1673,13 +1673,13 @@ mod tests {
         let (tx, _rx) = async_runtime::channel(2);
 
         assert!(tx
-            .try_send(notification("poolside/jsonrpc/notify", json!({ "seq": 1 })))
+            .try_send(notification("camber/jsonrpc/notify", json!({ "seq": 1 })))
             .is_ok());
         assert!(tx
-            .try_send(notification("poolside/jsonrpc/notify", json!({ "seq": 2 })))
+            .try_send(notification("camber/jsonrpc/notify", json!({ "seq": 2 })))
             .is_ok());
         assert!(tx
-            .try_send(notification("poolside/jsonrpc/notify", json!({ "seq": 3 })))
+            .try_send(notification("camber/jsonrpc/notify", json!({ "seq": 3 })))
             .is_err());
     }
 
@@ -1755,7 +1755,7 @@ mod tests {
 
     fn temp_log_dir(label: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!(
-            "poolside-helper-log-prune-{label}-{}-{}",
+            "camber-helper-log-prune-{label}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
@@ -1781,7 +1781,7 @@ mod tests {
         let dir = temp_log_dir("keeps-newest");
         for i in 0..25 {
             fs::write(
-                dir.join(format!("poolside-helper-2026-01-01T00-00-{i:02}.000.log")),
+                dir.join(format!("camber-helper-2026-01-01T00-00-{i:02}.000.log")),
                 "",
             )
             .unwrap();
@@ -1791,10 +1791,10 @@ mod tests {
 
         let names = session_log_names(&dir);
         assert_eq!(names.len(), 19);
-        assert_eq!(names[0], "poolside-helper-2026-01-01T00-00-06.000.log");
+        assert_eq!(names[0], "camber-helper-2026-01-01T00-00-06.000.log");
         assert_eq!(
             names.last().unwrap(),
-            "poolside-helper-2026-01-01T00-00-24.000.log"
+            "camber-helper-2026-01-01T00-00-24.000.log"
         );
 
         fs::remove_dir_all(dir).unwrap();
@@ -1803,7 +1803,7 @@ mod tests {
     #[test]
     fn prune_removes_the_legacy_single_log_file() {
         let dir = temp_log_dir("legacy");
-        fs::write(dir.join("poolside-helper.log"), "old").unwrap();
+        fs::write(dir.join("camber-helper.log"), "old").unwrap();
 
         prune_helper_session_logs(&dir, 19);
 
@@ -1816,17 +1816,17 @@ mod tests {
     fn prune_ignores_unrelated_files_and_small_session_counts() {
         let dir = temp_log_dir("unrelated");
         fs::write(dir.join("other.log"), "").unwrap();
-        fs::write(dir.join("poolside-helper-2026-01-01T00-00-00.000.log"), "").unwrap();
-        fs::write(dir.join("poolside-helper-2026-01-02T00-00-00.000.log"), "").unwrap();
+        fs::write(dir.join("camber-helper-2026-01-01T00-00-00.000.log"), "").unwrap();
+        fs::write(dir.join("camber-helper-2026-01-02T00-00-00.000.log"), "").unwrap();
 
         prune_helper_session_logs(&dir, 19);
 
         assert_eq!(
             session_log_names(&dir),
             vec![
+                "camber-helper-2026-01-01T00-00-00.000.log",
+                "camber-helper-2026-01-02T00-00-00.000.log",
                 "other.log",
-                "poolside-helper-2026-01-01T00-00-00.000.log",
-                "poolside-helper-2026-01-02T00-00-00.000.log",
             ]
         );
 

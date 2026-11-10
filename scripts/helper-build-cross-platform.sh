@@ -53,7 +53,7 @@ get_ldflags() {
     local commit="$3"
     local date="$4"
 
-    local base_ldflags="-s -w -X github.com/poolsideai/assistant/pkg/common/version.Tag=${tag} -X github.com/poolsideai/assistant/pkg/common/version.Commit=${commit} -X github.com/poolsideai/assistant/pkg/common/version.BuildTime=${date}"
+    local base_ldflags="-s -w -X github.com/appleton/camber/pkg/common/version.Tag=${tag} -X github.com/appleton/camber/pkg/common/version.Commit=${commit} -X github.com/appleton/camber/pkg/common/version.BuildTime=${date}"
 
     if [[ "$goos" == "windows" ]]; then
         echo "$base_ldflags -linkmode external -extldflags \"-static\""
@@ -258,10 +258,10 @@ EOF
 show_usage() {
     echo "Usage: $0 [OPTIONS] <tool> <platform|all>"
     echo ""
-    echo "Build poolside-helper for different platforms"
+    echo "Build camber-helper for different platforms"
     echo ""
     echo "Tools:"
-    echo "  poolside-helper"
+    echo "  camber-helper"
     echo ""
     echo "Platforms:"
     for platform in "${ALL_PLATFORMS[@]}"; do
@@ -274,9 +274,9 @@ show_usage() {
     echo "  --help       - Show this help message"
     echo ""
     echo "Examples:"
-    echo "  $0 poolside-helper windows/amd64"
-    echo "  $0 poolside-helper all"
-    echo "  $0 --clean poolside-helper windows/amd64"
+    echo "  $0 camber-helper windows/amd64"
+    echo "  $0 camber-helper all"
+    echo "  $0 --clean camber-helper windows/amd64"
     echo ""
     echo "Environment variables:"
     echo "  TAG          - Version tag (default: dev-TIMESTAMP)"
@@ -299,7 +299,7 @@ while [[ $# -gt 0 ]]; do
             show_usage
             exit 0
             ;;
-        poolside-helper)
+        camber-helper)
             if [[ -n "$TOOL" ]]; then
                 echo "Error: Tool already specified as '$TOOL'" >&2
                 echo "Cannot specify multiple tools in one invocation" >&2

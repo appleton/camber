@@ -16,12 +16,12 @@
 
 <script lang="ts">
   import type { SvelteHTMLElements } from "svelte/elements";
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
-  import { DiffStats } from "@poolsideai/components/diff";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
+  import { DiffStats } from "@camber/components/diff";
   import FileButton from "./FileButton.svelte";
   import { getToolContext } from "./ToolRoot.svelte";
-  import { CollapsibleTrigger } from "@poolsideai/components/collapsible";
+  import { CollapsibleTrigger } from "@camber/components/collapsible";
   import { getReadableFileInfo, shortenDirectoryPathsInText } from "../../shared/paths";
   import Tooltip from "../ui/Tooltip.svelte";
   import { getToolNameLabel, getToolPath, isMcpOutputFilePath } from "./toolPaths";

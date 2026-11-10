@@ -1,12 +1,12 @@
-import { poolsideGitStatus, type GitStatusOutput } from "@poolsideai/helperapi";
+import { camberGitStatus, type GitStatusOutput } from "@camber/helperapi";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DesktopGitChangesState } from "./DesktopGitChangesState.svelte";
 
-vi.mock("@poolsideai/helperapi", () => ({
-  poolsideGitStatus: vi.fn(),
+vi.mock("@camber/helperapi", () => ({
+  camberGitStatus: vi.fn(),
 }));
 
-const mockGitStatus = vi.mocked(poolsideGitStatus);
+const mockGitStatus = vi.mocked(camberGitStatus);
 
 function gitStatus(overrides: Partial<GitStatusOutput> = {}): GitStatusOutput {
   return {
@@ -26,7 +26,7 @@ function gitStatus(overrides: Partial<GitStatusOutput> = {}): GitStatusOutput {
 }
 
 async function flushMicrotasks(): Promise<void> {
-  // Settle the poolsideGitStatus promise chain inside refreshNow.
+  // Settle the camberGitStatus promise chain inside refreshNow.
   await Promise.resolve();
   await Promise.resolve();
 }

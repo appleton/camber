@@ -42,7 +42,7 @@ describe("Markdown host file opening", () => {
     await markdownHost.openFile?.("/tmp/notes.md", 12);
     expect(dispatch).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "poolside:desktop-open-file-tab",
+        type: "camber:desktop-open-file-tab",
         detail: { path: "/tmp/notes.md", line: 12, column: undefined },
       }),
     );

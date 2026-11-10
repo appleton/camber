@@ -17,21 +17,21 @@ TARGET_ARCH="${1:-}"
 mkdir -p "$DIST_DIR"
 cd "$DIST_DIR"
 
-runtime_artifact_dir="${POOLSIDE_RUNTIME_ARTIFACT_DIR:-}"
+runtime_artifact_dir="${CAMBER_RUNTIME_ARTIFACT_DIR:-}"
 
 if [[ -n "$runtime_artifact_dir" ]]; then
   [[ -d "$runtime_artifact_dir" ]] || {
     echo "Release runtime artifact directory does not exist: $runtime_artifact_dir" >&2
     exit 1
   }
-  helper_version="${POOLSIDE_RUNTIME_VERSION:-source/unknown}"
+  helper_version="${CAMBER_RUNTIME_VERSION:-source/unknown}"
 else
   REPO_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
-  helper_repository="${POOLSIDE_HELPER_REPOSITORY:-poolsideai/assistants}"
+  helper_repository="${CAMBER_HELPER_REPOSITORY:-appleton/camber}"
   helper_version="$(bash "$REPO_ROOT/scripts/resolve-helper-release.sh")"
 fi
 
-rm -f -- poolside-helper-* poolside-mlx-sidecar-* poolside-whisper-server-* \
+rm -f -- camber-helper-* camber-mlx-sidecar-* camber-whisper-server-* \
   ./*.tar.gz ./*.checksum ./*.metallib
 
 helper_pattern=""
@@ -40,23 +40,23 @@ case "$TARGET_ARCH" in
   "")
     ;;
   darwin-x64)
-    helper_pattern="poolside-helper-darwin-amd64.tar.gz"
+    helper_pattern="camber-helper-darwin-amd64.tar.gz"
     ;;
   darwin-arm64)
-    helper_pattern="poolside-helper-darwin-arm64.tar.gz"
-    supplemental_patterns+=("poolside-whisper-server-darwin-arm64.tar.gz")
+    helper_pattern="camber-helper-darwin-arm64.tar.gz"
+    supplemental_patterns+=("camber-whisper-server-darwin-arm64.tar.gz")
     ;;
   linux-x64)
-    helper_pattern="poolside-helper-linux-amd64.tar.gz"
+    helper_pattern="camber-helper-linux-amd64.tar.gz"
     ;;
   linux-arm64)
-    helper_pattern="poolside-helper-linux-arm64.tar.gz"
+    helper_pattern="camber-helper-linux-arm64.tar.gz"
     ;;
   win32-x64)
-    helper_pattern="poolside-helper-windows-amd64.tar.gz"
+    helper_pattern="camber-helper-windows-amd64.tar.gz"
     ;;
   win32-arm64)
-    helper_pattern="poolside-helper-windows-arm64.tar.gz"
+    helper_pattern="camber-helper-windows-arm64.tar.gz"
     ;;
   *)
     echo "Unsupported target: $TARGET_ARCH" >&2
@@ -83,13 +83,13 @@ if [[ -n "$runtime_artifact_dir" ]]; then
     done
   else
     for pattern in \
-      poolside-helper-darwin-amd64.tar.gz \
-      poolside-helper-darwin-arm64.tar.gz \
-      poolside-helper-linux-amd64.tar.gz \
-      poolside-helper-linux-arm64.tar.gz \
-      poolside-helper-windows-amd64.tar.gz \
-      poolside-helper-windows-arm64.tar.gz \
-      poolside-whisper-server-darwin-arm64.tar.gz; do
+      camber-helper-darwin-amd64.tar.gz \
+      camber-helper-darwin-arm64.tar.gz \
+      camber-helper-linux-amd64.tar.gz \
+      camber-helper-linux-arm64.tar.gz \
+      camber-helper-windows-amd64.tar.gz \
+      camber-helper-windows-arm64.tar.gz \
+      camber-whisper-server-darwin-arm64.tar.gz; do
       copy_runtime_asset "$pattern"
     done
   fi
@@ -111,9 +111,9 @@ rm -f -- ./*.tar.gz ./*.checksum
 
 # Local MLX inference is a Desktop-only capability. Universal helper releases
 # also contain the sidecar, so make sure it cannot leak into a VSIX.
-rm -f -- poolside-mlx-sidecar-* ./*.metallib
+rm -f -- camber-mlx-sidecar-* ./*.metallib
 
-binaries=(poolside-helper-* poolside-whisper-server-*)
+binaries=(camber-helper-* camber-whisper-server-*)
 if ((${#binaries[@]})); then
   chmod +x "${binaries[@]}"
 fi

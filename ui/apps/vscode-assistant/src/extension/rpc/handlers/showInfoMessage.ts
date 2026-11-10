@@ -1,17 +1,17 @@
-import { forceExhaustivenessCheck } from "@poolsideai/assistant/shared/language";
-import { InfoMessageType } from "@poolsideai/rpc";
+import { forceExhaustivenessCheck } from "@camber/assistant/shared/language";
+import { InfoMessageType } from "@camber/rpc";
 import * as vscode from "vscode";
 
 export function showInfoMessage(message: string, typ: InfoMessageType = InfoMessageType.info) {
   switch (typ) {
     case InfoMessageType.info:
-      vscode.window.showInformationMessage(`poolside: ${message}`);
+      vscode.window.showInformationMessage(`camber: ${message}`);
       break;
     case InfoMessageType.error:
-      vscode.window.showErrorMessage(`poolside: ${message}`);
+      vscode.window.showErrorMessage(`camber: ${message}`);
       break;
     case InfoMessageType.warning:
-      vscode.window.showWarningMessage(`poolside: ${message}`);
+      vscode.window.showWarningMessage(`camber: ${message}`);
       break;
     default:
       forceExhaustivenessCheck(typ);

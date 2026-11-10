@@ -93,7 +93,7 @@ vi.mock("vscode", () => ({
 vi.mock("./getWebviewHtml", () => ({
   getWebviewHtml: vi.fn(async (_system, webview, _view, variables) => {
     (webview as any).initialState = variables.find(
-      (variable: { key: string }) => variable.key === "POOLSIDE_INITIAL_ACP_CHAT_STATE",
+      (variable: { key: string }) => variable.key === "CAMBER_INITIAL_ACP_CHAT_STATE",
     )?.value;
     return "<html></html>";
   }),
@@ -169,13 +169,13 @@ describe("AcpChatPanels", () => {
     vi.setSystemTime(new Date("2026-01-01T00:00:01Z"));
     await panels.openSession({
       conversationId: "conversation:older",
-      agentServer: "poolside",
+      agentServer: "camber",
       sessionId: "older",
     });
     vi.setSystemTime(new Date("2026-01-01T00:00:02Z"));
     await panels.openSession({
       conversationId: "conversation:newer",
-      agentServer: "poolside",
+      agentServer: "camber",
       sessionId: "newer",
     });
 
@@ -215,7 +215,7 @@ describe("AcpChatPanels", () => {
 
     await panels.openSession({
       conversationId: "conversation:live",
-      agentServer: "poolside",
+      agentServer: "camber",
       sessionId: "session-live",
     });
     await panels.openSession({});
@@ -229,7 +229,7 @@ describe("AcpChatPanels", () => {
 
     await panels.openSession({});
     const initialState = initialACPChatState(createdPanels[0]);
-    panels.attachSessionId(initialState.conversationId, "poolside", "session-created");
+    panels.attachSessionId(initialState.conversationId, "camber", "session-created");
 
     await panels.openSession({});
 
@@ -241,12 +241,12 @@ describe("AcpChatPanels", () => {
 
     await panels.openSession({
       conversationId: "conversation:stable",
-      agentServer: "poolside",
+      agentServer: "camber",
       sessionId: "session-1",
     });
     await panels.openSession({
       conversationId: "conversation:stable",
-      agentServer: "poolside",
+      agentServer: "camber",
       sessionId: "session-2",
     });
 
@@ -259,11 +259,11 @@ describe("AcpChatPanels", () => {
 
     await panels.openSession({
       conversationId: "conversation:existing",
-      agentServer: "poolside",
+      agentServer: "camber",
       sessionId: "session-1",
     });
     await panels.openSession({
-      agentServer: "poolside",
+      agentServer: "camber",
       sessionId: "session-1",
     });
 
@@ -275,10 +275,10 @@ describe("AcpChatPanels", () => {
     const panels = createPanels();
 
     await panels.openSession({ conversationId: "conversation:pending" });
-    panels.attachSessionId("conversation:pending", "poolside", "session-created");
+    panels.attachSessionId("conversation:pending", "camber", "session-created");
     await panels.openSession({
       conversationId: "conversation:pending",
-      agentServer: "poolside",
+      agentServer: "camber",
       sessionId: "session-created",
     });
 
@@ -286,7 +286,7 @@ describe("AcpChatPanels", () => {
     expect(createdPanels[0].reveal).toHaveBeenCalledOnce();
   });
 
-  test("uses the agent icon URL for a non-poolside tab icon", async () => {
+  test("uses the agent icon URL for a non-camber tab icon", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => svgResponse(`<svg viewBox="0 0 16 16"><path d="M0 0h16v16H0z"/></svg>`)),
@@ -347,7 +347,7 @@ describe("AcpChatPanels", () => {
 
     await vi.waitFor(() => expect(writtenFiles.size).toBe(8));
 
-    expect(createdPanels[0].title).toBe("Poolside Chat");
+    expect(createdPanels[0].title).toBe("Camber Chat");
     expect(
       (createdPanels[0].iconPath as { dark: { toString(): string } }).dark.toString(),
     ).toContain("file:/global-storage/acp-tab-icons/");
@@ -490,9 +490,9 @@ describe("AcpChatPanels", () => {
     const panels = createPanels();
 
     await panels.openSession({
-      conversationId: "conversation:poolside",
-      agentServer: "poolside",
-      sessionId: "session-poolside",
+      conversationId: "conversation:camber",
+      agentServer: "camber",
+      sessionId: "session-camber",
     });
     await panels.openSession({
       conversationId: "conversation:claude",
@@ -500,7 +500,7 @@ describe("AcpChatPanels", () => {
       sessionId: "session-claude",
     });
 
-    await panels.routeInbound("poolside/acp/serverDidExit", {
+    await panels.routeInbound("camber/acp/serverDidExit", {
       agentServer: "claude-acp",
       error: "exit status 1",
     });
@@ -522,31 +522,31 @@ describe("AcpChatPanels", () => {
     const panels = createPanels();
 
     await panels.openSession({
-      conversationId: "conversation:poolside",
-      agentServer: "poolside",
-      sessionId: "session-poolside",
+      conversationId: "conversation:camber",
+      agentServer: "camber",
+      sessionId: "session-camber",
     });
     const panel = createdPanels[0];
     panel.webview.postMessage.mockResolvedValueOnce(false);
 
-    await panels.routeInbound("poolside/acp/serverDidExit", { agentServer: "poolside" });
+    await panels.routeInbound("camber/acp/serverDidExit", { agentServer: "camber" });
     // let the postMessage(false) promise settle so the replay is queued
     await Promise.resolve();
     await Promise.resolve();
 
     panel.webview.postMessage.mockClear();
-    panels.panelReady("conversation:poolside");
+    panels.panelReady("conversation:camber");
 
     expect(panel.webview.postMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         command: "acpAgentServerDidExit",
-        payload: [{ agentServer: "poolside" }],
+        payload: [{ agentServer: "camber" }],
       }),
     );
 
     // a second panelReady must not deliver the exit twice
     panel.webview.postMessage.mockClear();
-    panels.panelReady("conversation:poolside");
+    panels.panelReady("conversation:camber");
     expect(panel.webview.postMessage).not.toHaveBeenCalledWith(
       expect.objectContaining({ command: "acpAgentServerDidExit" }),
     );
@@ -562,15 +562,15 @@ describe("AcpChatPanels", () => {
 
     await panels.openSession({
       conversationId: "conversation:rebound",
-      agentServer: "poolside",
+      agentServer: "camber",
       sessionId: "session-old",
     });
     const panel = createdPanels[0];
-    panels.attachSessionId("conversation:rebound", "poolside", "session-new");
+    panels.attachSessionId("conversation:rebound", "camber", "session-new");
 
     panel.webview.postMessage.mockClear();
-    const request = panels.routeInbound("poolside/jsonrpc/request", {
-      agentServer: "poolside",
+    const request = panels.routeInbound("camber/jsonrpc/request", {
+      agentServer: "camber",
       message: {
         jsonrpc: "2.0",
         id: "req-1",
@@ -603,24 +603,24 @@ describe("AcpChatPanels", () => {
     const panels = createPanels();
 
     await panels.openSession({
-      conversationId: "conversation:poolside",
-      agentServer: "poolside",
-      sessionId: "session-poolside",
+      conversationId: "conversation:camber",
+      agentServer: "camber",
+      sessionId: "session-camber",
     });
     const panel = createdPanels[0];
 
     panel.webview.postMessage.mockResolvedValueOnce(false);
-    await panels.routeInbound("poolside/acp/serverDidExit", { agentServer: "poolside" });
+    await panels.routeInbound("camber/acp/serverDidExit", { agentServer: "camber" });
     panel.webview.postMessage.mockResolvedValueOnce(false);
-    await panels.routeInbound("poolside/acp/serverDidExit", {
-      agentServer: "poolside",
+    await panels.routeInbound("camber/acp/serverDidExit", {
+      agentServer: "camber",
       error: "exit status 1",
     });
     await Promise.resolve();
     await Promise.resolve();
 
     panel.webview.postMessage.mockClear();
-    panels.panelReady("conversation:poolside");
+    panels.panelReady("conversation:camber");
 
     const exitCalls = panel.webview.postMessage.mock.calls.filter(
       ([msg]: [{ command: string }]) => msg.command === "acpAgentServerDidExit",
@@ -628,7 +628,7 @@ describe("AcpChatPanels", () => {
     expect(exitCalls).toHaveLength(1);
     expect(exitCalls[0][0]).toEqual(
       expect.objectContaining({
-        payload: [{ agentServer: "poolside", error: "exit status 1" }],
+        payload: [{ agentServer: "camber", error: "exit status 1" }],
       }),
     );
   });

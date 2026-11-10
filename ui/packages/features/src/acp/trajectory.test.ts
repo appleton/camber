@@ -124,11 +124,11 @@ describe("collapseTrajectory", () => {
     expect(rows).toHaveLength(2);
   });
 
-  it("groups by _meta poolside/step_id when messageId is absent", () => {
+  it("groups by _meta camber/step_id when messageId is absent", () => {
     const rows = collapseTrajectory([
-      chunk("a", { meta: { "poolside/step_id": "step-1" } }),
-      chunk("b", { meta: { "poolside/step_id": "step-1" } }),
-      chunk("c", { meta: { "poolside/step_id": "step-2" } }),
+      chunk("a", { meta: { "camber/step_id": "step-1" } }),
+      chunk("b", { meta: { "camber/step_id": "step-1" } }),
+      chunk("c", { meta: { "camber/step_id": "step-2" } }),
     ]);
     expect(rows).toHaveLength(2);
     expect(rows[0].chunkCount).toBe(2);
@@ -326,15 +326,15 @@ describe("trajectory row model", () => {
   it("labels handshake/lifecycle frames without dumping JSON params", () => {
     const rows = buildTrajectoryRows(
       [
-        request("initialize", { clientInfo: { name: "poolside-desktop", version: "0.3.12" } }),
-        response("initialize", { agentInfo: { title: "Poolside", version: "1.0.7" } }),
+        request("initialize", { clientInfo: { name: "camber-desktop", version: "0.3.12" } }),
+        response("initialize", { agentInfo: { title: "Camber", version: "1.0.7" } }),
         request("session/load", { sessionId: "s1", cwd: "/repo" }, 2),
       ],
       { collapse: false },
     );
     expect(rows[0].title).toBe("Initialize");
-    expect(rows[0].summary).toBe("client poolside-desktop v0.3.12");
-    expect(rows[1].summary).toBe("agent Poolside v1.0.7");
+    expect(rows[0].summary).toBe("client camber-desktop v0.3.12");
+    expect(rows[1].summary).toBe("agent Camber v1.0.7");
     expect(rows[2].title).toBe("Load session");
     expect(rows[2].summary).toBe("/repo");
     rows.forEach((r) => expect(r.summary).not.toContain("{"));

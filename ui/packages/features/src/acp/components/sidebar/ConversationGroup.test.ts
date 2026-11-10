@@ -15,7 +15,7 @@ function animationDurations(animate: MockInstance<Element["animate"]>): number[]
 
 const sidebar = vi.hoisted(() => ({
   renameTarget: null,
-  reviewSessionKey: vi.fn(() => "poolside:conversation-1"),
+  reviewSessionKey: vi.fn(() => "camber:conversation-1"),
   liveSessionFor: vi.fn(() => null),
   isRenamingConversation: vi.fn(() => false),
   getSessionAgentServer: vi.fn(() => "poolside"),
@@ -29,7 +29,7 @@ const sidebar = vi.hoisted(() => ({
   closeConversationPreview: vi.fn(),
   rowState: vi.fn(() => ({
     selected: false,
-    agentName: "Poolside",
+    agentName: "Camber",
     iconUrl: undefined,
     iconClass: "",
     titleClass: "",

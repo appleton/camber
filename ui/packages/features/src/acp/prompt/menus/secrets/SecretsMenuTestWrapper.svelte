@@ -1,8 +1,8 @@
 <script lang="ts">
-  import * as Prompt from "@poolsideai/components/prompt";
+  import * as Prompt from "@camber/components/prompt";
   import { _setSecretsContextForTests, type SecretsRepository } from "../../../../secrets";
-  import type { SecretSummary } from "@poolsideai/helperapi/schemas";
-  import type { RPCError } from "@poolsideai/rpc/generics";
+  import type { SecretSummary } from "@camber/helperapi/schemas";
+  import type { RPCError } from "@camber/rpc/generics";
   import type { Snippet } from "svelte";
 
   interface Props {

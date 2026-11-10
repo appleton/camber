@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { CollapsibleContent } from "@poolsideai/components/collapsible";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import { CollapsibleContent } from "@camber/components/collapsible";
+  import type { WorkspaceFolder } from "@camber/rpc";
   import type { ToolCall } from "../../../types";
   import ToolRoot from "../../shared/ToolRoot.svelte";
   import ToolBody from "../../shared/ToolBody.svelte";

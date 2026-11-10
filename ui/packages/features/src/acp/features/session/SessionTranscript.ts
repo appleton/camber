@@ -27,7 +27,7 @@ export class ACPSessionTranscript {
       s.plan = null;
       s.metadataManager.reset();
     }
-    s.extensions.poolside?.reset();
+    s.extensions.camber?.reset();
     s.usageState.reset();
     s.lastRemoteMessageId = null;
     s.ignoredMessageIds = new Set();

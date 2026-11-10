@@ -1,5 +1,5 @@
 {
-  "name": "@poolsideai/tailwind-config",
+  "name": "@camber/tailwind-config",
   "version": "2.3.53",
   "private": true,
   "description": "Common tailwind configuration",
@@ -29,14 +29,14 @@
       "prettier --ignore-unknown --write"
     ]
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "dependencies": {
     "tailwind-variants": "catalog:"
   },
   "devDependencies": {
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "typescript": "catalog:"

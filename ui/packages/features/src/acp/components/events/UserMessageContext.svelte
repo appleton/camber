@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ContentBlock, ResourceLink, EmbeddedResource } from "@agentclientprotocol/sdk";
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { slide } from "svelte/transition";
   import { appState } from "../../hostAdapter";
   import { rpc } from "../../hostRpc";

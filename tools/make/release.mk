@@ -12,16 +12,16 @@ release-visual-studio: ## Release Visual Studio assistant
 	@echo "In a Windows VM, in Visual Studio, make sure Release configuration is selected and run a build."
 	@echo "Press enter to continue once the build is done."
 	@read dummy
-	@if [ ! -f "ui/apps/vs-assistant/bin/Release/net472/poolside-assistant.vsix" ]; then \
+	@if [ ! -f "ui/apps/vs-assistant/bin/Release/net472/camber-assistant.vsix" ]; then \
 		echo "Error: missing assistant VSIX build output"; \
 		exit 1; \
 	fi
-	cp ui/apps/vs-assistant/bin/Release/net472/poolside-assistant.vsix ui/apps/vs-assistant/bin/Release/poolside-assistant-$(VS_ASSISTANT_VERSION).vsix
+	cp ui/apps/vs-assistant/bin/Release/net472/camber-assistant.vsix ui/apps/vs-assistant/bin/Release/camber-assistant-$(VS_ASSISTANT_VERSION).vsix
 	@set -e; \
 	version="$(VS_ASSISTANT_VERSION)"; \
 	minor=$${version#*.}; minor=$${minor%%.*}; \
 	if [ $$((minor % 2)) -eq 0 ]; then channel=stable; else channel=nightly; fi; \
-	plan=$$(pnpm -s -F @poolsideai/release-helper find-version plan vs \
+	plan=$$(pnpm -s -F @camber/release-helper find-version plan vs \
 		--channel "$$channel" --version "$$version" \
 		--tag-prefix vs-assistant \
 		--destination "$$(ui/apps/vs-assistant/scripts/extension-identity.sh)" \
@@ -32,5 +32,5 @@ release-visual-studio: ## Release Visual Studio assistant
 	git tag --annotate --message "$$annotation" "$$tag" "$$sha"; \
 	git push origin "$$tag"; \
 	if [ "$$channel" = stable ]; then release_flags="--latest"; else release_flags="--prerelease --latest=false"; fi; \
-	gh release create "$$tag" "ui/apps/vs-assistant/bin/Release/poolside-assistant-$$version.vsix" \
+	gh release create "$$tag" "ui/apps/vs-assistant/bin/Release/camber-assistant-$$version.vsix" \
 		$$release_flags --title "$$tag" --generate-notes

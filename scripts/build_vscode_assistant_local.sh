@@ -22,7 +22,7 @@ set -x
 LDFLAGS=""
 GOOS=${GOOS:-"darwin"}
 GOARCH=${GOARCH:-"arm64"}
-OUTPUT_BINARY="poolside-helper-${GOOS}-${GOARCH}"
+OUTPUT_BINARY="camber-helper-${GOOS}-${GOARCH}"
 
 if [[ $GOOS == "windows" ]]; then
   LDFLAGS+=" -linkmode external -extldflags \"-static\""
@@ -31,10 +31,10 @@ fi
 # Build extension code.
 ./node_modules/.bin/turbo build --filter="./ui/apps/vscode-assistant"
 
-# Build poolside helper.
-GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=1 go build -tags=fts5 -ldflags "-s -w $LDFLAGS" -buildvcs=false -mod=readonly -o "$OUTPUT_BINARY" ./cmd/poolside-helper
+# Build camber helper.
+GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=1 go build -tags=fts5 -ldflags "-s -w $LDFLAGS" -buildvcs=false -mod=readonly -o "$OUTPUT_BINARY" ./cmd/camber-helper
 
-mv poolside-helper-* ./ui/apps/vscode-assistant/extension
+mv camber-helper-* ./ui/apps/vscode-assistant/extension
 
 # Package extension for VS Code.
-pnpm -F poolside-assistant run package
+pnpm -F camber-assistant run package

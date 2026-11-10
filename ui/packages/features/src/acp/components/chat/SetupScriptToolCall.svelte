@@ -1,7 +1,7 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import type { IconName } from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import Icon from "@camber/components/icon";
+  import type { IconName } from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
   import TerminalOutputView from "../TerminalOutputView.svelte";
   import type { AcpSetupScriptOutput } from "../../features/SetupScriptOutputRepository.svelte";
 

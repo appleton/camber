@@ -1,1 +1,0 @@
-See 'adding methods' in the poolside-helper/README.md.

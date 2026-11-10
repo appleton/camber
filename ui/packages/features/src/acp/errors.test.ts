@@ -134,7 +134,7 @@ describe("normalizeACPError", () => {
     const requestError = Object.assign(new Error("could not open a new TTY"), {
       name: "RequestError",
       code: -32000,
-      data: { message: "Run `pool login` in a terminal to authenticate to Poolside." },
+      data: { message: "Run `pool login` in a terminal to authenticate to Camber." },
     });
 
     const error = normalizeACPError(requestError);
@@ -144,7 +144,7 @@ describe("normalizeACPError", () => {
       name: "ACPError",
       message: "could not open a new TTY",
       code: -32000,
-      data: { message: "Run `pool login` in a terminal to authenticate to Poolside." },
+      data: { message: "Run `pool login` in a terminal to authenticate to Camber." },
     });
   });
 });

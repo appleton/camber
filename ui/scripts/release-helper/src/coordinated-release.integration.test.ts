@@ -21,9 +21,9 @@ interface CoordinatedPlan {
 
 const script = resolve(dirname(fileURLToPath(import.meta.url)), "find-version.ts");
 const tsx = resolve(dirname(fileURLToPath(import.meta.url)), "../node_modules/.bin/tsx");
-const vscodeDestination = "poolside-ai.acp-assistant";
-const desktopDestination = "poolside/desktop-assistant";
-const vsDestination = "Poolside.vs-acp-assistant";
+const vscodeDestination = "appleton.acp-assistant";
+const desktopDestination = "camber/desktop-assistant";
+const vsDestination = "Camber.vs-acp-assistant";
 
 function git(repo: string, ...args: string[]): string {
   return execFileSync("git", args, { cwd: repo, encoding: "utf8" }).trim();
@@ -73,7 +73,7 @@ function bootstrap(
     destination,
     "--create-lineage",
   ];
-  if (product === "vscode") args.push("--display-name", "Poolside Assistant");
+  if (product === "vscode") args.push("--display-name", "Camber Assistant");
   const plan = runCli<ProductPlan>(repo, ...args);
   git(repo, "tag", "--annotate", plan.tag, "--message", plan.tagAnnotation);
   return plan;
@@ -92,7 +92,7 @@ function coordinate(repo: string, ...args: string[]): CoordinatedPlan {
     "--vscode-destination",
     vscodeDestination,
     "--vscode-display-name",
-    "Poolside Assistant",
+    "Camber Assistant",
     "--desktop-destination",
     desktopDestination,
     ...args,

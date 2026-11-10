@@ -32,8 +32,8 @@
   }: Props = $props();
 
   const desktopRpc = rpc as DesktopOpenRPC;
-  const DESKTOP_SETTINGS_CHANGED_EVENT = "poolside:desktop-settings-changed";
-  const DESKTOP_OPEN_TARGET_OPENER_STORAGE_KEY = "poolside:desktop-open-target-opener-id";
+  const DESKTOP_SETTINGS_CHANGED_EVENT = "camber:desktop-settings-changed";
+  const DESKTOP_OPEN_TARGET_OPENER_STORAGE_KEY = "camber:desktop-open-target-opener-id";
   const initialDesktopOpeners = $appState.environment.desktopOpeners;
   const normalizedInitialDesktopOpeners = Array.isArray(initialDesktopOpeners)
     ? (initialDesktopOpeners as DesktopTargetOpener[])

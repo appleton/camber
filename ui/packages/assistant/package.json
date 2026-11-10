@@ -1,9 +1,9 @@
 {
-  "name": "@poolsideai/assistant",
+  "name": "@camber/assistant",
   "version": "2.3.53",
   "private": true,
   "repository": {
-    "url": "https://github.com/poolsideai/assistants"
+    "url": "https://github.com/appleton/camber"
   },
   "sideEffects": [
     "**/*.css"
@@ -65,8 +65,8 @@
     "test": "vitest run",
     "test:storybook": "vitest run --project storybook",
     "test:storybook:watch": "vitest --project storybook",
-    "test:unit": "POOLSIDE_SKIP_STORYBOOK_VITE=1 vitest run --project unit",
-    "test:unit:watch": "POOLSIDE_SKIP_STORYBOOK_VITE=1 vitest --project unit",
+    "test:unit": "CAMBER_SKIP_STORYBOOK_VITE=1 vitest run --project unit",
+    "test:unit:watch": "CAMBER_SKIP_STORYBOOK_VITE=1 vitest --project unit",
     "test:watch": "vitest"
   },
   "lint-staged": {
@@ -76,12 +76,12 @@
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^0.28.1",
+    "@camber/components": "workspace:*",
+    "@camber/features": "workspace:*",
+    "@camber/helperapi": "workspace:*",
+    "@camber/lib": "workspace:*",
+    "@camber/rpc": "workspace:*",
     "@melt-ui/svelte": "catalog:",
-    "@poolsideai/components": "workspace:*",
-    "@poolsideai/features": "workspace:*",
-    "@poolsideai/helperapi": "workspace:*",
-    "@poolsideai/lib": "workspace:*",
-    "@poolsideai/rpc": "workspace:*",
     "@rive-app/canvas-lite": "^2.25.7",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "autosize": "^6.0.1",
@@ -92,14 +92,14 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/storybook-config": "workspace:*",
+    "@camber/svelte-config": "workspace:*",
+    "@camber/tailwind-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
+    "@camber/vite-config": "workspace:*",
     "@chromatic-com/storybook": "catalog:",
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/storybook-config": "workspace:*",
-    "@poolsideai/svelte-config": "workspace:*",
-    "@poolsideai/tailwind-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
-    "@poolsideai/vite-config": "workspace:*",
     "@storybook/addon-a11y": "catalog:",
     "@storybook/addon-svelte-csf": "catalog:",
     "@storybook/addon-vitest": "catalog:",

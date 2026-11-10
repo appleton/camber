@@ -1,9 +1,0 @@
-{
-  "extends": "@poolsideai/tsconfig/base",
-  "compilerOptions": {
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "lib": ["es2023", "dom"],
-    "types": ["node"]
-  }
-}

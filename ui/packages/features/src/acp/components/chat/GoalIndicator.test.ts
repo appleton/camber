@@ -1,4 +1,4 @@
-import { initializeStatefulModule as initializeHelperApi } from "@poolsideai/helperapi";
+import { initializeStatefulModule as initializeHelperApi } from "@camber/helperapi";
 import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { get } from "svelte/store";

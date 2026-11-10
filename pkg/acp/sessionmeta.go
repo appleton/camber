@@ -8,8 +8,8 @@ package acp
 // instead of racing a client-side echo upsert over a possibly-flaky socket.
 // Agents ignore unknown _meta keys per the ACP spec.
 const (
-	MetaKeySessionConversationID = "poolside/conversation_id"
-	MetaKeySessionHandoffID      = "poolside/handoff_id"
+	MetaKeySessionConversationID = "camber/conversation_id"
+	MetaKeySessionHandoffID      = "camber/handoff_id"
 )
 
 // DecodeSessionConversationID extracts the conversation id from a session/new
@@ -23,7 +23,7 @@ func DecodeSessionConversationID(meta any) string {
 	return v
 }
 
-// DecodeSessionHandoffID extracts the prepared Poolside handoff id from a
+// DecodeSessionHandoffID extracts the prepared Camber handoff id from a
 // session/new request. The helper uses it to commit the frozen source leg in
 // the same transaction that rebinds the conversation to the target session.
 func DecodeSessionHandoffID(meta any) string {

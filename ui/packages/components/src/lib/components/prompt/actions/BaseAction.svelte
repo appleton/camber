@@ -2,7 +2,7 @@
   import { onMount, type Snippet } from "svelte";
   import Icon, { type IconName } from "../../icon/index.js";
   import { getActions, type Action } from "../context/prompt.js";
-  import { generateId } from "@poolsideai/lib/string";
+  import { generateId } from "@camber/lib/string";
   import { getItem } from "../context/item.js";
   import { portal } from "../../../attachments/portal.js";
   import type { KebabCase } from "type-fest";

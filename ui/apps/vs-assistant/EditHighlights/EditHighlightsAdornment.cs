@@ -11,9 +11,9 @@ using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Formatting;
 using Microsoft.VisualStudio.Text.Tagging;
-using Poolside.Assistant.WebViewInfrastructure;
+using Camber.Assistant.WebViewInfrastructure;
 
-namespace Poolside.Assistant.EditHighlights
+namespace Camber.Assistant.EditHighlights
 {
     internal class EditHighlightsAdornment
     {
@@ -27,7 +27,7 @@ namespace Poolside.Assistant.EditHighlights
         {
             this.view = view ?? throw new ArgumentNullException(nameof(view));
             this.tagAggregator = tagAggregator ?? throw new ArgumentNullException(nameof(tagAggregator));
-            adornmentLayer = view.GetAdornmentLayer("PoolsideEditHighlightLayer");
+            adornmentLayer = view.GetAdornmentLayer("CamberEditHighlightLayer");
 
             // Create the brush for highlighting
             ThreadHelper.ThrowIfNotOnUIThread();

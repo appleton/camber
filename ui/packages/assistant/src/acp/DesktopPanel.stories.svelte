@@ -2,7 +2,7 @@
   import { defineMeta } from "@storybook/addon-svelte-csf";
   import { within } from "storybook/test";
   import DesktopPanel from "./DesktopPanel.svelte";
-  import type { RPCError } from "@poolsideai/rpc/generics";
+  import type { RPCError } from "@camber/rpc/generics";
 
   const { Story } = defineMeta({
     component: DesktopPanel,
@@ -41,7 +41,7 @@
           };
         case "jsonrpc":
           switch (args[0]) {
-            case "poolside/getUserConfig":
+            case "camber/getUserConfig":
               return {
                 settingsFilePaths: [],
               };

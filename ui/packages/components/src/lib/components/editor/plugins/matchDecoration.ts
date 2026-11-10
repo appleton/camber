@@ -1,4 +1,4 @@
-import { cx } from "@poolsideai/tailwind-config/tv";
+import { cx } from "@camber/tailwind-config/tv";
 import {
   Plugin,
   PluginKey,

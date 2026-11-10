@@ -1,13 +1,13 @@
-import type { EnrichedContextSource } from "@poolsideai/rpc";
+import type { EnrichedContextSource } from "@camber/rpc";
 
 export default {};
 
 /**
- * global adds a type definition for the window.POOLSIDE_APP_STATE variable
+ * global adds a type definition for the window.CAMBER_APP_STATE variable
  * which is injected into the global scope of the webview window on start up.
  */
 declare global {
-  var POOLSIDE_INITIAL_STATE: {
+  var CAMBER_INITIAL_STATE: {
     accessToken?: string | undefined;
     keybindings?: Keybindings;
     disabledEnrichments?: EnrichedContextSource[];

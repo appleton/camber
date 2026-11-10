@@ -15,11 +15,11 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/format/gitignore"
 	"github.com/spf13/afero"
 
-	"github.com/poolsideai/assistant/pkg/common/data"
-	"github.com/poolsideai/assistant/pkg/common/sync/bufferpool"
-	"github.com/poolsideai/assistant/pkg/git"
-	"github.com/poolsideai/assistant/pkg/workspace/afero2billy"
-	"github.com/poolsideai/assistant/pkg/workspace/path"
+	"github.com/appleton/camber/pkg/common/data"
+	"github.com/appleton/camber/pkg/common/sync/bufferpool"
+	"github.com/appleton/camber/pkg/git"
+	"github.com/appleton/camber/pkg/workspace/afero2billy"
+	"github.com/appleton/camber/pkg/workspace/path"
 )
 
 const defaultLRUSize = 100000
@@ -125,11 +125,11 @@ func defaultPatterns() []gitignore.Pattern {
 }
 
 const (
-	commentPrefix      = "#"
-	gitDir             = ".git"
-	gitignoreFile      = ".gitignore"
-	poolsideignoreFile = ".poolsideignore"
-	infoExcludeFile    = gitDir + string(filepath.Separator) + "info" + string(filepath.Separator) + "exclude"
+	commentPrefix    = "#"
+	gitDir           = ".git"
+	gitignoreFile    = ".gitignore"
+	camberignoreFile = ".camberignore"
+	infoExcludeFile  = gitDir + string(filepath.Separator) + "info" + string(filepath.Separator) + "exclude"
 )
 
 // This was copied from "github.com/go-git/go-git/v5/internal/path_util"
@@ -186,14 +186,14 @@ func readIgnoreFile(
 // recursively traversing through the directory structure. The result is in
 // the ascending order of priority (last higher).
 // This was copied from "github.com/go-git/go-git/v5/plumbing/format/gitignore" and support was
-// added for .poolsideignore files.
+// added for .camberignore files.
 func readPatterns(fs billy.Filesystem, path []string) (ps []gitignore.Pattern, err error) {
 	ps, _ = readIgnoreFile(fs, path, infoExcludeFile)
 
 	subps, _ := readIgnoreFile(fs, path, gitignoreFile)
 	ps = append(ps, subps...)
 
-	subps, _ = readIgnoreFile(fs, path, poolsideignoreFile)
+	subps, _ = readIgnoreFile(fs, path, camberignoreFile)
 	ps = append(ps, subps...)
 
 	var fis []os.FileInfo

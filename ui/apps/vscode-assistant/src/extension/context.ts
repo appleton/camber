@@ -1,4 +1,4 @@
-import type { Selection } from "@poolsideai/rpc";
+import type { Selection } from "@camber/rpc";
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
@@ -24,7 +24,7 @@ export function getWorkspaces() {
 // reach of glob/grep/shell for anyone who had not set defaultWorkingDirectory.
 export function getDefaultCwd(): string {
   const configured = vscode.workspace
-    .getConfiguration("poolside")
+    .getConfiguration("camber")
     .get<string>("defaultWorkingDirectory");
 
   // A configured directory is the user's call, so it is returned as it stands - the
@@ -59,7 +59,7 @@ function ensureScratchDirectory(): string {
 function scratchDirectory(): string {
   const localAppData = process.env.LOCALAPPDATA;
   if (process.platform === "win32" && localAppData) {
-    return path.join(localAppData, "poolside", "scratch");
+    return path.join(localAppData, "camber", "scratch");
   }
   return path.join(os.homedir(), ".poolside", "scratch");
 }

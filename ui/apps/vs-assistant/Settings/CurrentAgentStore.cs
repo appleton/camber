@@ -3,14 +3,14 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Settings;
 using System;
 
-namespace Poolside.Assistant.Settings
+namespace Camber.Assistant.Settings
 {
     // Persists the currently selected ACP agent id across IDE sessions. The agent itself is
     // chosen in the webview (ACP chat); the host only remembers its id so it can seed the helper
     // configuration and the webview's initial state on startup.
     internal class CurrentAgentStore
     {
-        private const string CollectionPath = "PoolsideAssistant.Models";
+        private const string CollectionPath = "CamberAssistant.Models";
         private const string AgentModelIdKey = "AgentModelId";
         private readonly WritableSettingsStore settingsStore;
 

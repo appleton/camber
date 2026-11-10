@@ -1,5 +1,5 @@
-import { basename, normalize } from "@poolsideai/lib/path";
-import type { Configuration, Keybindings, Language, WorkspaceFolder } from "@poolsideai/rpc";
+import { basename, normalize } from "@camber/lib/path";
+import type { Configuration, Keybindings, Language, WorkspaceFolder } from "@camber/rpc";
 import { get, writable, type Updater, type Writable } from "svelte/store";
 import type { DesktopOpenerInfo } from "./desktopOpeners";
 

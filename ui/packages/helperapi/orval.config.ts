@@ -9,30 +9,30 @@ import { jsonrpcClientBuilder } from "./src/orval/jsonrpcGenerator";
 // those hosts, but emitting TypeScript call wrappers for them leaves functions
 // that no application code can call.
 const hostOwnedPaths = new Set([
-  "/poolside/abort",
-  "/poolside/acp/_poolside/mcp/delete_secrets",
-  "/poolside/acp/_poolside/mcp/set_input_variable",
-  "/poolside/acp/_poolside/mcp/set_server_disabled",
-  "/poolside/acp/_poolside/mcp/settings",
-  "/poolside/acpNav/getFileOpener",
-  "/poolside/acpNav/getKeybindings",
-  "/poolside/acpNav/setFileOpener",
-  "/poolside/acpNav/setKeybindings",
-  "/poolside/deleteMcpSecrets",
-  "/poolside/hello",
-  "/poolside/mcpOAuthCallback",
-  "/poolside/mcpOAuthInitiate",
-  "/poolside/mcpServers/setPoolServerDisabled",
-  "/poolside/remote/resume",
-  "/poolside/remoteTerminal/attach",
-  "/poolside/remoteTerminal/clear",
-  "/poolside/remoteTerminal/closeForPath",
-  "/poolside/remoteTerminal/create",
-  "/poolside/remoteTerminal/delete",
-  "/poolside/remoteTerminal/list",
-  "/poolside/remoteTerminal/resize",
-  "/poolside/remoteTerminal/write",
-  "/poolside/runtimeFiles",
+  "/camber/abort",
+  "/camber/acp/_poolside/mcp/delete_secrets",
+  "/camber/acp/_poolside/mcp/set_input_variable",
+  "/camber/acp/_poolside/mcp/set_server_disabled",
+  "/camber/acp/_poolside/mcp/settings",
+  "/camber/acpNav/getFileOpener",
+  "/camber/acpNav/getKeybindings",
+  "/camber/acpNav/setFileOpener",
+  "/camber/acpNav/setKeybindings",
+  "/camber/deleteMcpSecrets",
+  "/camber/hello",
+  "/camber/mcpOAuthCallback",
+  "/camber/mcpOAuthInitiate",
+  "/camber/mcpServers/setPoolServerDisabled",
+  "/camber/remote/resume",
+  "/camber/remoteTerminal/attach",
+  "/camber/remoteTerminal/clear",
+  "/camber/remoteTerminal/closeForPath",
+  "/camber/remoteTerminal/create",
+  "/camber/remoteTerminal/delete",
+  "/camber/remoteTerminal/list",
+  "/camber/remoteTerminal/resize",
+  "/camber/remoteTerminal/write",
+  "/camber/runtimeFiles",
   "/textDocument/didChange",
   "/textDocument/didClose",
   "/textDocument/didOpen",
@@ -45,7 +45,7 @@ const hostOwnedPaths = new Set([
 ]);
 
 export default defineConfig({
-  poolsideHelper: {
+  camberHelper: {
     input: {
       target: process.env.LOCAL_SCHEMA ?? "http://localhost:8080/openapi.yaml",
       override: {
@@ -180,11 +180,7 @@ function pruneUnusedGeneratedSchemas() {
       "**/__tests__/**",
     ],
   })) {
-    collectNamedImports(
-      fs.readFileSync(file, "utf8"),
-      "@poolsideai/helperapi/schemas",
-      neededNames,
-    );
+    collectNamedImports(fs.readFileSync(file, "utf8"), "@camber/helperapi/schemas", neededNames);
   }
   for (const file of glob.sync("./src/schemas/*.ts", { ignore: ["**/*.test.ts"] })) {
     collectNamedImports(fs.readFileSync(file, "utf8"), "../gen/schemas", neededNames);

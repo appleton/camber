@@ -6,7 +6,7 @@ inputs:
     description: "Path to the tar.gz archive containing the Windows binary"
     required: true
   binary_name:
-    description: "Name of the binary without extension (e.g., poolside-helper-windows-amd64)"
+    description: "Name of the binary without extension (e.g., camber-helper-windows-amd64)"
     required: true
   username:
     description: "SSL.com account username"

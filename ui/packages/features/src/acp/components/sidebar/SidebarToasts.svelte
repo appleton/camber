@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { InfoMessageType } from "@poolsideai/rpc";
+  import Icon from "@camber/components/icon";
+  import { InfoMessageType } from "@camber/rpc";
   import { onMount } from "svelte";
   import { slide } from "svelte/transition";
   import { sidebarToasts } from "./sidebarToastsState.svelte";

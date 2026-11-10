@@ -1,4 +1,4 @@
 {
-  "extends": "@poolsideai/tsconfig/svelte",
+  "extends": "@camber/tsconfig/svelte",
   "include": ["**/*.js", "**/*.ts", "**/*.svelte"]
 }

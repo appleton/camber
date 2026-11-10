@@ -1,6 +1,6 @@
 import type { SessionId } from "@agentclientprotocol/sdk";
-import { poolsideAcpNavList } from "@poolsideai/helperapi";
-import { failure, success, waiting, type AsyncState } from "@poolsideai/lib/async-state";
+import { camberAcpNavList } from "@camber/helperapi";
+import { failure, success, waiting, type AsyncState } from "@camber/lib/async-state";
 import { createContext } from "svelte";
 import { DEFAULT_AGENT_SERVER, normalizeAgentServerName } from "../agentServers";
 import { normalizeACPError, type ACPRequestError } from "../errors";
@@ -57,7 +57,7 @@ export class ACPLocalHistoryRepositoryWriter {
 
     let navState: ArchiveNavState;
     try {
-      navState = await poolsideAcpNavList({});
+      navState = await camberAcpNavList({});
     } catch (error) {
       // The archive shows ONLY conversations present in the archived nav set,
       // so a failed nav call must surface as the pane's error state — not a

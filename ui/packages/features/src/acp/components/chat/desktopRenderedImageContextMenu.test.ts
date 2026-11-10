@@ -17,8 +17,8 @@ describe("desktop rendered image context menu", () => {
   it("captures local path metadata and the workspace-relative path", () => {
     const image = document.createElement("img");
     image.src = "data:image/png;base64,aW1hZ2U=";
-    image.dataset["poolsideImagePath"] = "/workspace/assets/photo.png";
-    image.dataset["poolsideImageName"] = "/workspace/assets/photo.png";
+    image.dataset["camberImagePath"] = "/workspace/assets/photo.png";
+    image.dataset["camberImageName"] = "/workspace/assets/photo.png";
 
     expect(desktopRenderedImageTarget(image, ["/workspace"])).toEqual({
       src: "data:image/png;base64,aW1hZ2U=",

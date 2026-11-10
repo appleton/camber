@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Poolside.Assistant.Context.Prompt;
+using Camber.Assistant.Context.Prompt;
 
-namespace Poolside.Assistant.Context
+namespace Camber.Assistant.Context
 {
     internal class GitBranchContextProvider : GitBasedContextProvider
     {

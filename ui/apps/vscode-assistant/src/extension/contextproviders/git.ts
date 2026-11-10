@@ -1,8 +1,4 @@
-import {
-  EnrichedContextKind,
-  EnrichedContextSource,
-  type PromptContextFacet,
-} from "@poolsideai/rpc";
+import { EnrichedContextKind, EnrichedContextSource, type PromptContextFacet } from "@camber/rpc";
 import * as vscode from "vscode";
 import { System } from "../system";
 import type { GitExtension } from "./gitExtension";

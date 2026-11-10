@@ -1,4 +1,4 @@
-import type { ImageFileData } from "@poolsideai/rpc";
+import type { ImageFileData } from "@camber/rpc";
 import * as path from "path";
 import * as vscode from "vscode";
 

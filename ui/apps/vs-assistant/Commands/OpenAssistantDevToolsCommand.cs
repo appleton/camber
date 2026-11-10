@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Commands
+namespace Camber.Assistant.Commands
 {
-    internal class OpenAssistantDevToolsCommand : BasePoolsideHelpCommand
+    internal class OpenAssistantDevToolsCommand : BaseCamberHelpCommand
     {
         public const int CommandId = 0x0100;
 

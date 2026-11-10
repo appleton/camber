@@ -37,7 +37,7 @@ export function parseClaudePromptSuggestion(
   };
 }
 
-/** Enable the narrowly scoped Claude SDK events that Poolside understands. */
+/** Enable the narrowly scoped Claude SDK events that Camber understands. */
 export function withClaudeSessionFeatures(
   agentServer: string,
   meta?: Record<string, unknown>,

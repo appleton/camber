@@ -10,9 +10,9 @@
 
   const terminalMethod: ACPAuthMethod = {
     type: "terminal",
-    id: "poolside-login",
-    name: "Log in to Poolside",
-    description: "Authenticate with the Poolside CLI.",
+    id: "camber-login",
+    name: "Log in to Camber",
+    description: "Authenticate with the Camber CLI.",
     command: "pool",
     args: ["login"],
   };
@@ -91,7 +91,7 @@
   }}
   play={async ({ canvas }) => {
     const heading = canvas.getByRole("heading", {
-      name: "Poolside requires authentication before it can start a session.",
+      name: "Camber requires authentication before it can start a session.",
     });
     const action = canvas.getByRole("button", { name: agentMethod.name });
     const headingRect = heading.getBoundingClientRect();

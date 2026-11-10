@@ -11,7 +11,7 @@ import {
   type ClassifiedQuery,
   hasTrailingPathSeparator,
   lastSeparatorIndex,
-} from "@poolsideai/lib/path-query";
+} from "@camber/lib/path-query";
 
 export interface FileLike {
   path: string;

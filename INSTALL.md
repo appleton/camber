@@ -1,9 +1,9 @@
-# Install Poolside Assistant
+# Install Camber Assistant
 
-To use Poolside Assistant, see
+To use Camber Assistant, see
 [Install a prebuilt release](#install-a-prebuilt-release).
 
-To build, modify, or contribute to Poolside Assistant, see
+To build, modify, or contribute to Camber Assistant, see
 [Build from source](#build-from-source).
 
 ## Install a prebuilt release
@@ -13,19 +13,19 @@ for each surface. The steps below use the releases page directly.
 
 ### Desktop app on macOS Apple Silicon
 
-1. Open the [releases page](https://github.com/poolsideai/assistants/releases)
+1. Open the [releases page](https://github.com/appleton/camber/releases)
    and open the newest **desktop/** release.
 2. Download the `.dmg` asset.
-3. Open the `.dmg` and drag **Poolside** to **Applications**.
-4. Launch **Poolside** from **Applications**.
+3. Open the `.dmg` and drag **Camber** to **Applications**.
+4. Launch **Camber** from **Applications**.
 
 ### VS Code extension
 
-Install Poolside Assistant from the
-[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=poolside-ai.acp-assistant)
-or use a release VSIX. Poolside Assistant requires VS Code 1.85.0 or later.
+Install Camber Assistant from the
+[Camber releases](https://github.com/appleton/camber/releases)
+or use a release VSIX. Camber Assistant requires VS Code 1.85.0 or later.
 
-1. Open the [releases page](https://github.com/poolsideai/assistants/releases)
+1. Open the [releases page](https://github.com/appleton/camber/releases)
    and open the newest **vscode-assistant/** release.
 2. Download the `.vsix` asset for your platform. See
    [Choose the right VS Code VSIX](#choose-the-right-vs-code-vsix).
@@ -55,25 +55,25 @@ VSIX asset.
 
 ### Visual Studio extension
 
-Poolside Assistant requires Visual Studio 2022 version 17.9 or later on Windows
+Camber Assistant requires Visual Studio 2022 version 17.9 or later on Windows
 amd64.
 
-1. Open the [releases page](https://github.com/poolsideai/assistants/releases)
+1. Open the [releases page](https://github.com/appleton/camber/releases)
    and open the newest **vs-assistant/** release.
-2. Download `poolside-assistant-<version>.vsix`.
+2. Download `camber-assistant-<version>.vsix`.
 3. Close Visual Studio.
 4. Open the `.vsix` file to install the extension.
 5. Reopen Visual Studio.
 
-### Start using Poolside Assistant
+### Start using Camber Assistant
 
-Open Poolside Assistant in the desktop app, VS Code, or Visual Studio. Then see
-[Getting started with Poolside Assistant](./docs/getting-started.md) to choose
+Open Camber Assistant in the desktop app, VS Code, or Visual Studio. Then see
+[Getting started with Camber Assistant](./docs/getting-started.md) to choose
 an agent and start your first conversation.
 
 ## Build from source
 
-Use this section if you want to run, modify, or contribute to Poolside Assistant
+Use this section if you want to run, modify, or contribute to Camber Assistant
 from source.
 
 ### Prerequisites
@@ -96,7 +96,7 @@ from source.
 Clone the repository:
 
 ```sh
-git clone git@github.com:poolsideai/assistants.git
+git clone git@github.com:appleton/camber.git
 cd assistants
 ```
 
@@ -133,11 +133,11 @@ The Tauri desktop assistant is the fastest surface to bring up in development
 mode. From the repository root, run:
 
 ```sh
-pnpm -F @poolsideai/desktop-assistant dev
+pnpm -F @camber/desktop-assistant dev
 ```
 
 This launches the Tauri shell with hot reload on the Svelte side and starts a
-local `poolside-helper`.
+local `camber-helper`.
 
 ### Run the VS Code extension
 
@@ -166,7 +166,7 @@ the Visual Studio extension development workload installed.
    ```
 
 2. Open
-   [`ui/apps/vs-assistant/poolside-assistant.sln`](./ui/apps/vs-assistant/poolside-assistant.sln)
+   [`ui/apps/vs-assistant/camber-assistant.sln`](./ui/apps/vs-assistant/camber-assistant.sln)
    in Visual Studio.
 3. Press the play button to build and run the extension in an experimental
    Visual Studio instance.
@@ -179,17 +179,17 @@ For VM setup notes, helper type generation, and release details, see the
 To build the helper service, run:
 
 ```sh
-bazelisk build //cmd/poolside-helper
+bazelisk build //cmd/camber-helper
 ```
 
 To test the helper service, run:
 
 ```sh
-bazelisk test //pkg/poolside-helper/...
+bazelisk test //pkg/camber-helper/...
 ```
 
 For more details, see the
-[poolside-helper README](./pkg/poolside-helper/README.md).
+[camber-helper README](./pkg/camber-helper/README.md).
 
 ### Run tests
 
@@ -202,20 +202,20 @@ pnpm test
 To run helper tests, run:
 
 ```sh
-bazelisk test //pkg/poolside-helper/...
+bazelisk test //pkg/camber-helper/...
 ```
 
 To run tests for only one package, scope the command to that package:
 
 ```sh
-pnpm -F poolside-assistant test:unit
-pnpm -F @poolsideai/assistant test:unit
-pnpm -F @poolsideai/desktop-assistant check:types
+pnpm -F camber-assistant test:unit
+pnpm -F @camber/assistant test:unit
+pnpm -F @camber/desktop-assistant check:types
 ```
 
 ### Next steps for contributors
 
-- [Work on Poolside Assistant with coding agents](./docs/coding-with-agents.md).
+- [Work on Camber Assistant with coding agents](./docs/coding-with-agents.md).
 - Read the scoped [`AGENTS.md`](./AGENTS.md) for the area you plan to change.
 
 ## Troubleshooting
@@ -224,7 +224,7 @@ pnpm -F @poolsideai/desktop-assistant check:types
   downloaded the VSIX for your operating system and CPU architecture. If in
   doubt, use the universal VSIX asset.
 - **The extension is not visible after installing the VSIX**: Reload VS Code
-  and confirm **Poolside Assistant** is enabled in **Extensions**.
+  and confirm **Camber Assistant** is enabled in **Extensions**.
 - **`code --install-extension` fails**: Install the `code` command from VS
   Code's **Shell Command: Install 'code' command in PATH** command, or use
   **Install from VSIX...** in the Extensions view.
@@ -236,8 +236,8 @@ pnpm -F @poolsideai/desktop-assistant check:types
 - **Tauri build fails**: Make sure you have a Rust toolchain
   (`rustup`) installed and a recent stable version.
 - **VS Code dev host does not start**: Delete `ui/apps/vscode-assistant/dist`
-  and re-run `pnpm -F poolside-assistant dev`.
+  and re-run `pnpm -F camber-assistant dev`.
 - **Helper does not start in the editor**: Check the editor's developer
   console / output panel; the helper logs the port it is listening on.
-  See the [poolside-helper README](./pkg/poolside-helper/README.md) for
+  See the [camber-helper README](./pkg/camber-helper/README.md) for
   debugging guidance.

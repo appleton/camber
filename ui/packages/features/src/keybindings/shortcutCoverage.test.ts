@@ -4,8 +4,8 @@
 // listed as a global action with no corresponding button.
 //
 // Why a test and not an ESLint rule: registration lives in the desktop runtime
-// (`@poolsideai/assistant`) while hint display lives on buttons in shared components
-// (`@poolsideai/features`) — different files in different packages. ESLint is
+// (`@camber/assistant`) while hint display lives on buttons in shared components
+// (`@camber/features`) — different files in different packages. ESLint is
 // per-file/per-package and can't see both sides, so the invariant is enforced by a
 // repo-wide static scan here. It runs in CI alongside the rest of the unit tests.
 

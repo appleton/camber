@@ -5,9 +5,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Shell;
-using Poolside.Assistant.Context.Prompt;
+using Camber.Assistant.Context.Prompt;
 
-namespace Poolside.Assistant.Context
+namespace Camber.Assistant.Context
 {
     internal abstract class GitBasedContextProvider : IPromptContextProvider
     {
@@ -19,7 +19,7 @@ namespace Poolside.Assistant.Context
         public async Task<List<string>> GetRepoDirectoriesAsync()
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var dte = (EnvDTE.DTE)await PoolsideAssistantPackage.GetInstance().GetServiceAsync(typeof(EnvDTE.DTE));
+            var dte = (EnvDTE.DTE)await CamberAssistantPackage.GetInstance().GetServiceAsync(typeof(EnvDTE.DTE));
             var fileName = Path.GetDirectoryName(dte.Solution.FileName);
             return new List<string> { fileName };
         }

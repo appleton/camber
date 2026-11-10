@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { SessionEvent } from "../types";
-  import { Boundary } from "@poolsideai/components/boundary";
-  import { VirtualList } from "@poolsideai/components/virtual-list";
+  import { Boundary } from "@camber/components/boundary";
+  import { VirtualList } from "@camber/components/virtual-list";
   import {
     SessionEventsState,
     setToolCallExpansionContext,
@@ -17,7 +17,7 @@
   import ToolCall from "./events/ToolCall.svelte";
   import ToolCallGroup from "./events/tool/ToolCallGroup.svelte";
   import { CopyToClipboard } from "./ui";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import type { WorkspaceFolder } from "@camber/rpc";
   import type { TurnMetadata } from "../TurnMaterializer";
   import {
     VIRTUALIZE_THRESHOLD,

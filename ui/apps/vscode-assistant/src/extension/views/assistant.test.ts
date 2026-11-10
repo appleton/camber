@@ -38,7 +38,7 @@ vi.mock("../rpc/server", () => ({
 }));
 
 vi.mock("../configuration", () => ({
-  getPoolsideConfig: vi.fn(() => ({ uri: "" })),
+  getCamberConfig: vi.fn(() => ({ uri: "" })),
 }));
 
 vi.mock("../context", () => ({
@@ -62,7 +62,7 @@ function createAssistant(): Assistant {
     },
     context: {
       globalStorageUri: {
-        fsPath: "/user/globalStorage/poolside-ai.poolside-assistant",
+        fsPath: "/user/globalStorage/appleton.camber-assistant",
       },
     },
   } as any);
@@ -98,12 +98,12 @@ describe("Assistant", () => {
     executeCommand.mockResolvedValue(undefined);
   });
 
-  test("showSidebar focuses the Poolside view", async () => {
+  test("showSidebar focuses the Camber view", async () => {
     const assistant = createAssistant();
 
     await assistant.showSidebar();
 
-    expect(executeCommand).toHaveBeenCalledExactlyOnceWith("poolside-webview.focus");
+    expect(executeCommand).toHaveBeenCalledExactlyOnceWith("camber-webview.focus");
   });
 
   test("resolveWebviewView clears extension state when disposed", async () => {

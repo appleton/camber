@@ -2,8 +2,8 @@ using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using Poolside.Assistant.Context;
-using Poolside.Assistant.Settings;
+using Camber.Assistant.Context;
+using Camber.Assistant.Settings;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,16 +11,16 @@ using System.Threading.Tasks;
 using System.Windows;
 using SmartReader;
 using System.Net.Http;
-using Poolside.Assistant.Context.Prompt;
-using Poolside.Assistant.Telemetry;
-using Poolside.Assistant.ChatWindow;
-using Poolside.Assistant.Tasks;
-using Poolside.Assistant.HelperLSP;
+using Camber.Assistant.Context.Prompt;
+using Camber.Assistant.Telemetry;
+using Camber.Assistant.ChatWindow;
+using Camber.Assistant.Tasks;
+using Camber.Assistant.HelperLSP;
 using OmniSharp.Extensions.JsonRpc.Server;
 using CefSharp.Web;
 using Newtonsoft.Json;
-using Poolside.Assistant.EditHighlights;
-using static Poolside.Assistant.ChatWindow.ChatWindowControl;
+using Camber.Assistant.EditHighlights;
+using static Camber.Assistant.ChatWindow.ChatWindowControl;
 using System.IO;
 using System.Text.RegularExpressions;
 
@@ -28,7 +28,7 @@ using System.Text.RegularExpressions;
 #pragma warning disable VSTHRD200 // Use "Async" suffix for async methods
 #pragma warning disable IDE1006 // Naming Styles
 
-namespace Poolside.Assistant.WebViewInfrastructure
+namespace Camber.Assistant.WebViewInfrastructure
 {
 
     // Rule: always declare methods here to return a Task. That way, they will be async from
@@ -60,7 +60,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
         public async Task openSettings(string setting = null)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            PoolsideAssistantPackage.GetInstance().ShowOptionPage(typeof(PoolsideSettings));
+            CamberAssistantPackage.GetInstance().ShowOptionPage(typeof(CamberSettings));
         }
 
         public async Task<CodeSymbolResponse> getCodeSymbols(string path = null)
@@ -91,20 +91,20 @@ namespace Poolside.Assistant.WebViewInfrastructure
 
         public async Task<List<Document>> getVisibleFiles()
         {
-            await PoolsideAssistantPackage.GetInstance().JoinableTaskFactory.SwitchToMainThreadAsync();
+            await CamberAssistantPackage.GetInstance().JoinableTaskFactory.SwitchToMainThreadAsync();
             return FileOperations.GetVisibleFiles();
         }
 
         public async Task<string> getWorkspaceConversation()
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            return PoolsideAssistantPackage.GetInstance().ConversationIDHash;
+            return CamberAssistantPackage.GetInstance().ConversationIDHash;
         }
 
         public async Task setWorkspaceConversation(string conversationID)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            PoolsideAssistantPackage.GetInstance().ConversationIDHash = conversationID;
+            CamberAssistantPackage.GetInstance().ConversationIDHash = conversationID;
         }
 
         public Task openNewConversation()
@@ -132,14 +132,14 @@ namespace Poolside.Assistant.WebViewInfrastructure
         {
             try
             {
-                var name = string.IsNullOrEmpty(filename) ? "poolside-image.svg" : System.IO.Path.GetFileName(filename);
+                var name = string.IsNullOrEmpty(filename) ? "camber-image.svg" : System.IO.Path.GetFileName(filename);
                 var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), name);
                 System.IO.File.WriteAllText(path, svgContent);
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
             }
             catch (Exception ex)
             {
-                PoolsideTelemetryLogger.Instance.reportException(ex);
+                CamberTelemetryLogger.Instance.reportException(ex);
             }
         }
 
@@ -225,12 +225,12 @@ namespace Poolside.Assistant.WebViewInfrastructure
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             try
             {
-                var dte = (EnvDTE.DTE)PoolsideAssistantPackage.GetGlobalService(typeof(EnvDTE.DTE));
+                var dte = (EnvDTE.DTE)CamberAssistantPackage.GetGlobalService(typeof(EnvDTE.DTE));
                 dte?.ExecuteCommand("View.GitWindow");
             }
             catch (Exception ex)
             {
-                PoolsideTelemetryLogger.Instance.reportException(ex);
+                CamberTelemetryLogger.Instance.reportException(ex);
             }
         }
 
@@ -293,7 +293,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
         {
             try
             {
-                PoolsideTelemetryLogger.Instance.reportError(error, null);
+                CamberTelemetryLogger.Instance.reportError(error, null);
             }
             catch (Exception ex)
             {
@@ -318,7 +318,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
             var path = Util.TransformPathFromWebView(webViewPath);
-            var workspace = PoolsideAssistantPackage.GetInstance().GetWorkspace();
+            var workspace = CamberAssistantPackage.GetInstance().GetWorkspace();
             return workspace.IsPathInWorkspace(path)
                 ? ContextBuilder.BuildSingleFileContext(path)
                 : null;
@@ -374,12 +374,12 @@ namespace Poolside.Assistant.WebViewInfrastructure
             }
         }
 
-        public async Task taskDidChange(PoolsideTaskDTO task)
+        public async Task taskDidChange(CamberTaskDTO task)
         {
             await TasksToolWindow.HandleTaskChange(task);
         }
 
-        public async Task showTaskVersion(PoolsideTaskDTO task, string versionId = null)
+        public async Task showTaskVersion(CamberTaskDTO task, string versionId = null)
         {
             await TasksToolWindow.ShowTaskVersion(task, versionId);
         }
@@ -391,7 +391,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
 
         public async Task clearHighlights()
         {
-            await PoolsideAssistantPackage.GetInstance().JoinableTaskFactory.SwitchToMainThreadAsync();
+            await CamberAssistantPackage.GetInstance().JoinableTaskFactory.SwitchToMainThreadAsync();
             EditHighlightsTaggerProvider.ClearEditHighlights();
         }
 
@@ -418,7 +418,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
 
         public async Task updateContextConfig(ContextConfigUpdate conf)
         {
-            var package = PoolsideAssistantPackage.GetInstance();
+            var package = CamberAssistantPackage.GetInstance();
             await package.JoinableTaskFactory.SwitchToMainThreadAsync();
             var settings = package.GetSettings();
             if (conf.agent != null)
@@ -460,7 +460,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
         // No-op for non-chat webviews (HostCommunicator is not an AcpChatWebViewCommunicator).
         private void MaybeAttachAcpSession(string method, object parameters, object result)
         {
-            if (method != "poolside/acp/session/new") return;
+            if (method != "camber/acp/session/new") return;
             if (!(HostCommunicator is AcpChatWebViewCommunicator chatComm)) return;
             var sessionId = AcpChatToolWindow.SessionIdOf(result);
             if (string.IsNullOrEmpty(sessionId)) return;
@@ -512,7 +512,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
         public async Task setACPAgentServers(object agentServers, string defaultAgentServer = null)
         {
             await HelperLSPService.Instance.SendRequest(
-                "poolside/acpNav/setAgentServers",
+                "camber/acpNav/setAgentServers",
                 new { agentServers, defaultAgentServer });
         }
 
@@ -665,7 +665,7 @@ namespace Poolside.Assistant.WebViewInfrastructure
 
         public Task mcpOAuthInitiate(string serverId, string serverUrl, string serverName)
         {
-            return this.jsonrpc("poolside/mcpOAuthInitiate", new
+            return this.jsonrpc("camber/mcpOAuthInitiate", new
             {
                 serverID = serverId,
                 serverURL = serverUrl,

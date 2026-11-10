@@ -9,7 +9,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.WebViewInfrastructure
+namespace Camber.Assistant.WebViewInfrastructure
 {
     internal class WebViewRequestHandler : RequestHandler
     {
@@ -37,13 +37,13 @@ namespace Poolside.Assistant.WebViewInfrastructure
 
         protected override IResourceRequestHandler GetResourceRequestHandler(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame, IRequest request, bool isNavigation, bool isDownload, string requestInitiator, ref bool disableDefaultHandling)
         {
-            // We treat requests to poolside-app://app/... specially, serving them from
+            // We treat requests to camber-app://app/... specially, serving them from
             // the resources.
             var url = request?.Url;
             if (url != null)
             {
                 var parsed = new Uri(url);
-                if (parsed.Scheme == "poolside-app" && parsed.Host == "app")
+                if (parsed.Scheme == "camber-app" && parsed.Host == "app")
                 {
                     return new WebViewResourceRequestHandler(parsed.AbsolutePath, setupHTML);
                 }

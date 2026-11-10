@@ -14,8 +14,8 @@ dependencies.
 
 Vendored paths:
 
-- `pkg/poolside-helper/internal/gopls/**`
-- `pkg/poolside-helper/gopls/**`
+- `pkg/camber-helper/internal/gopls/**`
+- `pkg/camber-helper/gopls/**`
 
 Notice from vendored source files:
 
@@ -23,7 +23,7 @@ Notice from vendored source files:
 Copyright (c) 2009 The Go Authors. All rights reserved.
 ```
 
-License text from `pkg/poolside-helper/internal/gopls/LICENSE`:
+License text from `pkg/camber-helper/internal/gopls/LICENSE`:
 
 ```text
 Copyright (c) 2009 The Go Authors. All rights reserved.
@@ -59,7 +59,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 Vendored path:
 
-- `pkg/poolside-helper/internal/mcp/oauthex/**`
+- `pkg/camber-helper/internal/mcp/oauthex/**`
 
 Notice from vendored source files:
 

@@ -41,7 +41,7 @@ describe("release project ownership", () => {
     expect(dirsFor(product)).toEqual(
       expect.arrayContaining([
         appDirs[product],
-        "cmd/poolside-helper",
+        "cmd/camber-helper",
         "pkg",
         "ui/apps/mobile-remote",
         "ui/packages/assistant",
@@ -79,9 +79,9 @@ describe("release project ownership", () => {
   });
 
   it("assigns the Desktop-only MLX sidecar only to Desktop", () => {
-    expect(dirsFor("desktop")).toContain("cmd/poolside-mlx-sidecar");
-    expect(dirsFor("vscode")).not.toContain("cmd/poolside-mlx-sidecar");
-    expect(dirsFor("vs")).not.toContain("cmd/poolside-mlx-sidecar");
+    expect(dirsFor("desktop")).toContain("cmd/camber-mlx-sidecar");
+    expect(dirsFor("vscode")).not.toContain("cmd/camber-mlx-sidecar");
+    expect(dirsFor("vs")).not.toContain("cmd/camber-mlx-sidecar");
   });
 
   it.each(products)("does not treat %s release automation as product code", (product) => {

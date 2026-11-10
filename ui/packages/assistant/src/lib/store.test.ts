@@ -1,4 +1,4 @@
-import type { WorkspaceFolder } from "@poolsideai/rpc";
+import type { WorkspaceFolder } from "@camber/rpc";
 import { get } from "svelte/store";
 import { describe, expect, it } from "vitest";
 import { appState, appStateUpdates, workspaceFromCwd, type AppState } from "./store";

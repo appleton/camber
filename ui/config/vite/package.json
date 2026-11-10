@@ -1,5 +1,5 @@
 {
-  "name": "@poolsideai/vite-config",
+  "name": "@camber/vite-config",
   "version": "2.3.53",
   "private": true,
   "description": "Common vite configuration",
@@ -21,7 +21,7 @@
       "prettier --ignore-unknown --write"
     ]
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "dependencies": {
     "@chromatic-com/storybook": "catalog:",
     "@melt-ui/pp": "catalog:",
@@ -38,9 +38,9 @@
     "read-pkg": "catalog:"
   },
   "devDependencies": {
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "eslint": "catalog:",
     "happy-dom": "^20.10.6",

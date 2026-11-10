@@ -4,7 +4,7 @@ projects:
   - name: vscode
     tag: vscode-assistant
     dirs:
-      - cmd/poolside-helper
+      - cmd/camber-helper
       - pkg
       - ui/apps/vscode-assistant
       - ui/apps/mobile-remote
@@ -43,8 +43,8 @@ projects:
   - name: desktop
     tag: desktop
     dirs:
-      - cmd/poolside-helper
-      - cmd/poolside-mlx-sidecar
+      - cmd/camber-helper
+      - cmd/camber-mlx-sidecar
       - pkg
       - ui/apps/desktop-assistant
       - ui/apps/mobile-remote
@@ -83,7 +83,7 @@ projects:
   - name: vs
     tag: vs-assistant
     dirs:
-      - cmd/poolside-helper
+      - cmd/camber-helper
       - pkg
       - ui/apps/vs-assistant
       - ui/apps/mobile-remote

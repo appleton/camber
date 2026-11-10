@@ -8,7 +8,7 @@ import type {
   SessionModeState,
   SessionNotification,
 } from "@agentclientprotocol/sdk";
-import { waiting, type AsyncState } from "@poolsideai/lib/async-state";
+import { waiting, type AsyncState } from "@camber/lib/async-state";
 import { DEFAULT_AGENT_SERVER, normalizeAgentServerName } from "../../agentServers";
 import type { ACPPromptSuggestion } from "../../claudePromptSuggestions";
 import { normalizeACPError, type ACPRequestError } from "../../errors";
@@ -16,7 +16,7 @@ import { controlCodexGoal, type ACPGoalState } from "../../goals";
 import type { ACPResolvedSessionInfo } from "../../sessionInfo";
 import { TurnMaterializer, type SessionEvent, type TurnMetadata } from "../../TurnMaterializer";
 import { textPromptContent } from "./content";
-import { PoolsideSessionExtensions } from "./extensions/PoolsideSessionExtensions.svelte";
+import { CamberSessionExtensions } from "./extensions/CamberSessionExtensions.svelte";
 import { ACPSessionConfig, type ACPSetConfigOptionOptions } from "./SessionConfig";
 import { ACPSessionEvents } from "./SessionEvents";
 import { ACPSessionLoader } from "./SessionLoader";
@@ -137,8 +137,8 @@ export class ACPSession {
   loadingCwd = $state<string | null>(null);
   setupStatus = $state<string | null>(null);
 
-  private readonly poolsideExtension = new PoolsideSessionExtensions();
-  readonly extensions: { readonly poolside: PoolsideSessionExtensions | null };
+  private readonly camberExtension = new CamberSessionExtensions();
+  readonly extensions: { readonly camber: CamberSessionExtensions | null };
   prompting = new ACPSessionPrompting(this);
   config = new ACPSessionConfig(this);
 
@@ -204,13 +204,13 @@ export class ACPSession {
 
     const session = this;
     this.extensions = {
-      get poolside() {
-        return session.isPoolsideAgent() ? session.poolsideExtension : null;
+      get camber() {
+        return session.isCamberAgent() ? session.camberExtension : null;
       },
     };
   }
 
-  private isPoolsideAgent(): boolean {
+  private isCamberAgent(): boolean {
     return normalizeAgentServerName(this.agentServer) === DEFAULT_AGENT_SERVER;
   }
 
@@ -221,7 +221,7 @@ export class ACPSession {
     return this.sessionId === null ? this.cwd : null;
   }
   get compacting(): boolean {
-    return this.extensions.poolside?.compacting ?? false;
+    return this.extensions.camber?.compacting ?? false;
   }
   get currentModeId(): string | null {
     return this.config.currentModeId;
@@ -323,7 +323,7 @@ export class ACPSession {
     return this.runGoalAction("pause", async () => {
       const goal = this.goal;
       if (goal?.source !== "codex" || goal.controlMethod === undefined) {
-        throw new Error("This agent does not support pausing goals from Poolside.");
+        throw new Error("This agent does not support pausing goals from Camber.");
       }
       const connection = await this.goalConnection();
       await controlCodexGoal(connection, {
@@ -355,7 +355,7 @@ export class ACPSession {
         return;
       }
       if (goal.source !== "claude") {
-        throw new Error("This agent does not support clearing goals from Poolside.");
+        throw new Error("This agent does not support clearing goals from Camber.");
       }
       await this.issueGoalCommand("/goal clear");
       this.setGoal(null);
@@ -612,13 +612,13 @@ export class ACPSession {
   }
 
   handleCompactionUpdate(
-    params: Parameters<PoolsideSessionExtensions["handleCompactionUpdate"]>[0],
+    params: Parameters<CamberSessionExtensions["handleCompactionUpdate"]>[0],
   ): void {
-    this.extensions.poolside?.handleCompactionUpdate(params);
+    this.extensions.camber?.handleCompactionUpdate(params);
   }
 
   handleTurnEnded(): void {
-    this.extensions.poolside?.endTurn();
+    this.extensions.camber?.endTurn();
   }
 
   sendCore(...args: ACPSessionSendCoreArgs): Promise<string | null> {

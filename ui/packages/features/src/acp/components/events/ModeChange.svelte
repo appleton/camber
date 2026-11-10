@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import type { ModeChange } from "../../types";
   import { getACPChatSessionScope } from "../../features/ChatSessionScope.svelte";
 

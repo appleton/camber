@@ -1,9 +1,9 @@
 ﻿using Microsoft.VisualStudio.Shell;
-using Poolside.Assistant.Context;
-using Poolside.Assistant.HelperLSP;
-using Poolside.Assistant.Settings;
-using Poolside.Assistant.Telemetry;
-using Poolside.Assistant.WebViewInfrastructure;
+using Camber.Assistant.Context;
+using Camber.Assistant.HelperLSP;
+using Camber.Assistant.Settings;
+using Camber.Assistant.Telemetry;
+using Camber.Assistant.WebViewInfrastructure;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 #pragma warning disable VSTHRD110 // Observe result of async calls
 #pragma warning disable CS4014 // Lack of await
 
-namespace Poolside.Assistant.ChatWindow
+namespace Camber.Assistant.ChatWindow
 {
     internal static class ChatWindowRPCClient
     {
@@ -106,7 +106,7 @@ namespace Poolside.Assistant.ChatWindow
                 // If we failed to get the communicator, that typically means we're during shutdown, so don't ingest an error.
                 if (!gotCommunicator)
                     return;
-                PoolsideTelemetryLogger.Instance.reportError(ex, new System.Collections.Generic.Dictionary<string, object>
+                CamberTelemetryLogger.Instance.reportError(ex, new System.Collections.Generic.Dictionary<string, object>
                 {
                     { "method", method }
                 });
@@ -132,11 +132,11 @@ namespace Poolside.Assistant.ChatWindow
             if (cachedCommunicator == null)
             {
                 await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                var package = PoolsideAssistantPackage.GetInstance();
+                var package = CamberAssistantPackage.GetInstance();
                 if (package == null)
                     return null;
-                var poolsideToolWindow = await ChatToolWindow.GetInstanceAsync(PoolsideAssistantPackage.GetInstance());
-                cachedCommunicator = poolsideToolWindow.GetCommunicator();
+                var camberToolWindow = await ChatToolWindow.GetInstanceAsync(CamberAssistantPackage.GetInstance());
+                cachedCommunicator = camberToolWindow.GetCommunicator();
             }
             return cachedCommunicator;
         }

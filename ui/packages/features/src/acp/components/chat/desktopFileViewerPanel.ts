@@ -1,4 +1,4 @@
-import type { AttachedFile } from "@poolsideai/rpc";
+import type { AttachedFile } from "@camber/rpc";
 
 export interface DesktopFileViewerPanelProps {
   path: string;

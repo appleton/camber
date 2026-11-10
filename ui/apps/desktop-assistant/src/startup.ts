@@ -24,17 +24,17 @@ const DIAGNOSTIC_REPORT_LOG_LINES = 2000;
 // The counter lives in sessionStorage: it survives the reloads but resets on a
 // real app relaunch, and a successful reveal clears it.
 const AUTO_RETRY_DELAYS_MS = [1000, 3000];
-const AUTO_RETRY_COUNT_KEY = "poolside.startup.autoRetryCount";
+const AUTO_RETRY_COUNT_KEY = "camber.startup.autoRetryCount";
 
 // Dev-only simulation of the startup failure modes so the issue panel and
 // retry flows can be exercised without breaking real startup: set
-// localStorage["poolside.debug.simulateStartupIssue"] to "stall" (settle never
+// localStorage["camber.debug.simulateStartupIssue"] to "stall" (settle never
 // fires, so the watchdog panel appears), "fail" (start() rejects on every
 // attempt, exhausting auto-retry into the failed panel), or "fail-once" (only
 // the first attempt rejects, demonstrating silent auto-retry recovery) and
 // reload. Dead code in production builds.
 const simulatedStartupIssue = import.meta.env.DEV
-  ? window.localStorage.getItem("poolside.debug.simulateStartupIssue")
+  ? window.localStorage.getItem("camber.debug.simulateStartupIssue")
   : null;
 
 initStartupDiagnostics();
@@ -121,7 +121,7 @@ void import("./main")
   .then(() => logStartupDiagnostic("startup.revealed"))
   .catch((error) => {
     logStartupDiagnostic("startup.failed", { error });
-    console.error("Unable to start Poolside", error);
+    console.error("Unable to start Camber", error);
     if (revealed) return;
     clearWatchdog();
     // Startup failures are often transient (helper still spawning, an IPC

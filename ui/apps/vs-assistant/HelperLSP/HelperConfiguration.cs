@@ -1,8 +1,8 @@
 ﻿using Microsoft.VisualStudio.Shell;
 using Newtonsoft.Json;
-using Poolside.Assistant.Settings;
-using Poolside.Assistant.Telemetry;
-using Poolside.Assistant.WebViewInfrastructure;
+using Camber.Assistant.Settings;
+using Camber.Assistant.Telemetry;
+using Camber.Assistant.WebViewInfrastructure;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,7 +11,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.HelperLSP
+namespace Camber.Assistant.HelperLSP
 {
     internal class HelperConfiguration
     {
@@ -24,7 +24,7 @@ namespace Poolside.Assistant.HelperLSP
         // it is set unconditionally - matching vscode-assistant.
         public string agentMode { get; set; }
         // User-authored ACP agent servers (name -> { command, args, env, ... }), mirroring
-        // VSCode's poolside.agentServers setting. The helper seeds its acpNav registry from
+        // VSCode's camber.agentServers setting. The helper seeds its acpNav registry from
         // this on first run. Null when unset/invalid so the helper falls back to its defaults.
         // Values are kept opaque (not typed into per-field classes) so unknown/new fields pass
         // through to the helper verbatim rather than being silently dropped on re-serialization.
@@ -51,7 +51,7 @@ namespace Poolside.Assistant.HelperLSP
         public static HelperConfiguration Build()
         {
             ThreadHelper.ThrowIfNotOnUIThread();
-            var settings = PoolsideAssistantPackage.GetInstance().GetSettings();
+            var settings = CamberAssistantPackage.GetInstance().GetSettings();
             var environment = WebViewCommunicator.BuildEnvironment();
             var assemblyPath = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var binaryDirectoryUri = new Uri(System.IO.Path.Combine(assemblyPath, "helper"), UriKind.Absolute).AbsoluteUri;
@@ -90,7 +90,7 @@ namespace Poolside.Assistant.HelperLSP
             }
             catch (JsonException ex)
             {
-                PoolsideTelemetryLogger.Instance.reportException(ex);
+                CamberTelemetryLogger.Instance.reportException(ex);
                 return null;
             }
         }

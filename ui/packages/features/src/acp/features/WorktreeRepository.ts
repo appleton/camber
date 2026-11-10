@@ -1,11 +1,11 @@
 import {
-  poolsideAcpNavCreateWorktree,
-  poolsideAcpNavGetProjectSettings,
-  poolsideAcpNavList,
-  poolsideAcpNavPrepareWorktree,
-  poolsideAcpNavReleasePreparedWorktree,
-  poolsideAcpNavRemoveWorktree,
-} from "@poolsideai/helperapi";
+  camberAcpNavCreateWorktree,
+  camberAcpNavGetProjectSettings,
+  camberAcpNavList,
+  camberAcpNavPrepareWorktree,
+  camberAcpNavReleasePreparedWorktree,
+  camberAcpNavRemoveWorktree,
+} from "@camber/helperapi";
 import { createContext } from "svelte";
 import type { ACPNavProject, WorktreeBusyKind } from "../navTypes";
 import type {
@@ -135,7 +135,7 @@ export class ACPWorktreeRepositoryWriter implements ACPWorktreeRepository {
   ) {}
 
   async prepareWorktree(projectPath: string): Promise<ACPNavProject | undefined> {
-    return await poolsideAcpNavPrepareWorktree({ projectPath });
+    return await camberAcpNavPrepareWorktree({ projectPath });
   }
 
   async createWorktree(
@@ -147,7 +147,7 @@ export class ACPWorktreeRepositoryWriter implements ACPWorktreeRepository {
   ): Promise<ACPNavProject | undefined> {
     if (deleteSignal?.aborted) return undefined;
 
-    const created = await poolsideAcpNavCreateWorktree({
+    const created = await camberAcpNavCreateWorktree({
       projectPath,
       worktreeName: prepared.name,
     });
@@ -188,7 +188,7 @@ export class ACPWorktreeRepositoryWriter implements ACPWorktreeRepository {
       await this.commandRunner.runTeardown(path, teardownScript);
     }
     onStatus?.("deleting");
-    await poolsideAcpNavRemoveWorktree({ path });
+    await camberAcpNavRemoveWorktree({ path });
     await this.commandRunner.closeWorktree(path);
   }
 
@@ -196,7 +196,7 @@ export class ACPWorktreeRepositoryWriter implements ACPWorktreeRepository {
   // (non-idempotent) removeWorktree path — used when the user-facing create
   // flow fails before git worktree add ran.
   async discardPreparedWorktree(path: string): Promise<void> {
-    await poolsideAcpNavReleasePreparedWorktree({ path });
+    await camberAcpNavReleasePreparedWorktree({ path });
     await this.commandRunner.closeWorktree(path);
   }
 
@@ -230,11 +230,11 @@ export function getACPWorktreeRepo(): ACPWorktreeRepository {
 }
 
 async function projectSetupScript(path: string): Promise<string> {
-  return (await poolsideAcpNavGetProjectSettings({ path })).settings?.setupScript?.trim() ?? "";
+  return (await camberAcpNavGetProjectSettings({ path })).settings?.setupScript?.trim() ?? "";
 }
 
 async function worktreeTeardownScript(path: string): Promise<string> {
-  const projects = (await poolsideAcpNavList({})).projects ?? [];
+  const projects = (await camberAcpNavList({})).projects ?? [];
   const worktree = projects.find((project) => project.path === path);
   return worktree?.parentPath
     ? (projects.find((project) => project.path === worktree.parentPath)?.teardownScript?.trim() ??

@@ -1,10 +1,10 @@
-import { setThemeContext } from "@poolsideai/components/providers";
-import { initializeACPHostRpc } from "@poolsideai/features/acp";
+import { setThemeContext } from "@camber/components/providers";
+import { initializeACPHostRpc } from "@camber/features/acp";
 import { onDestroy, onMount } from "svelte";
 
 import { initializeStatefulModule as initializeHostRpc, rpc } from "../../../lib/rpc/client";
 import { WebviewRPCServer } from "../../../lib/rpc/server";
-import { appState, type PoolsideInitialState } from "../../../lib/store";
+import { appState, type CamberInitialState } from "../../../lib/store";
 import type { Repositories } from "./Repositories.svelte";
 import type { RuntimeProps } from "./types";
 
@@ -20,7 +20,7 @@ export function registerRpcServer({
   repositories,
   getActiveConversationId,
 }: RegisterRpcServerOptions) {
-  const initialState: PoolsideInitialState = props.initialState ?? window.POOLSIDE_INITIAL_STATE;
+  const initialState: CamberInitialState = props.initialState ?? window.CAMBER_INITIAL_STATE;
   const theme = setThemeContext({
     colorTheme: initialState?.colorTheme,
     fileIconTheme: initialState?.fileIconTheme,

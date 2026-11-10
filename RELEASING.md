@@ -16,10 +16,10 @@ the product is ready to declare 1.0.
 ## Identities and tags
 
 - VS Code uses `vscode-assistant/vM.m.p` and publishes
-  `poolside-ai.${VSCODE_EXTENSION_NAME}`. It currently resolves to
-  `poolside-ai.acp-assistant`.
+  `appleton.${VSCODE_EXTENSION_NAME}`. It currently resolves to
+  `appleton.acp-assistant`.
 - Desktop uses `desktop/vM.m.p` and publishes to `CN_APP_SLUG`, currently
-  `poolside/desktop-assistant`.
+  `camber/desktop-assistant`.
 - The new VS Code extension is unrelated to the legacy extension. Old
   `vscode/v*` tags never participate in versioning, changelogs, or sync.
 
@@ -43,7 +43,7 @@ treated as completed history rather than interrupted reservations.
 
 Before either product package is built, the coordinator allocates the next
 independent `helper/vM.m.p` patch version, then builds and signs one shared set
-of `poolside-helper`, MLX, and whisper-server artifacts from that exact source
+of `camber-helper`, MLX, and whisper-server artifacts from that exact source
 SHA. It publishes that exact set as a permanent GitHub helper release before VS
 Code or Desktop may publish. Both product-only workflows download and verify
 that immutable helper release before packaging. The individual VS Code and
@@ -179,7 +179,7 @@ The current workflow uses an existing Azure DevOps PAT with
 local login, include the publisher and paste the PAT when prompted:
 
 ```bash
-pnpm -F poolside-assistant exec vsce login poolside-ai
+pnpm -F camber-assistant exec vsce login appleton
 ```
 
 Azure DevOps stopped creating new global PATs on March 15, 2026 and will retire
@@ -232,7 +232,7 @@ The product manifests do not pin helper versions. Fresh local binary installs
 and Visual Studio resolve the highest published `helper/v*` version. Desktop
 development then reuses complete local `.version` stamps without a GitHub API
 call; use `download:binaries:refresh` to check for a newer release. Set
-`POOLSIDE_HELPER_VERSION=helper/vM.m.p` to reproduce an exact runtime.
+`CAMBER_HELPER_VERSION=helper/vM.m.p` to reproduce an exact runtime.
 
 Use **Release · Helper** only for an exceptional helper-only release. It runs
 the same planner, signed build, immutable tag, and permanent publication path
@@ -242,4 +242,4 @@ Implementation details:
 
 - [release-helper](ui/scripts/release-helper/README.md)
 - [Desktop updater](ui/apps/desktop-assistant/AUTOUPDATER.md)
-- [helper release](pkg/poolside-helper/README.md)
+- [helper release](pkg/camber-helper/README.md)

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Kbd from "@poolsideai/components/kbd";
-  import { MarkdownBlock } from "@poolsideai/components/markdown";
+  import Kbd from "@camber/components/kbd";
+  import { MarkdownBlock } from "@camber/components/markdown";
   import type { Snippet } from "svelte";
   import { desktopUpdate } from "../../desktopUpdate";
   import SidebarIconButton from "./SidebarIconButton.svelte";
@@ -45,7 +45,7 @@
   );
 
   // Self-update "Update" pill (populated by the desktop host once a new version
-  // has downloaded). Mirrors Poolside Studio: an "Update" text pill (smaller
+  // has downloaded). Mirrors Camber Studio: an "Update" text pill (smaller
   // when the sidebar is collapsed), full "Restart to update…" as the tooltip.
   // The pill stays one-click restart; the staged update's release notes open
   // from a separate "What's new" link so wanting to read them never costs an
@@ -55,8 +55,8 @@
     if (!$desktopUpdate.available) return "";
     if ($desktopUpdate.waitingForIdle) return "Waiting for conversations to finish before updating";
     return $desktopUpdate.version
-      ? `Restart to update Poolside Assistant to ${$desktopUpdate.version}`
-      : "Restart to finish updating Poolside Assistant";
+      ? `Restart to update Camber Assistant to ${$desktopUpdate.version}`
+      : "Restart to finish updating Camber Assistant";
   });
   let updateNotes = $derived($desktopUpdate.available ? $desktopUpdate.notes : undefined);
   let notesOpen = $state(false);

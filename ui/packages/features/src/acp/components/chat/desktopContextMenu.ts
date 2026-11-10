@@ -171,7 +171,7 @@ export interface DesktopContextMenuRequest {
  * clicked while a menu is open (from the `native-menu:set-default` Tauri
  * event). The menu stays open; selection still resolves the menu promise.
  */
-export const NATIVE_MENU_SET_DEFAULT_EVENT = "poolside:native-menu-set-default";
+export const NATIVE_MENU_SET_DEFAULT_EVENT = "camber:native-menu-set-default";
 
 export interface NativeMenuSetDefaultPayload {
   /** The `token` of the menu request the click belongs to. */

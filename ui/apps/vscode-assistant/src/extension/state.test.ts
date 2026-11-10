@@ -10,7 +10,7 @@ const mock = vi.hoisted(() => ({
 }));
 vi.mock("vscode", () => createVSCodeMock(vi));
 vi.mock("./system", () => ({}));
-vi.mock("./configuration", () => ({ getPoolsideConfig: () => ({ test: true }) }));
+vi.mock("./configuration", () => ({ getCamberConfig: () => ({ test: true }) }));
 vi.mock("./context", () => ({ getWorkspaces: () => [], getDefaultCwd: () => "/repo" }));
 vi.mock("./languages", () => ({ getLanguages: () => [], serializeLanguages: () => [] }));
 vi.mock("./env", () => ({ mapContextToExtensionMode: () => "production" }));

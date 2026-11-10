@@ -1,6 +1,6 @@
 ﻿using CefSharp;
 using Microsoft.VisualStudio.Shell;
-using Poolside.Assistant.WebViewInfrastructure;
+using Camber.Assistant.WebViewInfrastructure;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 
-namespace Poolside.Assistant.ChatWindow
+namespace Camber.Assistant.ChatWindow
 {
     public class ChatWindowControl : WebViewControl
     {

@@ -125,18 +125,18 @@
     {
       eventKind: "tool_call",
       toolCallId: "mcp-1",
-      title: "poolside-github__get_me",
+      title: "camber-github__get_me",
       kind: "execute",
       status: "completed",
-      _meta: { tool_name: "poolside-github__get_me" },
+      _meta: { tool_name: "camber-github__get_me" },
     },
     {
       eventKind: "tool_call",
       toolCallId: "mcp-2",
-      title: "poolside-github__list_issues",
+      title: "camber-github__list_issues",
       kind: "execute",
       status: "completed",
-      _meta: { tool_name: "poolside-github__list_issues" },
+      _meta: { tool_name: "camber-github__list_issues" },
     },
     {
       eventKind: "tool_call",
@@ -177,10 +177,10 @@
     {
       eventKind: "tool_call",
       toolCallId: "mcp-live",
-      title: "poolside-github__get_me",
+      title: "camber-github__get_me",
       kind: "execute",
       status: "in_progress",
-      _meta: { tool_name: "poolside-github__get_me" },
+      _meta: { tool_name: "camber-github__get_me" },
     },
   ];
 

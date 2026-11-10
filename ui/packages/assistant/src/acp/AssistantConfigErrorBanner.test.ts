@@ -2,8 +2,8 @@ import {
   currentACPHostState,
   initializeACPHostRpc,
   setACPHostStateStore,
-} from "@poolsideai/features/acp";
-import { failure, waiting } from "@poolsideai/lib/async-state";
+} from "@camber/features/acp";
+import { failure, waiting } from "@camber/lib/async-state";
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { writable } from "svelte/store";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -33,7 +33,7 @@ describe("AssistantConfigErrorBanner", () => {
     const agentServers = agentServersRepository(
       failure(
         new Error(
-          "assistant config: parsing /Users/test/.config/poolside/assistant.json: invalid character",
+          "assistant config: parsing /Users/test/.config/camber/assistant.json: invalid character",
         ),
       ),
     );
@@ -48,7 +48,7 @@ describe("AssistantConfigErrorBanner", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Open file" }));
     await waitFor(() =>
       expect(hostMessageSender).toHaveBeenCalledWith("openFile", [
-        "/Users/test/.config/poolside/assistant.json",
+        "/Users/test/.config/camber/assistant.json",
       ]),
     );
 

@@ -1,10 +1,10 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import type { IconName } from "@poolsideai/components/icon";
-  import Kbd from "@poolsideai/components/kbd";
-  import type { SearchFile } from "@poolsideai/helperapi/schemas";
-  import { joinPath } from "@poolsideai/lib/path-query";
-  import { InfoMessageType } from "@poolsideai/rpc";
+  import Icon from "@camber/components/icon";
+  import type { IconName } from "@camber/components/icon";
+  import Kbd from "@camber/components/kbd";
+  import type { SearchFile } from "@camber/helperapi/schemas";
+  import { joinPath } from "@camber/lib/path-query";
+  import { InfoMessageType } from "@camber/rpc";
   import { Command, defaultFilter } from "cmdk-sv";
   import { onMount, tick, untrack } from "svelte";
   import {
@@ -126,7 +126,7 @@
 
   const sidebar = getAcpSidebarController();
   const desktopRpc = rpc as DesktopOpenRPC;
-  const DESKTOP_SETTINGS_CHANGED_EVENT = "poolside:desktop-settings-changed";
+  const DESKTOP_SETTINGS_CHANGED_EVENT = "camber:desktop-settings-changed";
   const SEARCH_INPUT_ID = "desktop-conversation-search-input";
   const CONVERSATION_RESULT_LIMIT = 50;
   const FILE_RESULT_LIMIT = 50;

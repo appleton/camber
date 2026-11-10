@@ -1,4 +1,4 @@
-import type { ACPDebugAPI } from "@poolsideai/features/acp";
+import type { ACPDebugAPI } from "@camber/features/acp";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACP_DEBUG_RPC_METHODS, acpDebugRPCHandlers } from "./acpDebugRPC";
 import { DEBUG_RPC_EVENTS, installDebugRPC, requestDebugRPCInWindow } from "./debugRPC";

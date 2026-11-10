@@ -1,4 +1,4 @@
-import { poolsideAcpNavList } from "@poolsideai/helperapi";
+import { camberAcpNavList } from "@camber/helperapi";
 import type { ACPConversationRepositoryWriter } from "./ConversationRepository.svelte";
 import type { ACPProjectRepositoryWriter } from "./ProjectRepository.svelte";
 
@@ -7,7 +7,7 @@ export async function refreshACPNavState(
   conversations: Pick<ACPConversationRepositoryWriter, "applyNavState" | "refresh">,
 ): Promise<void> {
   try {
-    const state = await poolsideAcpNavList({});
+    const state = await camberAcpNavList({});
     projects.applyNavState(state);
     conversations.applyNavState(state);
   } catch {

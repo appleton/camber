@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Context
+namespace Camber.Assistant.Context
 {
     public class CodeSymbol
     {

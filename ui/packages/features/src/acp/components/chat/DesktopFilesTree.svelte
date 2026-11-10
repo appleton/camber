@@ -139,16 +139,12 @@
     type FileTreeIconConfig,
     type RemappedIcon,
   } from "@pierre/trees";
-  import {
-    getLanguages,
-    getThemeContext,
-    type FileIconTheme,
-  } from "@poolsideai/components/providers";
-  import { isAppleUser } from "@poolsideai/components";
+  import { getLanguages, getThemeContext, type FileIconTheme } from "@camber/components/providers";
+  import { isAppleUser } from "@camber/components";
   import { onMount, tick, untrack } from "svelte";
-  import { getUnknownErrorMessage } from "@poolsideai/lib/errors";
-  import { basename, dirname, normalize, relative } from "@poolsideai/lib/path";
-  import { InfoMessageType } from "@poolsideai/rpc";
+  import { getUnknownErrorMessage } from "@camber/lib/errors";
+  import { basename, dirname, normalize, relative } from "@camber/lib/path";
+  import { InfoMessageType } from "@camber/rpc";
   import { appState } from "../../hostAdapter";
   import { rpc, type RPCClient } from "../../hostRpc";
   import {
@@ -175,7 +171,7 @@
   import { readDesktopFilesTreePrefs, writeDesktopFilesTreePrefs } from "./desktopFilesTreePrefs";
   import { visibleChangedTreePaths } from "./desktopFilesTreeChangedFilter";
   import DesktopChangesList from "./DesktopChangesList.svelte";
-  import type { GitStatusOutput } from "@poolsideai/helperapi";
+  import type { GitStatusOutput } from "@camber/helperapi";
   import {
     DESKTOP_FILE_TREE_CHANGED_EVENT,
     DESKTOP_GIT_CHANGED_EVENT,
@@ -231,10 +227,10 @@
   const desktopRpc = rpc as DesktopFilesRPC;
   const languages = getLanguages();
   const theme = getThemeContext();
-  const DESKTOP_SETTINGS_CHANGED_EVENT = "poolside:desktop-settings-changed";
-  const DESKTOP_OPEN_FILE_TAB_EVENT = "poolside:desktop-open-file-tab";
+  const DESKTOP_SETTINGS_CHANGED_EVENT = "camber:desktop-settings-changed";
+  const DESKTOP_OPEN_FILE_TAB_EVENT = "camber:desktop-open-file-tab";
   const DESKTOP_FILE_TREE_CONTEXT_MENU_ACTION_EVENT =
-    "poolside:desktop-file-tree-context-menu-action";
+    "camber:desktop-file-tree-context-menu-action";
   const FILE_CHANGE_CREATED = 1;
   const FILE_CHANGE_CHANGED = 2;
   const FILE_CHANGE_DELETED = 3;
@@ -307,7 +303,7 @@
       background: color-mix(in srgb, currentColor 12%, transparent);
     }
 
-    [data-poolside-loading='true'] > [data-item-section='icon']::after {
+    [data-camber-loading='true'] > [data-item-section='icon']::after {
       position: absolute;
       inset: 4px;
       border: 1px solid currentColor;
@@ -315,14 +311,14 @@
       border-radius: 999px;
       content: "";
       opacity: 0.7;
-      animation: poolside-file-tree-spin 0.7s linear infinite;
+      animation: camber-file-tree-spin 0.7s linear infinite;
     }
 
-    [data-poolside-loading='true'] > [data-item-section='icon'] > svg {
+    [data-camber-loading='true'] > [data-item-section='icon'] > svg {
       opacity: 0.25;
     }
 
-    @keyframes poolside-file-tree-spin {
+    @keyframes camber-file-tree-spin {
       to {
         transform: rotate(360deg);
       }
@@ -1633,7 +1629,7 @@
 
     const version = loadVersion;
     const includeGitIgnored = showGitIgnored;
-    row.dataset.poolsideLoading = "true";
+    row.dataset.camberLoading = "true";
     loadingDirectoryPaths = new Set([...loadingDirectoryPaths, relativePath]);
     expandedDirectoryPaths = new Set([...expandedDirectoryPaths, relativePath]);
 
@@ -1652,7 +1648,7 @@
     } catch (error) {
       console.debug("Unable to load file tree directory", error);
     } finally {
-      row.dataset.poolsideLoading = "false";
+      row.dataset.camberLoading = "false";
       loadingDirectoryPaths = new Set(
         Array.from(loadingDirectoryPaths).filter((path) => path !== relativePath),
       );
@@ -1823,7 +1819,7 @@
 
   function fileTreeIconSymbolId(iconName: string) {
     const slug = iconName.replace(/[^a-zA-Z0-9_-]/g, "-").replace(/^-+|-+$/g, "") || "icon";
-    return `poolside-file-icon-${slug}-${hashString(iconName)}`;
+    return `camber-file-icon-${slug}-${hashString(iconName)}`;
   }
 
   function hashString(value: string) {

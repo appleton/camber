@@ -33,11 +33,11 @@ behind one interface:
   runtime) matches events against resolved bindings and fires registered handlers.
   User overrides come from a `KeybindingOverrideStore`. On desktop the runtime
   backs it with `createAcpDbKeybindingStore`, which persists to the ACP nav DB
-  owned by poolside-helper (`poolside/acpNav/get|setKeybindings`); reads serve
+  owned by camber-helper (`camber/acpNav/get|setKeybindings`); reads serve
   from an in-memory mirror hydrated at startup. Tests/Storybook use the default
   in-memory store.
 - **VS Code** already resolves keybindings in the extension host via contributed
-  `keybindings` + the `poolside.webviewFocus` context key. Re-dispatching in the
+  `keybindings` + the `camber.webviewFocus` context key. Re-dispatching in the
   webview would double-fire, so `createDelegatedKeybindingService` **delegates**:
   `register()` / `handleKeydown()` are no-ops, and `hint()` reads the
   host-resolved hints already plumbed in over RPC (`getKeybindings`).

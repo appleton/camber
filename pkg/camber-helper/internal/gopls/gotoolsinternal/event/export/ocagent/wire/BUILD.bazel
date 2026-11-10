@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "wire",
+    srcs = [
+        "common.go",
+        "core.go",
+        "metrics.go",
+        "trace.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/event/export/ocagent/wire",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "wire_test",
+    srcs = ["metrics_test.go"],
+    embed = [":wire"],
+)

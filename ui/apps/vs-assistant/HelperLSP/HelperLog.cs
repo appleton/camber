@@ -9,11 +9,11 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 using Microsoft.VisualStudio;
 
-namespace Poolside.Assistant.HelperLSP
+namespace Camber.Assistant.HelperLSP
 {
     internal class HelperLog
     {
-        private const string paneName = "Poolside Helper Logs";
+        private const string paneName = "Camber Helper Logs";
         private static Guid paneGuid = new Guid("A18ECD82-DBA2-4CC4-887C-C70B572536BF");
 
         private readonly IVsOutputWindowPane outputPane;
@@ -38,7 +38,7 @@ namespace Poolside.Assistant.HelperLSP
 
         public void Log(string message)
         {
-            Debug.WriteLine($"poolside-helper: {message}");
+            Debug.WriteLine($"camber-helper: {message}");
             lock (latestMesages)
             {
                 latestMesages.Enqueue(message);

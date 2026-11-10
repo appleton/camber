@@ -170,7 +170,7 @@ describe("TurnMaterializer", () => {
     const items = applyAll([
       textChunk("user_message_chunk", "initial prompt", "u1"),
       textChunk("user_message_chunk", "focus on tests", "u2", {
-        "poolside/steer": true,
+        "camber/steer": true,
       }),
     ]);
 
@@ -186,7 +186,7 @@ describe("TurnMaterializer", () => {
     });
   });
 
-  it("drops Poolside host context user chunks replayed as resource blocks", () => {
+  it("drops Camber host context user chunks replayed as resource blocks", () => {
     const m = new TurnMaterializer();
     const context = hostContextBlock({
       assistantVersion: "4.3.8",
@@ -207,15 +207,15 @@ describe("TurnMaterializer", () => {
     });
   });
 
-  it("drops Poolside host context user chunks replayed as resource links", () => {
+  it("drops Camber host context user chunks replayed as resource links", () => {
     const m = new TurnMaterializer();
     m.apply(textChunk("user_message_chunk", "hello"));
     m.apply({
       sessionUpdate: "user_message_chunk",
       content: {
         type: "resource_link",
-        name: "poolside://host-context.md",
-        uri: "poolside://host-context.md",
+        name: "camber://host-context.md",
+        uri: "camber://host-context.md",
       },
     } as SessionUpdate);
 
@@ -235,9 +235,9 @@ describe("TurnMaterializer", () => {
       content: {
         type: "resource",
         resource: {
-          uri: "poolside://handoff/source-session.md",
+          uri: "camber://handoff/source-session.md",
           mimeType: "text/markdown",
-          text: "<poolside-handoff>\nprior transcript\n</poolside-handoff>",
+          text: "<camber-handoff>\nprior transcript\n</camber-handoff>",
         },
       },
     } as SessionUpdate);
@@ -261,8 +261,8 @@ describe("TurnMaterializer", () => {
       textChunk(
         "user_message_chunk",
         [
-          "What is 2 plus 2?poolside://host-context.md",
-          '<context ref="poolside://host-context.md">',
+          "What is 2 plus 2?camber://host-context.md",
+          '<context ref="camber://host-context.md">',
           resourceText,
           "</context>",
         ].join("\n"),
@@ -288,10 +288,10 @@ describe("TurnMaterializer", () => {
       context.type === "resource" && "text" in context.resource ? context.resource.text : "";
     const items = applyAll([
       textChunk("user_message_chunk", "What is 2 plus 2?"),
-      textChunk("user_message_chunk", "poolside://host-context.md"),
+      textChunk("user_message_chunk", "camber://host-context.md"),
       textChunk(
         "user_message_chunk",
-        `\n<context ref="poolside://host-context.md">\n${resourceText}\n</context>`,
+        `\n<context ref="camber://host-context.md">\n${resourceText}\n</context>`,
       ),
     ]);
 
@@ -322,11 +322,11 @@ describe("TurnMaterializer", () => {
       textChunk(
         "user_message_chunk",
         [
-          `raw prefix ${USER_MESSAGE_START_BOUNDARY}What is 2 plus 2?${USER_MESSAGE_END_BOUNDARY}poolside://host-context.md`,
-          '<context ref="poolside://host-context.md">',
-          "# Poolside Host Context",
+          `raw prefix ${USER_MESSAGE_START_BOUNDARY}What is 2 plus 2?${USER_MESSAGE_END_BOUNDARY}camber://host-context.md`,
+          '<context ref="camber://host-context.md">',
+          "# Camber Host Context",
           "",
-          "You are running within Poolside Assistant via the Agent Client Protocol (ACP).",
+          "You are running within Camber Assistant via the Agent Client Protocol (ACP).",
           "",
           "## Project Guidelines for Agent",
           "",
@@ -346,7 +346,7 @@ describe("TurnMaterializer", () => {
   });
 
   it("keeps loaded user chunks unchanged when there is no client boundary pair", () => {
-    const text = "What is 2 plus 2?\npoolside://host-context.md\n<context>raw</context>";
+    const text = "What is 2 plus 2?\ncamber://host-context.md\n<context>raw</context>";
     const items = applyAll([textChunk("user_message_chunk", text)]);
 
     expect(items).toEqual([
@@ -404,11 +404,11 @@ describe("TurnMaterializer", () => {
     expect(items[1]).toMatchObject({ messageId: "m2", content: [{ text: "second" }] });
   });
 
-  it("uses poolside/step_id as the message identity when messageId is absent", () => {
+  it("uses camber/step_id as the message identity when messageId is absent", () => {
     const items = applyAll([
-      textChunk("agent_message_chunk", "hel", undefined, { "poolside/step_id": "step-1" }),
-      textChunk("agent_message_chunk", "lo", undefined, { "poolside/step_id": "step-1" }),
-      textChunk("agent_message_chunk", "new", undefined, { "poolside/step_id": "step-2" }),
+      textChunk("agent_message_chunk", "hel", undefined, { "camber/step_id": "step-1" }),
+      textChunk("agent_message_chunk", "lo", undefined, { "camber/step_id": "step-1" }),
+      textChunk("agent_message_chunk", "new", undefined, { "camber/step_id": "step-2" }),
     ]);
 
     expect(items).toHaveLength(2);
@@ -918,11 +918,11 @@ describe("TurnMaterializer", () => {
         acpTool({
           toolCallId: "w1",
           kind: "edit",
-          _meta: { "poolside/step_id": "step-1", tool_name: "write" },
+          _meta: { "camber/step_id": "step-1", tool_name: "write" },
         }),
         acpToolUpdate("w1", {
           status: "completed",
-          _meta: { "poolside/step_id": "step-1" },
+          _meta: { "camber/step_id": "step-1" },
         }),
       ]);
 
@@ -960,14 +960,14 @@ describe("TurnMaterializer", () => {
           toolCallId: "w1",
           kind: "edit",
           rawInput: { path: "/repo/fb8/index.html", contents: "<!doctype html>\n<html></html>" },
-          _meta: { "poolside/step_id": "s1", tool_name: "write" },
+          _meta: { "camber/step_id": "s1", tool_name: "write" },
         }),
         acpToolUpdate("w1", {
           status: "completed",
           content: [
             { type: "content", content: { type: "text", text: "Created file index.html" } },
           ],
-          _meta: { "poolside/step_id": "s1" },
+          _meta: { "camber/step_id": "s1" },
         }),
       ]);
 

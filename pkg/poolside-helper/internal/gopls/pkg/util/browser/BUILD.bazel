@@ -1,8 +1,0 @@
-load("@rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "browser",
-    srcs = ["browser.go"],
-    importpath = "github.com/poolsideai/assistant/pkg/poolside-helper/internal/gopls/pkg/util/browser",
-    visibility = ["//visibility:public"],
-)

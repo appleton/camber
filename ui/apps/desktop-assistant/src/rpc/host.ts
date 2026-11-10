@@ -8,14 +8,14 @@ import {
   type DesktopSystemContextMenuRequest,
   type NativeConfirmationRequest,
   type NativeErrorRequest,
-} from "@poolsideai/features/acp";
+} from "@camber/features/acp";
 import type {
   DeleteSecretParams,
   GetSecretParams,
   ListSecretsParams,
   UpsertSecretParams,
-} from "@poolsideai/helperapi/schemas";
-import { getUnknownErrorMessage } from "@poolsideai/lib/errors";
+} from "@camber/helperapi/schemas";
+import { getUnknownErrorMessage } from "@camber/lib/errors";
 import {
   INFO_MESSAGE_EVENT,
   InfoMessageType,
@@ -24,13 +24,13 @@ import {
   type ImageFileData,
   type OpenAcpChatOptions,
   type SaveTextFileOptions,
-} from "@poolsideai/rpc";
+} from "@camber/rpc";
 import {
   appliedSourceNotificationCount,
   coalesceACPTextChunkNotificationBatch,
   webviewCommandForHelperNotification,
   type JSONRPCNotifyBatchResult,
-} from "@poolsideai/rpc/assistant";
+} from "@camber/rpc/assistant";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
@@ -41,45 +41,45 @@ import { relaunch } from "@tauri-apps/plugin-process";
 
 import { logStartupDiagnostic } from "../startupDiagnostics";
 
-const WEBVIEW_RESPONSE_EVENT = "poolside:desktop:webview-response";
+const WEBVIEW_RESPONSE_EVENT = "camber:desktop:webview-response";
 // Notification handlers are synchronous in the webview. If no response comes
 // back promptly, the webview was reloaded or the bridge message was lost; fail
 // before the native 30-second ACK timeout so it can retry the batch safely.
 const HELPER_NOTIFICATION_WEBVIEW_TIMEOUT_MS = 10_000;
-export const DESKTOP_SETTINGS_CHANGED_EVENT = "poolside:desktop-settings-changed";
-export const DESKTOP_OPEN_SETTINGS_PANEL_EVENT = "poolside:desktop-open-settings-panel";
-export const DESKTOP_NEW_CONVERSATION_EVENT = "poolside:desktop-new-conversation";
-export const DESKTOP_NEW_PROJECT_EVENT = "poolside:desktop-new-project";
-export const DESKTOP_OPEN_IN_IDE_EVENT = "poolside:desktop-open-in-ide";
-export const DESKTOP_DEEP_LINK_EVENT = "poolside:desktop-deep-link";
+export const DESKTOP_SETTINGS_CHANGED_EVENT = "camber:desktop-settings-changed";
+export const DESKTOP_OPEN_SETTINGS_PANEL_EVENT = "camber:desktop-open-settings-panel";
+export const DESKTOP_NEW_CONVERSATION_EVENT = "camber:desktop-new-conversation";
+export const DESKTOP_NEW_PROJECT_EVENT = "camber:desktop-new-project";
+export const DESKTOP_OPEN_IN_IDE_EVENT = "camber:desktop-open-in-ide";
+export const DESKTOP_DEEP_LINK_EVENT = "camber:desktop-deep-link";
 // OAuth redirect deep links (must match the helper's DeepLinkOAuthRedirectURI):
 // the browser lands here after sign-in and the OS hands the URL to this app,
 // which forwards it to the helper to complete the pending flow.
-export const MCP_OAUTH_CALLBACK_DEEP_LINK = "poolside://oauth/callback";
-export const DESKTOP_NEW_TAB_EVENT = "poolside:desktop-new-tab";
-export const DESKTOP_OPEN_CONVERSATION_SEARCH_EVENT = "poolside:desktop-open-conversation-search";
-export const DESKTOP_CLOSE_TAB_EVENT = "poolside:desktop-close-tab";
-export const DESKTOP_REOPEN_CLOSED_TAB_EVENT = "poolside:desktop-reopen-closed-tab";
-export const DESKTOP_OPEN_FILE_TAB_EVENT = "poolside:desktop-open-file-tab";
-export const DESKTOP_SELECT_PREVIOUS_TAB_EVENT = "poolside:desktop-select-previous-tab";
-export const DESKTOP_SELECT_NEXT_TAB_EVENT = "poolside:desktop-select-next-tab";
-export const DESKTOP_SPLIT_RIGHT_EVENT = "poolside:desktop-split-right";
-export const DESKTOP_SPLIT_DOWN_EVENT = "poolside:desktop-split-down";
-export const DESKTOP_TOGGLE_LEFT_SIDEBAR_EVENT = "poolside:desktop-toggle-left-sidebar";
-export const DESKTOP_TOGGLE_RIGHT_SIDEBAR_EVENT = "poolside:desktop-toggle-right-sidebar";
-export const DESKTOP_TOGGLE_BOTTOM_PANEL_EVENT = "poolside:desktop-toggle-bottom-panel";
-export const DESKTOP_SAVE_LAYOUT_AS_DEFAULT_EVENT = "poolside:desktop-save-layout-as-default";
-export const DESKTOP_CHECK_FOR_UPDATES_EVENT = "poolside:desktop-check-for-updates";
-export const DESKTOP_UPDATE_STAGED_EVENT = "poolside:desktop-update-staged";
-export const DESKTOP_UPDATE_PROGRESS_EVENT = "poolside:desktop-update-progress";
-export const DESKTOP_BUNDLE_REPLACED_EVENT = "poolside:desktop-bundle-replaced";
-export const DESKTOP_NAVIGATE_BACK_EVENT = "poolside:desktop-navigate-back";
-export const DESKTOP_NAVIGATE_FORWARD_EVENT = "poolside:desktop-navigate-forward";
-export const DESKTOP_NAVIGATION_AVAILABILITY_EVENT = "poolside:desktop-navigation-availability";
-export const DESKTOP_CLOSE_WINDOW_EVENT = "poolside:desktop-close-window";
+export const MCP_OAUTH_CALLBACK_DEEP_LINK = "camber://oauth/callback";
+export const DESKTOP_NEW_TAB_EVENT = "camber:desktop-new-tab";
+export const DESKTOP_OPEN_CONVERSATION_SEARCH_EVENT = "camber:desktop-open-conversation-search";
+export const DESKTOP_CLOSE_TAB_EVENT = "camber:desktop-close-tab";
+export const DESKTOP_REOPEN_CLOSED_TAB_EVENT = "camber:desktop-reopen-closed-tab";
+export const DESKTOP_OPEN_FILE_TAB_EVENT = "camber:desktop-open-file-tab";
+export const DESKTOP_SELECT_PREVIOUS_TAB_EVENT = "camber:desktop-select-previous-tab";
+export const DESKTOP_SELECT_NEXT_TAB_EVENT = "camber:desktop-select-next-tab";
+export const DESKTOP_SPLIT_RIGHT_EVENT = "camber:desktop-split-right";
+export const DESKTOP_SPLIT_DOWN_EVENT = "camber:desktop-split-down";
+export const DESKTOP_TOGGLE_LEFT_SIDEBAR_EVENT = "camber:desktop-toggle-left-sidebar";
+export const DESKTOP_TOGGLE_RIGHT_SIDEBAR_EVENT = "camber:desktop-toggle-right-sidebar";
+export const DESKTOP_TOGGLE_BOTTOM_PANEL_EVENT = "camber:desktop-toggle-bottom-panel";
+export const DESKTOP_SAVE_LAYOUT_AS_DEFAULT_EVENT = "camber:desktop-save-layout-as-default";
+export const DESKTOP_CHECK_FOR_UPDATES_EVENT = "camber:desktop-check-for-updates";
+export const DESKTOP_UPDATE_STAGED_EVENT = "camber:desktop-update-staged";
+export const DESKTOP_UPDATE_PROGRESS_EVENT = "camber:desktop-update-progress";
+export const DESKTOP_BUNDLE_REPLACED_EVENT = "camber:desktop-bundle-replaced";
+export const DESKTOP_NAVIGATE_BACK_EVENT = "camber:desktop-navigate-back";
+export const DESKTOP_NAVIGATE_FORWARD_EVENT = "camber:desktop-navigate-forward";
+export const DESKTOP_NAVIGATION_AVAILABILITY_EVENT = "camber:desktop-navigation-availability";
+export const DESKTOP_CLOSE_WINDOW_EVENT = "camber:desktop-close-window";
 export const DESKTOP_FILE_TREE_CONTEXT_MENU_ACTION_EVENT =
-  "poolside:desktop-file-tree-context-menu-action";
-export const DESKTOP_FILE_TREE_CHANGED_EVENT = "poolside:desktop-file-tree-changed";
+  "camber:desktop-file-tree-context-menu-action";
+export const DESKTOP_FILE_TREE_CHANGED_EVENT = "camber:desktop-file-tree-changed";
 
 type TauriMenuItemOptions = NonNullable<MenuOptions["items"]>[number];
 
@@ -88,11 +88,11 @@ const DESKTOP_SYSTEM_CONTEXT_MENU_CLOSE_DELAY_MS = 30_000;
 let activeDesktopSystemContextMenu: { menu: Menu; dismiss: () => Promise<void> } | undefined;
 
 type AssistantTerminalCommandMode = "interactive" | "nonInteractive";
-export const TERMINAL_DID_OPEN_EVENT = "poolside:assistant-terminal-did-open";
-export const TERMINAL_DID_UPDATE_EVENT = "poolside:assistant-terminal-did-update";
-export const TERMINAL_DID_WRITE_EVENT = "poolside:assistant-terminal-did-write";
-export const TERMINAL_DID_EXIT_EVENT = "poolside:assistant-terminal-did-exit";
-export const TERMINAL_DID_CLOSE_EVENT = "poolside:assistant-terminal-did-close";
+export const TERMINAL_DID_OPEN_EVENT = "camber:assistant-terminal-did-open";
+export const TERMINAL_DID_UPDATE_EVENT = "camber:assistant-terminal-did-update";
+export const TERMINAL_DID_WRITE_EVENT = "camber:assistant-terminal-did-write";
+export const TERMINAL_DID_EXIT_EVENT = "camber:assistant-terminal-did-exit";
+export const TERMINAL_DID_CLOSE_EVENT = "camber:assistant-terminal-did-close";
 
 export interface DesktopSettings {
   themePreference: DesktopThemePreference;
@@ -143,7 +143,7 @@ export interface SystemAccentPalette {
 export type DesktopThemePreference = "system" | "light" | "dark";
 /**
  * Colours the app icon can be tinted with, based on `SLOT_COLORS` in
- * `@poolsideai/spoolside`. See src-tauri/src/app_icon.rs.
+ * `@camber/camberqa`. See src-tauri/src/app_icon.rs.
  */
 export type AppIconTint =
   | "default"
@@ -396,7 +396,7 @@ export class DesktopHost {
     };
 
     for (const { method, params } of notifications) {
-      if (method === "poolside/jsonrpc/notify") {
+      if (method === "camber/jsonrpc/notify") {
         acpNotifications.push(params);
         continue;
       }
@@ -522,11 +522,11 @@ export class DesktopHost {
   showInfoMessage(message: string, type: InfoMessageType = InfoMessageType.info): void {
     window.dispatchEvent(new CustomEvent(INFO_MESSAGE_EVENT, { detail: { message, type } }));
     const log = type === InfoMessageType.error ? console.error : console.info;
-    log(`poolside: ${message}`);
+    log(`camber: ${message}`);
   }
 
   async mcpOAuthCallback(url: string): Promise<void> {
-    await helperJsonRpc("poolside/mcpOAuthCallback", { url });
+    await helperJsonRpc("camber/mcpOAuthCallback", { url });
   }
 
   async openSettings(setting?: string): Promise<void> {
@@ -563,7 +563,7 @@ export class DesktopHost {
     const restart = await this.showNativeConfirmDialog({
       title: "Restart to finish updating",
       description:
-        "Poolside was updated on disk while it was running. Opening files or folders will quit this window until you restart.",
+        "Camber was updated on disk while it was running. Opening files or folders will quit this window until you restart.",
       confirmLabel: "Restart",
     });
     if (restart) await relaunch();
@@ -792,7 +792,7 @@ export class DesktopHost {
   }
 
   async setACPAgentServers(agentServers: ACPAgentServers): Promise<void> {
-    await helperJsonRpc("poolside/acpNav/setAgentServers", { agentServers });
+    await helperJsonRpc("camber/acpNav/setAgentServers", { agentServers });
     this.initialState.userSettings.acpAgentServers = agentServers;
     await this.updateHelperConfig();
   }
@@ -815,19 +815,19 @@ export class DesktopHost {
   }
 
   async upsertSecret(params: UpsertSecretParams): Promise<unknown> {
-    return await helperJsonRpc("poolside/upsertSecret", params);
+    return await helperJsonRpc("camber/upsertSecret", params);
   }
 
   async deleteSecret(params: DeleteSecretParams): Promise<unknown> {
-    return await helperJsonRpc("poolside/deleteSecret", params);
+    return await helperJsonRpc("camber/deleteSecret", params);
   }
 
   async listSecrets(params: ListSecretsParams): Promise<unknown> {
-    return await helperJsonRpc("poolside/listSecrets", params);
+    return await helperJsonRpc("camber/listSecrets", params);
   }
 
   async getSecret(params: GetSecretParams): Promise<unknown> {
-    return await helperJsonRpc("poolside/getSecret", params);
+    return await helperJsonRpc("camber/getSecret", params);
   }
 
   async writeToClipboard(text: string): Promise<void> {
@@ -870,15 +870,15 @@ export class DesktopHost {
 
   private queueHelperConfigUpdate(): void {
     void this.updateHelperConfig().catch((error) => {
-      console.debug("Unable to update poolside-helper configuration", error);
+      console.debug("Unable to update camber-helper configuration", error);
     });
   }
 
   private async dispatchHelperRequest(method: string, params: unknown): Promise<unknown> {
     switch (method) {
-      case "poolside/acp/elicitation/create":
+      case "camber/acp/elicitation/create":
         return await this.callWebview("elicitation", [params]);
-      case "poolside/jsonrpc/request":
+      case "camber/jsonrpc/request":
         return await this.callWebview("jsonrpcRequest", [params]);
       default:
         return undefined;
@@ -890,7 +890,7 @@ export class DesktopHost {
     // webview as-is routes through the shared table so a new helper
     // notification needs one entry there instead of a case per host.
     switch (method) {
-      case "poolside/mcpOAuthURL":
+      case "camber/mcpOAuthURL":
         this.openExternalURL(helperAuthURL(params));
         return;
     }

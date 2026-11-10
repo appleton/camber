@@ -29,7 +29,7 @@ describe("makeTauriDragDropCallbacks", () => {
     const callbacks = makeTauriDragDropCallbacks(runtime);
 
     const dispatched: string[] = [];
-    window.addEventListener("poolside:desktop-file-prompt-chip", (event) => {
+    window.addEventListener("camber:desktop-file-prompt-chip", (event) => {
       dispatched.push((event as CustomEvent<{ path: string }>).detail.path);
     });
 
@@ -46,7 +46,7 @@ describe("makeTauriDragDropCallbacks", () => {
     const callbacks = makeTauriDragDropCallbacks(runtime);
 
     const dispatched: string[] = [];
-    window.addEventListener("poolside:desktop-file-prompt-chip", (event) => {
+    window.addEventListener("camber:desktop-file-prompt-chip", (event) => {
       dispatched.push((event as CustomEvent<{ path: string }>).detail.path);
     });
 
@@ -71,12 +71,12 @@ describe("makeTauriDragDropCallbacks", () => {
 
     const imageEvents: Array<{ name: string; data: string; mimeType: string }> = [];
     const chipEvents: string[] = [];
-    window.addEventListener("poolside:desktop-image-attachment", (event) => {
+    window.addEventListener("camber:desktop-image-attachment", (event) => {
       imageEvents.push(
         (event as CustomEvent<{ name: string; data: string; mimeType: string }>).detail,
       );
     });
-    window.addEventListener("poolside:desktop-file-prompt-chip", (event) => {
+    window.addEventListener("camber:desktop-file-prompt-chip", (event) => {
       chipEvents.push((event as CustomEvent<{ path: string }>).detail.path);
     });
 
@@ -97,7 +97,7 @@ describe("makeTauriDragDropCallbacks", () => {
     const callbacks = makeTauriDragDropCallbacks(runtime, { rpc });
 
     const chipEvents: string[] = [];
-    window.addEventListener("poolside:desktop-file-prompt-chip", (event) => {
+    window.addEventListener("camber:desktop-file-prompt-chip", (event) => {
       chipEvents.push((event as CustomEvent<{ path: string }>).detail.path);
     });
 

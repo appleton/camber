@@ -1,41 +1,41 @@
 import {
-  poolsideGitDiffClose,
-  poolsideGitDiffList,
-  poolsideGitDiffOpen,
-  poolsideGitDiffRead,
-  poolsideGitDiffStats,
-  poolsideGitStatus,
+  camberGitDiffClose,
+  camberGitDiffList,
+  camberGitDiffOpen,
+  camberGitDiffRead,
+  camberGitDiffStats,
+  camberGitStatus,
   type GitStatusOutput,
-} from "@poolsideai/helperapi";
+} from "@camber/helperapi";
 import { fireEvent, render, waitFor } from "@testing-library/svelte";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { DESKTOP_FILE_TREE_CHANGED_EVENT } from "../../features/DesktopGitChangesState.svelte";
 import DesktopDiffPanel from "./DesktopDiffPanel.svelte";
 
-vi.mock("@poolsideai/helperapi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@poolsideai/helperapi")>()),
-  poolsideGitDiffClose: vi.fn(),
-  poolsideGitDiffList: vi.fn(),
-  poolsideGitDiffOpen: vi.fn(),
-  poolsideGitDiffRead: vi.fn(),
-  poolsideGitDiffStats: vi.fn(),
-  poolsideGitStatus: vi.fn(),
+vi.mock("@camber/helperapi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@camber/helperapi")>()),
+  camberGitDiffClose: vi.fn(),
+  camberGitDiffList: vi.fn(),
+  camberGitDiffOpen: vi.fn(),
+  camberGitDiffRead: vi.fn(),
+  camberGitDiffStats: vi.fn(),
+  camberGitStatus: vi.fn(),
 }));
 
 // jsdom cannot host @pierre/diffs' shadow-DOM CodeView (no
 // CSSStyleSheet.replaceSync); render items through the same mock the
 // document tests use.
-vi.mock("@poolsideai/components/file-diff", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@poolsideai/components/file-diff")>()),
+vi.mock("@camber/components/file-diff", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@camber/components/file-diff")>()),
   DiffCodeView: (await import("../shared/DiffCodeView.mock.svelte")).default,
 }));
 
-const closeMock = vi.mocked(poolsideGitDiffClose);
-const listMock = vi.mocked(poolsideGitDiffList);
-const openMock = vi.mocked(poolsideGitDiffOpen);
-const readMock = vi.mocked(poolsideGitDiffRead);
-const statsMock = vi.mocked(poolsideGitDiffStats);
-const statusMock = vi.mocked(poolsideGitStatus);
+const closeMock = vi.mocked(camberGitDiffClose);
+const listMock = vi.mocked(camberGitDiffList);
+const openMock = vi.mocked(camberGitDiffOpen);
+const readMock = vi.mocked(camberGitDiffRead);
+const statsMock = vi.mocked(camberGitDiffStats);
+const statusMock = vi.mocked(camberGitStatus);
 
 function unavailableStatus(gitMissing: boolean): GitStatusOutput {
   return {
@@ -57,9 +57,9 @@ function unavailableStatus(gitMissing: boolean): GitStatusOutput {
 function cleanStatus(overrides: Partial<GitStatusOutput> = {}): GitStatusOutput {
   return {
     isRepo: true,
-    branch: "poolside/fair-forecastle",
+    branch: "camber/fair-forecastle",
     detached: false,
-    upstream: "origin/poolside/fair-forecastle",
+    upstream: "origin/camber/fair-forecastle",
     ahead: 0,
     behind: 0,
     staged: [],
@@ -161,11 +161,9 @@ describe("DesktopDiffPanel empty state", () => {
       props: { worktreePath: "/tmp/clean-repo", openToken: 1 },
     });
 
-    await waitFor(() =>
-      expect(getByText("On branch poolside/fair-forecastle")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(getByText("On branch camber/fair-forecastle")).toBeInTheDocument());
     expect(
-      getByText("Your branch is up to date with 'origin/poolside/fair-forecastle'."),
+      getByText("Your branch is up to date with 'origin/camber/fair-forecastle'."),
     ).toBeInTheDocument();
     expect(getByText("nothing to commit, working tree clean")).toBeInTheDocument();
   });

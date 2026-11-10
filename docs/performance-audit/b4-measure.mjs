@@ -92,6 +92,6 @@ if (process.argv[2]) {
       throw Error(JSON.stringify(original));
     result.maps.push({ file, source, line, generated, original });
   }
-  writeFileSync("/tmp/poolside-b4-measurements.json", JSON.stringify(result, null, 2));
+  writeFileSync("/tmp/camber-b4-measurements.json", JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
 }

@@ -16,15 +16,15 @@ const sourceSha = "0123456789abcdef0123456789abcdef01234567";
 const metadata = createReleaseTagMetadata({
   product: "vscode",
   tagPrefix: "vscode-shadow-202607",
-  destination: "poolside-ai.assistant-release-test-202607",
-  displayName: "Poolside Assistant Release Test 202607",
+  destination: "appleton.assistant-release-test-202607",
+  displayName: "Camber Assistant Release Test 202607",
   version: "0.1.0",
   sourceSha,
 });
 const desktopMetadata = createReleaseTagMetadata({
   product: "desktop",
   tagPrefix: "desktop",
-  destination: "poolside/desktop-assistant",
+  destination: "camber/desktop-assistant",
   version: "1.0.0",
   sourceSha,
 });
@@ -63,7 +63,7 @@ describe("release tag metadata", () => {
       assertLineageAssociation(metadata, {
         product: "vscode",
         tagPrefix: "vscode-shadow-202607",
-        destination: "poolside-ai.another-extension",
+        destination: "appleton.another-extension",
       }),
     ).toThrow("is bound to");
   });
@@ -76,7 +76,7 @@ describe("release tag metadata", () => {
       assertLineageAssociation(desktopMetadata, {
         product: "desktop",
         tagPrefix: "desktop",
-        destination: "poolside/another-desktop-app",
+        destination: "camber/another-desktop-app",
       }),
     ).toThrow("is bound to");
   });

@@ -1,10 +1,10 @@
-@poolsideai/components contains reusable UI, not coupled to business logic or state. UI state is fine, e.g. whether a component has been clicked, or the value of fields currently shown in a form. UI components that are coupled to application logic belong within their relevant @poolsideai/features package.
+@camber/components contains reusable UI, not coupled to business logic or state. UI state is fine, e.g. whether a component has been clicked, or the value of fields currently shown in a form. UI components that are coupled to application logic belong within their relevant @camber/features package.
 
 ## Highlighting bundles
 
 Chat highlighting uses Shiki core, the app's CSS-variable theme, and lazy grammar loaders. The small `highlightLanguages.ts` registry contains every installed language name and alias without importing the tokenizer into UI name lookup. Regenerate it with `node scripts/highlight-languages.mjs` after updating Shiki; the highlighting tests compare it with the complete installed registry. Both WASM and the CSP-compatible JavaScript engine remain available.
 
-Chat and Pierre workers use `?shared-worker`, provided by `@poolsideai/vite-config`. Production emits them in the same Rollup graph as the window, sharing grammar/engine URLs without rewriting generated assets. Development uses Vite's standard module-worker path; restart the Vite server after changing the shared configuration. Keep these worker entries DOM-free: the build rejects CSS in their import closure. The build integration also guards Vite's preload helper for worker contexts and fails on an incompatible helper shape, so rerun its Node tests and production-worker browser checks when updating Vite.
+Chat and Pierre workers use `?shared-worker`, provided by `@camber/vite-config`. Production emits them in the same Rollup graph as the window, sharing grammar/engine URLs without rewriting generated assets. Development uses Vite's standard module-worker path; restart the Vite server after changing the shared configuration. Keep these worker entries DOM-free: the build rejects CSS in their import closure. The build integration also guards Vite's preload helper for worker contexts and fails on an incompatible helper shape, so rerun its Node tests and production-worker browser checks when updating Vite.
 
 The pinned `@pierre/diffs` patch uses narrow Shiki imports and the same core constructor as Pierre's own worker. Its existing language/theme resolvers still supply grammars, registered app themes, and optional upstream themes. Modified dependency modules retain accurate final JS source maps by omitting their stale upstream map links. See the [B3 evidence](../../../docs/performance-audit/implementation.md#b3--shared-worker-assets-and-narrow-highlighter-imports) for all-host grammar, engine, fallback and UI checks.
 
@@ -58,6 +58,6 @@ CDN allowlist. Fragments have a 1 MB limit (desktop file reads also have a nativ
 Codex-specific APIs such as `window.openai` and `Tweak` are not implemented.
 
 Run the real-browser navigation regression with
-`pnpm -F @poolsideai/components test:storybook src/lib/components/markdown/Visualization.stories.svelte`.
+`pnpm -F @camber/components test:storybook src/lib/components/markdown/Visualization.stories.svelte`.
 It exercises script, meta-refresh, anchor, and mailto navigation in Playwright,
 with synthetic destination requests intercepted before they can reach the network.

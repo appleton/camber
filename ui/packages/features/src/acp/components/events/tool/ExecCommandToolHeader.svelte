@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { CollapsibleTrigger } from "@poolsideai/components/collapsible";
+  import Icon from "@camber/components/icon";
+  import { CollapsibleTrigger } from "@camber/components/collapsible";
   import { getToolContext } from "../../shared/ToolRoot.svelte";
   import { shortenDirectoryPathsInText } from "../../../shared/paths";
 

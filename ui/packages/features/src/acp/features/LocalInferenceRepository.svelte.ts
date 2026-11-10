@@ -1,18 +1,18 @@
 import {
-  poolsideLocalInferenceCancelDownload,
-  poolsideLocalInferenceDeleteModel,
-  poolsideLocalInferenceDownloadModel,
-  poolsideLocalInferenceGetState,
-  poolsideLocalInferenceSearchModels,
-  poolsideLocalInferenceSetDefaultModel,
-  poolsideLocalInferenceUnloadModel,
-} from "@poolsideai/helperapi";
+  camberLocalInferenceCancelDownload,
+  camberLocalInferenceDeleteModel,
+  camberLocalInferenceDownloadModel,
+  camberLocalInferenceGetState,
+  camberLocalInferenceSearchModels,
+  camberLocalInferenceSetDefaultModel,
+  camberLocalInferenceUnloadModel,
+} from "@camber/helperapi";
 import type {
   LocalInferenceDidChangeParams,
   LocalInferenceModel,
   LocalInferenceState,
-} from "@poolsideai/helperapi/schemas";
-import { getUnknownErrorMessage } from "@poolsideai/lib/errors";
+} from "@camber/helperapi/schemas";
+import { getUnknownErrorMessage } from "@camber/lib/errors";
 import { createContext } from "svelte";
 
 export type LocalInferenceStateListener = (
@@ -39,7 +39,7 @@ export class LocalInferenceRepository {
     this.loading = true;
     this.error = null;
     try {
-      this.setState(await poolsideLocalInferenceGetState({}));
+      this.setState(await camberLocalInferenceGetState({}));
     } catch (error) {
       this.error = getUnknownErrorMessage(error);
       throw error;
@@ -63,7 +63,7 @@ export class LocalInferenceRepository {
     // not raise the shared loading flag or leave an error banner behind in
     // whichever surface happens to render this app-wide repository.
     const version = this.#stateVersion;
-    this.#refreshInFlight = poolsideLocalInferenceGetState({})
+    this.#refreshInFlight = camberLocalInferenceGetState({})
       .then((state) => {
         // A didChange push that landed mid-flight is newer than this response
         // (the helper enriches state from Hugging Face, so a read can take
@@ -93,29 +93,29 @@ export class LocalInferenceRepository {
   }
 
   async downloadModel(modelId: string): Promise<void> {
-    await this.update(() => poolsideLocalInferenceDownloadModel({ modelId }));
+    await this.update(() => camberLocalInferenceDownloadModel({ modelId }));
   }
 
   async cancelDownload(modelId: string): Promise<void> {
-    await this.update(() => poolsideLocalInferenceCancelDownload({ modelId }));
+    await this.update(() => camberLocalInferenceCancelDownload({ modelId }));
   }
 
   async deleteModel(modelId: string): Promise<void> {
-    await this.update(() => poolsideLocalInferenceDeleteModel({ modelId }));
+    await this.update(() => camberLocalInferenceDeleteModel({ modelId }));
   }
 
   async setDefaultModel(modelId: string): Promise<void> {
-    await this.update(() => poolsideLocalInferenceSetDefaultModel({ modelId }));
+    await this.update(() => camberLocalInferenceSetDefaultModel({ modelId }));
   }
 
   /** Releases the model resident in the local sidecar's memory. */
   async unloadModel(): Promise<void> {
-    await this.update(() => poolsideLocalInferenceUnloadModel({}));
+    await this.update(() => camberLocalInferenceUnloadModel({}));
   }
 
   async searchModels(query: string): Promise<LocalInferenceModel[]> {
     this.error = null;
-    const result = await poolsideLocalInferenceSearchModels({ query });
+    const result = await camberLocalInferenceSearchModels({ query });
     return result.models;
   }
 

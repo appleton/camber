@@ -1,5 +1,5 @@
-import type { AssistantTerminalTab } from "@poolsideai/rpc";
-import type { PaneID, PixelRect, SplitsController, Tab, TabID } from "@poolsideai/splits";
+import type { AssistantTerminalTab } from "@camber/rpc";
+import type { PaneID, PixelRect, SplitsController, Tab, TabID } from "@camber/splits";
 import type {
   AssistantTerminalCommandMode,
   AssistantTerminalPlacement,

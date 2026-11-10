@@ -42,7 +42,7 @@
   // applies at runtime (see src-tauri/src/app_icon.rs), so the swatch is what
   // the Dock will actually show. Regenerate these if the app icon changes.
   const OPTIONS: Array<{ value: AppIconTint; label: string; icon: string }> = [
-    { value: "default", label: "Poolside", icon: defaultURL },
+    { value: "default", label: "Camber", icon: defaultURL },
     { value: "blue", label: "Blue", icon: blueURL },
     { value: "green", label: "Green", icon: greenURL },
     { value: "pink", label: "Pink", icon: pinkURL },

@@ -1,4 +1,4 @@
-# gazelle:prefix github.com/poolsideai/assistant
+# gazelle:prefix github.com/appleton/camber
 # gazelle:exclude .claude
 # gazelle:exclude scripts
 

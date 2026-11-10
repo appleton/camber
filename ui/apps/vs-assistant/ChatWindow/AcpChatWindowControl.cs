@@ -1,7 +1,7 @@
 using CefSharp;
-using Poolside.Assistant.WebViewInfrastructure;
+using Camber.Assistant.WebViewInfrastructure;
 
-namespace Poolside.Assistant.ChatWindow
+namespace Camber.Assistant.ChatWindow
 {
     // CefSharp control hosting the acp-chat webview entry (the single-chat
     // AcpChatApp), one per ACP conversation.

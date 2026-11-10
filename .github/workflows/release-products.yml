@@ -98,7 +98,7 @@ concurrency:
 jobs:
   plan:
     name: Plan release train
-    if: github.repository == 'poolsideai/assistants'
+    if: github.repository == 'appleton/camber' && vars.CAMBER_RELEASES_ENABLED == 'true'
     runs-on: ubuntu-latest
     outputs:
       release: ${{ steps.gate.outputs.release }}
@@ -261,7 +261,7 @@ jobs:
           if [[ "${VSCODE}" == "true" ]]; then
             args+=(
               --vscode
-              --vscode-destination "poolside-ai.${VSCODE_EXTENSION_NAME}"
+              --vscode-destination "appleton.${VSCODE_EXTENSION_NAME}"
               --vscode-display-name "${VSCODE_EXTENSION_DISPLAY_NAME}"
             )
           fi
@@ -274,7 +274,7 @@ jobs:
           [[ -n "${BOOTSTRAP_VERSION}" ]] && args+=(--bootstrap-version "${BOOTSTRAP_VERSION}")
           [[ "${SYNC_VERSIONS}" == "true" ]] && args+=(--sync-versions)
           [[ "${SCHEDULED}" == "true" ]] && args+=(--scheduled --skip-if-no-changes)
-          pnpm -s -F @poolsideai/release-helper find-version "${args[@]}" > "$RUNNER_TEMP/product-release-plan.json"
+          pnpm -s -F @camber/release-helper find-version "${args[@]}" > "$RUNNER_TEMP/product-release-plan.json"
 
       - name: Export coordinated plan
         if: steps.gate.outputs.proceed == 'true'
@@ -311,7 +311,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          pnpm -s -F @poolsideai/release-helper find-version \
+          pnpm -s -F @camber/release-helper find-version \
             plan-helper \
             --ref "${{ steps.plan.outputs.source_sha }}" \
             --main-ref origin/main \

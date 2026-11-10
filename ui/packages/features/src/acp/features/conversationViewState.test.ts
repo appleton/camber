@@ -1,14 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@poolsideai/helperapi", () => ({
-  poolsideAcpNavReportConversationViewState: vi.fn(async () => {}),
+vi.mock("@camber/helperapi", () => ({
+  camberAcpNavReportConversationViewState: vi.fn(async () => {}),
 }));
 
-import { poolsideAcpNavReportConversationViewState } from "@poolsideai/helperapi";
+import { camberAcpNavReportConversationViewState } from "@camber/helperapi";
 import { appState } from "../hostAdapter";
 import { reportConversationViewState } from "./conversationViewState";
 
-const reportMock = vi.mocked(poolsideAcpNavReportConversationViewState);
+const reportMock = vi.mocked(camberAcpNavReportConversationViewState);
 
 function setHost(assistantHost: string): void {
   appState.update((state) => ({

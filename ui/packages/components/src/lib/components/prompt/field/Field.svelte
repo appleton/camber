@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import type { ClassValue } from "svelte/elements";
-  import { cn } from "@poolsideai/tailwind-config/tv";
+  import { cn } from "@camber/tailwind-config/tv";
   import { getDisplay } from "../../../providers/index.js";
 
   interface Props {

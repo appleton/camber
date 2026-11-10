@@ -44,8 +44,8 @@
             }
           ],
           "hidden": false,
-          "image-name": "poolside-app-icon-mac-V3-Sun-11-combined.png",
-          "name": "poolside-app-icon-mac-V3-Sun-11-combined",
+          "image-name": "camber-app-icon-mac-V3-Sun-11-combined.png",
+          "name": "camber-app-icon-mac-V3-Sun-11-combined",
           "position": {
             "scale": 0.38,
             "translation-in-points": [0, 0]
@@ -177,8 +177,8 @@
             }
           ],
           "hidden": false,
-          "image-name": "poolside-app-icon-mac-V3-Sun-11-combined.png",
-          "name": "poolside-app-icon-mac-V3-Sun-11-combined",
+          "image-name": "camber-app-icon-mac-V3-Sun-11-combined.png",
+          "name": "camber-app-icon-mac-V3-Sun-11-combined",
           "position": {
             "scale": 0.38,
             "translation-in-points": [0, 0]
@@ -314,8 +314,8 @@
             }
           ],
           "glass": true,
-          "image-name": "poolside-app-icon-mac-V3-Sun-11-white.png",
-          "name": "poolside-app-icon-mac-V3-Sun-11-white",
+          "image-name": "camber-app-icon-mac-V3-Sun-11-white.png",
+          "name": "camber-app-icon-mac-V3-Sun-11-white",
           "opacity": 1,
           "position": {
             "scale": 0.38,

@@ -17,11 +17,11 @@ use tauri::{async_runtime, AppHandle, Emitter, Manager, State};
 
 use crate::terminal_shell_integration::zsh_terminal_env;
 
-const TERMINAL_DID_OPEN_EVENT: &str = "poolside:assistant-terminal-did-open";
-const TERMINAL_DID_UPDATE_EVENT: &str = "poolside:assistant-terminal-did-update";
-const TERMINAL_DID_WRITE_EVENT: &str = "poolside:assistant-terminal-did-write";
-const TERMINAL_DID_EXIT_EVENT: &str = "poolside:assistant-terminal-did-exit";
-const TERMINAL_DID_CLOSE_EVENT: &str = "poolside:assistant-terminal-did-close";
+const TERMINAL_DID_OPEN_EVENT: &str = "camber:assistant-terminal-did-open";
+const TERMINAL_DID_UPDATE_EVENT: &str = "camber:assistant-terminal-did-update";
+const TERMINAL_DID_WRITE_EVENT: &str = "camber:assistant-terminal-did-write";
+const TERMINAL_DID_EXIT_EVENT: &str = "camber:assistant-terminal-did-exit";
+const TERMINAL_DID_CLOSE_EVENT: &str = "camber:assistant-terminal-did-close";
 const MAX_TERMINAL_BUFFER_BYTES: usize = 200_000;
 const MAX_TERMINAL_METADATA_TEXT_BYTES: usize = 512;
 const MAX_PENDING_OSC_BYTES: usize = 4096;
@@ -957,14 +957,14 @@ mod tests {
         let mut parser = TerminalMetadataParser::default();
 
         let update = parser
-            .process("\x1b]2;pnpm test\x07\x1b]7;file://host/Users/poolie/poolside%20assistant\x07")
+            .process("\x1b]2;pnpm test\x07\x1b]7;file://host/Users/poolie/camber%20assistant\x07")
             .expect("metadata update");
 
         assert_eq!(
             update,
             TerminalMetadataUpdate {
                 title: Some("pnpm test".to_string()),
-                cwd: Some("/Users/poolie/poolside assistant".to_string()),
+                cwd: Some("/Users/poolie/camber assistant".to_string()),
             },
         );
     }

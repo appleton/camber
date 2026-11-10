@@ -21,7 +21,7 @@
   import { iconMap, iconVariantSupport } from "./icons.js";
   import { mergeProps } from "bits-ui";
   import type { WithChild } from "../../types/child.js";
-  import { cn } from "@poolsideai/tailwind-config/tv";
+  import { cn } from "@camber/tailwind-config/tv";
 
   interface BaseIconProps {
     size?: number;

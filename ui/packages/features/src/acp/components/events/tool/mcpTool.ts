@@ -21,11 +21,11 @@ export function isMcpToolCallOverride(tool: ToolCall): boolean {
 /**
  * Agent namespaces stripped before the server/tool split. Claude Code prefixes
  * every MCP tool with "mcp__"; the Pool agent re-registers client-injected
- * servers (our connectors) as `poolside__agent__<name>`, so their tools arrive
- * as `poolside__agent__<name>__<tool>`. Pool's own built-in servers
- * (e.g. "poolside-github") carry no prefix.
+ * servers (our connectors) as `camber__agent__<name>`, so their tools arrive
+ * as `camber__agent__<name>__<tool>`. Pool's own built-in servers
+ * (e.g. "camber-github") carry no prefix.
  */
-const AGENT_NAMESPACE_PREFIXES = ["mcp__", "poolside__agent__"];
+const AGENT_NAMESPACE_PREFIXES = ["mcp__", "camber__agent__"];
 
 /**
  * Server/tool split of an MCP tool call's namespaced name (see

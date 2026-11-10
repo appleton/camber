@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Icon, { type IconName } from "@poolsideai/components/icon";
-  import { appState } from "@poolsideai/features/acp";
+  import Icon, { type IconName } from "@camber/components/icon";
+  import { appState } from "@camber/features/acp";
 
   import type { MobileAppearance, MobileThemePreference } from "./appearance";
 

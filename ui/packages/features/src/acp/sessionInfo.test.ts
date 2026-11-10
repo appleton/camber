@@ -9,10 +9,10 @@ describe("normalizeSessionInfo", () => {
       title: "Conversation history",
       updatedAt: "2026-03-30T09:00:00Z",
       _meta: {
-        "poolside/source": "conversation",
-        "poolside/read_only": true,
-        "poolside/conversation_id": "123",
-        "poolside/conversation_kind": "agentic",
+        "camber/source": "conversation",
+        "camber/read_only": true,
+        "camber/conversation_id": "123",
+        "camber/conversation_kind": "agentic",
       },
     });
 
@@ -29,9 +29,9 @@ describe("normalizeSessionInfo", () => {
       sessionId: "session:1",
       cwd: "/workspace",
       _meta: {
-        "poolside/read_only": true,
-        "poolside/error_message": "out of memory",
-        "poolside/cancellation_reason": "user requested",
+        "camber/read_only": true,
+        "camber/error_message": "out of memory",
+        "camber/cancellation_reason": "user requested",
       },
     });
 
@@ -57,7 +57,7 @@ describe("normalizeSessionInfo", () => {
     const info = normalizeSessionInfo({
       sessionId: "session:1",
       cwd: "/workspace",
-      _meta: { "poolside/agent_id": "agent-123" },
+      _meta: { "camber/agent_id": "agent-123" },
     });
 
     expect(info.agentId).toBe("agent-123");
@@ -78,7 +78,7 @@ describe("normalizeSessionInfo", () => {
       sessionId: "conversation:123",
       cwd: "/workspace",
       _meta: {
-        "poolside/source": "not_a_real_source",
+        "camber/source": "not_a_real_source",
       },
     });
 
@@ -91,13 +91,13 @@ describe("applySessionInfoUpdate", () => {
     const current = normalizeSessionInfo({
       sessionId: "session:1",
       cwd: "/workspace",
-      _meta: { "poolside/source": "native_session", "poolside/read_only": false },
+      _meta: { "camber/source": "native_session", "camber/read_only": false },
     });
 
     const updated = applySessionInfoUpdate(current, "session:1", {
       _meta: {
-        "poolside/read_only": true,
-        "poolside/error_message": "out of memory",
+        "camber/read_only": true,
+        "camber/error_message": "out of memory",
       },
     });
 
@@ -114,11 +114,11 @@ describe("applySessionInfoUpdate", () => {
       sessionId: "session:1",
       cwd: "/workspace",
       title: "My session",
-      _meta: { "poolside/source": "native_session" },
+      _meta: { "camber/source": "native_session" },
     });
 
     const updated = applySessionInfoUpdate(current, "session:1", {
-      _meta: { "poolside/read_only": true },
+      _meta: { "camber/read_only": true },
     });
 
     expect(updated.title).toBe("My session");

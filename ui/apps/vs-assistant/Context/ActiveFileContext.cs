@@ -4,14 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Context
+namespace Camber.Assistant.Context
 {
     public class ActiveFileContext
     {
         public Workspace[] workspaces { get; set; }
         public string homeDirectory { get; set; }
         public string defaultCwd { get; set; }
-        // Names must match ActiveFileContext in @poolsideai/rpc: the ACP webview
+        // Names must match ActiveFileContext in @camber/rpc: the ACP webview
         // reads only recentFile and activeFiles from setContext.
         public AttachedFile recentFile { get; set; }
         public AttachedFile[] activeFiles { get; set; }

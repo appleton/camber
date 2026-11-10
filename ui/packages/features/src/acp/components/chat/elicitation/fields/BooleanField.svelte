@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Checkbox } from "@poolsideai/components/checkbox";
+  import { Checkbox } from "@camber/components/checkbox";
   import type { AnyFieldApi } from "@tanstack/svelte-form";
   import type { BooleanField } from "../../../../../elicitation";
   import FieldErrors from "./FieldErrors.svelte";

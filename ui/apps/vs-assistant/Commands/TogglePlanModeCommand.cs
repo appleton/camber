@@ -1,12 +1,12 @@
 using Microsoft.VisualStudio.Shell;
-using Poolside.Assistant.ChatWindow;
+using Camber.Assistant.ChatWindow;
 using System.ComponentModel.Design;
 using System.Threading.Tasks;
 using System;
 
-namespace Poolside.Assistant.Commands
+namespace Camber.Assistant.Commands
 {
-    internal class TogglePlanModeCommand : BaseSignedInPoolsideCommand
+    internal class TogglePlanModeCommand : BaseSignedInCamberCommand
     {
         public const int CommandId = 0x0150;
 
@@ -30,7 +30,7 @@ namespace Poolside.Assistant.Commands
 
         protected override void Execute(object sender, EventArgs e)
         {
-            // The chord is bound globally, so only act while a Poolside webview has focus;
+            // The chord is bound globally, so only act while a Camber webview has focus;
             // otherwise it would toggle plan mode while the user is typing in the editor.
             if (!AcpChatToolWindow.AnyWebViewHasFocus() && !ChatToolWindow.WebViewHasFocus)
                 return;

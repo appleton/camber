@@ -73,7 +73,7 @@ if (preview) {
     notesPath,
     `<html>
 <head>
-\t<title>Poolside Assistant for Visual Studio Release Notes</title>
+\t<title>Camber Assistant for Visual Studio Release Notes</title>
 </head>
 <body>
 \t<h3>Nightly build ${values.version}</h3>

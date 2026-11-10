@@ -1,16 +1,16 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
   import {
-    poolsideGitDiffClose,
-    poolsideGitDiffOpen,
-    poolsideGitDiffStats,
-    poolsideGitStatus,
+    camberGitDiffClose,
+    camberGitDiffOpen,
+    camberGitDiffStats,
+    camberGitStatus,
     type GitDiffOpenOutput,
     type GitDiffScope,
     type GitDiffStats as GitDiffStatsValue,
     type GitStatusOutput,
-  } from "@poolsideai/helperapi";
+  } from "@camber/helperapi";
   import { onDestroy, untrack } from "svelte";
   import { extractErrorMessage } from "../../errors";
   import {
@@ -125,7 +125,7 @@
   function loadBranch(): void {
     const path = worktreePath;
     if (!path) return;
-    void poolsideGitStatus({ path })
+    void camberGitStatus({ path })
       .then((git) => {
         if (path !== worktreePath) return;
         gitStatus = git;
@@ -184,7 +184,7 @@
       closeAllEntries();
     }
     try {
-      const result = await poolsideGitDiffOpen({
+      const result = await camberGitDiffOpen({
         path: worktreePath,
         scope,
         targetPath: relativePath,
@@ -266,7 +266,7 @@
     statsPollTimer = setTimeout(async () => {
       statsPollTimer = undefined;
       try {
-        const result = await poolsideGitDiffStats({ sessionId });
+        const result = await camberGitDiffStats({ sessionId });
         if (token !== diffToken || diffState.status !== "ready") return;
         if (diffState.diff.sessionId !== sessionId) return;
         if (result.ready && result.stats) {
@@ -281,7 +281,7 @@
   }
 
   function closeSession(sessionId: string): void {
-    void poolsideGitDiffClose({ sessionId }).catch(() => undefined);
+    void camberGitDiffClose({ sessionId }).catch(() => undefined);
   }
 
   /**

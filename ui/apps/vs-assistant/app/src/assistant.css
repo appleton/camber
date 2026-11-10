@@ -1,7 +1,7 @@
 @import "./app.css";
-@import "@poolsideai/assistant/theme.css";
-@import "@poolsideai/assistant/syntax-theme.css";
+@import "@camber/assistant/theme.css";
+@import "@camber/assistant/syntax-theme.css";
 
-@source "../node_modules/@poolsideai/assistant";
-@source "../node_modules/@poolsideai/components";
-@source "../node_modules/@poolsideai/features";
+@source "../node_modules/@camber/assistant";
+@source "../node_modules/@camber/components";
+@source "../node_modules/@camber/features";

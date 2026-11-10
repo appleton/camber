@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace Poolside.Assistant.Context.Prompt
+namespace Camber.Assistant.Context.Prompt
 {
     internal class DependenciesContextProvider : IPromptContextProvider
     {
@@ -20,7 +20,7 @@ namespace Poolside.Assistant.Context.Prompt
             // We'll find the dependencies of the project of the active document; if there's no active
             // document, don't continue.
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var dte = (EnvDTE.DTE)await PoolsideAssistantPackage.GetInstance().GetServiceAsync(typeof(EnvDTE.DTE));
+            var dte = (EnvDTE.DTE)await CamberAssistantPackage.GetInstance().GetServiceAsync(typeof(EnvDTE.DTE));
             var activeDocument = dte.ActiveDocument;
             if (activeDocument == null)
                 return null;

@@ -1,0 +1,15 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "memoize",
+    srcs = ["memoize.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/memoize",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/camber-helper/internal/gopls/gotoolsinternal/xcontext"],
+)
+
+go_test(
+    name = "memoize_test",
+    srcs = ["memoize_test.go"],
+    deps = [":memoize"],
+)

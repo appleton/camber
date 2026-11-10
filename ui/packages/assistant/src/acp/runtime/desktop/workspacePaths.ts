@@ -6,9 +6,9 @@ import {
   resolveSessionCwd,
   type ACPNavProject,
   type AppState,
-} from "@poolsideai/features/acp";
+} from "@camber/features/acp";
 
-const LAST_CONVERSATION_CWD_STORAGE_KEY = "poolside.desktop.lastConversationCwd";
+const LAST_CONVERSATION_CWD_STORAGE_KEY = "camber.desktop.lastConversationCwd";
 
 // Remembers the last project/worktree a conversation was opened in so a fresh
 // "New conversation" can reopen there across restarts.

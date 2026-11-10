@@ -69,7 +69,7 @@ The table preserves every unique ecosystem, package, and version record from the
 | go-module | github.com/pkg/errors | v0.9.1 | BSD-2-Clause |
 | go-module | github.com/pmezard/go-difflib | v1.0.1-0.20181226105442-5d4384ee4fb2 | BSD-3-Clause |
 | go-module | github.com/poolsideai/acp-go-sdk | v0.0.0-20260731145119-52ff639a379a | Apache-2.0 |
-| go-module | github.com/poolsideai/assistant | UNKNOWN | Apache-2.0, BSD-3-Clause, sha256:23d5f0d031930b52ffbd06480374fd10363935686f31486fe241dc29fb866073 |
+| go-module | github.com/appleton/camber | UNKNOWN | Apache-2.0, BSD-3-Clause, sha256:23d5f0d031930b52ffbd06480374fd10363935686f31486fe241dc29fb866073 |
 | go-module | github.com/poolsideai/glsp | v0.0.8 | Apache-2.0 |
 | go-module | github.com/rivo/uniseg | v0.4.7 | MIT |
 | go-module | github.com/rogpeppe/go-internal | v1.14.1 | BSD-3-Clause |

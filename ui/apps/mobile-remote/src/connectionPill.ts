@@ -4,7 +4,7 @@
 // visible (the pill made it on screen), recovery is acknowledged with a short
 // "Connected" flash; invisible drops recover silently.
 
-import type { ConnectionStatus } from "@poolsideai/remote-client";
+import type { ConnectionStatus } from "@camber/remote-client";
 
 export const OFFLINE_PILL_DELAY_MS = 10_000;
 const CONNECTED_FLASH_MS = 1_500;

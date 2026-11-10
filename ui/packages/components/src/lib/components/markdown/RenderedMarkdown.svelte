@@ -148,7 +148,7 @@
     matches: FilePathMatch[];
   };
 
-  const PROCESSED_CLASS = "poolside-colorized";
+  const PROCESSED_CLASS = "camber-colorized";
 
   // Detect file-path references in the rendered markdown and replace them with
   // FileChip components. Handles two DOM shapes:

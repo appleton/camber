@@ -45,7 +45,7 @@ export function buildVisualizationDocument(
     const height = Math.ceil(document.body.getBoundingClientRect().height);
     if (height !== previousHeight) {
       previousHeight = height;
-      parent.postMessage({type: 'poolside:visualization-size', height}, '*');
+      parent.postMessage({type: 'camber:visualization-size', height}, '*');
     }
   };
   new ResizeObserver(reportSize).observe(document.body);
@@ -66,11 +66,11 @@ ${fragment}
   window.addEventListener('message', event => {
     if (event.source !== frame.contentWindow) return;
     const data = event.data;
-    if (data?.type !== 'poolside:visualization-size' ||
+    if (data?.type !== 'camber:visualization-size' ||
         typeof data.height !== 'number' || !Number.isFinite(data.height)) return;
     const height = Math.min(1600, Math.max(80, data.height));
     frame.style.height = height + 'px';
-    parent.postMessage({type: 'poolside:visualization-size', height}, '*');
+    parent.postMessage({type: 'camber:visualization-size', height}, '*');
   });
 })();
 </script></body></html>`;

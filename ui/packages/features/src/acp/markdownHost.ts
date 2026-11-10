@@ -1,9 +1,6 @@
-import {
-  isLocalVisualizationPath,
-  type MarkdownHostAdapter,
-} from "@poolsideai/components/markdown";
-import { normalize, relative } from "@poolsideai/lib/path";
-import { InfoMessageType } from "@poolsideai/rpc";
+import { isLocalVisualizationPath, type MarkdownHostAdapter } from "@camber/components/markdown";
+import { normalize, relative } from "@camber/lib/path";
+import { InfoMessageType } from "@camber/rpc";
 import { get } from "svelte/store";
 import { requestDesktopFilePromptChip } from "./components/chat/desktopFilePromptChip";
 import {
@@ -44,9 +41,8 @@ type DesktopMarkdownRPC = RPCClient & {
 } & DesktopFilesTreeActionRPC;
 
 const desktopRpc = rpc as DesktopMarkdownRPC;
-const DESKTOP_OPEN_FILE_TAB_EVENT = "poolside:desktop-open-file-tab";
-const DESKTOP_FILE_TREE_CONTEXT_MENU_ACTION_EVENT =
-  "poolside:desktop-file-tree-context-menu-action";
+const DESKTOP_OPEN_FILE_TAB_EVENT = "camber:desktop-open-file-tab";
+const DESKTOP_FILE_TREE_CONTEXT_MENU_ACTION_EVENT = "camber:desktop-file-tree-context-menu-action";
 
 export const markdownHost: MarkdownHostAdapter = {
   state: appState,

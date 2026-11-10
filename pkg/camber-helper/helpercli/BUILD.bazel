@@ -1,0 +1,9 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "helpercli",
+    srcs = ["openapi_server.go"],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/helpercli",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/camber-helper/internal/handler"],
+)

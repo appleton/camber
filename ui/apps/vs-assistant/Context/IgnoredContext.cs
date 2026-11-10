@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Context
+namespace Camber.Assistant.Context
 {
     public static class IgnoredContext
     {

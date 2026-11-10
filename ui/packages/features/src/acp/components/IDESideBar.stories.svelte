@@ -1,6 +1,6 @@
 <script module lang="ts">
   import { defineMeta } from "@storybook/addon-svelte-csf";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import type { WorkspaceFolder } from "@camber/rpc";
   import IDESideBar from "./IDESideBar.svelte";
   import SidebarStoryHarness from "./SidebarStoryHarness.svelte";
   import type { ACPNavConversation } from "../navTypes";
@@ -77,15 +77,15 @@
     {
       // out-of-workspace conversation — should be filtered out of the IDE sidebar
       id: "conv-5",
-      workspacePath: "/Users/poolie/code/poolside-books-api-demo",
+      workspacePath: "/Users/poolie/code/camber-books-api-demo",
       agentServer: "poolside",
       sessionId: "session-acp-5",
-      cwd: "/Users/poolie/code/poolside-books-api-demo",
+      cwd: "/Users/poolie/code/camber-books-api-demo",
       title: "Add Book description field",
       updatedAt: minutesAgo(60 * 6),
       active: true,
       archived: false,
-      workingDirectories: ["/Users/poolie/code/poolside-books-api-demo"],
+      workingDirectories: ["/Users/poolie/code/camber-books-api-demo"],
     },
   ];
 

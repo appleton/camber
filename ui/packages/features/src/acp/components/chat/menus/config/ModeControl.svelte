@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { SessionConfigOption } from "@agentclientprotocol/sdk";
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { appState } from "../../../../hostAdapter";
   import { getACPChatSessionScope } from "../../../../features/ChatSessionScope.svelte";
   import ConfigSelectDropdown from "./ConfigSelectDropdown.svelte";

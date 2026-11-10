@@ -12,7 +12,7 @@ import (
 	"github.com/go-git/go-git/v5/utils/ioutil"
 	"github.com/spf13/afero"
 
-	"github.com/poolsideai/assistant/pkg/workspace/afero2billy"
+	"github.com/appleton/camber/pkg/workspace/afero2billy"
 )
 
 // ErrNoDotGitDir is returned when no .git directory can be found in the current

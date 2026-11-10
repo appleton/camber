@@ -1,5 +1,5 @@
-import type { GetDiagnosticsOutput, GetDiagnosticsParams } from "@poolsideai/helperapi/schemas";
-import { withTimeout } from "@poolsideai/lib/promise";
+import type { GetDiagnosticsOutput, GetDiagnosticsParams } from "@camber/helperapi/schemas";
+import { withTimeout } from "@camber/lib/promise";
 import * as vscode from "vscode";
 import { createConverter } from "vscode-languageclient/lib/common/codeConverter";
 

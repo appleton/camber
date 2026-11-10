@@ -3,9 +3,9 @@
  * @description This module is written in a legacy style. Do not copy it. Instead, use repositories to manage state and persistence. Refer to ui/README.md for more.
  */
 
-import type { ColorTheme, FileIconTheme } from "@poolsideai/components/providers";
-import { normalize } from "@poolsideai/lib/path";
-import type { Configuration, Keybindings, Language, WorkspaceFolder } from "@poolsideai/rpc";
+import type { ColorTheme, FileIconTheme } from "@camber/components/providers";
+import { normalize } from "@camber/lib/path";
+import type { Configuration, Keybindings, Language, WorkspaceFolder } from "@camber/rpc";
 import { type Updater, writable, type Writable } from "svelte/store";
 
 export const DEFAULT_URI = "https://api.poolsi.de";
@@ -38,7 +38,7 @@ export interface DesktopInstanceInfo {
   color?: string;
 }
 
-export interface PoolsideInitialState {
+export interface CamberInitialState {
   accessToken?: string;
   keybindings?: Keybindings;
   colorTheme?: ColorTheme;
@@ -54,7 +54,7 @@ export interface PoolsideInitialState {
   isEditorFocused?: boolean;
 }
 
-type AuthManagedInitialState = PoolsideInitialState & {
+type AuthManagedInitialState = CamberInitialState & {
   identity?: unknown;
   is_tenant_admin?: boolean;
   isAuthenticated?: boolean;
@@ -93,7 +93,7 @@ const initialAppState = {
   isHelperSupported: false,
   isEditorFocused: true,
 
-  ...stripAuthFields(globalThis.POOLSIDE_INITIAL_STATE),
+  ...stripAuthFields(globalThis.CAMBER_INITIAL_STATE),
 };
 
 export type AppState = typeof initialAppState;
@@ -110,7 +110,7 @@ export function resolveSessionCwd(appState: Pick<AppState, "workspaces" | "defau
 
 type AppStoreUpdates = {
   ensureWorkspaceForCwd: (cwd: string | null | undefined) => Updater<AppState>;
-  setInitialState: (initial: PoolsideInitialState) => Updater<AppState>;
+  setInitialState: (initial: CamberInitialState) => Updater<AppState>;
 };
 
 function workspaceName(path: string): string {
@@ -165,8 +165,8 @@ export const appStateUpdates = {
 // to keep appState's runtime fields matching its types, remove all
 // fields now managed by AuthRepository
 function stripAuthFields(
-  initial: PoolsideInitialState | undefined,
-): Omit<PoolsideInitialState, "accessToken"> {
+  initial: CamberInitialState | undefined,
+): Omit<CamberInitialState, "accessToken"> {
   if (!initial) return {};
   const {
     accessToken: _accessToken,
@@ -178,5 +178,5 @@ function stripAuthFields(
     features: _features,
     ...rest
   } = initial as AuthManagedInitialState;
-  return rest as Omit<PoolsideInitialState, "accessToken">;
+  return rest as Omit<CamberInitialState, "accessToken">;
 }

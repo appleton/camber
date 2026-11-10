@@ -1,9 +1,0 @@
-load("@rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "label",
-    srcs = ["keys.go"],
-    importpath = "github.com/poolsideai/assistant/pkg/poolside-helper/internal/gopls/pkg/label",
-    visibility = ["//visibility:public"],
-    deps = ["//pkg/poolside-helper/internal/gopls/gotoolsinternal/event/keys"],
-)

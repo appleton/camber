@@ -7,7 +7,7 @@ import type {
   ListSecretsParams,
   UpsertSecretOutput,
   UpsertSecretParams,
-} from "@poolsideai/helperapi/schemas";
+} from "@camber/helperapi/schemas";
 import type { ErrorObject } from "serialize-error";
 import type { Client, Messages } from "./generics";
 
@@ -28,9 +28,9 @@ export interface Host {
   getImageFileData(path: string): Promise<ImageFileData | undefined>;
   getPromptContext: () => Promise<PromptContextFacet[]>;
   getUrlContents(url: string): Promise<AttachedUrl | undefined>;
-  // jsonrpc performs a jsonrpc request to the poolside Helper over jsonrpc,
+  // jsonrpc performs a jsonrpc request to the camber Helper over jsonrpc,
   // and returns the response. Throws an error if an error response is received.
-  /** @deprecated Use generated `@poolsideai/helperapi` methods instead. */
+  /** @deprecated Use generated `@camber/helperapi` methods instead. */
   jsonrpc(methodName: string, params: object): Promise<object>;
   jsonrpcNotify(methodName: string, params: object): Promise<void>;
   openExternalURL: (url: string) => void;
@@ -98,7 +98,7 @@ export enum InfoMessageType {
   warning = "warning",
 }
 
-export const INFO_MESSAGE_EVENT = "poolside:info-message";
+export const INFO_MESSAGE_EVENT = "camber:info-message";
 
 /**
  * HostClient is the interface which should be implemented to communicate with the RPC Host process
@@ -207,7 +207,7 @@ export interface AcpChatPanelMetadata {
   /** Whether this agent accepts MCP servers (null = capabilities not known yet). */
   supportsMcp?: boolean | null;
   /**
-   * For the Poolside agent: whether the active model permits user/custom MCP
+   * For the Camber agent: whether the active model permits user/custom MCP
    * servers. Per-model, so only the live session knows it (null = unknown).
    */
   allowCustomMcp?: boolean | null;
@@ -233,7 +233,7 @@ export interface Configuration {
   renderScan?: boolean;
   highlightTelemetryElements?: boolean;
   // boolean only feature flags, matching the server-side features.
-  // These are pre-processed to allow us to specify full "poolside.boolFeatures.foo"
+  // These are pre-processed to allow us to specify full "camber.boolFeatures.foo"
   // keys, but end up with a single object, where all non-booleans are dropped.
   // VSCode only currently
   boolFeatures?: {

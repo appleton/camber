@@ -1,5 +1,5 @@
 import type { ContentBlock, EmbeddedResourceResource } from "@agentclientprotocol/sdk";
-import { basename } from "@poolsideai/lib/path";
+import { basename } from "@camber/lib/path";
 
 export interface PromptContentOptions {
   supportsEmbeddedContext: boolean;

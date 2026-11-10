@@ -1,4 +1,4 @@
-import type { AgentSettingsOutput, MCPServerInputs } from "@poolsideai/helperapi/schemas";
+import type { AgentSettingsOutput, MCPServerInputs } from "@camber/helperapi/schemas";
 import { extractErrorMessage, isMethodNotFoundError } from "../errors";
 import { rpc as acpHostRpc } from "../hostRpc";
 import { getACPActiveAgentServer } from "./activeAgent.svelte";
@@ -7,16 +7,16 @@ import type { ACPSessionRepository } from "./SessionRepository.svelte";
 type NoSetters<T> = { readonly [K in keyof T]: T[K] };
 
 const ACP_BUNDLED_POOL_AGENT_SERVER = "poolside";
-const ACP_MCP_SETTINGS_CAPABILITY = "poolside/mcp_settings";
-const ACP_MCP_SETTINGS_METHOD = "poolside/acp/_poolside/mcp/settings";
-const ACP_MCP_SET_SERVER_DISABLED_METHOD = "poolside/acp/_poolside/mcp/set_server_disabled";
-// Helper-side global toggle: writes ~/.config/poolside/settings.yaml so a pool
+const ACP_MCP_SETTINGS_CAPABILITY = "camber/mcp_settings";
+const ACP_MCP_SETTINGS_METHOD = "camber/acp/_poolside/mcp/settings";
+const ACP_MCP_SET_SERVER_DISABLED_METHOD = "camber/acp/_poolside/mcp/set_server_disabled";
+// Helper-side global toggle: writes ~/.config/camber/settings.yaml so a pool
 // connector is disabled across all workspaces, not just the active one (which is
 // all the agent's own set_server_disabled does).
-const MCP_SET_POOL_SERVER_DISABLED_METHOD = "poolside/mcpServers/setPoolServerDisabled";
-const ACP_MCP_DELETE_SECRETS_METHOD = "poolside/acp/_poolside/mcp/delete_secrets";
-const ACP_MCP_AUTHENTICATE_METHOD = "poolside/acp/_poolside/mcp/authenticate";
-const ACP_MCP_SET_INPUT_VARIABLE_METHOD = "poolside/acp/_poolside/mcp/set_input_variable";
+const MCP_SET_POOL_SERVER_DISABLED_METHOD = "camber/mcpServers/setPoolServerDisabled";
+const ACP_MCP_DELETE_SECRETS_METHOD = "camber/acp/_poolside/mcp/delete_secrets";
+const ACP_MCP_AUTHENTICATE_METHOD = "camber/acp/_poolside/mcp/authenticate";
+const ACP_MCP_SET_INPUT_VARIABLE_METHOD = "camber/acp/_poolside/mcp/set_input_variable";
 const NIL_UUID = "00000000-0000-0000-0000-000000000000";
 
 const rawACPHostRpc = acpHostRpc as unknown as {
@@ -135,12 +135,12 @@ export class ACPMCPSettingsRepositoryWriter {
     return agentServer === ACP_BUNDLED_POOL_AGENT_SERVER || this.#supportsMCPSettingsCapability();
   }
 
-  // Whether the active agent is the bundled Poolside agent. Used to hide the
-  // Poolside connectors UI when the user is working with a different ACP agent.
+  // Whether the active agent is the bundled Camber agent. Used to hide the
+  // Camber connectors UI when the user is working with a different ACP agent.
   // Deliberately does NOT fall back to the default agent: when the active agent
   // is unknown (e.g. a pending chat that hasn't reported its agent yet, or no
-  // chat at all), we must not assume Poolside — otherwise the sidebar shows
-  // Poolside connectors over a different ACP agent's chat.
+  // chat at all), we must not assume Camber — otherwise the sidebar shows
+  // Camber connectors over a different ACP agent's chat.
   isActiveAgentPool(): boolean {
     const active = this.#activeSession()?.agentServer ?? getACPActiveAgentServer();
     return active === ACP_BUNDLED_POOL_AGENT_SERVER;

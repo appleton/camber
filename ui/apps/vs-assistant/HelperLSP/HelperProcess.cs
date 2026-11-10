@@ -6,11 +6,11 @@ using OmniSharp.Extensions.LanguageServer.Protocol.General;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Protocol.Window;
 using Newtonsoft.Json.Linq;
-using Poolside.Assistant.ChatWindow;
-using Poolside.Assistant.Context;
-using Poolside.Assistant.Tasks;
-using Poolside.Assistant.Telemetry;
-using Poolside.Assistant.WebViewInfrastructure;
+using Camber.Assistant.ChatWindow;
+using Camber.Assistant.Context;
+using Camber.Assistant.Tasks;
+using Camber.Assistant.Telemetry;
+using Camber.Assistant.WebViewInfrastructure;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -21,7 +21,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.HelperLSP
+namespace Camber.Assistant.HelperLSP
 {
     // A running instance of the LSP helper process and the LSP client that communicates with it.
     // If we restart it due to a crash, then a new instance of this class would be created.
@@ -55,7 +55,7 @@ namespace Poolside.Assistant.HelperLSP
         {
             // Start the LSP process and wire up exit handler.
             var assemblyPath = System.IO.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            var languageServerPath = System.IO.Path.Combine(assemblyPath, "helper", "poolside-helper.exe");
+            var languageServerPath = System.IO.Path.Combine(assemblyPath, "helper", "camber-helper.exe");
             Process process;
             try
             {
@@ -64,13 +64,13 @@ namespace Poolside.Assistant.HelperLSP
             catch (Exception ex) when (ex is System.ComponentModel.Win32Exception || ex is IOException)
             {
                 // Probably access denied. Let's try the temp directory instead.
-                helperLog.Log($"Failed to start Poolside Helper in {languageServerPath} ({ex.Message}), trying temp directory instead");
+                helperLog.Log($"Failed to start Camber Helper in {languageServerPath} ({ex.Message}), trying temp directory instead");
                 try
                 {
-                    var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "PoolsideHelper");
+                    var tempDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "CamberHelper");
                     Directory.CreateDirectory(tempDir);
 
-                    var tempHelperPath = System.IO.Path.Combine(tempDir, "poolside-helper.exe");
+                    var tempHelperPath = System.IO.Path.Combine(tempDir, "camber-helper.exe");
                     if (!File.Exists(tempHelperPath) ||
                         File.GetLastWriteTimeUtc(tempHelperPath) != File.GetLastWriteTimeUtc(languageServerPath))
                     {
@@ -135,7 +135,7 @@ namespace Poolside.Assistant.HelperLSP
                         // that we are doing a simple pass through of the value to the assistant
                         // without looking at any of its content. This reduces the risk of
                         // schema-related issues.
-                        .OnRequest("poolside/taskWorkspaceEdit",
+                        .OnRequest("camber/taskWorkspaceEdit",
                             async (dynamic editJson) =>
                             {
                                 try
@@ -146,7 +146,7 @@ namespace Poolside.Assistant.HelperLSP
                                 }
                                 catch (Exception ex)
                                 {
-                                    PoolsideTelemetryLogger.Instance.reportException(ex);
+                                    CamberTelemetryLogger.Instance.reportException(ex);
                                     return new TaskWorkspaceEditResult
                                     {
                                         Applied = false,
@@ -154,22 +154,22 @@ namespace Poolside.Assistant.HelperLSP
                                     };
                                 }
                             })
-                        .OnRequest("poolside/searchSymbolDefinitions",
+                        .OnRequest("camber/searchSymbolDefinitions",
                             async (SearchSymbolDefinitionsParams searchParams) => new SearchSymbolDefinitionsOutput
                             {
                                 Defs = await SymbolSearch.SearchSymbolsAsync(searchParams.Symbol, searchParams.Type)
                             })
-                        .OnRequest("poolside/getDiagnostics",
+                        .OnRequest("camber/getDiagnostics",
                             async (GetDiagnosticsParams diagParams) =>
                             {
 
                                 return new GetDiagnosticsOutput
                                 {
-                                    Diagnostics = await PoolsideAssistantPackage.GetInstance().GetErrorTableWatcher()
+                                    Diagnostics = await CamberAssistantPackage.GetInstance().GetErrorTableWatcher()
                                         .GetDiagnosticsForFileAsync(FileOperations.UriToPath(diagParams.Uri), diagParams.WaitMs, diagParams.Severity)
                                 };
                             })
-                        .OnRequest("poolside/acp/elicitation/create", (JObject parameters) =>
+                        .OnRequest("camber/acp/elicitation/create", (JObject parameters) =>
                         {
                             // We need to use Task.Run here to get the processing of this off the
                             // LSP message dispatch thread, otherwise we can't process any other
@@ -185,14 +185,14 @@ namespace Poolside.Assistant.HelperLSP
                                 return ChatWindowRPCClient.elicitation(parameters);
                             });
                         })
-                        .OnNotification("poolside/acp/approvals/didChange", (object parameters) =>
+                        .OnNotification("camber/acp/approvals/didChange", (object parameters) =>
                         {
                             // Helper-owned pending approvals (permission prompts, elicitations)
                             // as a reconciled state push; webviews render and clear approval
                             // cards from it, including for conversations they don't have open.
                             ChatWindowRPCClient.acpApprovalsDidChange(parameters);
                         })
-                        .OnNotification("poolside/mcpServers/didChange", (object parameters) =>
+                        .OnNotification("camber/mcpServers/didChange", (object parameters) =>
                         {
                             ChatWindowRPCClient.mcpServersDidChange();
                         })
@@ -240,10 +240,10 @@ namespace Poolside.Assistant.HelperLSP
                             var path = FileOperations.UriToPath(showDocumentRequest.uri);
                             Util.OpenFileInEditor(path);
                         })
-                        // ACP bridge: helper wraps every agent→client frame in poolside/jsonrpc/{notify,request}.
+                        // ACP bridge: helper wraps every agent→client frame in camber/jsonrpc/{notify,request}.
                         // Hand them off to the webview, which feeds them to the ACP SDK via RPCTransport.
                         // Task.Run on the request handler keeps the LSP dispatch thread free, same reason as elicitation above.
-                        .OnRequest("poolside/jsonrpc/request", (object parameters) =>
+                        .OnRequest("camber/jsonrpc/request", (object parameters) =>
                             Task.Run(() =>
                             {
                                 // Route to the chat window owning this session; fall back to the
@@ -256,28 +256,28 @@ namespace Poolside.Assistant.HelperLSP
                                 }
                                 return ChatWindowRPCClient.jsonrpcRequest(parameters);
                             }))
-                        .OnNotification("poolside/jsonrpc/notify", (object parameters) =>
+                        .OnNotification("camber/jsonrpc/notify", (object parameters) =>
                         {
                             if (!AcpChatToolWindow.RouteNotify(parameters))
                             {
                                 ChatWindowRPCClient.jsonrpcNotify(parameters);
                             }
                         })
-                        .OnNotification("poolside/acp/serverDidExit", (object parameters) =>
+                        .OnNotification("camber/acp/serverDidExit", (object parameters) =>
                         {
                             if (!AcpChatToolWindow.RouteServerDidExit(parameters))
                             {
                                 ChatWindowRPCClient.acpAgentServerDidExit(parameters);
                             }
                         })
-                        .OnNotification("poolside/acpNav/didChange", (object parameters) =>
+                        .OnNotification("camber/acpNav/didChange", (object parameters) =>
                         {
                             // The nav (conversation list) is owned by the sidebar webview;
                             // chat windows take their tab titles from it.
                             ChatWindowRPCClient.acpNavDidChange(parameters);
                             _ = AcpChatToolWindow.ApplyNavStateAsync(parameters);
                         })
-                        .OnNotification("poolside/mcpOAuthURL", (MCPOAuthURLParams parameters) =>
+                        .OnNotification("camber/mcpOAuthURL", (MCPOAuthURLParams parameters) =>
                         {
                             Util.OpenUrlInBrowser(parameters.AuthURL);
                         });
@@ -305,11 +305,11 @@ namespace Poolside.Assistant.HelperLSP
             {
                 try
                 {
-                    helperLog.Log($"[{DateTime.Now:HH:mm:ss.fff}] Poolside helper process exited with code {process.ExitCode}");
+                    helperLog.Log($"[{DateTime.Now:HH:mm:ss.fff}] Camber helper process exited with code {process.ExitCode}");
                 }
                 catch (Exception)
                 {
-                    helperLog.Log($"[{DateTime.Now:HH:mm:ss.fff}] Poolside helper process exit callback fired but no exit code available");
+                    helperLog.Log($"[{DateTime.Now:HH:mm:ss.fff}] Camber helper process exit callback fired but no exit code available");
                 }
                 onExit();
             };

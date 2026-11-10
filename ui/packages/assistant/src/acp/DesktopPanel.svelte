@@ -20,7 +20,7 @@
     type DesktopSplitsEntry,
     type DesktopFileViewerPanelProps,
     type DesktopNewTabAvailability,
-  } from "@poolsideai/features/acp";
+  } from "@camber/features/acp";
   import { onDestroy, onMount, type Component } from "svelte";
 
   import ACPAgentUpdateBanner from "./AgentUpdateBanner.svelte";
@@ -44,15 +44,15 @@
     onConversationActivityChange?: (active: boolean) => void;
   }
 
-  const DESKTOP_NEW_CONVERSATION_EVENT = "poolside:desktop-new-conversation";
-  const DESKTOP_NEW_PROJECT_EVENT = "poolside:desktop-new-project";
-  const DESKTOP_OPEN_IN_IDE_EVENT = "poolside:desktop-open-in-ide";
-  const DESKTOP_TOGGLE_LEFT_SIDEBAR_EVENT = "poolside:desktop-toggle-left-sidebar";
-  const DESKTOP_TOGGLE_RIGHT_SIDEBAR_EVENT = "poolside:desktop-toggle-right-sidebar";
-  const DESKTOP_TOGGLE_BOTTOM_PANEL_EVENT = "poolside:desktop-toggle-bottom-panel";
-  const DESKTOP_NAVIGATE_BACK_EVENT = "poolside:desktop-navigate-back";
-  const DESKTOP_NAVIGATE_FORWARD_EVENT = "poolside:desktop-navigate-forward";
-  const DESKTOP_NAVIGATION_AVAILABILITY_EVENT = "poolside:desktop-navigation-availability";
+  const DESKTOP_NEW_CONVERSATION_EVENT = "camber:desktop-new-conversation";
+  const DESKTOP_NEW_PROJECT_EVENT = "camber:desktop-new-project";
+  const DESKTOP_OPEN_IN_IDE_EVENT = "camber:desktop-open-in-ide";
+  const DESKTOP_TOGGLE_LEFT_SIDEBAR_EVENT = "camber:desktop-toggle-left-sidebar";
+  const DESKTOP_TOGGLE_RIGHT_SIDEBAR_EVENT = "camber:desktop-toggle-right-sidebar";
+  const DESKTOP_TOGGLE_BOTTOM_PANEL_EVENT = "camber:desktop-toggle-bottom-panel";
+  const DESKTOP_NAVIGATE_BACK_EVENT = "camber:desktop-navigate-back";
+  const DESKTOP_NAVIGATE_FORWARD_EVENT = "camber:desktop-navigate-forward";
+  const DESKTOP_NAVIGATION_AVAILABILITY_EVENT = "camber:desktop-navigation-availability";
 
   let {
     desktopFileViewerPanel,
@@ -76,28 +76,28 @@
   // on the startup frame: the probe samples every input to the initial-screen
   // gate. Inert on hosts that don't install the globals.
   const startupDiagnostics = globalThis as {
-    __poolsideStartupDiag?: (event: string, data?: unknown) => void;
-    __poolsideRegisterStartupProbe?: (name: string, probe: () => unknown) => void;
+    __camberStartupDiag?: (event: string, data?: unknown) => void;
+    __camberRegisterStartupProbe?: (name: string, probe: () => unknown) => void;
   };
-  startupDiagnostics.__poolsideRegisterStartupProbe?.("initialScreenGate", () =>
+  startupDiagnostics.__camberRegisterStartupProbe?.("initialScreenGate", () =>
     desktop.startupDiagnosticsSnapshot(),
   );
   onMount(() => {
-    startupDiagnostics.__poolsideStartupDiag?.("desktopPanel.shellInteractive");
+    startupDiagnostics.__camberStartupDiag?.("desktopPanel.shellInteractive");
     onShellInteractive?.();
   });
   let initialScreenSettledNotified = false;
   $effect(() => {
     if (initialScreenSettledNotified || !desktop.initialScreenSettled) return;
     initialScreenSettledNotified = true;
-    startupDiagnostics.__poolsideStartupDiag?.("desktopPanel.initialScreenSettled");
+    startupDiagnostics.__camberStartupDiag?.("desktopPanel.initialScreenSettled");
     onInitialScreenSettled?.();
   });
   let initialAgentReadyNotified = false;
   $effect(() => {
     if (initialAgentReadyNotified || !desktop.initialAgentReady) return;
     initialAgentReadyNotified = true;
-    startupDiagnostics.__poolsideStartupDiag?.("desktopPanel.agentReadyForPrompt");
+    startupDiagnostics.__camberStartupDiag?.("desktopPanel.agentReadyForPrompt");
   });
   let activeSplitNavigation = $state<DesktopSplitNavigationLocation>();
   let splitNavigationRequest = $state<DesktopSplitNavigationRequest>();

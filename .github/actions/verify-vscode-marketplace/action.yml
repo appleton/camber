@@ -204,7 +204,7 @@ runs:
             --proto '=https' --tlsv1.2 --retry 5 --retry-all-errors \
             "${url}" --output "${package}"
           if ! actual_json=$(unzip -p "${package}" extension/release-provenance.json); then
-            echo "Marketplace ${VERSION}/${target} has no Poolside release provenance." >&2
+            echo "Marketplace ${VERSION}/${target} has no Camber release provenance." >&2
             exit 1
           fi
           actual_provenance=$(jq -S -c . <<<"${actual_json}")

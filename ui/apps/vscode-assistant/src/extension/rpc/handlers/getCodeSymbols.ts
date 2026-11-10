@@ -1,4 +1,4 @@
-import type { CodeSymbol, CodeSymbolKind, CodeSymbolResponse } from "@poolsideai/rpc";
+import type { CodeSymbol, CodeSymbolKind, CodeSymbolResponse } from "@camber/rpc";
 import * as vscode from "vscode";
 
 // These are the symbols kinds that we include.

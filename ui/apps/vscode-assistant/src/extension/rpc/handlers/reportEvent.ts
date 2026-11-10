@@ -1,4 +1,4 @@
-import type { TelemetryEventInputEventType, TelemetryEventInputMetadata } from "@poolsideai/rpc";
+import type { TelemetryEventInputEventType, TelemetryEventInputMetadata } from "@camber/rpc";
 import { System } from "../../system";
 
 export function reportEvent(

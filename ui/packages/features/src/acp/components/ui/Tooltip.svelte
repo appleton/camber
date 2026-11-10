@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Tooltip as SharedTooltip } from "@poolsideai/components/assistant-ui";
+  import { Tooltip as SharedTooltip } from "@camber/components/assistant-ui";
   import type { Snippet } from "svelte";
   import { appState } from "../../hostAdapter";
 

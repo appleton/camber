@@ -1,8 +1,8 @@
 <script lang="ts">
-  import * as Prompt from "@poolsideai/components/prompt";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import * as Prompt from "@camber/components/prompt";
+  import { Spinner } from "@camber/components/spinner";
   import { getSecretsContext } from "../../../../secrets";
-  import Button from "../../../components/ui/PoolsideButton.svelte";
+  import Button from "../../../components/ui/CamberButton.svelte";
   import { getSecretsMenuState } from "./secretsMenuState.svelte";
 
   const menuState = getSecretsMenuState();

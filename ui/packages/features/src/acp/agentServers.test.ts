@@ -10,7 +10,7 @@ import {
 } from "./agentServers";
 
 describe("resolveAgentServers", () => {
-  it("adds the default Poolside registry server to custom config", () => {
+  it("adds the default Camber registry server to custom config", () => {
     const servers = resolveAgentServers({
       echo: {
         command: "node",
@@ -29,7 +29,7 @@ describe("resolveAgentServers", () => {
     });
   });
 
-  it("preserves configured Poolside entries", () => {
+  it("preserves configured Camber entries", () => {
     const servers = resolveAgentServers({
       [DEFAULT_AGENT_SERVER]: {
         command: "pool",
@@ -49,7 +49,7 @@ describe("resolveAgentServers", () => {
     expect(Object.keys(servers)).toEqual([DEFAULT_AGENT_SERVER, "echo"]);
   });
 
-  it("replaces legacy self placeholders for Poolside entries", () => {
+  it("replaces legacy self placeholders for Camber entries", () => {
     for (const command of ["{{SELF}}", "{{$SELF}}"]) {
       const servers = resolveAgentServers({
         [DEFAULT_AGENT_SERVER]: {
@@ -67,7 +67,7 @@ describe("resolveAgentServers", () => {
     }
   });
 
-  it("treats legacy default as an alias for Poolside", () => {
+  it("treats legacy default as an alias for Camber", () => {
     const servers = resolveAgentServers({
       [LEGACY_DEFAULT_AGENT_SERVER]: {
         command: "pool",

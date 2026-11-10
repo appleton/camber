@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Context.Prompt
+namespace Camber.Assistant.Context.Prompt
 {
     internal class ReadmePromptContextProvider : IPromptContextProvider
     {
@@ -21,7 +21,7 @@ namespace Poolside.Assistant.Context.Prompt
         {
             // Use current open documents as the basis for finding relevant READMEs.
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var dte = (EnvDTE.DTE)await PoolsideAssistantPackage.GetInstance().GetServiceAsync(typeof(EnvDTE.DTE));
+            var dte = (EnvDTE.DTE)await CamberAssistantPackage.GetInstance().GetServiceAsync(typeof(EnvDTE.DTE));
             var root = Path.GetDirectoryName(dte.Solution.FullName);
             var possibleReadmes = new List<string>();
             foreach (EnvDTE.Document doc in dte.Documents)

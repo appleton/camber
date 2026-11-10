@@ -4,7 +4,7 @@ using Microsoft.VisualStudio.Text.Differencing;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
-using Poolside.Assistant.Context;
+using Camber.Assistant.Context;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -12,7 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.EditHighlights
+namespace Camber.Assistant.EditHighlights
 {
     [Export(typeof(IViewTaggerProvider))]
     [ContentType("text")]
@@ -37,7 +37,7 @@ namespace Poolside.Assistant.EditHighlights
 
         /* Shows highlights for the given edits, and clears any others. (This means that clearing all
          * edit highlights is achieved by passing in an empty list.) */
-        internal static void ApplyEditHighlights(List<EditHighlightsInput> highlightsInput, IPoolsideWorkspace workspace)
+        internal static void ApplyEditHighlights(List<EditHighlightsInput> highlightsInput, ICamberWorkspace workspace)
         {
             ApplyEditHighlightsInternal(highlightsInput);
 
@@ -52,7 +52,7 @@ namespace Poolside.Assistant.EditHighlights
 
         private static void ApplyEditHighlightsInternal(List<EditHighlightsInput> highlightsInput)
         {
-            var componentModel = (IComponentModel)PoolsideAssistantPackage.GetGlobalService(typeof(SComponentModel));
+            var componentModel = (IComponentModel)CamberAssistantPackage.GetGlobalService(typeof(SComponentModel));
             var diffService = componentModel.GetService<ITextDifferencingSelectorService>().DefaultTextDifferencingService;
 
             foreach (var entry in taggers.GetLiveEntries())
@@ -82,7 +82,7 @@ namespace Poolside.Assistant.EditHighlights
             }
         }
 
-        internal static IEnumerable<EditHighlightsInput> GetPreviousHighlights(IPoolsideWorkspace workspace)
+        internal static IEnumerable<EditHighlightsInput> GetPreviousHighlights(ICamberWorkspace workspace)
         {
             return previousHighlights != null && previousHighlightsWorkspacePath == workspace.RootPath
                 ? previousHighlights

@@ -5,9 +5,9 @@
   import ToolHeader from "../shared/ToolHeader.svelte";
   import ToolBody from "../shared/ToolBody.svelte";
   import ToolFooter from "../shared/ToolFooter.svelte";
-  import { Boundary } from "@poolsideai/components/boundary";
-  import { HighlightedShellCommand } from "@poolsideai/components/assistant-ui";
-  import { CollapsibleContent } from "@poolsideai/components/collapsible";
+  import { Boundary } from "@camber/components/boundary";
+  import { HighlightedShellCommand } from "@camber/components/assistant-ui";
+  import { CollapsibleContent } from "@camber/components/collapsible";
   import {
     getPermissionDeniedObservation,
     getToolCommand,
@@ -17,7 +17,7 @@
   import { getWrittenFileDiff } from "../shared/toolPaths";
   import { findToolOverride } from "./tool/toolOverrides";
   import type { ToolCall } from "../../types";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import type { WorkspaceFolder } from "@camber/rpc";
 
   interface Props {
     event: ToolCall;

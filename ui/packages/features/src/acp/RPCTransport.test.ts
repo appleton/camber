@@ -22,7 +22,7 @@ async function readOne(transport: RPCTransport): Promise<AnyMessage> {
 
 describe("RPCTransport", () => {
   describe("writable — outbound request (method + id)", () => {
-    it("forwards requests to jsonrpcCall with the poolside/acp/ prefix", async () => {
+    it("forwards requests to jsonrpcCall with the camber/acp/ prefix", async () => {
       const client = mockHelperApiClient();
       const transport = new RPCTransport(client);
 
@@ -35,7 +35,7 @@ describe("RPCTransport", () => {
       } as AnyMessage);
       writer.releaseLock();
 
-      expect(client.jsonrpcCall).toHaveBeenCalledWith("poolside/acp/session/new", {
+      expect(client.jsonrpcCall).toHaveBeenCalledWith("camber/acp/session/new", {
         agentServer: DEFAULT_AGENT_SERVER,
         workingDirectory: "/tmp",
       });
@@ -49,7 +49,7 @@ describe("RPCTransport", () => {
       await writer.write({ jsonrpc: "2.0", id: 2, method: "session/new" } as AnyMessage);
       writer.releaseLock();
 
-      expect(client.jsonrpcCall).toHaveBeenCalledWith("poolside/acp/session/new", {
+      expect(client.jsonrpcCall).toHaveBeenCalledWith("camber/acp/session/new", {
         agentServer: DEFAULT_AGENT_SERVER,
       });
     });
@@ -67,7 +67,7 @@ describe("RPCTransport", () => {
       } as AnyMessage);
       writer.releaseLock();
 
-      expect(client.jsonrpcCall).toHaveBeenCalledWith("poolside/acp/session/new", {
+      expect(client.jsonrpcCall).toHaveBeenCalledWith("camber/acp/session/new", {
         agentServer: "echo",
         workingDirectory: "/tmp",
       });
@@ -138,7 +138,7 @@ describe("RPCTransport", () => {
   });
 
   describe("writable — outbound notification (method, no id)", () => {
-    it("forwards notifications to jsonrpcNotify with the poolside/acp/ prefix", async () => {
+    it("forwards notifications to jsonrpcNotify with the camber/acp/ prefix", async () => {
       const client = mockHelperApiClient();
       const transport = new RPCTransport(client);
 
@@ -150,7 +150,7 @@ describe("RPCTransport", () => {
       } as AnyMessage);
       writer.releaseLock();
 
-      expect(client.jsonrpcNotify).toHaveBeenCalledWith("poolside/acp/session/cancel", {
+      expect(client.jsonrpcNotify).toHaveBeenCalledWith("camber/acp/session/cancel", {
         agentServer: DEFAULT_AGENT_SERVER,
         sessionId: "s1",
       });
@@ -165,7 +165,7 @@ describe("RPCTransport", () => {
       await writer.write({ jsonrpc: "2.0", method: "session/cancel" } as AnyMessage);
       writer.releaseLock();
 
-      expect(client.jsonrpcNotify).toHaveBeenCalledWith("poolside/acp/session/cancel", {
+      expect(client.jsonrpcNotify).toHaveBeenCalledWith("camber/acp/session/cancel", {
         agentServer: DEFAULT_AGENT_SERVER,
       });
     });
@@ -188,7 +188,7 @@ describe("RPCTransport", () => {
       } as AnyMessage);
       writer.releaseLock();
 
-      expect(client.jsonrpcNotify).toHaveBeenCalledWith("poolside/acp/session/cancel", {
+      expect(client.jsonrpcNotify).toHaveBeenCalledWith("camber/acp/session/cancel", {
         agentServer: DEFAULT_AGENT_SERVER,
         sessionId: "s1",
       });

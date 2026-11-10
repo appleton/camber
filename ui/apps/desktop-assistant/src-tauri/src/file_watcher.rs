@@ -19,11 +19,11 @@ use tauri::{async_runtime, AppHandle, Emitter, Manager, Url};
 
 use crate::helper;
 
-pub(crate) const ACP_NAV_LIST_METHOD: &str = "poolside/acpNav/list";
-pub(crate) const DESKTOP_FILE_TREE_CHANGED_EVENT: &str = "poolside:desktop-file-tree-changed";
-const ACP_NAV_METHOD_PREFIX: &str = "poolside/acpNav/";
-const ACP_NAV_CREATE_WORKTREE_METHOD: &str = "poolside/acpNav/createWorktree";
-const ACP_NAV_UPSERT_PROJECT_METHOD: &str = "poolside/acpNav/upsertProject";
+pub(crate) const ACP_NAV_LIST_METHOD: &str = "camber/acpNav/list";
+pub(crate) const DESKTOP_FILE_TREE_CHANGED_EVENT: &str = "camber:desktop-file-tree-changed";
+const ACP_NAV_METHOD_PREFIX: &str = "camber/acpNav/";
+const ACP_NAV_CREATE_WORKTREE_METHOD: &str = "camber/acpNav/createWorktree";
+const ACP_NAV_UPSERT_PROJECT_METHOD: &str = "camber/acpNav/upsertProject";
 const WATCH_DEBOUNCE: Duration = Duration::from_millis(150);
 pub(crate) const FILE_CHANGE_CREATED: i32 = 1;
 const FILE_CHANGE_CHANGED: i32 = 2;
@@ -205,7 +205,7 @@ async fn flush_pending_changes(
     )
     .await
     {
-        eprintln!("failed to send watched file changes to poolside-helper: {err}");
+        eprintln!("failed to send watched file changes to camber-helper: {err}");
     }
 }
 
@@ -441,8 +441,7 @@ mod tests {
 
     #[test]
     fn classify_missing_changed_path_as_deleted() {
-        let path =
-            std::env::temp_dir().join(format!("poolside-missing-file-{}", std::process::id()));
+        let path = std::env::temp_dir().join(format!("camber-missing-file-{}", std::process::id()));
 
         assert_eq!(
             classify_pending_change(&path, FILE_CHANGE_CHANGED),
@@ -462,7 +461,7 @@ mod tests {
 
     #[test]
     fn event_changes_handles_ambiguous_name_events() {
-        let path = std::env::temp_dir().join(format!("poolside-name-event-{}", std::process::id()));
+        let path = std::env::temp_dir().join(format!("camber-name-event-{}", std::process::id()));
         let event = notify::Event::new(EventKind::Modify(ModifyKind::Name(RenameMode::Any)))
             .add_path(path.clone());
 

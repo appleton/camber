@@ -3,9 +3,9 @@
 build: ## Build executables
 	$(BAZEL_BUILD) //...
 
-build-target: ## Build a specific target. Usage: make build-target TARGET=//cmd/poolside-helper:poolside-helper
+build-target: ## Build a specific target. Usage: make build-target TARGET=//cmd/camber-helper:camber-helper
 	@if [ -z "$(TARGET)" ]; then \
-	  echo 'usage: make build-target TARGET=//cmd/poolside-helper:poolside-helper'; \
+	  echo 'usage: make build-target TARGET=//cmd/camber-helper:camber-helper'; \
 	  exit 1; \
 	fi
 	$(BAZEL_BUILD) $(TARGET)

@@ -2,8 +2,8 @@
   import type { SessionConfigOption, SessionConfigSelectOption } from "@agentclientprotocol/sdk";
   import { mount, unmount, untrack } from "svelte";
   import type { Attachment } from "svelte/attachments";
-  import Icon from "@poolsideai/components/icon";
-  import { fuzzyScore } from "@poolsideai/components/assistant-ui";
+  import Icon from "@camber/components/icon";
+  import { fuzzyScore } from "@camber/components/assistant-ui";
   import { LOCAL_AGENT_SERVER } from "../../../../agentServers";
   import { getACPChatSessionScope } from "../../../../features/ChatSessionScope.svelte";
   import { getACPAgentRegistryRepo } from "../../../../features/AgentRegistryRepository.svelte";
@@ -20,7 +20,7 @@
   } from "../../../../localInferenceRuntime";
   import { localInferenceModelMissing } from "../../../../localInferenceModelOptions";
   import { pointerHeadedToRect, type Point } from "../../../../shared/safeTriangle";
-  import { Spinner } from "@poolsideai/components/spinner";
+  import { Spinner } from "@camber/components/spinner";
   import { supportsNativeMenus } from "../../desktopContextMenu";
   import type { NativeMenuIcon } from "../../nativeMenuIcons";
   import { presentNativeMenu, type MenuSpecItem } from "../../../ui/menuSpec";
@@ -56,7 +56,7 @@
     shouldPersistConfigSelection,
     valueDescription,
   } from "./configOptions";
-  import { Badge } from "@poolsideai/components/badge";
+  import { Badge } from "@camber/components/badge";
 
   interface Props {
     // Collapsed away by the footer overflow manager when there is not even room
@@ -925,7 +925,7 @@
     const url = agentPickerIconUrl(registry, agentServer);
     // Same masked-URL icon RegistryAgentIcon renders, with its fallback glyph
     // and the same brand tint the DOM rows apply through agentPickerIconProps
-    // (Poolside's vibrant, Claude's orange); untinted agents keep the default
+    // (Camber's vibrant, Claude's orange); untinted agents keep the default
     // glyph color, as in the DOM. The local agent's badge overlay (the
     // computer glyph sitting in the roundel's notch) composites in too.
     if (!url) return "sparkles";

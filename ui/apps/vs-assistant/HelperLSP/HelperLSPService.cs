@@ -1,9 +1,9 @@
 ﻿using Microsoft.VisualStudio.Shell;
 using OmniSharp.Extensions.LanguageServer.Client;
 using OmniSharp.Extensions.LanguageServer.Protocol;
-using Poolside.Assistant.Context;
-using Poolside.Assistant.Settings;
-using Poolside.Assistant.Telemetry;
+using Camber.Assistant.Context;
+using Camber.Assistant.Settings;
+using Camber.Assistant.Telemetry;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 #pragma warning disable VSTHRD100 // Avoid async void methods
 
-namespace Poolside.Assistant.HelperLSP
+namespace Camber.Assistant.HelperLSP
 {
     internal class HelperLSPService
     {
@@ -27,7 +27,7 @@ namespace Poolside.Assistant.HelperLSP
 
         // The settings object, retained primarily so we don't attempt to resolve it again during shutdown of
         // the IDE when we're cleaning up handlers, which causes exceptions.
-        private PoolsideSettings currentSettings = null;
+        private CamberSettings currentSettings = null;
 
         // Since starting the client is async, it may not be available yet when we have messages to send to it.
         // Thus we have a Task that message sends can be chained onto. We might also get some document open
@@ -62,12 +62,12 @@ namespace Poolside.Assistant.HelperLSP
             return StartInternalAsync(null);
         }
 
-        internal Task StartForWorkspaceAsync(IPoolsideWorkspace workspace)
+        internal Task StartForWorkspaceAsync(ICamberWorkspace workspace)
         {
             return StartInternalAsync(workspace);
         }
 
-        private async Task StartInternalAsync(IPoolsideWorkspace maybeWorkspace)
+        private async Task StartInternalAsync(ICamberWorkspace maybeWorkspace)
         {
             try
             {
@@ -76,7 +76,7 @@ namespace Poolside.Assistant.HelperLSP
 
                 // Subscribe to events that indicate configuration changes.
                 CurrentAgentStore.Instance.OnCurrentAgentChange += SendUpdatedConfiguration;
-                currentSettings = PoolsideAssistantPackage.GetInstance().GetSettings();
+                currentSettings = CamberAssistantPackage.GetInstance().GetSettings();
                 currentSettings.PropertyChanged += OnSettingsChanged;
 
                 // Set flag indicating we should be running, try to start helper, and also set up restart handler.
@@ -87,14 +87,14 @@ namespace Poolside.Assistant.HelperLSP
                 {
                     if (shouldBeRunning)
                     {
-                        Debug.WriteLine($"Restarting Poolside helper");
+                        Debug.WriteLine($"Restarting Camber helper");
                         FreshProcessState();
                         Util.HandleTaskErrors(HelperProcess.StartAsync(workspacePaths, restartHandler, helperLog).ContinueWith(restartResult =>
                         {
                             if (restartResult.IsFaulted)
                             {
                                 this.currentProcess = null;
-                                PoolsideTelemetryLogger.Instance.reportException(restartResult.Exception);
+                                CamberTelemetryLogger.Instance.reportException(restartResult.Exception);
                             }
                             else
                             {
@@ -112,7 +112,7 @@ namespace Poolside.Assistant.HelperLSP
                     }
                 };
                 this.currentProcess = await HelperProcess.StartAsync(workspacePaths, restartHandler, helperLog);
-                var package = PoolsideAssistantPackage.GetInstance();
+                var package = CamberAssistantPackage.GetInstance();
                 await package.JoinableTaskFactory.SwitchToMainThreadAsync();
                 SyncVisibleFilesToHelper(this.currentProcess.Client);
                 this.clientWhenStartedSource.SetResult(this.currentProcess.Client);
@@ -120,11 +120,11 @@ namespace Poolside.Assistant.HelperLSP
             catch (Exception ex)
             {
                 this.clientWhenStartedSource.TrySetException(ex);
-                await Util.ShowInfoMessageAsync("Failed to start Poolside helper process; some functionality will be unavailable. " + ex.Message, "error");
+                await Util.ShowInfoMessageAsync("Failed to start Camber helper process; some functionality will be unavailable. " + ex.Message, "error");
             }
         }
 
-        private static List<string> GetWorkspacePaths(IPoolsideWorkspace maybeWorkspace)
+        private static List<string> GetWorkspacePaths(ICamberWorkspace maybeWorkspace)
         {
             var paths = new List<string>();
             if (maybeWorkspace == null) return paths;
@@ -152,7 +152,7 @@ namespace Poolside.Assistant.HelperLSP
             }
             catch (Exception ex)
             {
-                PoolsideTelemetryLogger.Instance.reportException(ex);
+                CamberTelemetryLogger.Instance.reportException(ex);
             }
         }
 
@@ -332,17 +332,17 @@ namespace Poolside.Assistant.HelperLSP
 
         internal async Task HandleCommand(Command command)
         {
-            if (command?.command == "poolside.invokeLSP")
+            if (command?.command == "camber.invokeLSP")
             {
                 if (command.arguments == null || command.arguments.Count == 0)
-                    throw new Exception("Malformed poolside.invokeLSP command arguments");
+                    throw new Exception("Malformed camber.invokeLSP command arguments");
                 var client = await clientWhenStarted;
                 await client.SendRequest(command.arguments[0] as string, command.arguments.ElementAtOrDefault(1))
                     .Returning<object>(CancellationToken.None);
             }
             else
             {
-                PoolsideTelemetryLogger.Instance.reportError(new Exception("Unknown command"), new Dictionary<string, object>
+                CamberTelemetryLogger.Instance.reportError(new Exception("Unknown command"), new Dictionary<string, object>
                 {
                     { "command", command }
                 });
@@ -351,37 +351,37 @@ namespace Poolside.Assistant.HelperLSP
 
         internal Task<object> Abort(object abort)
         {
-            return SendRequest<object>("poolside/abort", abort);
+            return SendRequest<object>("camber/abort", abort);
         }
 
         internal Task<RuntimeFilesOutput> GetRuntimeFiles()
         {
-            return SendRequest<RuntimeFilesOutput>("poolside/runtimeFiles", new RuntimeFilesParams());
+            return SendRequest<RuntimeFilesOutput>("camber/runtimeFiles", new RuntimeFilesParams());
         }
 
         internal Task<object> UpsertSecret(object parameters)
         {
-            return SendRequest<object>("poolside/upsertSecret", parameters);
+            return SendRequest<object>("camber/upsertSecret", parameters);
         }
 
         internal Task<object> DeleteSecret(object parameters)
         {
-            return SendRequest<object>("poolside/deleteSecret", parameters);
+            return SendRequest<object>("camber/deleteSecret", parameters);
         }
 
         internal Task<object> ListSecrets(object parameters)
         {
-            return SendRequest<object>("poolside/listSecrets", parameters);
+            return SendRequest<object>("camber/listSecrets", parameters);
         }
 
         internal Task<object> GetSecret(object parameters)
         {
-            return SendRequest<object>("poolside/getSecret", parameters);
+            return SendRequest<object>("camber/getSecret", parameters);
         }
 
         internal Task<object> DeleteMcpSecrets(object parameters)
         {
-            return SendRequest<object>("poolside/deleteMcpSecrets", parameters);
+            return SendRequest<object>("camber/deleteMcpSecrets", parameters);
         }
 
         private void SendNotification(string method, object payload)
@@ -442,7 +442,7 @@ namespace Poolside.Assistant.HelperLSP
             }
             catch (Exception ex)
             {
-                PoolsideTelemetryLogger.Instance.reportException(ex);
+                CamberTelemetryLogger.Instance.reportException(ex);
             }
         }
 

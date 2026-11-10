@@ -1,7 +1,7 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
-  import { getDisplay } from "@poolsideai/components/providers";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
+  import { getDisplay } from "@camber/components/providers";
   import { onMount } from "svelte";
   import { getKeybindingService, withShortcut } from "../../../../keybindings";
   import { SpeechRecorder } from "./recorder";

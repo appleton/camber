@@ -1,4 +1,4 @@
-import Icon, { type IconName } from "@poolsideai/components/icon";
+import Icon, { type IconName } from "@camber/components/icon";
 import { mount, unmount } from "svelte";
 import type { DesktopContextMenuIcon, DesktopContextMenuStarIcons } from "./desktopContextMenu";
 import { FALLBACK_NATIVE_MENU_THEME } from "./nativeMenuTheme";

@@ -2,7 +2,7 @@ import { extname } from "./extname.js";
 
 describe("unix", () => {
   it("should extract extension from absolute path", () => {
-    expect(extname("/Users/poolie/poolside/file.ts")).toBe(".ts");
+    expect(extname("/Users/poolie/camber/file.ts")).toBe(".ts");
   });
 
   it("should extract extension from root directory", () => {
@@ -10,7 +10,7 @@ describe("unix", () => {
   });
 
   it("should handle paths with trailing slashes", () => {
-    expect(extname("/Users/poolie/poolside/")).toBe("");
+    expect(extname("/Users/poolie/camber/")).toBe("");
   });
 
   it("should extract last extension from multiple extensions", () => {
@@ -24,7 +24,7 @@ describe("unix", () => {
 
 describe("windows", () => {
   it("should extract extension from absolute path", () => {
-    expect(extname("C:\\Users\\poolie\\poolside\\file.ts")).toBe(".ts");
+    expect(extname("C:\\Users\\poolie\\camber\\file.ts")).toBe(".ts");
   });
 
   it("should extract extension from drive root", () => {
@@ -36,7 +36,7 @@ describe("windows", () => {
   });
 
   it("should handle paths with trailing backslashes", () => {
-    expect(extname("C:\\Users\\poolie\\poolside\\")).toBe("");
+    expect(extname("C:\\Users\\poolie\\camber\\")).toBe("");
   });
 });
 

@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import { poolsideCommand } from "./api/commands";
-import { getExtensionIdentity, POOLSIDE } from "./extensionIdentity";
+import { camberCommand } from "./api/commands";
+import { CAMBER, getExtensionIdentity } from "./extensionIdentity";
 
 /**
  * Status bar entry point for the assistant.
@@ -14,14 +14,14 @@ export function createStatusBarItem(): vscode.StatusBarItem {
   const { assistantTitle } = getExtensionIdentity();
 
   const statusBarItem = vscode.window.createStatusBarItem(
-    `${POOLSIDE}.launch`,
+    `${CAMBER}.launch`,
     vscode.StatusBarAlignment.Right,
     100,
   );
   statusBarItem.name = assistantTitle;
-  statusBarItem.text = `$(${POOLSIDE}-roundel)`;
+  statusBarItem.text = `$(${CAMBER}-roundel)`;
   statusBarItem.tooltip = `Open ${assistantTitle}`;
-  statusBarItem.command = poolsideCommand("focusInput");
+  statusBarItem.command = camberCommand("focusInput");
   statusBarItem.show();
 
   return statusBarItem;

@@ -8,7 +8,7 @@ export interface LineRangeOneIndexed {
 }
 
 /**
- * The poolside API starts line number at 1, vscode at 0
+ * The camber API starts line number at 1, vscode at 0
  */
 export function vscodeRangeToAPIRange(selection: Range): LineRangeOneIndexed {
   return {

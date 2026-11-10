@@ -1,4 +1,4 @@
-import type { DesktopSplitNavigationLocation } from "@poolsideai/features/acp";
+import type { DesktopSplitNavigationLocation } from "@camber/features/acp";
 import type { DesktopView } from "./DesktopViewState.svelte";
 
 export interface DesktopNavigationEntry {

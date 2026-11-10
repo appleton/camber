@@ -3,7 +3,7 @@ import type {
   ACPNavConversation,
   ACPNavConversationLiveStatus,
   ACPNavState,
-} from "@poolsideai/helperapi/schemas";
+} from "@camber/helperapi/schemas";
 import type {
   AcpChatPanelMetadata,
   ActiveFileContext,
@@ -12,8 +12,8 @@ import type {
   Keybindings,
   Language,
   OpenAcpChatOptions,
-} from "@poolsideai/rpc";
-import type { AssistantError, AssistantResponse } from "@poolsideai/rpc/assistant";
+} from "@camber/rpc";
+import type { AssistantError, AssistantResponse } from "@camber/rpc/assistant";
 import { randomUUID } from "crypto";
 import * as vscode from "vscode";
 import { HostRPCServer } from "../rpc/server";
@@ -21,7 +21,7 @@ import type { System } from "../system";
 import { AcpTabIconProvider, type AcpTabIconStatus } from "./acpTabIcon";
 import { getWebviewHtml } from "./getWebviewHtml";
 
-export const POOLSIDE_ACP_CHAT_VIEW_TYPE = "poolside-acp-chat" as const;
+export const CAMBER_ACP_CHAT_VIEW_TYPE = "camber-acp-chat" as const;
 export const DEFAULT_AGENT_SERVER = "poolside";
 
 export interface AcpChatPanelState {
@@ -86,11 +86,11 @@ function newConversationId(): string {
 
 function panelTitle(sessionTitle: string | undefined): string {
   if (sessionTitle) return sessionTitle;
-  return "Poolside Chat";
+  return "Camber Chat";
 }
 
 function agentNameFromServer(agentServer: string): string {
-  return agentServer === DEFAULT_AGENT_SERVER ? "Poolside" : agentServer;
+  return agentServer === DEFAULT_AGENT_SERVER ? "Camber" : agentServer;
 }
 
 /**
@@ -152,7 +152,7 @@ export class AcpChatPanels {
     const conversationId = opts.conversationId ?? newConversationId();
 
     const panel = vscode.window.createWebviewPanel(
-      POOLSIDE_ACP_CHAT_VIEW_TYPE,
+      CAMBER_ACP_CHAT_VIEW_TYPE,
       panelTitle(opts.sessionTitle),
       { viewColumn: vscode.ViewColumn.Active },
       {
@@ -332,17 +332,17 @@ export class AcpChatPanels {
 
   async routeInbound(methodName: string, params: unknown): Promise<unknown> {
     switch (methodName) {
-      case "poolside/jsonrpc/notify":
+      case "camber/jsonrpc/notify":
         return this.routeJsonrpcNotify(params);
-      case "poolside/jsonrpc/request":
+      case "camber/jsonrpc/request":
         return this.routeJsonrpcRequest(params);
-      case "poolside/acp/serverDidExit":
+      case "camber/acp/serverDidExit":
         return this.routeAgentServerDidExit(params);
-      case "poolside/acp/elicitation/create":
+      case "camber/acp/elicitation/create":
         return this.routeElicitation(params);
-      case "poolside/acp/approvals/didChange":
+      case "camber/acp/approvals/didChange":
         return this.routeApprovalsDidChange(params);
-      case "poolside/mcpServers/didChange":
+      case "camber/mcpServers/didChange":
         return this.routeMcpServersDidChange();
     }
   }
@@ -440,7 +440,7 @@ export class AcpChatPanels {
     });
 
     panel.webview.html = await getWebviewHtml(this.system, panel.webview, "acp-chat", [
-      { key: "POOLSIDE_INITIAL_ACP_CHAT_STATE", value: initial },
+      { key: "CAMBER_INITIAL_ACP_CHAT_STATE", value: initial },
     ]);
     this.applyPanelNavState(entry);
     this.syncPanelViewState(entry);
@@ -559,7 +559,7 @@ export class AcpChatPanels {
 
   // Tell the sidebar webview which ACP agent the user is currently working with.
   // The sidebar is a separate webview and can't see the focused chat editor, so
-  // it relies on this to decide e.g. whether to show Poolside-specific UI.
+  // it relies on this to decide e.g. whether to show Camber-specific UI.
   private broadcastActiveAgent(): void {
     // runWhenReady covers the sidebar opening after the last focus event; it
     // also fires immediately once the sidebar is ready, so live updates work.
@@ -743,7 +743,7 @@ export class AcpChatPanels {
     try {
       const { getHelperSingleton } = await import("../helper");
       const client = await getHelperSingleton(this.system);
-      acpNavState = (await client.sendRequest("poolside/acpNav/setConversationViewState", {
+      acpNavState = (await client.sendRequest("camber/acpNav/setConversationViewState", {
         agentServer,
         sessionId,
         active,

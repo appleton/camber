@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createDropdownMenu, melt } from "@melt-ui/svelte";
-  import Icon from "@poolsideai/components/icon";
-  import { Badge } from "@poolsideai/components/badge";
+  import Icon from "@camber/components/icon";
+  import { Badge } from "@camber/components/badge";
   import { createACPChatWorkingDirectory } from "../../chatWorkspaces";
   import { appState } from "../../hostAdapter";
   import { getACPProjectRepo } from "../../features/ProjectRepository.svelte";

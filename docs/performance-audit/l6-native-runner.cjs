@@ -3,21 +3,21 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const crypto = require("node:crypto");
 exports.run = async () => {
-  const before = require("/tmp/poolside-l6-before.cjs");
-  const after = require("/tmp/poolside-l6-after.cjs");
+  const before = require("/tmp/camber-l6-before.cjs");
+  const after = require("/tmp/camber-l6-after.cjs");
   const context = {
     extensionMode: vscode.ExtensionMode.Production,
-    extensionPath: process.env.POOLSIDE_L6_EXTENSION,
-    extensionUri: vscode.Uri.file(process.env.POOLSIDE_L6_EXTENSION),
+    extensionPath: process.env.CAMBER_L6_EXTENSION,
+    extensionUri: vscode.Uri.file(process.env.CAMBER_L6_EXTENSION),
   };
   const system = { context };
   const webview = { asWebviewUri: (uri) => uri };
-  if (process.env.POOLSIDE_L6_CAPTURE) {
+  if (process.env.CAMBER_L6_CAPTURE) {
     for (const entry of ["assistant", "acp-chat"]) {
       const htmls = [];
       for (const phase of ["before", "after"]) {
         const html = await { before, after }[phase].getWebviewHtml(system, webview, entry);
-        fs.writeFileSync(`/tmp/poolside-l6-${phase}-${entry}.html`, html);
+        fs.writeFileSync(`/tmp/camber-l6-${phase}-${entry}.html`, html);
         htmls.push(html);
       }
       assert.equal(htmls[0], htmls[1]);
@@ -45,7 +45,7 @@ exports.run = async () => {
         const durationMs = performance.now() - start;
         const state = JSON.parse(
           Buffer.from(
-            html.match(/POOLSIDE_INITIAL_STATE = decode\("([^"]+)"\)/)[1],
+            html.match(/CAMBER_INITIAL_STATE = decode\("([^"]+)"\)/)[1],
             "base64",
           ).toString("utf8"),
         );
@@ -62,7 +62,7 @@ exports.run = async () => {
         };
         rows.push(row);
         fs.writeFileSync(
-          "/tmp/poolside-l6-native-measurements.json",
+          "/tmp/camber-l6-native-measurements.json",
           JSON.stringify({ vscode: vscode.version, rows }, null, 2),
         );
       }

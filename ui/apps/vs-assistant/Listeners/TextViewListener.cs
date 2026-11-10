@@ -2,9 +2,9 @@
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Utilities;
-using Poolside.Assistant.Context;
-using Poolside.Assistant.HelperLSP;
-using Poolside.Assistant.Telemetry;
+using Camber.Assistant.Context;
+using Camber.Assistant.HelperLSP;
+using Camber.Assistant.Telemetry;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -13,7 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 
-namespace Poolside.Assistant.Listeners
+namespace Camber.Assistant.Listeners
 {
     [Export(typeof(IWpfTextViewCreationListener))]
     [ContentType("text")]
@@ -64,7 +64,7 @@ namespace Poolside.Assistant.Listeners
                 }
                 catch (Exception ex)
                 {
-                    PoolsideTelemetryLogger.Instance.reportException(ex);
+                    CamberTelemetryLogger.Instance.reportException(ex);
                 }
             });
         }

@@ -149,16 +149,16 @@
     {
       "phase": "before",
       "entry": "assistant",
-      "text": "Review performance\n11h\nSettings\nConnectors\nMCP servers & tools\nAgents\nConfigure & enable agents\nExtension Settings\nPoolside extension options",
+      "text": "Review performance\n11h\nSettings\nConnectors\nMCP servers & tools\nAgents\nConfigure & enable agents\nExtension Settings\nCamber extension options",
       "errors": [],
       "commands": [
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/list"
+          "method": "camber/acpNav/list"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acp/approvals/list"
+          "method": "camber/acp/approvals/list"
         },
         {
           "command": "ready"
@@ -168,26 +168,26 @@
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/list"
+          "method": "camber/acpNav/list"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/listAgentServers"
+          "method": "camber/acpNav/listAgentServers"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/listAgentServers"
+          "method": "camber/acpNav/listAgentServers"
         },
         {
           "command": "openAcpChat"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/list"
+          "method": "camber/acpNav/list"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acp/initialize"
+          "method": "camber/acp/initialize"
         }
       ],
       "selection": "",
@@ -240,16 +240,16 @@
     {
       "phase": "after",
       "entry": "assistant",
-      "text": "Review performance\n11h\nSettings\nConnectors\nMCP servers & tools\nAgents\nConfigure & enable agents\nExtension Settings\nPoolside extension options",
+      "text": "Review performance\n11h\nSettings\nConnectors\nMCP servers & tools\nAgents\nConfigure & enable agents\nExtension Settings\nCamber extension options",
       "errors": [],
       "commands": [
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/list"
+          "method": "camber/acpNav/list"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acp/approvals/list"
+          "method": "camber/acp/approvals/list"
         },
         {
           "command": "ready"
@@ -259,26 +259,26 @@
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/list"
+          "method": "camber/acpNav/list"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/listAgentServers"
+          "method": "camber/acpNav/listAgentServers"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/listAgentServers"
+          "method": "camber/acpNav/listAgentServers"
         },
         {
           "command": "openAcpChat"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/list"
+          "method": "camber/acpNav/list"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acp/initialize"
+          "method": "camber/acp/initialize"
         }
       ],
       "selection": "",
@@ -331,24 +331,24 @@
     {
       "phase": "before",
       "entry": "acp-chat",
-      "text": "Chatting with\nPoolside\nStart a new conversation\nusing\n\nCheck streaming, splits and tabs.",
+      "text": "Chatting with\nCamber\nStart a new conversation\nusing\n\nCheck streaming, splits and tabs.",
       "errors": [],
       "commands": [
         {
           "command": "jsonrpc",
-          "method": "poolside/voiceInput/getState"
+          "method": "camber/voiceInput/getState"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/git/status"
+          "method": "camber/git/status"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/list"
+          "method": "camber/acpNav/list"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acp/approvals/list"
+          "method": "camber/acp/approvals/list"
         },
         {
           "command": "ready"
@@ -361,38 +361,38 @@
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/listSkills"
+          "method": "camber/listSkills"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/listAgentServers"
+          "method": "camber/acpNav/listAgentServers"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/listAgentServers"
+          "method": "camber/acpNav/listAgentServers"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/getConfigCache"
+          "method": "camber/acpNav/getConfigCache"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acp/initialize"
+          "method": "camber/acp/initialize"
         },
         {
           "command": "updateAcpChatPanelMetadata"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acp/session/new"
+          "method": "camber/acp/session/new"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/upsertConfigCache"
+          "method": "camber/acpNav/upsertConfigCache"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/upsertConversation"
+          "method": "camber/acpNav/upsertConversation"
         }
       ],
       "draft": "Check streaming, splits and tabs.",
@@ -462,24 +462,24 @@
     {
       "phase": "after",
       "entry": "acp-chat",
-      "text": "Chatting with\nPoolside\nStart a new conversation\nusing\n\nCheck streaming, splits and tabs.",
+      "text": "Chatting with\nCamber\nStart a new conversation\nusing\n\nCheck streaming, splits and tabs.",
       "errors": [],
       "commands": [
         {
           "command": "jsonrpc",
-          "method": "poolside/voiceInput/getState"
+          "method": "camber/voiceInput/getState"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/git/status"
+          "method": "camber/git/status"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/list"
+          "method": "camber/acpNav/list"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acp/approvals/list"
+          "method": "camber/acp/approvals/list"
         },
         {
           "command": "ready"
@@ -492,38 +492,38 @@
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/listSkills"
+          "method": "camber/listSkills"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/listAgentServers"
+          "method": "camber/acpNav/listAgentServers"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/listAgentServers"
+          "method": "camber/acpNav/listAgentServers"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/getConfigCache"
+          "method": "camber/acpNav/getConfigCache"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acp/initialize"
+          "method": "camber/acp/initialize"
         },
         {
           "command": "updateAcpChatPanelMetadata"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acp/session/new"
+          "method": "camber/acp/session/new"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/upsertConfigCache"
+          "method": "camber/acpNav/upsertConfigCache"
         },
         {
           "command": "jsonrpc",
-          "method": "poolside/acpNav/upsertConversation"
+          "method": "camber/acpNav/upsertConversation"
         }
       ],
       "draft": "Check streaming, splits and tabs.",

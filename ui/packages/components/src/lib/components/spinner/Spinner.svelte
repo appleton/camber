@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from "@poolsideai/tailwind-config/tv";
+  import { cn } from "@camber/tailwind-config/tv";
   import type { SvelteHTMLElements } from "svelte/elements";
 
   type Props = SvelteHTMLElements["span"] & {

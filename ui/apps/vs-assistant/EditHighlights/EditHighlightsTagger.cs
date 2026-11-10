@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using System.Windows.Documents;
 using System.Windows.Media.Animation;
 
-namespace Poolside.Assistant.EditHighlights
+namespace Camber.Assistant.EditHighlights
 {
     internal class EditHighlightsTagger : ITagger<EditHighlightsTag>
     {

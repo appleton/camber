@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "git",
     srcs = ["git.go"],
-    importpath = "github.com/poolsideai/assistant/pkg/git",
+    importpath = "github.com/appleton/camber/pkg/git",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/workspace/afero2billy",

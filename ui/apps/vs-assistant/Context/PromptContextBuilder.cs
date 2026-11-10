@@ -1,11 +1,11 @@
-﻿using Poolside.Assistant.Context.Prompt;
+﻿using Camber.Assistant.Context.Prompt;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Context
+namespace Camber.Assistant.Context
 {
     internal static class PromptContextBuilder
     {

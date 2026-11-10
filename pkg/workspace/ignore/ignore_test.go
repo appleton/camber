@@ -13,7 +13,7 @@ func TestCreateIgnoredChecker(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	root := filepath.Join(string(filepath.Separator), "workspace")
 	require.NoError(t, fs.MkdirAll(root, 0o755))
-	require.NoError(t, afero.WriteFile(fs, filepath.Join(root, ".poolsideignore"), []byte("ignored.txt\n"), 0o644))
+	require.NoError(t, afero.WriteFile(fs, filepath.Join(root, ".camberignore"), []byte("ignored.txt\n"), 0o644))
 	require.NoError(t, afero.WriteFile(fs, filepath.Join(root, "ignored.txt"), []byte("text"), 0o644))
 	require.NoError(t, afero.WriteFile(fs, filepath.Join(root, "regular.txt"), []byte("text"), 0o644))
 	require.NoError(t, afero.WriteFile(fs, filepath.Join(root, "binary.dat"), []byte{0, 1, 2}, 0o644))

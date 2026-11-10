@@ -9,11 +9,11 @@ const app = join(root, "ui/apps/vscode-assistant");
 for (const phase of ["before", "after"]) {
   const source =
     phase === "before" ? resolve("output/performance/b4-before-dist") : join(app, "dist");
-  const extension = `/tmp/poolside-b4-${phase}-extension`;
+  const extension = `/tmp/camber-b4-${phase}-extension`;
   mkdirSync(extension, { recursive: true });
   cpSync(source, join(extension, "dist"), { recursive: true });
   copyFileSync(join(app, "package.json"), join(extension, "package.json"));
-  const profile = `/tmp/poolside-b4-${phase}-profile/User`;
+  const profile = `/tmp/camber-b4-${phase}-profile/User`;
   mkdirSync(profile, { recursive: true });
   writeFileSync(
     join(profile, "settings.json"),

@@ -15,7 +15,7 @@ if (process.argv.includes("--clean")) {
   writeFileSync(`${destination}/fixture.js`, host.slice(host.indexOf("window.__b4 =")));
   for (const phase of ["before", "after"])
     for (const entry of ["assistant", "acp-chat"]) {
-      const html = readFileSync(`/tmp/poolside-l6-${phase}-${entry}.html`, "utf8")
+      const html = readFileSync(`/tmp/camber-l6-${phase}-${entry}.html`, "utf8")
         .replace(/<base href="[^"]+">/, '<base href="/__audit_l6/">')
         .replace(
           '<script type="module"',

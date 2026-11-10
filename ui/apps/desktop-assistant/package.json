@@ -1,17 +1,16 @@
 {
-  "name": "@poolsideai/desktop-assistant",
+  "name": "@camber/desktop-assistant",
   "version": "0.0.0",
   "private": true,
-  "description": "The Poolside desktop assistant shell.",
+  "description": "The Camber desktop assistant shell.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/poolsideai/assistants"
+    "url": "https://github.com/appleton/camber"
   },
   "license": "Apache-2.0",
   "author": {
-    "name": "Poolside",
-    "email": "hello@poolside.ai",
-    "url": "https://poolside.ai"
+    "name": "Andy Appleton",
+    "url": "https://github.com/appleton"
   },
   "type": "module",
   "scripts": {
@@ -38,15 +37,15 @@
       "prettier --ignore-unknown --write"
     ]
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "dependencies": {
+    "@camber/assistant": "workspace:*",
+    "@camber/components": "workspace:*",
+    "@camber/features": "workspace:*",
+    "@camber/helperapi": "workspace:*",
+    "@camber/lib": "workspace:*",
+    "@camber/rpc": "workspace:*",
     "@iconify-json/vscode-icons": "^1.2.50",
-    "@poolsideai/assistant": "workspace:*",
-    "@poolsideai/components": "workspace:*",
-    "@poolsideai/features": "workspace:*",
-    "@poolsideai/helperapi": "workspace:*",
-    "@poolsideai/lib": "workspace:*",
-    "@poolsideai/rpc": "workspace:*",
     "@tauri-apps/api": "2",
     "@tauri-apps/plugin-dialog": "2",
     "@tauri-apps/plugin-notification": "^2.3.3",
@@ -58,12 +57,12 @@
     "vscode-icons-js": "^11.6.1"
   },
   "devDependencies": {
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/svelte-config": "workspace:*",
-    "@poolsideai/tailwind-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
-    "@poolsideai/vite-config": "workspace:*",
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/svelte-config": "workspace:*",
+    "@camber/tailwind-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
+    "@camber/vite-config": "workspace:*",
     "@tauri-apps/cli": "2",
     "eslint": "catalog:",
     "prettier": "catalog:",

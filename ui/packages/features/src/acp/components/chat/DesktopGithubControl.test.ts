@@ -1,4 +1,4 @@
-import type { GitHubLinksOutput } from "@poolsideai/helperapi";
+import type { GitHubLinksOutput } from "@camber/helperapi";
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { appState } from "../../hostAdapter";

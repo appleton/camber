@@ -1,5 +1,5 @@
 <script lang="ts">
-  import * as Prompt from "@poolsideai/components/prompt";
+  import * as Prompt from "@camber/components/prompt";
   import type { ServerCommandEntry } from "./serverCommands";
   import { skillInvocation } from "./serverCommands";
 

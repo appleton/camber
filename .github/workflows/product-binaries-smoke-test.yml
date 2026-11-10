@@ -5,8 +5,8 @@ on:
   pull_request:
     types: [ opened, reopened, synchronize ]
     paths:
-      - 'cmd/poolside-helper/**'
-      - 'pkg/poolside-helper/**'
+      - 'cmd/camber-helper/**'
+      - 'pkg/camber-helper/**'
       - '.github/workflows/product-binaries-smoke-test.yml'
 
 jobs:
@@ -17,9 +17,9 @@ jobs:
         os:
           - windows-2022
           - ubuntu-24.04
-          - macos-14-large
+          - macos-14
     # Forks don't have the org's larger runners; fall back to a public macOS runner.
-    runs-on: ${{ (github.repository != 'poolsideai/assistants' && matrix.os == 'macos-14-large') && 'macos-latest' || matrix.os }}
+    runs-on: ${{ matrix.os }}
 
     defaults:
       run:
@@ -47,8 +47,8 @@ jobs:
           ext=""
           if [[ "${RUNNER_OS:-}" == "Windows" ]]; then ext=".exe"; fi
 
-          go build -tags=fts5 -o "poolside-helper${ext}" ./cmd/poolside-helper
-          echo "HELPER_BIN=$PWD/poolside-helper${ext}" >> "$GITHUB_ENV"
+          go build -tags=fts5 -o "camber-helper${ext}" ./cmd/camber-helper
+          echo "HELPER_BIN=$PWD/camber-helper${ext}" >> "$GITHUB_ENV"
 
       # the simplest of smoke tests fow now: does it start without crashing
       - name: Run helper smoke test

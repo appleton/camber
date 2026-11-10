@@ -1,16 +1,15 @@
 {
-  "name": "@poolsideai/mobile-remote",
+  "name": "@camber/mobile-remote",
   "version": "0.1.0",
   "private": true,
-  "description": "Mobile remote-control web UI for the Poolside desktop assistant, served by poolside-helper over Tailscale.",
+  "description": "Mobile remote-control web UI for the Camber desktop assistant, served by camber-helper over Tailscale.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/poolsideai/assistants"
+    "url": "https://github.com/appleton/camber"
   },
   "author": {
-    "name": "Poolside",
-    "email": "hello@poolside.ai",
-    "url": "https://poolside.ai"
+    "name": "Andy Appleton",
+    "url": "https://github.com/appleton"
   },
   "type": "module",
   "scripts": {
@@ -26,23 +25,23 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest"
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "dependencies": {
-    "@poolsideai/assistant": "workspace:*",
-    "@poolsideai/components": "workspace:*",
-    "@poolsideai/features": "workspace:*",
-    "@poolsideai/helperapi": "workspace:*",
-    "@poolsideai/lib": "workspace:*",
-    "@poolsideai/remote-client": "workspace:*",
-    "@poolsideai/rpc": "workspace:*"
+    "@camber/assistant": "workspace:*",
+    "@camber/components": "workspace:*",
+    "@camber/features": "workspace:*",
+    "@camber/helperapi": "workspace:*",
+    "@camber/lib": "workspace:*",
+    "@camber/remote-client": "workspace:*",
+    "@camber/rpc": "workspace:*"
   },
   "devDependencies": {
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/svelte-config": "workspace:*",
-    "@poolsideai/tailwind-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
-    "@poolsideai/vite-config": "workspace:*",
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/svelte-config": "workspace:*",
+    "@camber/tailwind-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
+    "@camber/vite-config": "workspace:*",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "svelte": "catalog:",

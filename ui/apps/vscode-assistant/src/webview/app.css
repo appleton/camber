@@ -1,6 +1,6 @@
 @import "tailwindcss";
-@import "@poolsideai/tailwind-config/vscode.css";
-@import "@poolsideai/tailwind-config";
+@import "@camber/tailwind-config/vscode.css";
+@import "@camber/tailwind-config";
 
 @source "../../../../packages/components";
 @source "../../../../packages/web-components";

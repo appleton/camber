@@ -115,7 +115,7 @@ export default defineConfig((env) => {
   }
 
   if (
-    process.env["POOLSIDE_SKIP_STORYBOOK_VITE"] !== "1" &&
+    process.env["CAMBER_SKIP_STORYBOOK_VITE"] !== "1" &&
     Object.hasOwn(devDependencies, "storybook")
   ) {
     config = mergeConfigs(config, storybook(env));

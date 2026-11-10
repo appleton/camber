@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { Badge } from "@poolsideai/components/badge";
-  import { Switch } from "@poolsideai/components/switch";
-  import type { MCPServerInputs } from "@poolsideai/helperapi/schemas";
+  import { Badge } from "@camber/components/badge";
+  import { Switch } from "@camber/components/switch";
+  import type { MCPServerInputs } from "@camber/helperapi/schemas";
   import { getACPMCPSettingsRepo } from "../../features/MCPSettingsRepository.context";
   import type { MenuSpecItem } from "../ui/menuSpec";
   import ConnectorServiceIcon from "./ConnectorServiceIcon.svelte";
@@ -111,7 +111,7 @@
       menu.push({
         kind: "action",
         id: "managed",
-        label: "Managed by Poolside",
+        label: "Managed by Camber",
         icon: "info",
         enabled: false,
       });

@@ -1,4 +1,4 @@
-import { initializeStatefulModule as initializeHelperApi } from "@poolsideai/helperapi";
+import { initializeStatefulModule as initializeHelperApi } from "@camber/helperapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_AGENT_SERVER } from "../agentServers";
 import { ACP_DESKTOP_CONVERSATIONS_EVENT, ACP_SESSION_CLOSE_EVENT } from "../navTypes";
@@ -82,7 +82,7 @@ describe("ACPConversationRepositoryWriter", () => {
 
     expect(jsonrpcCall).toHaveBeenCalledTimes(2);
     expect(jsonrpcCall).toHaveBeenLastCalledWith(
-      "poolside/acpNav/upsertConversation",
+      "camber/acpNav/upsertConversation",
       expect.objectContaining({
         conversation: expect.objectContaining({
           sessionId: "s-new",
@@ -96,7 +96,7 @@ describe("ACPConversationRepositoryWriter", () => {
 
   it("keeps chat scope while persisting turn and generated-title updates", async () => {
     const jsonrpcCall = vi.fn().mockImplementation((method: string, params: unknown) => {
-      if (method !== "poolside/acpNav/upsertConversation") {
+      if (method !== "camber/acpNav/upsertConversation") {
         return Promise.resolve({ projects: [], conversations: [] });
       }
       const conversation = (params as { conversation: ReturnType<typeof navConversation> })
@@ -112,8 +112,8 @@ describe("ACPConversationRepositoryWriter", () => {
       {
         ...navConversation("chat-1", DEFAULT_AGENT_SERVER, "session-1"),
         workspacePath: "CHAT",
-        cwd: "/state/poolside/chat-1",
-        workingDirectories: ["/state/poolside/chat-1"],
+        cwd: "/state/camber/chat-1",
+        workingDirectories: ["/state/camber/chat-1"],
       },
     ]);
 
@@ -134,7 +134,7 @@ describe("ACPConversationRepositoryWriter", () => {
 
   it("keeps a user nickname ahead of a generated title override", async () => {
     const jsonrpcCall = vi.fn().mockImplementation((method: string, params: unknown) => {
-      if (method === "poolside/acpNav/renameConversation") {
+      if (method === "camber/acpNav/renameConversation") {
         const { conversationId, nickname } = params as {
           conversationId: string;
           nickname: string;
@@ -173,7 +173,7 @@ describe("ACPConversationRepositoryWriter", () => {
 
   it("renames session-backed conversations when session rename is supported", async () => {
     const jsonrpcCall = vi.fn().mockImplementation((method: string, params: unknown) => {
-      if (method === "poolside/acpNav/renameConversation") {
+      if (method === "camber/acpNav/renameConversation") {
         const { conversationId, nickname, title } = params as {
           conversationId: string;
           nickname: string;
@@ -212,7 +212,7 @@ describe("ACPConversationRepositoryWriter", () => {
     await repo.renameConversation("s-new", "Renamed session");
 
     expect(jsonrpcCall).toHaveBeenCalledWith(
-      "poolside/acpNav/renameConversation",
+      "camber/acpNav/renameConversation",
       expect.objectContaining({
         conversationId: "s-new",
         nickname: "Renamed session",
@@ -220,7 +220,7 @@ describe("ACPConversationRepositoryWriter", () => {
       }),
     );
     expect(jsonrpcCall).toHaveBeenCalledWith(
-      "poolside/acp/_poolside/rename_session",
+      "camber/acp/_poolside/rename_session",
       expect.objectContaining({
         agentServer: DEFAULT_AGENT_SERVER,
         sessionId: "s-new",
@@ -233,10 +233,10 @@ describe("ACPConversationRepositoryWriter", () => {
 
   it("refreshes conversations when rename persistence fails", async () => {
     const jsonrpcCall = vi.fn().mockImplementation((method: string) => {
-      if (method === "poolside/acpNav/renameConversation") {
+      if (method === "camber/acpNav/renameConversation") {
         return Promise.reject(new Error("rename failed"));
       }
-      if (method === "poolside/acpNav/list") {
+      if (method === "camber/acpNav/list") {
         return Promise.resolve({
           projects: [],
           conversations: [
@@ -263,7 +263,7 @@ describe("ACPConversationRepositoryWriter", () => {
 
     await expect(repo.renameConversation("s-new", "Optimistic")).rejects.toThrow("rename failed");
 
-    expect(jsonrpcCall).toHaveBeenCalledWith("poolside/acpNav/list", {});
+    expect(jsonrpcCall).toHaveBeenCalledWith("camber/acpNav/list", {});
     expect(repo.sessions[0]?.title).toBe("Original");
     expect(repo.sessions[0]?.nickname).toBeNull();
   });
@@ -272,17 +272,17 @@ describe("ACPConversationRepositoryWriter", () => {
     const listState = {
       projects: [],
       conversations: [
-        navConversation("poolside-conv", "poolside", "s-poolside"),
+        navConversation("camber-conv", "poolside", "s-camber"),
         navConversation("echo-conv", "echo", "s-echo"),
         navConversation("echo-pending", "echo"),
       ],
     };
     const archivedState = {
       projects: [],
-      conversations: [navConversation("poolside-conv", "poolside", "s-poolside")],
+      conversations: [navConversation("camber-conv", "poolside", "s-camber")],
     };
     const jsonrpcCall = vi.fn().mockImplementation((method: string) => {
-      if (method === "poolside/acpNav/list") {
+      if (method === "camber/acpNav/list") {
         return Promise.resolve(listState);
       }
       return Promise.resolve(archivedState);
@@ -293,7 +293,7 @@ describe("ACPConversationRepositoryWriter", () => {
     });
     const repo = new ACPConversationRepositoryWriter();
     repo.replaceConversations([
-      navConversation("poolside-conv", "poolside", "s-poolside"),
+      navConversation("camber-conv", "poolside", "s-camber"),
       navConversation("echo-conv", "echo", "s-echo"),
       navConversation("echo-pending", "echo"),
     ]);
@@ -303,13 +303,13 @@ describe("ACPConversationRepositoryWriter", () => {
     expect(repo.sessions.map((session) => session.agentServer)).toEqual(["poolside"]);
     // list + 2 archives + session/close for the one conversation with a session
     expect(jsonrpcCall).toHaveBeenCalledTimes(4);
-    expect(jsonrpcCall).toHaveBeenCalledWith("poolside/acpNav/list", {});
-    expect(jsonrpcCall).toHaveBeenCalledWith("poolside/acp/session/close", {
+    expect(jsonrpcCall).toHaveBeenCalledWith("camber/acpNav/list", {});
+    expect(jsonrpcCall).toHaveBeenCalledWith("camber/acp/session/close", {
       agentServer: "echo",
       sessionId: "s-echo",
     });
     expect(jsonrpcCall).toHaveBeenCalledWith(
-      "poolside/acpNav/archiveConversation",
+      "camber/acpNav/archiveConversation",
       expect.objectContaining({
         agentServer: "echo",
         sessionId: "s-echo",
@@ -317,7 +317,7 @@ describe("ACPConversationRepositoryWriter", () => {
       }),
     );
     expect(jsonrpcCall).toHaveBeenCalledWith(
-      "poolside/acpNav/archiveConversation",
+      "camber/acpNav/archiveConversation",
       expect.objectContaining({
         agentServer: "echo",
         conversationId: "echo-pending",
@@ -354,7 +354,7 @@ describe("ACPConversationRepositoryWriter", () => {
 
     await repo.archiveSession("/repo", "s-echo", "echo", "echo-conv");
 
-    expect(jsonrpcCall).toHaveBeenCalledWith("poolside/acp/session/close", {
+    expect(jsonrpcCall).toHaveBeenCalledWith("camber/acp/session/close", {
       agentServer: "echo",
       sessionId: "s-echo",
     });
@@ -370,12 +370,12 @@ describe("ACPConversationRepositoryWriter", () => {
 
     await repo.archiveSession("/repo", null, "echo", "echo-pending");
 
-    expect(jsonrpcCall).not.toHaveBeenCalledWith("poolside/acp/session/close", expect.anything());
+    expect(jsonrpcCall).not.toHaveBeenCalledWith("camber/acp/session/close", expect.anything());
   });
 
   it("still archives and emits the close event when session/close fails", async () => {
     const jsonrpcCall = vi.fn().mockImplementation((method: string) => {
-      if (method === "poolside/acp/session/close") {
+      if (method === "camber/acp/session/close") {
         return Promise.reject(new Error("close failed"));
       }
       return Promise.resolve({ projects: [], conversations: [] });

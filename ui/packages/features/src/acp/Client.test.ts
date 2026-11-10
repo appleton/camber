@@ -50,12 +50,12 @@ describe("ACPClient", () => {
     });
   });
 
-  describe("Poolside turn lifecycle", () => {
+  describe("Camber turn lifecycle", () => {
     it("routes helper-owned turn completion to its session", async () => {
       const repo = createMockRepo();
       const client = new ACPClient(repo, "codex-acp");
 
-      await client.extNotification("poolside/acp/turn_ended", { sessionId: "s1" });
+      await client.extNotification("camber/acp/turn_ended", { sessionId: "s1" });
 
       expect(repo.handleTurnEnded).toHaveBeenCalledWith("codex-acp", { sessionId: "s1" });
     });

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { appState } from "../hostAdapter";
   import AcpAgentConfigurationSection from "./AgentConfigurationSection.svelte";
 

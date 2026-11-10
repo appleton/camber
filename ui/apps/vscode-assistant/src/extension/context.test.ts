@@ -179,7 +179,7 @@ describe("context", () => {
 
       const cwd = getDefaultCwd();
 
-      expect(cwd).toBe(path.join(windowsLocalAppData, "poolside", "scratch"));
+      expect(cwd).toBe(path.join(windowsLocalAppData, "camber", "scratch"));
       expect(mockMkdirSync).toHaveBeenCalledWith(cwd, { recursive: true });
     });
 

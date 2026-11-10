@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { EmbeddedResource } from "@agentclientprotocol/sdk";
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
 
   type Props = EmbeddedResource & {
     type: "resource";

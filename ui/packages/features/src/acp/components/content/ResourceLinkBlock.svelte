@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { ResourceLink } from "@agentclientprotocol/sdk";
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { appState } from "../../hostAdapter";
   import { getReadableFileInfo, shortenDirectoryPathsInText } from "../../shared/paths";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import type { WorkspaceFolder } from "@camber/rpc";
   import { isPreviewableImagePath, isPreviewableImageUrl } from "./imagePreview";
 
   type Props = ResourceLink & {

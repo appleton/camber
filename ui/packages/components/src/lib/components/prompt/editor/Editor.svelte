@@ -1,7 +1,7 @@
 <script lang="ts">
   import { run } from "svelte/legacy";
   import { type Chip, getChips, getMenus, getPrompt } from "../context/prompt.js";
-  import { uniqueBy } from "@poolsideai/lib/array";
+  import { uniqueBy } from "@camber/lib/array";
   import { type Command, EditorState, Plugin } from "prosemirror-state";
   import { undo } from "prosemirror-history";
   import { markdownParser, schema } from "./schema.js";

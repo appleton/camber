@@ -54,7 +54,7 @@ vi.mock("vscode", () => {
 });
 
 describe("apiProposals", () => {
-  const extensionId = "poolside-ai.poolside-assistant";
+  const extensionId = "appleton.camber-assistant";
 
   let mockSystem: {
     context: { extension: { id: string } };

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { LocalInferenceState } from "@poolsideai/helperapi/schemas";
+  import type { LocalInferenceState } from "@camber/helperapi/schemas";
   import type { Snippet } from "svelte";
   import { appState } from "../hostAdapter";
   import type { Capabilities } from "../hostAdapter";

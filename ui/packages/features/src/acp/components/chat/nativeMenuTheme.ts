@@ -1,4 +1,4 @@
-import { Badge } from "@poolsideai/components/badge";
+import { Badge } from "@camber/components/badge";
 import { createRawSnippet, mount, unmount } from "svelte";
 import type { DesktopContextMenuTheme } from "./desktopContextMenu";
 

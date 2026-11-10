@@ -2,7 +2,7 @@ import { getContext, setContext } from "svelte";
 import type { CommandId } from "./commands";
 import type { KeybindingService } from "./service";
 
-const KEY = Symbol("poolside.keybindings");
+const KEY = Symbol("camber.keybindings");
 
 // Module-level mirror of the active service so the `shortcutHint`/`withShortcut`
 // helpers can resolve a hint from anywhere (markup expressions, prop values)

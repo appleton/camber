@@ -1,6 +1,6 @@
 ﻿using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
-using Poolside.Assistant.HelperLSP;
+using Camber.Assistant.HelperLSP;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,13 +11,13 @@ using Microsoft.CodeAnalysis.FindSymbols;
 using Microsoft.CodeAnalysis;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 
-namespace Poolside.Assistant.Context
+namespace Camber.Assistant.Context
 {
     internal static class SymbolSearch
     {
         internal static async Task<List<SymbolDefinition>> SearchSymbolsAsync(string symbolName, string requiredType)
         {
-            await PoolsideAssistantPackage.GetInstance().JoinableTaskFactory.SwitchToMainThreadAsync();
+            await CamberAssistantPackage.GetInstance().JoinableTaskFactory.SwitchToMainThreadAsync();
             var found = new List<SymbolDefinition>();
 
             // Try to do a Roslyn-based symbol search if available.
@@ -64,7 +64,7 @@ namespace Poolside.Assistant.Context
                     }
                 }
             }
-            
+
             return found;
         }
 

@@ -6,7 +6,7 @@ import { groupSessionsByProject } from "./sessionPickerUtil";
 describe("groupSessionsByProject", () => {
   it("groups root and worktree sessions under the parent project", () => {
     const projects = [
-      project("/code/assistant", { name: "assistant", nickname: "Poolside" }),
+      project("/code/assistant", { name: "assistant", nickname: "Camber" }),
       project("/worktrees/assistant/feature", {
         name: "feature",
         isWorktree: true,
@@ -26,7 +26,7 @@ describe("groupSessionsByProject", () => {
 
     const buckets = groupSessionsByProject(sessions, "", projects);
 
-    expect(buckets.map((bucket) => bucket.title)).toEqual(["Chats", "Poolside"]);
+    expect(buckets.map((bucket) => bucket.title)).toEqual(["Chats", "Camber"]);
     expect(buckets[1]?.sessions.map((item) => item.session.id)).toEqual(["worktree", "root"]);
     expect(
       buckets.flatMap((bucket) => bucket.sessions).map((item) => item.session.id),
@@ -85,11 +85,11 @@ describe("groupSessionsByProject", () => {
 
   it("does not match text from appended host context", () => {
     const titleWithContext = [
-      "Visible conversation titlepoolside://host-context.md",
-      '<context ref="poolside://host-context.md">',
-      "<poolside-system-instructions>",
+      "Visible conversation titlecamber://host-context.md",
+      '<context ref="camber://host-context.md">',
+      "<camber-system-instructions>",
       "Secret context phrase",
-      "</poolside-system-instructions>",
+      "</camber-system-instructions>",
       "</context>",
     ].join("\n");
     const sessions = [

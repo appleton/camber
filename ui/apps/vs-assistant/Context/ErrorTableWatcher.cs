@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.Shell.TableManager;
-using Poolside.Assistant.HelperLSP;
+using Camber.Assistant.HelperLSP;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Context
+namespace Camber.Assistant.Context
 {
     internal class ErrorTableWatcher : IDisposable
     {
@@ -15,7 +15,7 @@ namespace Poolside.Assistant.Context
         /// The error table manager instance.
         /// </summary>
         private readonly ITableManager errorsTable;
-        
+
         /// <summary>
         /// Tracks our syncs for each data source that populates the errors table.
         /// </summary>

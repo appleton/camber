@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon, { type IconName } from "@poolsideai/components/icon";
+  import Icon, { type IconName } from "@camber/components/icon";
   import { DEFAULT_AGENT_SERVER, LOCAL_AGENT_SERVER } from "../../agentServers";
   import { agentServerIconUrl } from "../../localAgentIcon";
   import { getACPAgentRegistryRepo } from "../../features/AgentRegistryRepository.svelte";
@@ -57,9 +57,9 @@
   const agent = $derived(registry.getAgent(agentServer) ?? null);
   const activeAgentName = $derived(
     agentServer === DEFAULT_AGENT_SERVER
-      ? "Poolside"
+      ? "Camber"
       : agentServer === LOCAL_AGENT_SERVER
-        ? "Poolside Local"
+        ? "Camber Local"
         : (agent?.name ?? agentServer),
   );
   const iconUrl = $derived(agentServerIconUrl(agentServer, agent));

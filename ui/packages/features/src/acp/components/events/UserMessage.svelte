@@ -3,7 +3,7 @@
   import UserMessageBubble from "../ui/UserMessageBubble.svelte";
   import UserMessageContext from "./UserMessageContext.svelte";
   import Tooltip from "../ui/Tooltip.svelte";
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import ContentRenderer from "../content/ContentRenderer.svelte";
   import { CopyToClipboard } from "../ui";
 

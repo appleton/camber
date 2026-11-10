@@ -1,4 +1,4 @@
-import { commonPrefix, commonSuffix } from "@poolsideai/lib/string";
+import { commonPrefix, commonSuffix } from "@camber/lib/string";
 import * as levenshtein from "fastest-levenshtein";
 import { diffChars, type DiffCharsOptions } from "../diffChars.js";
 import { diffWords } from "../diffWords.js";

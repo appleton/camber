@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { onDestroy } from "svelte";
   import { getACPProjectRepo } from "../features/ProjectRepository.svelte";
   import { getACPConversationRepo } from "../features/ConversationRepository.svelte";
@@ -494,7 +494,7 @@
   <ConfirmationDialog
     destructive
     title="Delete project?"
-    description={`Delete ${projectDisplayName} from Poolside. Existing files on disk will not be deleted.`}
+    description={`Delete ${projectDisplayName} from Camber. Existing files on disk will not be deleted.`}
     confirmLabel="Delete Project"
     onCancel={() => (removeConfirmOpen = false)}
     onConfirm={removeProject}

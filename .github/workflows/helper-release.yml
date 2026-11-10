@@ -20,7 +20,7 @@ concurrency:
 jobs:
   plan:
     name: Plan helper release
-    if: github.repository == 'poolsideai/assistants'
+    if: github.repository == 'appleton/camber' && vars.CAMBER_RELEASES_ENABLED == 'true'
     runs-on: ubuntu-latest
     outputs:
       action: ${{ steps.plan.outputs.action }}
@@ -49,7 +49,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          pnpm -s -F @poolsideai/release-helper find-version \
+          pnpm -s -F @camber/release-helper find-version \
             plan-helper \
             --ref HEAD \
             --main-ref origin/main \

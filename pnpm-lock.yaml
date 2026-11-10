@@ -165,7 +165,7 @@ importers:
 
   .:
     devDependencies:
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:ui/config/prettier
       '@testing-library/jest-dom':
@@ -192,22 +192,22 @@ importers:
       '@iconify-json/vscode-icons':
         specifier: ^1.2.50
         version: 1.2.50
-      '@poolsideai/assistant':
+      '@camber/assistant':
         specifier: workspace:*
         version: link:../../packages/assistant
-      '@poolsideai/components':
+      '@camber/components':
         specifier: workspace:*
         version: link:../../packages/components
-      '@poolsideai/features':
+      '@camber/features':
         specifier: workspace:*
         version: link:../../packages/features
-      '@poolsideai/helperapi':
+      '@camber/helperapi':
         specifier: workspace:*
         version: link:../../packages/helperapi
-      '@poolsideai/lib':
+      '@camber/lib':
         specifier: workspace:*
         version: link:../../packages/lib
-      '@poolsideai/rpc':
+      '@camber/rpc':
         specifier: workspace:*
         version: link:../../packages/rpc
       '@tauri-apps/api':
@@ -238,22 +238,22 @@ importers:
         specifier: ^11.6.1
         version: 11.6.1
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../config/prettier
-      '@poolsideai/svelte-config':
+      '@camber/svelte-config':
         specifier: workspace:*
         version: link:../../config/svelte
-      '@poolsideai/tailwind-config':
+      '@camber/tailwind-config':
         specifier: workspace:*
         version: link:../../config/tailwind
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../../config/vite
       '@tauri-apps/cli':
@@ -283,44 +283,44 @@ importers:
 
   ui/apps/mobile-remote:
     dependencies:
-      '@poolsideai/assistant':
+      '@camber/assistant':
         specifier: workspace:*
         version: link:../../packages/assistant
-      '@poolsideai/components':
+      '@camber/components':
         specifier: workspace:*
         version: link:../../packages/components
-      '@poolsideai/features':
+      '@camber/features':
         specifier: workspace:*
         version: link:../../packages/features
-      '@poolsideai/helperapi':
+      '@camber/helperapi':
         specifier: workspace:*
         version: link:../../packages/helperapi
-      '@poolsideai/lib':
+      '@camber/lib':
         specifier: workspace:*
         version: link:../../packages/lib
-      '@poolsideai/remote-client':
+      '@camber/remote-client':
         specifier: workspace:*
         version: link:../../packages/remote-client
-      '@poolsideai/rpc':
+      '@camber/rpc':
         specifier: workspace:*
         version: link:../../packages/rpc
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../config/prettier
-      '@poolsideai/svelte-config':
+      '@camber/svelte-config':
         specifier: workspace:*
         version: link:../../config/svelte
-      '@poolsideai/tailwind-config':
+      '@camber/tailwind-config':
         specifier: workspace:*
         version: link:../../config/tailwind
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../../config/vite
       eslint:
@@ -350,41 +350,41 @@ importers:
 
   ui/apps/vs-assistant/app:
     dependencies:
-      '@poolsideai/assistant':
+      '@camber/assistant':
         specifier: workspace:*
         version: link:../../../packages/assistant
-      '@poolsideai/components':
+      '@camber/components':
         specifier: workspace:*
         version: link:../../../packages/components
-      '@poolsideai/features':
+      '@camber/features':
         specifier: workspace:*
         version: link:../../../packages/features
-      '@poolsideai/helperapi':
+      '@camber/helperapi':
         specifier: workspace:*
         version: link:../../../packages/helperapi
-      '@poolsideai/lib':
+      '@camber/lib':
         specifier: workspace:*
         version: link:../../../packages/lib
-      '@poolsideai/rpc':
+      '@camber/rpc':
         specifier: workspace:*
         version: link:../../../packages/rpc
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../../config/prettier
-      '@poolsideai/svelte-config':
+      '@camber/svelte-config':
         specifier: workspace:*
         version: link:../../../config/svelte
-      '@poolsideai/tailwind-config':
+      '@camber/tailwind-config':
         specifier: workspace:*
         version: link:../../../config/tailwind
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../../config/tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../../../config/vite
       eslint:
@@ -423,19 +423,19 @@ importers:
       '@mozilla/readability':
         specifier: ^0.5.0
         version: 0.5.0
-      '@poolsideai/assistant':
+      '@camber/assistant':
         specifier: workspace:*
         version: link:../../packages/assistant
-      '@poolsideai/features':
+      '@camber/features':
         specifier: workspace:*
         version: link:../../packages/features
-      '@poolsideai/helperapi':
+      '@camber/helperapi':
         specifier: workspace:*
         version: link:../../packages/helperapi
-      '@poolsideai/lib':
+      '@camber/lib':
         specifier: workspace:*
         version: link:../../packages/lib
-      '@poolsideai/rpc':
+      '@camber/rpc':
         specifier: workspace:*
         version: link:../../packages/rpc
       archiver:
@@ -469,22 +469,22 @@ importers:
         specifier: ^9.0.1
         version: 9.0.1
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../config/prettier
-      '@poolsideai/svelte-config':
+      '@camber/svelte-config':
         specifier: workspace:*
         version: link:../../config/svelte
-      '@poolsideai/tailwind-config':
+      '@camber/tailwind-config':
         specifier: workspace:*
         version: link:../../config/tailwind
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../../config/vite
       '@types/archiver':
@@ -569,10 +569,10 @@ importers:
         specifier: 'catalog:'
         version: 8.56.0(eslint@9.34.0(jiti@2.6.1))(typescript@5.9.3)
     devDependencies:
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../prettier
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       prettier:
@@ -628,16 +628,16 @@ importers:
         specifier: 'catalog:'
         version: 7.0.3
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../prettier
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../vite
       eslint:
@@ -668,13 +668,13 @@ importers:
         specifier: 'catalog:'
         version: 5.56.6(@typescript-eslint/types@8.56.0)
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../prettier
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       eslint:
@@ -696,13 +696,13 @@ importers:
         specifier: 'catalog:'
         version: 4.1.16
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../prettier
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       eslint:
@@ -717,7 +717,7 @@ importers:
 
   ui/config/tsconfig:
     devDependencies:
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../prettier
       prettier:
@@ -778,13 +778,13 @@ importers:
         specifier: 'catalog:'
         version: 3.2.7(@types/debug@4.1.12)(@types/node@24.3.0)(@vitest/browser@3.2.7)(@vitest/ui@3.2.7)(happy-dom@20.10.6)(jiti@2.6.1)(jsdom@27.0.1(postcss@8.5.19))(lightningcss@1.30.2)(tsx@4.20.5)(yaml@2.9.0)
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../prettier
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
       '@types/node':
@@ -814,19 +814,19 @@ importers:
       '@melt-ui/svelte':
         specifier: 'catalog:'
         version: 0.86.6(svelte@5.56.6(@typescript-eslint/types@8.56.0))
-      '@poolsideai/components':
+      '@camber/components':
         specifier: workspace:*
         version: link:../components
-      '@poolsideai/features':
+      '@camber/features':
         specifier: workspace:*
         version: link:../features
-      '@poolsideai/helperapi':
+      '@camber/helperapi':
         specifier: workspace:*
         version: link:../helperapi
-      '@poolsideai/lib':
+      '@camber/lib':
         specifier: workspace:*
         version: link:../lib
-      '@poolsideai/rpc':
+      '@camber/rpc':
         specifier: workspace:*
         version: link:../rpc
       '@rive-app/canvas-lite':
@@ -863,25 +863,25 @@ importers:
       '@chromatic-com/storybook':
         specifier: 'catalog:'
         version: 4.1.2(storybook@10.5.2(prettier@3.6.2)(react@19.1.1))
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../config/prettier
-      '@poolsideai/storybook-config':
+      '@camber/storybook-config':
         specifier: workspace:*
         version: link:../../config/storybook
-      '@poolsideai/svelte-config':
+      '@camber/svelte-config':
         specifier: workspace:*
         version: link:../../config/svelte
-      '@poolsideai/tailwind-config':
+      '@camber/tailwind-config':
         specifier: workspace:*
         version: link:../../config/tailwind
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../../config/vite
       '@storybook/addon-a11y':
@@ -968,13 +968,13 @@ importers:
       '@pierre/diffs':
         specifier: ^1.2.12
         version: 1.2.12(patch_hash=9daf00a6f257428d2dcc85036e8b35b6a9ce5ccc1e49ffa9c2de9d595fc0c471)(@shikijs/themes@4.3.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
-      '@poolsideai/diff':
+      '@camber/diff':
         specifier: workspace:*
         version: link:../diff
-      '@poolsideai/lib':
+      '@camber/lib':
         specifier: workspace:*
         version: link:../lib
-      '@poolsideai/tailwind-config':
+      '@camber/tailwind-config':
         specifier: workspace:*
         version: link:../../config/tailwind
       bits-ui:
@@ -1062,22 +1062,22 @@ importers:
       '@chromatic-com/storybook':
         specifier: 'catalog:'
         version: 4.1.2(storybook@10.5.2(prettier@3.6.2)(react@19.1.1))
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../config/prettier
-      '@poolsideai/storybook-config':
+      '@camber/storybook-config':
         specifier: workspace:*
         version: link:../../config/storybook
-      '@poolsideai/svelte-config':
+      '@camber/svelte-config':
         specifier: workspace:*
         version: link:../../config/svelte
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../../config/vite
       '@storybook/addon-a11y':
@@ -1161,7 +1161,7 @@ importers:
 
   ui/packages/diff:
     dependencies:
-      '@poolsideai/lib':
+      '@camber/lib':
         specifier: workspace:*
         version: link:../lib
       diff:
@@ -1171,16 +1171,16 @@ importers:
         specifier: ^1.0.16
         version: 1.0.16
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../config/prettier
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../../config/vite
       '@vitest/ui':
@@ -1201,16 +1201,16 @@ importers:
 
   ui/packages/dnd:
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../config/prettier
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../../config/vite
       eslint:
@@ -1246,22 +1246,22 @@ importers:
       '@pierre/trees':
         specifier: 1.0.0-beta.4
         version: 1.0.0-beta.4(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
-      '@poolsideai/components':
+      '@camber/components':
         specifier: workspace:*
         version: link:../components
-      '@poolsideai/dnd':
+      '@camber/dnd':
         specifier: workspace:*
         version: link:../dnd
-      '@poolsideai/helperapi':
+      '@camber/helperapi':
         specifier: workspace:*
         version: link:../helperapi
-      '@poolsideai/lib':
+      '@camber/lib':
         specifier: workspace:*
         version: link:../lib
-      '@poolsideai/rpc':
+      '@camber/rpc':
         specifier: workspace:*
         version: link:../rpc
-      '@poolsideai/splits':
+      '@camber/splits':
         specifier: workspace:*
         version: link:../splits
       '@tanstack/svelte-form':
@@ -1301,25 +1301,25 @@ importers:
       '@chromatic-com/storybook':
         specifier: 'catalog:'
         version: 4.1.2(storybook@10.5.2(prettier@3.6.2)(react@19.1.1))
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../config/prettier
-      '@poolsideai/storybook-config':
+      '@camber/storybook-config':
         specifier: workspace:*
         version: link:../../config/storybook
-      '@poolsideai/svelte-config':
+      '@camber/svelte-config':
         specifier: workspace:*
         version: link:../../config/svelte
-      '@poolsideai/tailwind-config':
+      '@camber/tailwind-config':
         specifier: workspace:*
         version: link:../../config/tailwind
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../../config/vite
       '@storybook/addon-a11y':
@@ -1389,16 +1389,16 @@ importers:
         specifier: ^3.17.5
         version: 3.17.5
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../config/prettier
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../../config/vite
       '@total-typescript/ts-reset':
@@ -1435,16 +1435,16 @@ importers:
         specifier: ^2.0.3
         version: 2.0.3
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../config/prettier
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../../config/vite
       eslint:
@@ -1468,20 +1468,20 @@ importers:
 
   ui/packages/remote-client:
     dependencies:
-      '@poolsideai/rpc':
+      '@camber/rpc':
         specifier: workspace:*
         version: link:../rpc
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../config/prettier
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../../config/vite
       eslint:
@@ -1502,7 +1502,7 @@ importers:
 
   ui/packages/rpc:
     dependencies:
-      '@poolsideai/helperapi':
+      '@camber/helperapi':
         specifier: workspace:*
         version: link:../helperapi
       lodash:
@@ -1515,16 +1515,16 @@ importers:
         specifier: ^11.0.3
         version: 11.0.3
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../config/prettier
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../../config/vite
       '@types/lodash':
@@ -1551,7 +1551,7 @@ importers:
 
   ui/packages/splits:
     dependencies:
-      '@poolsideai/components':
+      '@camber/components':
         specifier: workspace:*
         version: link:../components
       svelte:
@@ -1561,25 +1561,25 @@ importers:
       '@chromatic-com/storybook':
         specifier: 'catalog:'
         version: 4.1.2(storybook@10.5.2(prettier@3.6.2)(react@19.1.1))
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../config/prettier
-      '@poolsideai/storybook-config':
+      '@camber/storybook-config':
         specifier: workspace:*
         version: link:../../config/storybook
-      '@poolsideai/svelte-config':
+      '@camber/svelte-config':
         specifier: workspace:*
         version: link:../../config/svelte
-      '@poolsideai/tailwind-config':
+      '@camber/tailwind-config':
         specifier: workspace:*
         version: link:../../config/tailwind
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
-      '@poolsideai/vite-config':
+      '@camber/vite-config':
         specifier: workspace:*
         version: link:../../config/vite
       '@storybook/addon-a11y':
@@ -1622,9 +1622,9 @@ importers:
         specifier: 'catalog:'
         version: 3.2.7(@types/debug@4.1.12)(@types/node@24.3.0)(@vitest/browser@3.2.7)(@vitest/ui@3.2.7)(happy-dom@20.10.6)(jiti@2.6.1)(jsdom@27.0.1(postcss@8.5.19))(lightningcss@1.30.2)(tsx@4.20.5)(yaml@2.9.0)
 
-  ui/packages/spoolside:
+  ui/packages/camberqa:
     dependencies:
-      '@poolsideai/assistant':
+      '@camber/assistant':
         specifier: workspace:*
         version: link:../assistant
       diff:
@@ -1640,10 +1640,10 @@ importers:
         specifier: 'catalog:'
         version: 4.20.5
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
       '@types/diff':
@@ -1683,13 +1683,13 @@ importers:
         specifier: ^2.9.0
         version: 2.9.0
     devDependencies:
-      '@poolsideai/eslint-config':
+      '@camber/eslint-config':
         specifier: workspace:*
         version: link:../../config/eslint
-      '@poolsideai/prettier-config':
+      '@camber/prettier-config':
         specifier: workspace:*
         version: link:../../config/prettier
-      '@poolsideai/tsconfig':
+      '@camber/tsconfig':
         specifier: workspace:*
         version: link:../../config/tsconfig
       '@types/node':

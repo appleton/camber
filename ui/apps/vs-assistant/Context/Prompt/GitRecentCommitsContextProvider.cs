@@ -1,10 +1,10 @@
-﻿using Poolside.Assistant.Context.Prompt;
+﻿using Camber.Assistant.Context.Prompt;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Context
+namespace Camber.Assistant.Context
 {
     internal class GitRecentCommitsContextProvider : GitBasedContextProvider
     {

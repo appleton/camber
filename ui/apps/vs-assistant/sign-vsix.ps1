@@ -14,7 +14,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$VsixFile = "bin\Release\net472\poolside-assistant.vsix"
+$VsixFile = "bin\Release\net472\camber-assistant.vsix"
 $TimestampServer = "http://ts.ssl.com/"
 
 # Validate thumbprint

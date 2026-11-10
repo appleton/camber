@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ContentBlock } from "@agentclientprotocol/sdk";
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { onDestroy } from "svelte";
   import type { AgentThought as AgentThoughtEvent } from "../../types";
   import ChatProgress from "../ui/ChatProgress.svelte";

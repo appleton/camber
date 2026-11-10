@@ -1,4 +1,4 @@
-import type { ACPElicitationParams } from "@poolsideai/helperapi/schemas";
+import type { ACPElicitationParams } from "@camber/helperapi/schemas";
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { describe, expect, it } from "vitest";

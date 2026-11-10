@@ -4,9 +4,9 @@ Tested CLI utilities used by the tag-driven VS Code and Desktop workflows.
 Run commands from this directory or through the package filter from repo root.
 
 ```bash
-pnpm -F @poolsideai/release-helper test
-pnpm -F @poolsideai/release-helper check:types
-pnpm -F @poolsideai/release-helper check:lint
+pnpm -F @camber/release-helper test
+pnpm -F @camber/release-helper check:types
+pnpm -F @camber/release-helper check:lint
 ```
 
 ## Release plans
@@ -25,20 +25,20 @@ source SHA wins during a partial retry only while its GitHub release is
 unpublished; conflicting incomplete reservations fail closed.
 
 ```bash
-pnpm -F @poolsideai/release-helper find-version plan vscode \
+pnpm -F @camber/release-helper find-version plan vscode \
   --channel nightly --ref HEAD --tag-prefix vscode-assistant \
-  --destination poolside-ai.acp-assistant --dry-run
+  --destination appleton.acp-assistant --dry-run
 
-pnpm -F @poolsideai/release-helper find-version plan desktop \
+pnpm -F @camber/release-helper find-version plan desktop \
   --channel nightly --ref HEAD --tag-prefix desktop \
-  --destination poolside/desktop-assistant --dry-run
+  --destination camber/desktop-assistant --dry-run
 
-pnpm -F @poolsideai/release-helper find-version plan-products \
+pnpm -F @camber/release-helper find-version plan-products \
   --channel nightly --ref HEAD --vscode --desktop --sync-versions \
   --scheduled --skip-if-no-changes \
-  --vscode-destination poolside-ai.acp-assistant \
-  --vscode-display-name "Poolside Assistant" \
-  --desktop-destination poolside/desktop-assistant
+  --vscode-destination appleton.acp-assistant \
+  --vscode-display-name "Camber Assistant" \
+  --desktop-destination camber/desktop-assistant
 ```
 
 Important options used by the workflows:
@@ -71,8 +71,8 @@ prefix to one CrabNebula application; VS Code binds its tag prefix to one
 Marketplace extension:
 
 ```text
-vscode-assistant/v0.1.0       -> poolside-ai.acp-assistant
-desktop/v0.7.2                -> poolside/desktop-assistant
+vscode-assistant/v0.1.0       -> appleton.acp-assistant
+desktop/v0.7.2                -> camber/desktop-assistant
 ```
 
 The first tag is annotated with product, prefix, destination, version, source
@@ -128,24 +128,24 @@ To inspect the first plan locally without writing tags or publishing:
 
 ```bash
 # Set RELEASE_VERSION to the reviewed version, not a previously published one.
-pnpm -s -F @poolsideai/release-helper find-version plan-products \
+pnpm -s -F @camber/release-helper find-version plan-products \
   --channel nightly --ref HEAD --main-ref origin/main \
   --bootstrap-version "$RELEASE_VERSION" --vscode --desktop --sync-versions \
-  --vscode-destination poolside-ai.acp-assistant \
-  --vscode-display-name "Poolside Assistant" \
-  --desktop-destination poolside/desktop-assistant
+  --vscode-destination appleton.acp-assistant \
+  --vscode-display-name "Camber Assistant" \
+  --desktop-destination camber/desktop-assistant
 ```
 
 ## Changelogs and channel baselines
 
 ```bash
-pnpm -F @poolsideai/release-helper find-version prev-stable desktop
-pnpm -F @poolsideai/release-helper find-version prev-nightly vscode
-pnpm -F @poolsideai/release-helper find-version changelog desktop \
+pnpm -F @camber/release-helper find-version prev-stable desktop
+pnpm -F @camber/release-helper find-version prev-nightly vscode
+pnpm -F @camber/release-helper find-version changelog desktop \
   --prev desktop/v0.8.0 --head "$SHA"
-pnpm -F @poolsideai/release-helper find-version changelog vscode \
+pnpm -F @camber/release-helper find-version changelog vscode \
   --channel nightly --slack
-pnpm -F @poolsideai/release-helper find-version render-changelog desktop \
+pnpm -F @camber/release-helper find-version render-changelog desktop \
   --version 1.2.0 --head "$SHA" --out -
 ```
 

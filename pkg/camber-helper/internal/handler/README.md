@@ -1,0 +1,1 @@
+See 'adding methods' in the camber-helper/README.md.

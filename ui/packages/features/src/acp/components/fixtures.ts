@@ -10,7 +10,7 @@ import type {
   ToolCall,
   ToolCallContent,
 } from "@agentclientprotocol/sdk";
-import type { WorkspaceFolder } from "@poolsideai/rpc";
+import type { WorkspaceFolder } from "@camber/rpc";
 import type { AgentMessage, AgentThought, ModeChange, SessionEvent, UserMessage } from "../types";
 
 const imageData =
@@ -20,13 +20,13 @@ const audioData = "UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="
 
 export const storyWorkspaceFolders = [
   {
-    path: "/Users/poolie/Developer/poolside/poolside-books-api-demo",
-    name: "poolside-books-api-demo",
+    path: "/Users/poolie/Developer/camber/camber-books-api-demo",
+    name: "camber-books-api-demo",
     index: 0,
   },
   {
-    path: "/Users/poolie/Developer/poolside/poolside-shared-ui",
-    name: "poolside-shared-ui",
+    path: "/Users/poolie/Developer/camber/camber-shared-ui",
+    name: "camber-shared-ui",
     index: 1,
   },
 ] satisfies WorkspaceFolder[];
@@ -40,7 +40,7 @@ export const resourceLinkBlock = {
   type: "resource_link",
   name: "README.md",
   title: "README.md",
-  uri: "/Users/poolie/poolside/assistant/README.md",
+  uri: "/Users/poolie/camber/assistant/README.md",
   description: "Repository overview",
 } satisfies ResourceLink & { type: "resource_link" };
 
@@ -113,7 +113,7 @@ export const inlineToolContent = {
 
 export const diffContent = {
   type: "diff",
-  path: "/Users/poolie/poolside/assistant/src/index.ts",
+  path: "/Users/poolie/camber/assistant/src/index.ts",
   oldText: "const answer = 41;\n",
   newText: "const answer = 42;\n",
 } satisfies Diff & { type: "diff" };
@@ -129,8 +129,8 @@ export const contentToolCall = {
   title: "Read README.md",
   kind: "read",
   status: "completed",
-  locations: [{ path: "/Users/poolie/poolside/assistant/README.md" }],
-  rawInput: { path: "/Users/poolie/poolside/assistant/README.md" },
+  locations: [{ path: "/Users/poolie/camber/assistant/README.md" }],
+  rawInput: { path: "/Users/poolie/camber/assistant/README.md" },
   rawOutput: { lines: 42 },
   content: [inlineToolContent],
 } satisfies ToolCall & SessionEvent;
@@ -141,7 +141,7 @@ export const diffToolCall = {
   title: "Edit src/index.ts",
   kind: "edit",
   status: "completed",
-  locations: [{ path: "/Users/poolie/poolside/assistant/src/index.ts" }],
+  locations: [{ path: "/Users/poolie/camber/assistant/src/index.ts" }],
   content: [diffContent],
 } satisfies ToolCall & SessionEvent;
 
@@ -153,7 +153,7 @@ export const terminalToolCall = {
   status: "completed",
   rawInput: {
     cmd: "pnpm test",
-    cwd: "/Users/poolie/poolside/assistant",
+    cwd: "/Users/poolie/camber/assistant",
   },
   rawOutput: {
     output: "PASS  src/example.test.ts\n",
@@ -231,11 +231,11 @@ export const events = [
     kind: "read",
     locations: [
       {
-        path: "/Users/poolie/Developer/poolside/poolside-books-api-demo/index.ts",
+        path: "/Users/poolie/Developer/camber/camber-books-api-demo/index.ts",
       },
     ],
     rawInput: {
-      path: "/Users/poolie/Developer/poolside/poolside-books-api-demo/index.ts",
+      path: "/Users/poolie/Developer/camber/camber-books-api-demo/index.ts",
     },
     status: "completed",
     title: "Read index.ts",
@@ -269,11 +269,11 @@ export const events = [
     kind: "read",
     locations: [
       {
-        path: "/Users/poolie/Developer/poolside/poolside-books-api-demo",
+        path: "/Users/poolie/Developer/camber/camber-books-api-demo",
       },
     ],
     rawInput: {
-      path: "/Users/poolie/Developer/poolside/poolside-books-api-demo",
+      path: "/Users/poolie/Developer/camber/camber-books-api-demo",
     },
     status: "completed",
     title: "List Directory .",
@@ -281,7 +281,7 @@ export const events = [
     content: [
       {
         content: {
-          text: "Directory /Users/poolie/Developer/poolside/poolside-books-api-demo contains:\n- File: .DS_Store\n- File: .gitignore\n- File: README.md\n- File: package.json\n- File: pnpm-lock.yaml\n- File: temp.bin\n- File: tsconfig.json\n- Directory: .git\n- Directory: .poolside\n- Directory: node_modules\n- Directory: src\n",
+          text: "Directory /Users/poolie/Developer/camber/camber-books-api-demo contains:\n- File: .DS_Store\n- File: .gitignore\n- File: README.md\n- File: package.json\n- File: pnpm-lock.yaml\n- File: temp.bin\n- File: tsconfig.json\n- Directory: .git\n- Directory: .poolside\n- Directory: node_modules\n- Directory: src\n",
           type: "text",
         },
         type: "content",
@@ -289,7 +289,7 @@ export const events = [
     ],
     rawOutput: {
       observation:
-        "Directory /Users/poolie/Developer/poolside/poolside-books-api-demo contains:\n- File: .DS_Store\n- File: .gitignore\n- File: README.md\n- File: package.json\n- File: pnpm-lock.yaml\n- File: temp.bin\n- File: tsconfig.json\n- Directory: .git\n- Directory: .poolside\n- Directory: node_modules\n- Directory: src\n",
+        "Directory /Users/poolie/Developer/camber/camber-books-api-demo contains:\n- File: .DS_Store\n- File: .gitignore\n- File: README.md\n- File: package.json\n- File: pnpm-lock.yaml\n- File: temp.bin\n- File: tsconfig.json\n- Directory: .git\n- Directory: .poolside\n- Directory: node_modules\n- Directory: src\n",
     },
   },
   {
@@ -307,11 +307,11 @@ export const events = [
     kind: "read",
     locations: [
       {
-        path: "/Users/poolie/Developer/poolside/poolside-books-api-demo/src",
+        path: "/Users/poolie/Developer/camber/camber-books-api-demo/src",
       },
     ],
     rawInput: {
-      path: "/Users/poolie/Developer/poolside/poolside-books-api-demo/src",
+      path: "/Users/poolie/Developer/camber/camber-books-api-demo/src",
     },
     status: "completed",
     title: "List Directory src",
@@ -319,7 +319,7 @@ export const events = [
     content: [
       {
         content: {
-          text: "Directory /Users/poolie/Developer/poolside/poolside-books-api-demo/src contains:\n- File: index.ts\n",
+          text: "Directory /Users/poolie/Developer/camber/camber-books-api-demo/src contains:\n- File: index.ts\n",
           type: "text",
         },
         type: "content",
@@ -327,7 +327,7 @@ export const events = [
     ],
     rawOutput: {
       observation:
-        "Directory /Users/poolie/Developer/poolside/poolside-books-api-demo/src contains:\n- File: index.ts\n",
+        "Directory /Users/poolie/Developer/camber/camber-books-api-demo/src contains:\n- File: index.ts\n",
     },
   },
   {
@@ -345,11 +345,11 @@ export const events = [
     kind: "read",
     locations: [
       {
-        path: "/Users/poolie/Developer/poolside/poolside-books-api-demo/src/index.ts",
+        path: "/Users/poolie/Developer/camber/camber-books-api-demo/src/index.ts",
       },
     ],
     rawInput: {
-      path: "/Users/poolie/Developer/poolside/poolside-books-api-demo/src/index.ts",
+      path: "/Users/poolie/Developer/camber/camber-books-api-demo/src/index.ts",
     },
     status: "completed",
     title: "Read src/index.ts",
@@ -365,7 +365,7 @@ export const events = [
     ],
     rawOutput: {
       observation:
-        "/Users/poolie/Developer/poolside/poolside-books-api-demo/src/index.ts has 18 total lines. Showing lines 1-18.\n\n```\n1|◊|type Author = {\n2|◊|  id: string;\n3|◊|  name: string;\n4|◊|  email: string;\n5|◊|  website: string;\n6|◊|  country: string;\n7|◊|};\n8|◊|\n9|◊|type Publisher = {\n10|◊|  id: string;\n11|◊|  name: string;\n12|◊|  address: string;\n13|◊|  website: string;\n14|◊|  email: string;\n15|◊|  foundedYear: number;\n16|◊|  country: string;\n17|◊|};\n18|◊|\n```\n",
+        "/Users/poolie/Developer/camber/camber-books-api-demo/src/index.ts has 18 total lines. Showing lines 1-18.\n\n```\n1|◊|type Author = {\n2|◊|  id: string;\n3|◊|  name: string;\n4|◊|  email: string;\n5|◊|  website: string;\n6|◊|  country: string;\n7|◊|};\n8|◊|\n9|◊|type Publisher = {\n10|◊|  id: string;\n11|◊|  name: string;\n12|◊|  address: string;\n13|◊|  website: string;\n14|◊|  email: string;\n15|◊|  foundedYear: number;\n16|◊|  country: string;\n17|◊|};\n18|◊|\n```\n",
     },
   },
   {
@@ -383,7 +383,7 @@ export const events = [
     kind: "edit",
     locations: [
       {
-        path: "/Users/poolie/Developer/poolside/poolside-books-api-demo/src/index.ts",
+        path: "/Users/poolie/Developer/camber/camber-books-api-demo/src/index.ts",
       },
     ],
     rawInput: {
@@ -391,7 +391,7 @@ export const events = [
         "type Publisher = {\n  id: string;\n  name: string;\n  address: string;\n  website: string;\n  email: string;\n  foundedYear: number;\n  country: string;\n};\n\ntype Book = {\n  id: string;\n  title: string;\n  isbn: string;\n  publicationDate: Date;\n  edition: string;\n  pages: number;\n  language: string;\n  authorId: string;\n  publisherId: string;\n  price: number;\n  description: string;\n  genre: string;\n  available: boolean;\n};",
       old_string:
         "type Publisher = {\n  id: string;\n  name: string;\n  address: string;\n  website: string;\n  email: string;\n  foundedYear: number;\n  country: string;\n};",
-      path: "/Users/poolie/Developer/poolside/poolside-books-api-demo/src/index.ts",
+      path: "/Users/poolie/Developer/camber/camber-books-api-demo/src/index.ts",
     },
     status: "completed",
     title: "Edit src/index.ts",
@@ -402,13 +402,13 @@ export const events = [
           "type Publisher = {\n  id: string;\n  name: string;\n  address: string;\n  website: string;\n  email: string;\n  foundedYear: number;\n  country: string;\n};\n\ntype Book = {\n  id: string;\n  title: string;\n  isbn: string;\n  publicationDate: Date;\n  edition: string;\n  pages: number;\n  language: string;\n  authorId: string;\n  publisherId: string;\n  price: number;\n  description: string;\n  genre: string;\n  available: boolean;\n};",
         oldText:
           "type Publisher = {\n  id: string;\n  name: string;\n  address: string;\n  website: string;\n  email: string;\n  foundedYear: number;\n  country: string;\n};",
-        path: "/Users/poolie/Developer/poolside/poolside-books-api-demo/src/index.ts",
+        path: "/Users/poolie/Developer/camber/camber-books-api-demo/src/index.ts",
         type: "diff",
       },
     ],
     rawOutput: {
       observation:
-        "Edit applied to file /Users/poolie/Developer/poolside/poolside-books-api-demo/src/index.ts",
+        "Edit applied to file /Users/poolie/Developer/camber/camber-books-api-demo/src/index.ts",
     },
   },
   {
@@ -416,7 +416,7 @@ export const events = [
     messageId: null,
     content: [
       {
-        text: "Great! I've successfully created a `Book` type in `/Users/poolie/Developer/poolside/poolside-books-api-demo/src/index.ts`. The type includes:\n\n- **id**: Unique identifier for the book\n- **title**: The book's title\n- **isbn**: International Standard Book Number\n- **publicationDate**: When the book was published\n- **edition**: Edition information (e.g., \"First\", \"Second\")\n- **pages**: Number of pages in the book\n- **language**: Language of the book\n- **authorId**: Reference to the Author type (foreign key)\n- **publisherId**: Reference to the Publisher type (foreign key)\n- **price**: Book's price\n- **description**: Brief description of the book\n- **genre**: Book's genre/category\n- **available**: Availability status (in stock or not)\n\nThe Book type is designed to work well with the existing Author and Publisher types you already have in the file.\n",
+        text: "Great! I've successfully created a `Book` type in `/Users/poolie/Developer/camber/camber-books-api-demo/src/index.ts`. The type includes:\n\n- **id**: Unique identifier for the book\n- **title**: The book's title\n- **isbn**: International Standard Book Number\n- **publicationDate**: When the book was published\n- **edition**: Edition information (e.g., \"First\", \"Second\")\n- **pages**: Number of pages in the book\n- **language**: Language of the book\n- **authorId**: Reference to the Author type (foreign key)\n- **publisherId**: Reference to the Publisher type (foreign key)\n- **price**: Book's price\n- **description**: Brief description of the book\n- **genre**: Book's genre/category\n- **available**: Availability status (in stock or not)\n\nThe Book type is designed to work well with the existing Author and Publisher types you already have in the file.\n",
         type: "text",
       },
     ],

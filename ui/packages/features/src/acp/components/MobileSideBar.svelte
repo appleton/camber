@@ -1,9 +1,9 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
-  import { Spinner } from "@poolsideai/components/spinner";
-  import type { GitHubLinksOutput } from "@poolsideai/helperapi";
-  import { formatError } from "@poolsideai/lib/errors";
-  import { InfoMessageType } from "@poolsideai/rpc";
+  import Icon from "@camber/components/icon";
+  import { Spinner } from "@camber/components/spinner";
+  import type { GitHubLinksOutput } from "@camber/helperapi";
+  import { formatError } from "@camber/lib/errors";
+  import { InfoMessageType } from "@camber/rpc";
   import { onMount } from "svelte";
   import {
     compareWorktreesByDisplayOrder,
@@ -22,10 +22,10 @@
   import { rpc } from "../hostRpc";
   import { formatRelativeTimeWithoutAgo } from "../shared/time";
   import {
-    spoolsideSlotForWorktree,
-    spoolsideSlotMobileUrl,
-    type MobileSpoolsideInstance,
-  } from "../spoolsideMobile";
+    camberqaSlotForWorktree,
+    camberqaSlotMobileUrl,
+    type MobileCamberQAInstance,
+  } from "../camberqaMobile";
   import RegistryAgentIcon from "./RegistryAgentIcon.svelte";
   import ConfirmationDialog from "./ui/ConfirmationDialog.svelte";
   import { getOptionalACPConnectionPoolContext } from "../connectionPoolContext";
@@ -48,10 +48,10 @@
     // AcpSidebarController.openSession.
     onOpenConversation: (session: ACPConversationSummary) => void | Promise<void>;
     onActiveConversationIdChange: (id: string | null) => void;
-    // Spoolside worktree identity of the serving helper (dev only): enables
+    // CamberQA worktree identity of the serving helper (dev only): enables
     // the "Open Worktree's Mobile App" action for worktrees another live
-    // slot on the same machine serves. See spoolsideMobile.ts.
-    spoolside?: MobileSpoolsideInstance | null;
+    // slot on the same machine serves. See camberqaMobile.ts.
+    camberqa?: MobileCamberQAInstance | null;
   }
 
   let {
@@ -61,7 +61,7 @@
     onNewConversation,
     onOpenConversation,
     onActiveConversationIdChange,
-    spoolside = null,
+    camberqa = null,
   }: Props = $props();
 
   const projects = getACPProjectRepo();
@@ -192,11 +192,11 @@
         callback: () => openGithubUrl(worktree.path, (links) => links.prUrl),
       },
     ];
-    // Spoolside development only: when another live slot serves this
+    // CamberQA development only: when another live slot serves this
     // worktree, offer jumping to its mobile app (same origin, that slot's
     // remote port). A full navigation, not window.open — the phone should
     // land in the other instance, not stack PWA windows.
-    const slot = spoolsideSlotForWorktree(worktree, spoolside);
+    const slot = camberqaSlotForWorktree(worktree, camberqa);
     if (slot) {
       actions.push({
         name: "Open Worktree's Mobile App",
@@ -204,10 +204,10 @@
         callback: () => {
           // The handoff hash carries this origin's device token so the
           // target slot (a different origin) signs in without re-pairing.
-          window.location.href = spoolsideSlotMobileUrl(
+          window.location.href = camberqaSlotMobileUrl(
             slot,
             window.location,
-            spoolside?.getHandoffHash?.() ?? "",
+            camberqa?.getHandoffHash?.() ?? "",
           );
         },
       });
@@ -693,7 +693,7 @@
   <ConfirmationDialog
     destructive
     title="Delete project?"
-    description={`Delete ${removeProjectTarget.name} from Poolside. Existing files on disk will not be deleted.`}
+    description={`Delete ${removeProjectTarget.name} from Camber. Existing files on disk will not be deleted.`}
     confirmLabel="Delete Project"
     onCancel={() => (removeProjectTarget = null)}
     onConfirm={async () => {

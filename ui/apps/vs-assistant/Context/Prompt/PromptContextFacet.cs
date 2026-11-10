@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.Context.Prompt
+namespace Camber.Assistant.Context.Prompt
 {
     public class PromptContextFacet
     {

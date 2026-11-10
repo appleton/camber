@@ -1,4 +1,4 @@
-import { setThemeContext } from "@poolsideai/components/providers";
+import { setThemeContext } from "@camber/components/providers";
 import {
   ACPConversationRepositoryWriter,
   ACPLocalHistoryRepositoryWriter,
@@ -18,11 +18,11 @@ import {
   setNotificationContext,
   type ACPConversationSummary,
   type ACPNavProject,
-} from "@poolsideai/features/acp";
-import { setContextRepoContext } from "@poolsideai/features/context";
-import { setElicitationContext } from "@poolsideai/features/elicitation";
-import { initializeStatefulModule as initializeHelperApi } from "@poolsideai/helperapi";
-import { success } from "@poolsideai/lib/async-state";
+} from "@camber/features/acp";
+import { setContextRepoContext } from "@camber/features/context";
+import { setElicitationContext } from "@camber/features/elicitation";
+import { initializeStatefulModule as initializeHelperApi } from "@camber/helperapi";
+import { success } from "@camber/lib/async-state";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { get } from "svelte/store";
@@ -49,7 +49,7 @@ vi.mock("../../../features/src/acp/components/chat/Prompt.svelte", async () => (
   default: (await import("../../../features/src/acp/components/chat/Prompt.mock.svelte")).default,
 }));
 
-vi.mock("@poolsideai/components/interactive-logo", async () => ({
+vi.mock("@camber/components/interactive-logo", async () => ({
   default: (await import("./test/Empty.svelte")).default,
   InteractiveLogo: (await import("./test/Empty.svelte")).default,
 }));
@@ -100,7 +100,7 @@ describe("DesktopPanel integration", () => {
       jsonrpcCall: vi
         .fn()
         .mockImplementation(async (method: string) =>
-          method === "poolside/acpNav/createChat" ? { path: "/state/poolside/chat" } : {},
+          method === "camber/acpNav/createChat" ? { path: "/state/camber/chat" } : {},
         ),
       jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
     });
@@ -133,7 +133,7 @@ describe("DesktopPanel integration", () => {
       jsonrpcCall: vi
         .fn()
         .mockImplementation((method: string) =>
-          method === "poolside/acpNav/createChat" ? directory : Promise.resolve({}),
+          method === "camber/acpNav/createChat" ? directory : Promise.resolve({}),
         ),
       jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
     });
@@ -175,7 +175,7 @@ describe("DesktopPanel integration", () => {
     await waitFor(() => expect(repositories.acpRepo.loadSessionRecord).toHaveBeenCalledTimes(1));
 
     // Native New Conversation / Cmd+N bypasses the sidebar's createSession path.
-    window.dispatchEvent(new CustomEvent("poolside:desktop-new-conversation"));
+    window.dispatchEvent(new CustomEvent("camber:desktop-new-conversation"));
     await waitFor(() =>
       expect(screen.getByTestId("prompt-session-key")).toHaveTextContent("conversation-local"),
     );
@@ -209,7 +209,7 @@ describe("DesktopPanel integration", () => {
           jsonrpcCall: vi
             .fn()
             .mockImplementation((method: string) =>
-              method === "poolside/acpNav/createChat" ? directory : Promise.resolve({}),
+              method === "camber/acpNav/createChat" ? directory : Promise.resolve({}),
             ),
           jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
         });
@@ -230,7 +230,7 @@ describe("DesktopPanel integration", () => {
       if (prerequisite === "chat directory") {
         await fireEvent.click(screen.getByRole("button", { name: "New chat" }));
       } else {
-        window.dispatchEvent(new CustomEvent("poolside:desktop-new-conversation"));
+        window.dispatchEvent(new CustomEvent("camber:desktop-new-conversation"));
         await waitFor(() => expect(repositories.acpAgentServers.refresh).toHaveBeenCalled());
       }
       await fireEvent.click(await screen.findByText("Selected later"));
@@ -323,7 +323,7 @@ describe("DesktopPanel integration", () => {
     // seeded in an isolated chat working directory.
     await waitFor(() =>
       expect(repositories.acpRepo.createSession).toHaveBeenCalledWith(
-        "/state/poolside/chat",
+        "/state/camber/chat",
         "poolside",
         expect.stringMatching(/^conversation:/),
         { isChat: true },
@@ -331,7 +331,7 @@ describe("DesktopPanel integration", () => {
     );
     expect(await screen.findByRole("button", { name: "Submit" })).toBeInTheDocument();
     expect(screen.queryByText("Get Started")).toBeNull();
-    // With only the built-in Poolside agent configured, the set-up-agent nudge shows.
+    // With only the built-in Camber agent configured, the set-up-agent nudge shows.
     expect(screen.getByRole("button", { name: "Set up another agent" })).toBeInTheDocument();
     // Draft chat is not persisted to the sidebar until the first message is sent.
     expect(repositories.acpConversationRepo.createPendingConversation).not.toHaveBeenCalled();
@@ -339,7 +339,7 @@ describe("DesktopPanel integration", () => {
 
   it("hides the set-up-agent action once more than one extra agent is configured", async () => {
     const repositories = new TestRepositories();
-    // Two agents beyond the built-in Poolside and Poolside local agents.
+    // Two agents beyond the built-in Camber and Camber local agents.
     repositories.acpRepo.agents.agentServerNames = ["poolside", "local", "claude-acp", "codex-acp"];
 
     await renderDesktopPanel({
@@ -386,7 +386,7 @@ describe("DesktopPanel integration", () => {
     const repositories = new TestRepositories({
       projects: [project("/tmp/project-a")],
       conversations: [
-        conversationSummary("chat-session", "/state/poolside/chat-session", "Standalone chat", {
+        conversationSummary("chat-session", "/state/camber/chat-session", "Standalone chat", {
           workspacePath: "CHAT",
         }),
         conversationSummary("project-session", "/tmp/project-a", "Project conversation", {
@@ -484,7 +484,7 @@ describe("DesktopPanel integration", () => {
     const repositories = new TestRepositories({
       projects: [project("/tmp/project-a")],
       conversations: [
-        conversationSummary("chat-session", "/state/poolside/chat-session", "Standalone chat", {
+        conversationSummary("chat-session", "/state/camber/chat-session", "Standalone chat", {
           workspacePath: "CHAT",
         }),
         conversationSummary("project-session", "/tmp/project-a", "Project conversation", {
@@ -512,7 +512,7 @@ describe("DesktopPanel integration", () => {
     const repositories = new TestRepositories({
       projects: [project("/tmp/project-a")],
       conversations: [
-        conversationSummary("chat-session", "/state/poolside/chat-session", "Standalone chat", {
+        conversationSummary("chat-session", "/state/camber/chat-session", "Standalone chat", {
           workspacePath: "CHAT",
         }),
         conversationSummary("project-session", "/tmp/project-a", "Project conversation"),
@@ -562,7 +562,7 @@ describe("DesktopPanel integration", () => {
     const repositories = new TestRepositories({
       projects: [project("/tmp/project-a")],
       conversations: [
-        conversationSummary("chat-session", "/state/poolside/chat-session", "Standalone chat", {
+        conversationSummary("chat-session", "/state/camber/chat-session", "Standalone chat", {
           workspacePath: "CHAT",
         }),
       ],
@@ -604,7 +604,7 @@ describe("DesktopPanel integration", () => {
         expect.stringContaining("Chats"),
       ]);
     });
-    expect(window.localStorage.getItem("poolside.desktop.sidebarSectionOrder.v1")).toBe(
+    expect(window.localStorage.getItem("camber.desktop.sidebarSectionOrder.v1")).toBe(
       JSON.stringify(["projects", "chats"]),
     );
   });
@@ -650,7 +650,7 @@ describe("DesktopPanel integration", () => {
     const repositories = new TestRepositories({
       projects: [project("/tmp/project-a")],
       conversations: [
-        conversationSummary("chat-session", "/state/poolside/chat-session", "Standalone chat", {
+        conversationSummary("chat-session", "/state/camber/chat-session", "Standalone chat", {
           workspacePath: "CHAT",
         }),
       ],
@@ -695,7 +695,7 @@ describe("DesktopPanel integration", () => {
 
   it("restores the saved top-level sidebar section order", async () => {
     window.localStorage.setItem(
-      "poolside.desktop.sidebarSectionOrder.v1",
+      "camber.desktop.sidebarSectionOrder.v1",
       JSON.stringify(["projects", "chats"]),
     );
     const repositories = new TestRepositories({
@@ -874,7 +874,7 @@ describe("DesktopPanel integration", () => {
         }),
       ],
       conversations: [conversationSummary("desktop-session", worktreePath, "Desktop conversation")],
-      githubBranches: { [worktreePath]: "poolside/worktree" },
+      githubBranches: { [worktreePath]: "camber/worktree" },
     });
 
     await renderDesktopPanel({
@@ -897,7 +897,7 @@ describe("DesktopPanel integration", () => {
     expect(hostMessageSender).toHaveBeenCalledWith("writeToClipboard", [worktreePath]);
 
     await selectFromNativeContextMenu(worktree, "Copy Branch Name");
-    expect(hostMessageSender).toHaveBeenCalledWith("writeToClipboard", ["poolside/worktree"]);
+    expect(hostMessageSender).toHaveBeenCalledWith("writeToClipboard", ["camber/worktree"]);
 
     const projectGroup = screen.getByRole("group", { name: "Project Alpha" });
     const projectToggle = within(projectGroup).getByRole("button", {
@@ -1093,7 +1093,7 @@ describe("DesktopPanel integration", () => {
     expect(screen.queryByTitle("Initial nickname")).toBeNull();
   });
 
-  it("does not show a desktop sidebar header label outside spoolside", async () => {
+  it("does not show a desktop sidebar header label outside camberqa", async () => {
     const repositories = new TestRepositories({
       projects: [
         project("/tmp/project-a"),
@@ -1145,8 +1145,8 @@ describe("DesktopPanel integration", () => {
 
   it("orders the blank command search by last changed", async () => {
     window.localStorage.setItem(
-      "poolside.desktop.recentlyViewedConversations.v1",
-      JSON.stringify(["poolside:older-conversation"]),
+      "camber.desktop.recentlyViewedConversations.v1",
+      JSON.stringify(["camber:older-conversation"]),
     );
     const repositories = new TestRepositories({
       projects: [project("/tmp/project-a")],
@@ -1208,17 +1208,17 @@ describe("DesktopPanel integration", () => {
   });
 
   it("indexes and renders the embedded conversation title instead of handoff context", async () => {
-    const handoffTitle = `continuepoolside://handoff/source-session.md
-<context ref="poolside://handoff/source-session.md">
-<poolside-handoff>
-# Poolside ACP Session Handoff
+    const handoffTitle = `continuecamber://handoff/source-session.md
+<context ref="camber://handoff/source-session.md">
+<camber-handoff>
+# Camber ACP Session Handoff
 
 This is a semantic handoff between agents.
 
 ## Conversation
 Title: Fix ACP event capture end-to-end streaming
 Workspace: \`/tmp/project-a\`
-</poolside-handoff>
+</camber-handoff>
 </context>`;
     const repositories = new TestRepositories({
       projects: [project("/tmp/project-a")],
@@ -1237,8 +1237,8 @@ Workspace: \`/tmp/project-a\`
     const option = within(dialog).getByRole("option", {
       name: /^Fix ACP event capture end-to-end streaming/,
     });
-    expect(option).not.toHaveTextContent("poolside://handoff");
-    expect(option).not.toHaveTextContent("Poolside ACP Session Handoff");
+    expect(option).not.toHaveTextContent("camber://handoff");
+    expect(option).not.toHaveTextContent("Camber ACP Session Handoff");
 
     await fireEvent.input(input, { target: { value: "semantic handoff" } });
     expect(within(dialog).queryByRole("option")).toBeNull();
@@ -1304,8 +1304,8 @@ Workspace: \`/tmp/project-a\`
 
   it("orders conversation searches by match quality", async () => {
     window.localStorage.setItem(
-      "poolside.desktop.recentlyViewedConversations.v1",
-      JSON.stringify(["poolside:loose-match"]),
+      "camber.desktop.recentlyViewedConversations.v1",
+      JSON.stringify(["camber:loose-match"]),
     );
     const repositories = new TestRepositories({
       projects: [project("/tmp/project-a")],
@@ -1531,7 +1531,7 @@ Workspace: \`/tmp/project-a\`
     chatControl.focus();
     expect(chatControl).toHaveFocus();
 
-    window.dispatchEvent(new CustomEvent("poolside:desktop-select-next-tab"));
+    window.dispatchEvent(new CustomEvent("camber:desktop-select-next-tab"));
 
     await waitFor(() => expect(terminalInput).toHaveFocus());
   });
@@ -1692,7 +1692,7 @@ Workspace: \`/tmp/project-a\`
     // surface: the user's next tab belongs where they were working (main),
     // not in the sidebar the setup terminal claimed.
     window.dispatchEvent(
-      new CustomEvent("poolside:desktop-new-tab", { detail: { kind: "terminal" } }),
+      new CustomEvent("camber:desktop-new-tab", { detail: { kind: "terminal" } }),
     );
 
     await waitFor(() => {
@@ -1729,12 +1729,12 @@ Workspace: \`/tmp/project-a\`
       newTabEvents.push((event as CustomEvent<{ kind?: string }>).detail?.kind ?? "");
       event.preventDefault();
     };
-    window.addEventListener("poolside:desktop-new-tab", onNewTab);
+    window.addEventListener("camber:desktop-new-tab", onNewTab);
     try {
       await fireEvent.keyDown(input, { key: "Enter" });
       await waitFor(() => expect(newTabEvents).toEqual(["terminal"]));
     } finally {
-      window.removeEventListener("poolside:desktop-new-tab", onNewTab);
+      window.removeEventListener("camber:desktop-new-tab", onNewTab);
     }
     expect(screen.queryByRole("dialog", { name: "Search conversations" })).toBeNull();
   });
@@ -2529,7 +2529,7 @@ Workspace: \`/tmp/project-a\`
     await openArchivedChats();
     expectSettingsHeader("Archived Chats");
 
-    window.dispatchEvent(new CustomEvent("poolside:desktop-open-settings-panel"));
+    window.dispatchEvent(new CustomEvent("camber:desktop-open-settings-panel"));
 
     expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
     expectSettingsHeader("General");
@@ -2645,11 +2645,11 @@ Workspace: \`/tmp/project-a\`
   it("opens a fresh draft instead of the next chat while the active chat waits to archive", async () => {
     const currentChat = conversationSummary(
       "chat-current",
-      "/state/poolside/chats/current",
+      "/state/camber/chats/current",
       "Current chat",
       { workspacePath: "CHAT" },
     );
-    const nextChat = conversationSummary("chat-next", "/state/poolside/chats/next", "Next chat", {
+    const nextChat = conversationSummary("chat-next", "/state/camber/chats/next", "Next chat", {
       workspacePath: "CHAT",
     });
     const repositories = new TestRepositories({
@@ -2684,7 +2684,7 @@ Workspace: \`/tmp/project-a\`
     }
 
     expect(repositories.acpConversationRepo.archiveSession).toHaveBeenCalledWith(
-      "/state/poolside/chats/current",
+      "/state/camber/chats/current",
       "chat-current",
       "poolside",
       "chat-current",
@@ -3322,7 +3322,7 @@ Workspace: \`/tmp/project-a\`
     await fireEvent.click(await screen.findByRole("button", { name: "Hide sidebar" }));
     expect(await screen.findByRole("button", { name: "Show sidebar" })).toBeInTheDocument();
 
-    window.dispatchEvent(new CustomEvent("poolside:desktop-open-settings-panel"));
+    window.dispatchEvent(new CustomEvent("camber:desktop-open-settings-panel"));
 
     expect(await screen.findByRole("button", { name: "Back" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Hide sidebar" })).toBeDisabled();
@@ -3340,10 +3340,7 @@ Workspace: \`/tmp/project-a\`
         (event as CustomEvent<{ canGoBack: boolean; canGoForward: boolean }>).detail,
       );
     };
-    window.addEventListener(
-      "poolside:desktop-navigation-availability",
-      handleNavigationAvailability,
-    );
+    window.addEventListener("camber:desktop-navigation-availability", handleNavigationAvailability);
     const repositories = new TestRepositories({
       projects: [project("/tmp/project-a")],
       conversations: [conversationSummary("s-current", "/tmp/project-a", "Current conversation")],
@@ -3370,14 +3367,14 @@ Workspace: \`/tmp/project-a\`
         }),
       );
 
-      window.dispatchEvent(new CustomEvent("poolside:desktop-navigate-back"));
+      window.dispatchEvent(new CustomEvent("camber:desktop-navigate-back"));
       expect(await screen.findByRole("button", { name: "Settings" })).toBeInTheDocument();
       expect(navigationAvailability).toHaveBeenLastCalledWith({
         canGoBack: false,
         canGoForward: true,
       });
 
-      window.dispatchEvent(new CustomEvent("poolside:desktop-navigate-forward"));
+      window.dispatchEvent(new CustomEvent("camber:desktop-navigate-forward"));
       expect(await screen.findByRole("heading", { name: "Settings" })).toBeInTheDocument();
       expect(navigationAvailability).toHaveBeenLastCalledWith({
         canGoBack: true,
@@ -3385,7 +3382,7 @@ Workspace: \`/tmp/project-a\`
       });
     } finally {
       window.removeEventListener(
-        "poolside:desktop-navigation-availability",
+        "camber:desktop-navigation-availability",
         handleNavigationAvailability,
       );
     }
@@ -3398,10 +3395,7 @@ Workspace: \`/tmp/project-a\`
         (event as CustomEvent<{ canGoBack: boolean; canGoForward: boolean }>).detail,
       );
     };
-    window.addEventListener(
-      "poolside:desktop-navigation-availability",
-      handleNavigationAvailability,
-    );
+    window.addEventListener("camber:desktop-navigation-availability", handleNavigationAvailability);
     const repositories = new TestRepositories({
       projects: [project("/tmp/project-a")],
       conversations: [conversationSummary("s-current", "/tmp/project-a", "Current conversation")],
@@ -3416,7 +3410,7 @@ Workspace: \`/tmp/project-a\`
       navigationAvailability.mockClear();
 
       window.dispatchEvent(
-        new CustomEvent("poolside:desktop-new-tab", {
+        new CustomEvent("camber:desktop-new-tab", {
           cancelable: true,
           detail: { kind: "files" },
         }),
@@ -3434,17 +3428,17 @@ Workspace: \`/tmp/project-a\`
         }),
       );
 
-      window.dispatchEvent(new CustomEvent("poolside:desktop-navigate-back"));
+      window.dispatchEvent(new CustomEvent("camber:desktop-navigate-back"));
       const restoredFilesTab = await screen.findByRole("tab", { name: "project-a" });
       expect(restoredFilesTab).toHaveAttribute("aria-selected", "true");
 
       navigationAvailability.mockClear();
-      const chatTab = screen.getByRole("tab", { name: "Chatting with Poolside" });
+      const chatTab = screen.getByRole("tab", { name: "Chatting with Camber" });
       await fireEvent.click(chatTab);
       await waitFor(() => expect(chatTab).toHaveAttribute("aria-selected", "true"));
       await waitFor(() => expect(navigationAvailability).toHaveBeenCalled());
 
-      window.dispatchEvent(new CustomEvent("poolside:desktop-navigate-back"));
+      window.dispatchEvent(new CustomEvent("camber:desktop-navigate-back"));
       await waitFor(() =>
         expect(screen.getByRole("tab", { name: "project-a" })).toHaveAttribute(
           "aria-selected",
@@ -3453,7 +3447,7 @@ Workspace: \`/tmp/project-a\`
       );
     } finally {
       window.removeEventListener(
-        "poolside:desktop-navigation-availability",
+        "camber:desktop-navigation-availability",
         handleNavigationAvailability,
       );
     }
@@ -4023,7 +4017,7 @@ function makeConversationRepo(
     vi.fn().mockImplementation(async (_workspacePath, session) => {
       writer.refreshState = success([...writer.sessions, session]);
       writer.emitter.dispatchEvent(
-        new CustomEvent("poolside:acp-desktop-conversations", {
+        new CustomEvent("camber:acp-desktop-conversations", {
           detail: { sessions: writer.sessions },
         }),
       );
@@ -4136,7 +4130,7 @@ function defaultLayoutWithSidebarTerminal(): PersistedDesktopLayout {
   return {
     version: 1,
     surfaces: {
-      main: { version: 1, rootNode: pane("pane-main", "tab-chat", "Chatting with Poolside") },
+      main: { version: 1, rootNode: pane("pane-main", "tab-chat", "Chatting with Camber") },
       rightSidebar: { version: 1, rootNode: pane("pane-sidebar", "tab-terminal", "Terminal") },
       bottomPanel: {
         version: 1,

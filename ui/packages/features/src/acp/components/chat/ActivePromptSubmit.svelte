@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { isAppleUser } from "@poolsideai/components";
-  import Kbd from "@poolsideai/components/kbd";
-  import * as Prompt from "@poolsideai/components/prompt";
+  import { isAppleUser } from "@camber/components";
+  import Kbd from "@camber/components/kbd";
+  import * as Prompt from "@camber/components/prompt";
   import type { MouseEventHandler } from "svelte/elements";
   import Tooltip from "../ui/Tooltip.svelte";
 

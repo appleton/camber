@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { initializeStatefulModule as initializeHelperApi } from "@poolsideai/helperapi";
+  import { initializeStatefulModule as initializeHelperApi } from "@camber/helperapi";
   import { onDestroy, untrack } from "svelte";
   import { get } from "svelte/store";
   import { getACPContext } from "../../features/SessionRepository.svelte";

@@ -44,7 +44,7 @@
 <script lang="ts">
   import { getChips, getMenus, getPrompt, type Chip } from "../context/prompt.js";
   import BaseAction, { type ActionBaseProps } from "./BaseAction.svelte";
-  import { generateId } from "@poolsideai/lib/string";
+  import { generateId } from "@camber/lib/string";
   import type { ChipNodeAttrs } from "../editor/chip/chipNode.js";
   import type { Snippet } from "svelte";
   import type { SetOptional } from "type-fest";

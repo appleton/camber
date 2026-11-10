@@ -1,4 +1,4 @@
-import type { GitHubPRStatus } from "@poolsideai/helperapi";
+import type { GitHubPRStatus } from "@camber/helperapi";
 import { describe, expect, it } from "vitest";
 import {
   githubChecksCountLabel,

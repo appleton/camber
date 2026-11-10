@@ -8,13 +8,13 @@
 // RPC server never sees unrelated window "message" traffic (browser
 // extensions, iframes) and helper messages never leak to other listeners.
 
-import { webviewCommandForHelperNotification } from "@poolsideai/rpc/assistant";
+import { webviewCommandForHelperNotification } from "@camber/rpc/assistant";
 
 import { recoverSession, type SessionRecovery } from "./deviceSession";
 import { SessionStreamGate, type StaleSession } from "./sessionStreamGate";
 import { CONNECTION_LOST_MESSAGE, WsRpc, type WsRpcStatus } from "./wsRpc";
 
-// Structurally identical to @poolsideai/assistant's WebviewRPCListener runtime
+// Structurally identical to @camber/assistant's WebviewRPCListener runtime
 // prop (Pick<Window, ...>); declared here so this transport package does not
 // depend on the whole assistant UI package for one type alias.
 export type WebviewRPCListener = Pick<Window, "addEventListener" | "removeEventListener">;
@@ -57,7 +57,7 @@ export type { WsRpcStatus as ConnectionStatus, StaleSession };
 // but forwarding them would only feed webview stores nothing reads. Remove an
 // entry when mobile grows that surface; notifications NOT listed here forward
 // by default via the shared table.
-const UNRENDERED_ON_MOBILE = new Set(["poolside/localInference/didChange"]);
+const UNRENDERED_ON_MOBILE = new Set(["camber/localInference/didChange"]);
 
 export interface RemoteHostCallbacks {
   onStatusChange?: (status: WsRpcStatus) => void;
@@ -70,7 +70,7 @@ export interface RemoteHostCallbacks {
   // it is recovered silently with the device token.
   onAuthExpired?: () => void;
   // Fired after the socket reopens following a real disconnect, once
-  // /api/me re-confirmed the session and poolside/remote/resume replayed the
+  // /api/me re-confirmed the session and camber/remote/resume replayed the
   // missed live events. staleSessions are the ones the helper could NOT
   // resume (helper restart, buffer evicted): their in-memory transcripts may
   // be missing messages and must be re-loaded. The conversation list should
@@ -167,7 +167,7 @@ export class RemoteHost {
     // socket is dead — drop it so the reconnect path takes over.
     if (this.#probing) return;
     this.#probing = true;
-    const probe = this.#rpc.call("poolside/hello", { ping: "keepalive" });
+    const probe = this.#rpc.call("camber/hello", { ping: "keepalive" });
     const timeout = new Promise((_, reject) =>
       setTimeout(() => reject(new Error("timeout")), 4000),
     );
@@ -228,7 +228,7 @@ export class RemoteHost {
     }));
     if (sessions.length === 0) return;
     try {
-      const result = (await this.#rpc.call("poolside/remoteTerminal/attach", { sessions })) as {
+      const result = (await this.#rpc.call("camber/remoteTerminal/attach", { sessions })) as {
         sessions?: RemoteTerminalAttachResult[];
       };
       for (const session of result.sessions ?? []) {
@@ -253,7 +253,7 @@ export class RemoteHost {
         }
       }
     } catch (error) {
-      console.warn("poolside: terminal reattach failed", error);
+      console.warn("camber: terminal reattach failed", error);
     }
   }
 
@@ -264,14 +264,14 @@ export class RemoteHost {
     const cursors = this.#gate.cursors();
     if (cursors.length === 0) return [];
     try {
-      const result = (await this.#rpc.call("poolside/remote/resume", { sessions: cursors })) as {
+      const result = (await this.#rpc.call("camber/remote/resume", { sessions: cursors })) as {
         sessions?: { agentServer: string; sessionId: string; resumed: boolean }[];
       };
       const stale = (result.sessions ?? []).filter((s) => !s.resumed);
       for (const s of stale) this.#gate.markStale(s.agentServer, s.sessionId);
       return stale.map(({ agentServer, sessionId }) => ({ agentServer, sessionId }));
     } catch (error) {
-      console.warn("poolside: resume after reconnect failed", error);
+      console.warn("camber: resume after reconnect failed", error);
       // Without a successful resume nothing was replayed; treat every
       // cursored session as stale so the caller re-loads them.
       for (const c of cursors) this.#gate.markStale(c.agentServer, c.sessionId);
@@ -364,11 +364,11 @@ export class RemoteHost {
     switch (method) {
       case "jsonrpc": {
         const rpcMethod = args[0] as string;
-        if (rpcMethod === "poolside/acp/session/prompt") {
+        if (rpcMethod === "camber/acp/session/prompt") {
           return await this.#promptWithRetry(args[1]);
         }
         const result = await this.#rpc.call(rpcMethod, args[1]);
-        if (rpcMethod === "poolside/acp/session/load") {
+        if (rpcMethod === "camber/acp/session/load") {
           this.#applyLoadCursor(args[1], result);
         }
         return result;
@@ -389,10 +389,10 @@ export class RemoteHost {
         window.open(String(args[0]), "_blank", "noopener");
         return undefined;
       case "showInfoMessage":
-        console.info("poolside:", args[0]);
+        console.info("camber:", args[0]);
         return undefined;
 
-      // Worktree terminals are helper-side PTYs (poolside/remoteTerminal/*),
+      // Worktree terminals are helper-side PTYs (camber/remoteTerminal/*),
       // so the shared terminal repository — and worktree setup/teardown
       // scripts run through it — work against the desktop machine.
       case "createAssistantTerminal": {
@@ -405,7 +405,7 @@ export class RemoteHost {
           number | undefined,
           number | undefined,
         ];
-        const result = (await this.#rpc.call("poolside/remoteTerminal/create", {
+        const result = (await this.#rpc.call("camber/remoteTerminal/create", {
           cwd: worktreePath,
           command,
           env,
@@ -418,7 +418,7 @@ export class RemoteHost {
         return result.tab;
       }
       case "listAssistantTerminals": {
-        const result = (await this.#rpc.call("poolside/remoteTerminal/list", {})) as {
+        const result = (await this.#rpc.call("camber/remoteTerminal/list", {})) as {
           tabs?: RemoteTerminalTab[];
         };
         const tabs = result.tabs ?? [];
@@ -432,28 +432,28 @@ export class RemoteHost {
         return tabs;
       }
       case "writeAssistantTerminal":
-        await this.#rpc.call("poolside/remoteTerminal/write", {
+        await this.#rpc.call("camber/remoteTerminal/write", {
           terminalId: args[0],
           data: args[1],
         });
         return undefined;
       case "resizeAssistantTerminal":
-        await this.#rpc.call("poolside/remoteTerminal/resize", {
+        await this.#rpc.call("camber/remoteTerminal/resize", {
           terminalId: args[0],
           cols: args[1],
           rows: args[2],
         });
         return undefined;
       case "clearAssistantTerminal":
-        await this.#rpc.call("poolside/remoteTerminal/clear", { terminalId: args[0] });
+        await this.#rpc.call("camber/remoteTerminal/clear", { terminalId: args[0] });
         return undefined;
       case "deleteAssistantTerminal":
         this.#terminals.delete(String(args[0]));
-        await this.#rpc.call("poolside/remoteTerminal/delete", { terminalId: args[0] });
+        await this.#rpc.call("camber/remoteTerminal/delete", { terminalId: args[0] });
         return undefined;
       case "closeAssistantTerminalsForWorktree":
       case "closeAssistantTerminalsForProject":
-        await this.#rpc.call("poolside/remoteTerminal/closeForPath", { path: args[0] });
+        await this.#rpc.call("camber/remoteTerminal/closeForPath", { path: args[0] });
         return undefined;
 
       // File reads go over the helper's authenticated /api/file endpoint (the
@@ -546,11 +546,11 @@ export class RemoteHost {
     const meta = (
       request._meta && typeof request._meta === "object" ? request._meta : {}
     ) as Record<string, unknown>;
-    meta["poolside/turnId"] = crypto.randomUUID();
+    meta["camber/turnId"] = crypto.randomUUID();
     request._meta = meta;
     for (let attempt = 0; ; attempt++) {
       try {
-        return await this.#rpc.call("poolside/acp/session/prompt", request);
+        return await this.#rpc.call("camber/acp/session/prompt", request);
       } catch (error) {
         const lost = error instanceof Error && error.message === CONNECTION_LOST_MESSAGE;
         if (!lost || attempt >= 5) throw error;
@@ -573,7 +573,7 @@ export class RemoteHost {
   #applyLoadCursor(params: unknown, result: unknown): void {
     const req = params as { agentServer?: string; sessionId?: string } | undefined;
     const meta = (result as { _meta?: Record<string, unknown> } | null)?._meta?.[
-      "poolside/sessionCursor"
+      "camber/sessionCursor"
     ] as { epoch?: string; seq?: number } | undefined;
     if (!req?.sessionId || typeof meta?.epoch !== "string" || typeof meta?.seq !== "number") {
       return;
@@ -596,7 +596,7 @@ export class RemoteHost {
     // without touching this file, unless its surface is deliberately not
     // rendered on mobile (see UNRENDERED_ON_MOBILE).
     switch (method) {
-      case "poolside/jsonrpc/notify": {
+      case "camber/jsonrpc/notify": {
         const admitted = this.#gate.admit(params);
         if (admitted === null) {
           // Not a stamped session event (load replay, config probes, other
@@ -609,7 +609,7 @@ export class RemoteHost {
         }
         return;
       }
-      case "poolside/remoteTerminal/didWrite": {
+      case "camber/remoteTerminal/didWrite": {
         const write = params as { terminalId: string; data: string; seq: number };
         const tracked = this.#terminals.get(write.terminalId);
         // Drop chunks an attach backfill already covered.
@@ -624,7 +624,7 @@ export class RemoteHost {
         ]);
         return;
       }
-      case "poolside/remoteTerminal/didExit": {
+      case "camber/remoteTerminal/didExit": {
         const exit = params as { terminalId: string; exitCode?: number };
         void this.#callWebview("assistantTerminalDidExit", [exit]);
         return;
@@ -641,9 +641,9 @@ export class RemoteHost {
 
   async #dispatchHelperRequest(method: string, params: unknown): Promise<unknown> {
     switch (method) {
-      case "poolside/jsonrpc/request":
+      case "camber/jsonrpc/request":
         return await this.#callWebview("jsonrpcRequest", [params]);
-      case "poolside/acp/elicitation/create":
+      case "camber/acp/elicitation/create":
         return await this.#callWebview("elicitation", [params]);
       default:
         throw new Error(`remoteHost: unsupported helper request ${method}`);

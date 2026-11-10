@@ -1,4 +1,4 @@
-import { generateId } from "@poolsideai/lib/string";
+import { generateId } from "@camber/lib/string";
 import { getContext, onMount, setContext } from "svelte";
 import { type CreateMenuProps, getMenus, type Menu } from "./prompt.js";
 

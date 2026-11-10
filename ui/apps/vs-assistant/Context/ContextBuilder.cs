@@ -8,16 +8,16 @@ using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.TextManager.Interop;
-using Poolside.Assistant.ChatWindow;
+using Camber.Assistant.ChatWindow;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Poolside.Assistant.Telemetry;
+using Camber.Assistant.Telemetry;
 
-namespace Poolside.Assistant.Context
+namespace Camber.Assistant.Context
 {
     internal static class ContextBuilder
     {
@@ -90,7 +90,7 @@ namespace Poolside.Assistant.Context
         // of its file tools.
         internal static string BuildDefaultCwd()
         {
-            var configured = PoolsideAssistantPackage.GetInstance()?.GetSettings()?.DefaultWorkingDirectory;
+            var configured = CamberAssistantPackage.GetInstance()?.GetSettings()?.DefaultWorkingDirectory;
             if (!string.IsNullOrWhiteSpace(configured))
             {
                 return configured.Trim();
@@ -114,7 +114,7 @@ namespace Poolside.Assistant.Context
             if (string.IsNullOrEmpty(localAppData))
             {
                 // GetFolderPath returns an empty string when the folder is not physically
-                // present. Combining onto it would yield the relative path "poolside\scratch",
+                // present. Combining onto it would yield the relative path "camber\scratch",
                 // which CreateDirectory would happily make under the IDE's own working
                 // directory - leaving the helper with a relative cwd pointing who knows where.
                 ensuredScratchDirectory = Path.GetTempPath();
@@ -142,7 +142,7 @@ namespace Poolside.Assistant.Context
             var result = new List<Workspace>();
             try
             {
-                var workspace = PoolsideAssistantPackage.GetInstance()?.GetWorkspace();
+                var workspace = CamberAssistantPackage.GetInstance()?.GetWorkspace();
                 if (workspace != null)
                 {
                     result.Add(new Workspace { path = workspace.RootPath, name = workspace.Name, index = 0 });
@@ -154,7 +154,7 @@ namespace Poolside.Assistant.Context
             }
             catch (Exception ex)
             {
-                PoolsideTelemetryLogger.Instance.reportException(ex);
+                CamberTelemetryLogger.Instance.reportException(ex);
             }
             return result.ToArray();
         }

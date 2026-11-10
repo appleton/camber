@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "testenv",
+    testonly = True,
+    srcs = [
+        "exec.go",
+        "testenv.go",
+        "testenv_notunix.go",
+        "testenv_unix.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/testenv",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/goroot",
+        "@org_golang_x_mod//modfile",
+    ],
+)

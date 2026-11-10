@@ -6,21 +6,19 @@ vi.mock("../../api/configuration", () => ({ getConfiguration: vi.fn() }));
 import { findKeybinding, type Keybinding } from "./getKeybindings";
 
 const extensionBindings: Keybinding[] = [
-  { command: "poolside.focusInput", key: "ctrl+l", mac: "cmd+l" },
-  { command: "poolside.focusInput", key: "ctrl+escape", mac: "cmd+escape" }, // override previous binding
-  { command: "poolside.togglePlanMode", key: "shift+tab" },
+  { command: "camber.focusInput", key: "ctrl+l", mac: "cmd+l" },
+  { command: "camber.focusInput", key: "ctrl+escape", mac: "cmd+escape" }, // override previous binding
+  { command: "camber.togglePlanMode", key: "shift+tab" },
 ];
 
 describe("findKeybinding", () => {
   it("returns the last matching binding from extension defaults", () => {
-    expect(findKeybinding(extensionBindings, [], "poolside.focusInput", "mac")).toBe("cmd+escape");
+    expect(findKeybinding(extensionBindings, [], "camber.focusInput", "mac")).toBe("cmd+escape");
   });
 
   it("returns platform-specific key when available", () => {
-    expect(findKeybinding(extensionBindings, [], "poolside.togglePlanMode", "mac")).toBe(
-      "shift+tab",
-    );
-    expect(findKeybinding(extensionBindings, [], "poolside.togglePlanMode", "linux")).toBe(
+    expect(findKeybinding(extensionBindings, [], "camber.togglePlanMode", "mac")).toBe("shift+tab");
+    expect(findKeybinding(extensionBindings, [], "camber.togglePlanMode", "linux")).toBe(
       "shift+tab",
     );
   });
@@ -37,54 +35,54 @@ describe("findKeybinding", () => {
   describe("user overrides", () => {
     it("user binding overrides extension default", () => {
       const user: Keybinding[] = [
-        { command: "poolside.togglePlanMode", key: "ctrl+alt+9" },
-        { command: "-poolside.togglePlanMode", key: "shift+tab" },
+        { command: "camber.togglePlanMode", key: "ctrl+alt+9" },
+        { command: "-camber.togglePlanMode", key: "shift+tab" },
       ];
-      expect(findKeybinding(extensionBindings, user, "poolside.togglePlanMode", "mac")).toBe(
+      expect(findKeybinding(extensionBindings, user, "camber.togglePlanMode", "mac")).toBe(
         "ctrl+alt+9",
       );
     });
 
     it("user add+remove for same key: user add survives, removal only targets extension default", () => {
       const user: Keybinding[] = [
-        { command: "poolside.togglePlanMode", key: "shift+tab" },
-        { command: "-poolside.togglePlanMode", key: "shift+tab" },
+        { command: "camber.togglePlanMode", key: "shift+tab" },
+        { command: "-camber.togglePlanMode", key: "shift+tab" },
       ];
-      expect(findKeybinding(extensionBindings, user, "poolside.togglePlanMode", "mac")).toBe(
+      expect(findKeybinding(extensionBindings, user, "camber.togglePlanMode", "mac")).toBe(
         "shift+tab",
       );
     });
 
     it("handles modifier order differences (tab+shift vs shift+tab)", () => {
       const user: Keybinding[] = [
-        { command: "poolside.togglePlanMode", key: "tab+shift" },
-        { command: "-poolside.togglePlanMode", key: "shift+tab" },
+        { command: "camber.togglePlanMode", key: "tab+shift" },
+        { command: "-camber.togglePlanMode", key: "shift+tab" },
       ];
-      expect(findKeybinding(extensionBindings, user, "poolside.togglePlanMode", "mac")).toBe(
+      expect(findKeybinding(extensionBindings, user, "camber.togglePlanMode", "mac")).toBe(
         "tab+shift",
       );
     });
 
     it("removal only affects the specific key, not other bindings for the same command", () => {
-      const user: Keybinding[] = [{ command: "-poolside.focusInput", key: "ctrl+l", mac: "cmd+l" }];
-      expect(findKeybinding(extensionBindings, user, "poolside.focusInput", "mac")).toBe(
+      const user: Keybinding[] = [{ command: "-camber.focusInput", key: "ctrl+l", mac: "cmd+l" }];
+      expect(findKeybinding(extensionBindings, user, "camber.focusInput", "mac")).toBe(
         "cmd+escape",
       );
     });
 
     it("unbind-only entry disables the extension default", () => {
-      const user: Keybinding[] = [{ command: "-poolside.togglePlanMode", key: "shift+tab" }];
+      const user: Keybinding[] = [{ command: "-camber.togglePlanMode", key: "shift+tab" }];
       expect(
-        findKeybinding(extensionBindings, user, "poolside.togglePlanMode", "mac"),
+        findKeybinding(extensionBindings, user, "camber.togglePlanMode", "mac"),
       ).toBeUndefined();
     });
 
     it("handles profile keybindings overriding extension defaults", () => {
       const user: Keybinding[] = [
-        { command: "poolside.togglePlanMode", key: "ctrl+alt+9" },
-        { command: "-poolside.togglePlanMode", key: "shift+tab" },
+        { command: "camber.togglePlanMode", key: "ctrl+alt+9" },
+        { command: "-camber.togglePlanMode", key: "shift+tab" },
       ];
-      expect(findKeybinding(extensionBindings, user, "poolside.togglePlanMode", "mac")).toBe(
+      expect(findKeybinding(extensionBindings, user, "camber.togglePlanMode", "mac")).toBe(
         "ctrl+alt+9",
       );
     });

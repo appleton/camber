@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Icon, { type IconName } from "@poolsideai/components/icon";
-  import Kbd from "@poolsideai/components/kbd";
+  import Icon, { type IconName } from "@camber/components/icon";
+  import Kbd from "@camber/components/kbd";
   import BadgedIcon from "../BadgedIcon.svelte";
   import { suppressContextMenu } from "./contextMenuHelpers";
 

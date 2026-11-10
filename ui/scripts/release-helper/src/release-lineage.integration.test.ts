@@ -26,8 +26,8 @@ interface Plan {
 
 const script = resolve(dirname(fileURLToPath(import.meta.url)), "find-version.ts");
 const tsx = resolve(dirname(fileURLToPath(import.meta.url)), "../node_modules/.bin/tsx");
-const destination = "poolside-ai.assistant-release-test";
-const displayName = "Poolside Assistant Release Test";
+const destination = "appleton.assistant-release-test";
+const displayName = "Camber Assistant Release Test";
 
 function git(repo: string, ...args: string[]): string {
   return execFileSync("git", args, { cwd: repo, encoding: "utf8" }).trim();
@@ -324,7 +324,7 @@ describe("managed release lineages", () => {
         "--tag-prefix",
         "vscode-shadow",
         "--destination",
-        "poolside-ai.some-other-extension",
+        "appleton.some-other-extension",
       ),
     ).toThrow("is bound to");
   });
@@ -337,11 +337,11 @@ describe("managed release lineages", () => {
 
   it("ignores malformed metadata outside the active lineage", { timeout: 20_000 }, () => {
     const unrelated = JSON.stringify({
-      kind: "poolside-release-lineage",
+      kind: "camber-release-lineage",
       schema: 2,
       product: "desktop",
       tagPrefix: "desktop-shadow",
-      destination: "poolside/desktop-shadow",
+      destination: "camber/desktop-shadow",
       version: "0.1.0",
       sourceSha: git(repo, "rev-parse", "HEAD"),
     });
@@ -363,7 +363,7 @@ describe("managed release lineages", () => {
 
   it("rejects malformed metadata inside the active lineage", { timeout: 20_000 }, () => {
     const malformed = JSON.stringify({
-      kind: "poolside-release-lineage",
+      kind: "camber-release-lineage",
       schema: 2,
       product: "vscode",
       tagPrefix: "vscode-shadow",

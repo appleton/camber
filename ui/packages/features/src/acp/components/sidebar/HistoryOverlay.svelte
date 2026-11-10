@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Button } from "@poolsideai/components/button";
-  import { Spinner } from "@poolsideai/components/spinner";
-  import Icon from "@poolsideai/components/icon";
-  import { formatError } from "@poolsideai/lib/errors";
+  import { Button } from "@camber/components/button";
+  import { Spinner } from "@camber/components/spinner";
+  import Icon from "@camber/components/icon";
+  import { formatError } from "@camber/lib/errors";
   import { onDestroy } from "svelte";
   import { SvelteMap, SvelteSet } from "svelte/reactivity";
   import type { ACPConversationSummary, ACPNavProject } from "../../navTypes";

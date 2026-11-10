@@ -1,9 +1,9 @@
 {
-  "name": "poolside-assistant",
-  "displayName": "Poolside Assistant",
+  "name": "camber-assistant",
+  "displayName": "Camber Assistant",
   "version": "0.0.0",
   "private": true,
-  "description": "The power of Poolside, right in your editor",
+  "description": "The power of Camber, right in your editor",
   "categories": [
     "Machine Learning"
   ],
@@ -12,13 +12,12 @@
     "chat"
   ],
   "license": "Apache-2.0",
-  "qna": "mailto:feedback@poolside.ai",
+  "qna": "https://github.com/appleton/camber/discussions",
   "author": {
-    "name": "Poolside",
-    "email": "hello@poolside.ai",
-    "url": "https://poolside.ai"
+    "name": "Andy Appleton",
+    "url": "https://github.com/appleton"
   },
-  "publisher": "poolside-ai",
+  "publisher": "appleton",
   "type": "module",
   "main": "./dist/extension/main.cjs",
   "scripts": {
@@ -47,75 +46,75 @@
   "contributes": {
     "commands": [
       {
-        "category": "Poolside",
-        "command": "poolside.focusInput",
-        "icon": "$(poolside-roundel)",
+        "category": "Camber",
+        "command": "camber.focusInput",
+        "icon": "$(camber-roundel)",
         "title": "Focus on Prompt Input"
       },
       {
-        "category": "Poolside",
-        "command": "poolside.togglePlanMode",
+        "category": "Camber",
+        "command": "camber.togglePlanMode",
         "title": "Toggle Plan Mode"
       },
       {
-        "category": "Poolside",
-        "command": "poolside.newConversation",
+        "category": "Camber",
+        "command": "camber.newConversation",
         "title": "New Conversation",
-        "icon": "$(poolside-new)"
+        "icon": "$(camber-new)"
       },
       {
-        "category": "Poolside",
-        "command": "poolside.resetConfiguration",
+        "category": "Camber",
+        "command": "camber.resetConfiguration",
         "title": "Reset Configuration"
       },
       {
-        "category": "Poolside",
-        "command": "poolside.showSidebar",
+        "category": "Camber",
+        "command": "camber.showSidebar",
         "title": "Show Sidebar"
       },
       {
-        "category": "Poolside",
-        "command": "poolside.openPermissionSettings",
+        "category": "Camber",
+        "command": "camber.openPermissionSettings",
         "title": "Open Permissions Settings"
       },
       {
-        "category": "Poolside",
-        "command": "poolside.openSettings",
+        "category": "Camber",
+        "command": "camber.openSettings",
         "title": "Extension Settings",
-        "icon": "$(poolside-settings)"
+        "icon": "$(camber-settings)"
       }
     ],
     "configuration": {
-      "title": "poolside",
+      "title": "camber",
       "properties": {
-        "poolside.showKeybindings": {
+        "camber.showKeybindings": {
           "default": true,
-          "description": "Show keybinding hints in the Poolside UI",
+          "description": "Show keybinding hints in the Camber UI",
           "type": "boolean"
         },
-        "poolside.wrapLines": {
+        "camber.wrapLines": {
           "default": true,
           "description": "Wrap lines in code snippets",
           "type": "boolean"
         },
-        "poolside.codeFontSize": {
+        "camber.codeFontSize": {
           "default": 0,
           "description": "Font size for code snippets in pixels. Use 0 to inherit from editor font size",
           "type": "number",
           "minimum": 0,
           "maximum": 72
         },
-        "poolside.showMermaidDiagrams": {
+        "camber.showMermaidDiagrams": {
           "default": false,
           "markdownDescription": "`Experimental` Visualise Mermaid diagrams in code blocks",
           "type": "boolean"
         },
-        "poolside.notifyOnApproval": {
+        "camber.notifyOnApproval": {
           "default": true,
           "description": "Show a system notification when approval is needed and the window is not focused",
           "type": "boolean"
         },
-        "poolside.toolActivity": {
+        "camber.toolActivity": {
           "default": "grouped",
           "description": "How much detail to show while the agent works. Finished replies always collapse into a summary.",
           "type": "string",
@@ -135,14 +134,14 @@
             "One summary line plus the current step — tool calls and interim messages fold as the agent works"
           ]
         },
-        "poolside.defaultWorkingDirectory": {
+        "camber.defaultWorkingDirectory": {
           "default": "",
-          "description": "Working directory the assistant uses when no folder is open in VS Code. Leave empty to use a scratch directory (~/.poolside/scratch, or %LOCALAPPDATA%\\poolside\\scratch on Windows) so the agent's file tools start there instead of at your home directory.",
+          "description": "Working directory the assistant uses when no folder is open in VS Code. Leave empty to use a scratch directory (~/.poolside/scratch, or %LOCALAPPDATA%\\camber\\scratch on Windows) so the agent's file tools start there instead of at your home directory.",
           "type": "string"
         },
-        "poolside.agentServers": {
+        "camber.agentServers": {
           "default": {},
-          "markdownDescription": "Named ACP servers available to the Poolside ACP client. The Poolside server is available as `default` from the ACP registry unless that entry is configured here. Each entry requires `command`; optional `args`, `env`, and `default_config_options` are passed to that server.",
+          "markdownDescription": "Named ACP servers available to the Camber ACP client. The Camber server is available as `default` from the ACP registry unless that entry is configured here. Each entry requires `command`; optional `args`, `env`, and `default_config_options` are passed to that server.",
           "type": "object",
           "additionalProperties": {
             "type": "object",
@@ -181,44 +180,45 @@
       }
     },
     "icons": {
-      "poolside-roundel": {
+      "camber-roundel": {
         "description": "Roundel to use in the status bar",
         "default": {
-          "fontPath": "./dist/resources/font/poolside.woff",
+          "fontPath": "./dist/resources/font/camber.woff",
           "fontCharacter": ""
         }
       },
-      "poolside-settings": {
+      "camber-settings": {
         "description": "Icon to use for settings",
         "default": {
-          "fontPath": "./dist/resources/font/poolside.woff",
+          "fontPath": "./dist/resources/font/camber.woff",
           "fontCharacter": ""
         }
       },
-      "poolside-new": {
+      "camber-new": {
         "description": "Icon to use for new conversations",
         "default": {
-          "fontPath": "./dist/resources/font/poolside.woff",
+          "fontPath": "./dist/resources/font/camber.woff",
           "fontCharacter": ""
         }
       }
     },
     "keybindings": [
       {
-        "command": "poolside.showSidebar",
+        "command": "camber.showSidebar",
         "key": "ctrl+escape",
         "mac": "cmd+escape"
       },
       {
-        "command": "poolside.togglePlanMode",
+        "command": "camber.togglePlanMode",
         "key": "shift+tab",
-        "when": "poolside.webviewFocus"
+        "when": "camber.webviewFocus"
       }
     ],
     "languages": [
       {
         "id": "markdown",
         "extensions": [
+          ".camber",
           ".poolside"
         ]
       }
@@ -226,25 +226,25 @@
     "menus": {
       "editor/title": [
         {
-          "command": "poolside.focusInput",
+          "command": "camber.focusInput",
           "group": "navigation@1"
         }
       ],
       "view/title": [
         {
-          "command": "poolside.newConversation",
-          "when": "view == poolside-webview",
+          "command": "camber.newConversation",
+          "when": "view == camber-webview",
           "group": "navigation@1"
         }
       ]
     },
     "views": {
-      "poolside": [
+      "camber": [
         {
-          "id": "poolside-webview",
-          "name": "Poolside",
+          "id": "camber-webview",
+          "name": "Camber",
           "type": "webview",
-          "webview": "poolside-webview",
+          "webview": "camber-webview",
           "visibility": "visible"
         }
       ]
@@ -252,16 +252,16 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "poolside",
-          "title": "Poolside",
+          "id": "camber",
+          "title": "Camber",
           "icon": "./dist/resources/icon-light.svg"
         }
       ]
     },
     "yamlValidation": [
       {
-        "fileMatch": "**/{.,}poolside/settings{.local,}.{yaml,yml}",
-        "url": "./dist/resources/poolside.settings.json"
+        "fileMatch": "**/{.,}camber/settings{.local,}.{yaml,yml}",
+        "url": "./dist/resources/camber.settings.json"
       }
     ]
   },
@@ -274,13 +274,13 @@
     ]
   },
   "dependencies": {
+    "@camber/assistant": "workspace:*",
+    "@camber/features": "workspace:*",
+    "@camber/helperapi": "workspace:*",
+    "@camber/lib": "workspace:*",
+    "@camber/rpc": "workspace:*",
     "@estruyf/vscode": "^1.1.0",
     "@mozilla/readability": "^0.5.0",
-    "@poolsideai/assistant": "workspace:*",
-    "@poolsideai/features": "workspace:*",
-    "@poolsideai/helperapi": "workspace:*",
-    "@poolsideai/lib": "workspace:*",
-    "@poolsideai/rpc": "workspace:*",
     "archiver": "^7.0.0",
     "chokidar": "^4.0.3",
     "comment-json": "^4.2.5",
@@ -293,12 +293,12 @@
     "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/svelte-config": "workspace:*",
-    "@poolsideai/tailwind-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
-    "@poolsideai/vite-config": "workspace:*",
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/svelte-config": "workspace:*",
+    "@camber/tailwind-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
+    "@camber/vite-config": "workspace:*",
     "@types/archiver": "^6.0.0",
     "@types/lodash": "catalog:",
     "@types/luxon": "catalog:",

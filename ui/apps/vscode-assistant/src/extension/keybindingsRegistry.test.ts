@@ -8,7 +8,7 @@ import {
   type KeyChord,
   parseChord,
   vscodeCommandId,
-} from "@poolsideai/features/keybindings";
+} from "@camber/features/keybindings";
 import { describe, expect, it } from "vitest";
 import packageJson from "../../package.json";
 

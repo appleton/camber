@@ -7,7 +7,7 @@
       "passThroughEnv": [
         "CARGO_BUILD_TARGET",
         "GH_TOKEN",
-        "POOLSIDE_*",
+        "CAMBER_*",
         "TARGET_TRIPLE"
       ]
     },
@@ -17,16 +17,16 @@
       "passThroughEnv": [
         "CARGO_BUILD_TARGET",
         "GH_TOKEN",
-        "POOLSIDE_*",
+        "CAMBER_*",
         "TARGET_TRIPLE"
       ],
       "outputs": [
         "dist/**",
         "dist-isolation/**",
         "src-tauri/target/**",
-        "src-tauri/binaries/poolside-helper-*",
-        "src-tauri/binaries/poolside-mlx-sidecar-*",
-        "src-tauri/binaries/poolside-whisper-server-*",
+        "src-tauri/binaries/camber-helper-*",
+        "src-tauri/binaries/camber-mlx-sidecar-*",
+        "src-tauri/binaries/camber-whisper-server-*",
         "src-tauri/binaries/pool-*"
       ]
     },
@@ -41,7 +41,7 @@
       "passThroughEnv": [
         "CARGO_BUILD_TARGET",
         "GH_TOKEN",
-        "POOLSIDE_*",
+        "CAMBER_*",
         "TARGET_TRIPLE"
       ]
     }

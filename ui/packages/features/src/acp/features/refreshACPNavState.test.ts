@@ -1,11 +1,11 @@
-import { poolsideAcpNavList } from "@poolsideai/helperapi";
+import { camberAcpNavList } from "@camber/helperapi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ACPConversationRepositoryWriter } from "./ConversationRepository.svelte";
 import { ACPProjectRepositoryWriter } from "./ProjectRepository.svelte";
 import { refreshACPNavState } from "./refreshACPNavState";
 
-vi.mock("@poolsideai/helperapi", () => ({
-  poolsideAcpNavList: vi.fn(),
+vi.mock("@camber/helperapi", () => ({
+  camberAcpNavList: vi.fn(),
 }));
 
 describe("refreshACPNavState", () => {
@@ -14,7 +14,7 @@ describe("refreshACPNavState", () => {
   });
 
   it("refreshes projects and conversations with one acpNav/list request", async () => {
-    vi.mocked(poolsideAcpNavList).mockResolvedValue({
+    vi.mocked(camberAcpNavList).mockResolvedValue({
       projects: [
         {
           path: "/repo",
@@ -46,13 +46,13 @@ describe("refreshACPNavState", () => {
 
     await refreshACPNavState(projects, conversations);
 
-    expect(poolsideAcpNavList).toHaveBeenCalledOnce();
+    expect(camberAcpNavList).toHaveBeenCalledOnce();
     expect(projects.projects).toEqual([expect.objectContaining({ path: "/repo" })]);
     expect(conversations.sessions).toEqual([expect.objectContaining({ id: "conv-1" })]);
   });
 
   it("falls back to repository refresh error handling when acpNav/list fails", async () => {
-    vi.mocked(poolsideAcpNavList).mockRejectedValue(new Error("boom"));
+    vi.mocked(camberAcpNavList).mockRejectedValue(new Error("boom"));
     const projects = {
       applyNavState: vi.fn(),
       refresh: vi.fn().mockResolvedValue(undefined),
@@ -64,7 +64,7 @@ describe("refreshACPNavState", () => {
 
     await refreshACPNavState(projects, conversations);
 
-    expect(poolsideAcpNavList).toHaveBeenCalledOnce();
+    expect(camberAcpNavList).toHaveBeenCalledOnce();
     expect(projects.applyNavState).not.toHaveBeenCalled();
     expect(conversations.applyNavState).not.toHaveBeenCalled();
     expect(projects.refresh).toHaveBeenCalledWith({ showLoading: false });

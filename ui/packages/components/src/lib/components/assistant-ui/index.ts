@@ -1,3 +1,5 @@
+export { default as CamberButton } from "./CamberButton.svelte";
+export type { ButtonProps } from "./CamberButton.svelte";
 export { default as ChatProgress } from "./ChatProgress.svelte";
 export { default as CodeBlockButton } from "./CodeBlockOptions/CodeBlockButton.svelte";
 export { default as CodeBlockOptions } from "./CodeBlockOptions/CodeBlockOptions.svelte";
@@ -9,8 +11,6 @@ export { default as DropdownSeparator } from "./Dropdown/DropdownSeparator.svelt
 export * from "./Dropdown/fuzzy.js";
 export { default as HighlightedShellCommand } from "./HighlightedShellCommand.svelte";
 export * from "./imagePreview.js";
-export { default as PoolsideButton } from "./PoolsideButton.svelte";
-export type { ButtonProps } from "./PoolsideButton.svelte";
 export { default as RunCommand } from "./RunCommand.svelte";
 export { ScrollManager, type ScrollManagerOptions } from "./ScrollManager.js";
 export * from "./shellHighlight.js";

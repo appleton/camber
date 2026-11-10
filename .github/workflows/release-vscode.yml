@@ -60,7 +60,7 @@ permissions:
 jobs:
   plan:
     name: Plan
-    if: github.repository == 'poolsideai/assistants'
+    if: github.repository == 'appleton/camber' && vars.CAMBER_RELEASES_ENABLED == 'true'
     runs-on: ubuntu-latest
     outputs:
       needs_release: ${{ steps.plan.outputs.needs_release || 'false' }}
@@ -176,7 +176,7 @@ jobs:
             echo "VSCODE_EXTENSION_NAME must not end in -dev; the runtime treats it as the dev-mode identity." >&2
             exit 1
           }
-          [[ "${EXTENSION_NAME}" != "poolside-assistant" ]] || {
+          [[ "${EXTENSION_NAME}" != "camber-assistant" ]] || {
             echo "Refusing to publish the legacy extension identity." >&2
             exit 1
           }
@@ -189,7 +189,7 @@ jobs:
             echo "tag_prefix=${tag_prefix}"
             echo "extension_name=${EXTENSION_NAME}"
             echo "extension_display_name=${EXTENSION_DISPLAY_NAME}"
-            echo "destination=poolside-ai.${EXTENSION_NAME}"
+            echo "destination=appleton.${EXTENSION_NAME}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Checkout release source
@@ -249,7 +249,7 @@ jobs:
           if [[ "${SCHEDULED}" == "true" ]]; then
             args+=(--scheduled --skip-if-no-changes)
           fi
-          pnpm -s -F @poolsideai/release-helper find-version "${args[@]}" > "$RUNNER_TEMP/release-plan.json"
+          pnpm -s -F @camber/release-helper find-version "${args[@]}" > "$RUNNER_TEMP/release-plan.json"
 
       - name: Refuse to overtake an incomplete release
         if: steps.gate.outputs.proceed == 'true' && steps.gate.outputs.dry_run != 'true'
@@ -391,7 +391,7 @@ jobs:
         if: needs.plan.outputs.dry_run == 'true'
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
-          pattern: artifact-poolside-*
+          pattern: artifact-camber-*
           path: ${{ runner.temp }}/release-runtime
           merge-multiple: true
 
@@ -421,7 +421,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          pnpm -s -F @poolsideai/release-helper find-version render-changelog vscode \
+          pnpm -s -F @camber/release-helper find-version render-changelog vscode \
             --head "${RELEASE_SHA}" --version "${VERSION}"
 
       - name: Write immutable release provenance
@@ -466,8 +466,8 @@ jobs:
       - name: Package all targets
         shell: bash
         env:
-          POOLSIDE_RUNTIME_ARTIFACT_DIR: ${{ runner.temp }}/release-runtime
-          POOLSIDE_RUNTIME_VERSION: ${{ inputs.helper_version }}
+          CAMBER_RUNTIME_ARTIFACT_DIR: ${{ runner.temp }}/release-runtime
+          CAMBER_RUNTIME_VERSION: ${{ inputs.helper_version }}
         run: |
           set -euo pipefail
           prerelease=()
@@ -476,8 +476,8 @@ jobs:
           mkdir release-artifacts
 
           for target in darwin-x64 darwin-arm64 linux-x64 linux-arm64 win32-x64 win32-arm64; do
-            rm -f ui/apps/vscode-assistant/dist/poolside-helper-* \
-              ui/apps/vscode-assistant/dist/poolside-mlx-sidecar-* \
+            rm -f ui/apps/vscode-assistant/dist/camber-helper-* \
+              ui/apps/vscode-assistant/dist/camber-mlx-sidecar-* \
               ui/apps/vscode-assistant/dist/*.tar.gz
             pnpm -F ./ui/apps/vscode-assistant run download:binaries "${target}"
             pnpm -F ./ui/apps/vscode-assistant exec vsce package \
@@ -488,8 +488,8 @@ jobs:
               --out "$(pwd)/release-artifacts/vscode-${VERSION}-${target}.vsix"
           done
 
-          rm -f ui/apps/vscode-assistant/dist/poolside-helper-* \
-            ui/apps/vscode-assistant/dist/poolside-mlx-sidecar-* \
+          rm -f ui/apps/vscode-assistant/dist/camber-helper-* \
+            ui/apps/vscode-assistant/dist/camber-mlx-sidecar-* \
             ui/apps/vscode-assistant/dist/*.tar.gz
           pnpm -F ./ui/apps/vscode-assistant run download:binaries
           pnpm -F ./ui/apps/vscode-assistant exec vsce package \
@@ -504,8 +504,8 @@ jobs:
           set -euo pipefail
           args=(changelog vscode --head "${RELEASE_SHA}")
           [[ -n "${CHANGELOG_TAG}" ]] && args+=(--prev "${CHANGELOG_TAG}")
-          pnpm -s -F @poolsideai/release-helper find-version "${args[@]}" > release-artifacts/notes.md
-          pnpm -s -F @poolsideai/release-helper find-version "${args[@]}" --slack > release-artifacts/slack.txt
+          pnpm -s -F @camber/release-helper find-version "${args[@]}" > release-artifacts/notes.md
+          pnpm -s -F @camber/release-helper find-version "${args[@]}" --slack > release-artifacts/slack.txt
           cp ui/apps/vscode-assistant/release-provenance.json release-artifacts/provenance.json
           (cd release-artifacts && sha256sum ./*.vsix > checksums.txt)
 
@@ -576,7 +576,7 @@ jobs:
           set -euo pipefail
           log="${RUNNER_TEMP}/vsce-verify-pat.log"
           for attempt in 1 2; do
-            if pnpm -F ./ui/apps/vscode-assistant exec vsce verify-pat poolside-ai 2>&1 | tee "${log}"; then
+            if pnpm -F ./ui/apps/vscode-assistant exec vsce verify-pat appleton 2>&1 | tee "${log}"; then
               exit 0
             fi
             if ! grep -Fq "Request timeout:" "${log}" || [[ "${attempt}" -eq 2 ]]; then
@@ -746,7 +746,7 @@ jobs:
     needs: [plan, build, publish, finalize]
     if: >-
       always() &&
-      github.repository == 'poolsideai/assistants'
+      github.repository == 'appleton/camber'
     runs-on: ubuntu-latest
     steps:
       - name: Determine terminal outcome

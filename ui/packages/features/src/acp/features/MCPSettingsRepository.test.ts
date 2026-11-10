@@ -1,4 +1,4 @@
-import type { MCPServerInputs } from "@poolsideai/helperapi/schemas";
+import type { MCPServerInputs } from "@camber/helperapi/schemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ACPMCPSettingsRepositoryWriter } from "./MCPSettingsRepository.svelte";
 
@@ -36,7 +36,7 @@ function createACPContext(overrides: Record<string, any> = {}) {
     initializeResponses: {
       pool: {
         agentCapabilities: {
-          _meta: { "poolside/mcp_settings": true },
+          _meta: { "camber/mcp_settings": true },
         },
       },
     },
@@ -73,7 +73,7 @@ describe("ACPMCPSettingsRepositoryWriter", () => {
 
     await repo.fetchSettings();
 
-    expect(rawACPHostRpc.jsonrpc).toHaveBeenCalledWith("poolside/acp/_poolside/mcp/settings", {
+    expect(rawACPHostRpc.jsonrpc).toHaveBeenCalledWith("camber/acp/_poolside/mcp/settings", {
       agentServer: "pool",
       sessionId: "session-1",
     });
@@ -113,7 +113,7 @@ describe("ACPMCPSettingsRepositoryWriter", () => {
           initializeResponses: {
             pool: {
               agentCapabilities: {
-                _meta: { "poolside/mcp_settings": true },
+                _meta: { "camber/mcp_settings": true },
               },
             },
           },
@@ -131,7 +131,7 @@ describe("ACPMCPSettingsRepositoryWriter", () => {
 
     await repo.fetchSettings();
 
-    expect(rawACPHostRpc.jsonrpc).toHaveBeenCalledWith("poolside/acp/_poolside/mcp/settings", {
+    expect(rawACPHostRpc.jsonrpc).toHaveBeenCalledWith("camber/acp/_poolside/mcp/settings", {
       agentServer: "pool",
       sessionId: "config-session-1",
     });
@@ -197,12 +197,12 @@ describe("ACPMCPSettingsRepositoryWriter", () => {
 
     expect(rawACPHostRpc.jsonrpc).toHaveBeenNthCalledWith(
       1,
-      "poolside/mcpServers/setPoolServerDisabled",
+      "camber/mcpServers/setPoolServerDisabled",
       { serverName: "Linear", disabled: false },
     );
     expect(rawACPHostRpc.jsonrpc).toHaveBeenNthCalledWith(
       2,
-      "poolside/acp/_poolside/mcp/set_server_disabled",
+      "camber/acp/_poolside/mcp/set_server_disabled",
       {
         agentServer: "pool",
         sessionId: "session-1",
@@ -229,7 +229,7 @@ describe("ACPMCPSettingsRepositoryWriter", () => {
 
     expect(rawACPHostRpc.jsonrpc).toHaveBeenNthCalledWith(
       3,
-      "poolside/mcpServers/setPoolServerDisabled",
+      "camber/mcpServers/setPoolServerDisabled",
       { serverName: "Linear", disabled: true },
     );
     expect(repo.disabledState.Linear).toBeUndefined();

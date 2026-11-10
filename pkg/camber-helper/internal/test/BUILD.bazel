@@ -1,0 +1,22 @@
+load("@rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "test_test",
+    srcs = [
+        "harness_for_test.go",
+        "text_document_synchronization_integration_test.go",
+    ],
+    data = glob(["testdata/**"]),
+    deps = [
+        "//pkg/camber-helper/gopls/pkg/protocol",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2/servertest",
+        "//pkg/camber-helper/internal/gopls/pkg/test/integration/fake",
+        "//pkg/camber-helper/internal/handler",
+        "//pkg/camber-helper/server",
+        "@com_github_pkg_errors//:errors",
+        "@com_github_sourcegraph_jsonrpc2//:jsonrpc2",
+        "@com_github_stretchr_testify//require",
+        "@com_github_tliron_glsp//:glsp",
+    ],
+)

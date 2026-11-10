@@ -14,7 +14,7 @@ vi.mock("vscode", () => {
 });
 vi.mock("../system", () => ({}));
 vi.mock("../api/configuration", () => ({
-  getPoolsideConfigurationSection: () => ({ get: () => 0 }),
+  getCamberConfigurationSection: () => ({ get: () => 0 }),
 }));
 vi.mock("../state", () => ({ getInitialAppStateAsJSON: mock.state }));
 const manifest = {
@@ -74,7 +74,7 @@ it("shares a release manifest between views while preserving fresh initial state
   expect(mock.state).toHaveBeenCalledTimes(2);
   for (const html of [assistant, chat]) {
     expect(html).toContain('rel="modulepreload" href="webview/shared.js"');
-    const encoded = html.match(/POOLSIDE_INITIAL_STATE = decode\("([^"]+)"\)/)![1];
+    const encoded = html.match(/CAMBER_INITIAL_STATE = decode\("([^"]+)"\)/)![1];
     expect(JSON.parse(Buffer.from(encoded, "base64").toString("utf8"))).toEqual({
       draft: "日本語 🧵 </script>\u2028",
     });
@@ -118,7 +118,7 @@ it("refreshes mutable state while reusing the immutable release manifest", async
   await one;
   mock.state.mockResolvedValueOnce('{"theme":"changed"}');
   const two = await getWebviewHtml(system, webview, "assistant");
-  const encoded = two.match(/POOLSIDE_INITIAL_STATE = decode\("([^"]+)"\)/)![1];
+  const encoded = two.match(/CAMBER_INITIAL_STATE = decode\("([^"]+)"\)/)![1];
   expect(JSON.parse(Buffer.from(encoded, "base64").toString("utf8"))).toEqual({ theme: "changed" });
   expect(mock.readFile).toHaveBeenCalledTimes(1);
 });

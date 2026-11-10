@@ -3,8 +3,8 @@ import type { ToolCall } from "../../../types";
 import { formatFetchUrl, getFetchUrl, isFetchToolCall } from "./fetchTool";
 
 describe("fetch ACP tool override", () => {
-  // Shape captured live from the Poolside agent via spoolside.
-  it("matches Poolside web_fetch (kind execute, rawInput.url)", () => {
+  // Shape captured live from the Camber agent via camberqa.
+  it("matches Camber web_fetch (kind execute, rawInput.url)", () => {
     const tool = {
       eventKind: "tool_call",
       toolCallId: "chatcmpl-tool-815a00fa7da849c0",
@@ -21,7 +21,7 @@ describe("fetch ACP tool override", () => {
     expect(getFetchUrl(tool)).toBe("https://agentclientprotocol.com/llms.txt");
   });
 
-  // Shape captured live from the Codex agent via spoolside (merged tool_call +
+  // Shape captured live from the Codex agent via camberqa (merged tool_call +
   // tool_call_update): kind "fetch", URL nested under action.
   it("matches Codex open_page (kind fetch, rawInput.action.url)", () => {
     const tool = {

@@ -24,7 +24,7 @@ export function isCollaborationModeOption(option: SessionConfigOption | undefine
   if (!isStringSelectConfigOption(option)) return false;
   if (option.category === ACP_COLLABORATION_MODE_CATEGORY) return true;
   // Categories are optional in ACP. Codex's canonical option id remains
-  // unambiguous without one; Poolside's `agent_mode` does not, so it still
+  // unambiguous without one; Camber's `agent_mode` does not, so it still
   // needs the category to stay distinct from an approval mode.
   if (option.category !== undefined && option.category !== null) return false;
   return [option.id, option.name].some(
@@ -190,7 +190,7 @@ export function promptConfigKind(option: SessionConfigOption): PromptConfigKind 
       return "model";
     // How the agent works (build vs plan), which agents that separate it
     // from the approval policy publish under its own category — Codex on
-    // `collaboration_mode`, Poolside on `agent_mode`.
+    // `collaboration_mode`, Camber on `agent_mode`.
     case ACP_COLLABORATION_MODE_CATEGORY:
       return "collaboration";
     case "mode":

@@ -1,15 +1,15 @@
-import type { ColorTheme, FileIconTheme } from "@poolsideai/components/providers";
-import type { Configuration, Keybindings, WorkspaceFolder } from "@poolsideai/rpc";
+import type { ColorTheme, FileIconTheme } from "@camber/components/providers";
+import type { Configuration, Keybindings, WorkspaceFolder } from "@camber/rpc";
 import type { Environment } from "./src/lib/store";
 
 export default {};
 
 /**
- * global adds a type definition for the window.POOLSIDE_APP_STATE variable
+ * global adds a type definition for the window.CAMBER_APP_STATE variable
  * which is injected into the global scope of the webview window on start up.
  */
 declare global {
-  var POOLSIDE_INITIAL_STATE: {
+  var CAMBER_INITIAL_STATE: {
     accessToken?: string | undefined;
     keybindings?: Keybindings;
     colorTheme?: ColorTheme;
@@ -19,7 +19,7 @@ declare global {
     workspaces?: WorkspaceFolder[];
     homeDirectory?: string;
   };
-  var POOLSIDE_INITIAL_ACP_CHAT_STATE:
+  var CAMBER_INITIAL_ACP_CHAT_STATE:
     | {
         kind: "pending";
         conversationId: string;
@@ -42,7 +42,7 @@ declare global {
         fallbackCwds?: string[];
       }
     | undefined;
-  var POOLSIDE_ASSISTANT_VIEW_MODE: "classic" | "acp-sidebar" | undefined;
+  var CAMBER_ASSISTANT_VIEW_MODE: "classic" | "acp-sidebar" | undefined;
   function acquireVsCodeApi<T = unknown>(): {
     getState(): T | undefined;
     setState(state: T | undefined): void;

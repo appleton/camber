@@ -1,11 +1,11 @@
-import type { VSCodeMcpServer } from "@poolsideai/rpc";
+import type { VSCodeMcpServer } from "@camber/rpc";
 import * as path from "path";
 import * as vscode from "vscode";
 import type { System } from "../../system";
 
 /**
  * Reads MCP servers the user has configured in VS Code so they can be imported
- * into Poolside connectors without retyping. VS Code stores these in mcp.json:
+ * into Camber connectors without retyping. VS Code stores these in mcp.json:
  *   - workspace: <folder>/.vscode/mcp.json
  *   - user:      <userData>/User/mcp.json
  * Both use a `{ "servers": { name: def } }` shape (we also accept the

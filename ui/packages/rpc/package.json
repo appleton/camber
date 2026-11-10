@@ -1,10 +1,10 @@
 {
-  "name": "@poolsideai/rpc",
+  "name": "@camber/rpc",
   "version": "2.3.53",
   "private": true,
-  "description": "Inter process communication protocol for poolside assistants",
+  "description": "Inter process communication protocol for camber assistants",
   "repository": {
-    "url": "https://github.com/poolsideai/assistants"
+    "url": "https://github.com/appleton/camber"
   },
   "type": "module",
   "imports": {
@@ -52,18 +52,18 @@
       "prettier --ignore-unknown --write"
     ]
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "dependencies": {
-    "@poolsideai/helperapi": "workspace:*",
+    "@camber/helperapi": "workspace:*",
     "lodash": "catalog:",
     "luxon": "catalog:",
     "serialize-error": "^11.0.3"
   },
   "devDependencies": {
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
-    "@poolsideai/vite-config": "workspace:*",
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
+    "@camber/vite-config": "workspace:*",
     "@types/lodash": "catalog:",
     "@types/luxon": "catalog:",
     "eslint": "catalog:",

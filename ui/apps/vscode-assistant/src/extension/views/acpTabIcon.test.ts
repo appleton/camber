@@ -26,7 +26,7 @@ describe("acpTabIcon", () => {
     ).toThrow(/external references/);
   });
 
-  test("composes the neutral agent mask with the status-colored poolside badge", () => {
+  test("composes the neutral agent mask with the status-colored camber badge", () => {
     const svg = composeAcpTabIconSvg(
       { viewBox: "0 0 16 16", innerHTML: `<path fill="white" d="M0 0h16v16H0z"/>` },
       {

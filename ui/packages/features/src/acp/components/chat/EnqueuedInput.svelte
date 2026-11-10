@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ContentBlock } from "@agentclientprotocol/sdk";
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import ContentRenderer from "../content/ContentRenderer.svelte";
   import Tooltip from "../ui/Tooltip.svelte";
   import UserMessageBubble from "../ui/UserMessageBubble.svelte";

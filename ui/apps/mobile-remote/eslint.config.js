@@ -1,3 +1,3 @@
-import { defineConfig } from "@poolsideai/eslint-config";
+import { defineConfig } from "@camber/eslint-config";
 
 export default defineConfig();

@@ -6,7 +6,7 @@ set -euo pipefail
 
 tag="${1:?usage: download-helper-runtime.sh <helper-tag> <destination>}"
 destination="${2:?usage: download-helper-runtime.sh <helper-tag> <destination>}"
-repository="${POOLSIDE_HELPER_REPOSITORY:-${GITHUB_REPOSITORY:-poolsideai/assistants}}"
+repository="${CAMBER_HELPER_REPOSITORY:-${GITHUB_REPOSITORY:-appleton/camber}}"
 
 [[ "${tag}" =~ ^helper/v[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
   echo "Helper release tag must look like helper/v1.2.3: ${tag}" >&2

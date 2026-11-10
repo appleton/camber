@@ -1,6 +1,6 @@
-import { isNonNullable } from "@poolsideai/lib/guard";
-import { dirname, extname, isAbsolute, resolve } from "@poolsideai/lib/path";
-import type { FileIconTheme } from "@poolsideai/rpc";
+import { isNonNullable } from "@camber/lib/guard";
+import { dirname, extname, isAbsolute, resolve } from "@camber/lib/path";
+import type { FileIconTheme } from "@camber/rpc";
 import * as JSON5 from "json5";
 import { merge } from "lodash";
 import * as vscode from "vscode";

@@ -7,9 +7,9 @@ param(
     [int]   $PollSeconds = 4                         # how often to check (seconds)
 )
 
-$ExtensionId = "poolside-ai.poolside-assistant"       
+$ExtensionId = "appleton.camber-assistant"
 
-function Reinstall-PoolsideVsix {
+function Reinstall-CamberVsix {
     param([string]$VsixPath)
 
     # 1. Close every running VS Code instance (save work first!)
@@ -38,8 +38,8 @@ while ($true) {
         $info = Get-Item $file
         if ($info.LastWriteTime -ne $lastWrite) {
             Start-Sleep 2 # let Drive finish syncing
-            Reinstall-PoolsideVsix $file
-            $lastWrite = $info.LastWriteTime 
+            Reinstall-CamberVsix $file
+            $lastWrite = $info.LastWriteTime
         }
     }
     Start-Sleep $PollSeconds

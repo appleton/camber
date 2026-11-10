@@ -1,18 +1,18 @@
 using Microsoft.VisualStudio.Shell;
-using Poolside.Assistant.Telemetry;
+using Camber.Assistant.Telemetry;
 using System;
 using System.ComponentModel.Design;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace Poolside.Assistant.Commands
+namespace Camber.Assistant.Commands
 {
     /// <summary>
-    /// Resets all Poolside Assistant settings to their defaults. Mirrors VS Code's
-    /// poolside.resetConfiguration command. Unlike VS Code it first asks for confirmation,
+    /// Resets all Camber Assistant settings to their defaults. Mirrors VS Code's
+    /// camber.resetConfiguration command. Unlike VS Code it first asks for confirmation,
     /// since here it is a destructive, non-undoable menu action.
     /// </summary>
-    internal class ResetConfigurationCommand : BaseSignedInPoolsideCommand
+    internal class ResetConfigurationCommand : BaseSignedInCamberCommand
     {
         public const int CommandId = 0x0170;
 
@@ -40,14 +40,14 @@ namespace Poolside.Assistant.Commands
             try
             {
                 var confirm = MessageBox.Show(
-                    "Reset all Poolside Assistant settings to their defaults?",
-                    "Poolside Assistant",
+                    "Reset all Camber Assistant settings to their defaults?",
+                    "Camber Assistant",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning);
                 if (confirm != MessageBoxResult.Yes)
                     return;
 
-                var settings = PoolsideAssistantPackage.GetInstance()?.GetSettings();
+                var settings = CamberAssistantPackage.GetInstance()?.GetSettings();
                 if (settings == null)
                     return;
 
@@ -56,7 +56,7 @@ namespace Poolside.Assistant.Commands
             }
             catch (Exception ex)
             {
-                PoolsideTelemetryLogger.Instance.reportException(ex);
+                CamberTelemetryLogger.Instance.reportException(ex);
             }
         }
     }

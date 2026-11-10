@@ -1,6 +1,6 @@
 <script lang="ts">
   import type * as acp from "@agentclientprotocol/sdk";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import type { WorkspaceFolder } from "@camber/rpc";
   import ToolDiffContent from "./ToolDiffContent.svelte";
   import ToolCallContent from "./ToolCallContent.svelte";
 

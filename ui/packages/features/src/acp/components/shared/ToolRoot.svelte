@@ -1,6 +1,6 @@
 <script lang="ts" module>
   import { createContext } from "svelte";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import type { WorkspaceFolder } from "@camber/rpc";
   import type { ToolCall, ToolCallDiffContent } from "../../types";
 
   export type ToolContext = {
@@ -22,10 +22,10 @@
 </script>
 
 <script lang="ts">
-  import { Boundary } from "@poolsideai/components/boundary";
-  import { Collapsible } from "@poolsideai/components/collapsible";
-  import { Diff, diffLines } from "@poolsideai/components/diff";
-  import type { IconName, IconProps } from "@poolsideai/components/icon";
+  import { Boundary } from "@camber/components/boundary";
+  import { Collapsible } from "@camber/components/collapsible";
+  import { Diff, diffLines } from "@camber/components/diff";
+  import type { IconName, IconProps } from "@camber/components/icon";
   import type { Snippet } from "svelte";
   import { getReadableFileInfo } from "../../shared/paths";
   import { getToolCallExpansionContext, isInsideToolCallGroup } from "../SessionEventsState.svelte";

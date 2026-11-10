@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.Shell;
-using Poolside.Assistant.HelperLSP;
+using Camber.Assistant.HelperLSP;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
@@ -8,9 +8,9 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace Poolside.Assistant.Commands
+namespace Camber.Assistant.Commands
 {
-    internal class HelperProtocolLogCommand : BasePoolsideHelpCommand
+    internal class HelperProtocolLogCommand : BaseCamberHelpCommand
     {
         public const int CommandId = 0x0130;
 

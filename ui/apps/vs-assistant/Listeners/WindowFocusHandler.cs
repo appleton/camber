@@ -1,10 +1,10 @@
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using Poolside.Assistant.ChatWindow;
+using Camber.Assistant.ChatWindow;
 using System;
 
-namespace Poolside.Assistant.Listeners
+namespace Camber.Assistant.Listeners
 {
     internal class WindowFocusHandler : IVsBroadcastMessageEvents, IDisposable
     {

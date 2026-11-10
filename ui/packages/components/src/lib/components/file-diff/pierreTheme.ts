@@ -51,7 +51,7 @@ export function detectPierreTheme(): PierreTheme {
  * editor color tokens. Pierre can then render code and diffs with one palette.
  */
 function registerAppTheme(type: PierreTheme): string {
-  const name = `poolside-code-${type}`;
+  const name = `camber-code-${type}`;
   const dark = type === "dark";
   const syntax = (token: string, fallback: string) =>
     `var(--color-prettylights-syntax-${token}, ${fallback})`;

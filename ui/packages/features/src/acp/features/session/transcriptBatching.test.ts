@@ -3,7 +3,7 @@ import type {
   InitializeResponse,
   SessionNotification,
 } from "@agentclientprotocol/sdk";
-import { initializeStatefulModule as initializeHelperApi } from "@poolsideai/helperapi";
+import { initializeStatefulModule as initializeHelperApi } from "@camber/helperapi";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ACPConnectionPool } from "../../ConnectionPool";
 import { DEFAULT_AGENT_SERVER } from "../../agentServers";

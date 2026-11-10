@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { POOLSIDE } from "./extensionIdentity";
+import { CAMBER } from "./extensionIdentity";
 
 /**
  * DecorationProvider is used to set green line background highlights for inserted lines
@@ -45,10 +45,7 @@ export class DecorationProvider {
 
       this.insertDecorations.set(editor.document.uri.fsPath, [decoration, innerDecoration]);
 
-      const hoverMessage = new vscode.MarkdownString(
-        `$(${POOLSIDE}-roundel) Edited by poolside`,
-        true,
-      );
+      const hoverMessage = new vscode.MarkdownString(`$(${CAMBER}-roundel) Edited by camber`, true);
 
       if (ranges.lines.length > 0) {
         editor.setDecorations(

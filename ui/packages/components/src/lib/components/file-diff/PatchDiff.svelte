@@ -23,7 +23,7 @@
     type FileContents,
     type FileDiffMetadata,
   } from "@pierre/diffs";
-  import { createTwoFilesPatch } from "@poolsideai/diff";
+  import { createTwoFilesPatch } from "@camber/diff";
   import { preferredShikiHighlighter } from "../../utils/shikiEngine.js";
   import Badge from "../badge/Badge.svelte";
   import Icon from "../icon/Icon.svelte";

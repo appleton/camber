@@ -19,7 +19,7 @@ const config: ConfigArray = ts.config(
     "**/*.test.tsx",
   ]),
   {
-    name: "poolside/globals",
+    name: "camber/globals",
     languageOptions: {
       globals: {
         ...globals.browser,

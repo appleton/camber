@@ -6,9 +6,9 @@
 // flow (a page reload throws away the transcript, cursors, and scroll state
 // over nothing more than an expired cookie).
 
-export const DEVICE_TOKEN_STORAGE_KEY = "poolside-remote-device-token";
+export const DEVICE_TOKEN_STORAGE_KEY = "camber-remote-device-token";
 
-// Spoolside worktree development: each worktree slot's mobile app is a
+// CamberQA worktree development: each worktree slot's mobile app is a
 // different origin (same host, different port), so localStorage — and with it
 // the device token — does not carry across a slot jump, even though every
 // worktree helper accepts the same token (they share one paired-device state
@@ -16,7 +16,7 @@ export const DEVICE_TOKEN_STORAGE_KEY = "poolside-remote-device-token";
 // never sent to the server, so the token stays out of request lines, proxy
 // logs, and helper logs; the receiving app adopts it into localStorage and
 // immediately scrubs it from the address bar and history.
-export const DEVICE_TOKEN_HANDOFF_PARAM = "poolsideDeviceToken";
+export const DEVICE_TOKEN_HANDOFF_PARAM = "camberDeviceToken";
 
 /**
  * The hash fragment carrying this origin's device token for a cross-origin

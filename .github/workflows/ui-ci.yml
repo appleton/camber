@@ -37,7 +37,7 @@ jobs:
     # the repo is public. The 4-core box roughly halves these jobs vs the 2-core default
     # (Build ~5.5m vs ~9m) and keeps --concurrency=50% at 2 rather than collapsing to 1.
     # Actionlint cannot validate the organization-specific runner label.
-    runs-on: ${{ github.repository == 'poolsideai/assistants' && 'assistants-ubuntu-24.04-4' || 'ubuntu-24.04' }}
+    runs-on: ubuntu-24.04
     name: ${{ matrix.name }}
     env:
       GH_TOKEN: ${{ github.token }}
@@ -76,6 +76,6 @@ jobs:
       - name: Visualization navigation regressions
         if: matrix.name == 'Test'
         run: |
-          pnpm -F @poolsideai/desktop-assistant exec vitest run --project unit src/externalLinks.test.ts
-          pnpm -F @poolsideai/components exec playwright install --with-deps chromium
-          pnpm -F @poolsideai/components test:storybook src/lib/components/markdown/Visualization.stories.svelte
+          pnpm -F @camber/desktop-assistant exec vitest run --project unit src/externalLinks.test.ts
+          pnpm -F @camber/components exec playwright install --with-deps chromium
+          pnpm -F @camber/components test:storybook src/lib/components/markdown/Visualization.stories.svelte

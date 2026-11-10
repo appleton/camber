@@ -21,7 +21,7 @@ describe("hostContextBlock", () => {
     const text = hostContextText({ assistantVersion: "4.3.8" });
     expect(text.startsWith(`<${SYSTEM_INSTRUCTIONS_TAG}>`)).toBe(true);
     expect(text.endsWith(`</${SYSTEM_INSTRUCTIONS_TAG}>`)).toBe(true);
-    expect(text).toContain("Poolside Assistant version: 4.3.8");
+    expect(text).toContain("Camber Assistant version: 4.3.8");
   });
 
   it("nests project instructions in a child tag", () => {
@@ -44,8 +44,8 @@ describe("stripInjectedContextFromText", () => {
 
   it("strips a claude-style context wrapper with link preamble", () => {
     const flattened = [
-      "What is 2 plus 2?poolside://host-context.md",
-      '<context ref="poolside://host-context.md">',
+      "What is 2 plus 2?camber://host-context.md",
+      '<context ref="camber://host-context.md">',
       context,
       "</context>",
     ].join("\n");
@@ -64,16 +64,16 @@ describe("stripInjectedContextFromText", () => {
   });
 
   it("strips a bare host context link at either end", () => {
-    expect(stripInjectedContextFromText("What is 2 plus 2?\npoolside://host-context.md")).toBe(
+    expect(stripInjectedContextFromText("What is 2 plus 2?\ncamber://host-context.md")).toBe(
       "What is 2 plus 2?",
     );
-    expect(stripInjectedContextFromText("poolside://host-context.md\nWhat is 2 plus 2?")).toBe(
+    expect(stripInjectedContextFromText("camber://host-context.md\nWhat is 2 plus 2?")).toBe(
       "What is 2 plus 2?",
     );
   });
 
   it("keeps a host context link in the middle of user text", () => {
-    const text = "why does poolside://host-context.md appear in my message?";
+    const text = "why does camber://host-context.md appear in my message?";
     expect(stripInjectedContextFromText(text)).toBe(text);
   });
 
@@ -100,7 +100,7 @@ describe("stripInjectedContextFromText", () => {
     expect(stripInjectedContextFromText(`Continue\n${handoff.text}`)).toBe("Continue");
     expect(
       stripInjectedContextFromText(
-        `Continuepoolside://handoff/source-session.md\n<context ref=\"poolside://handoff/source-session.md\">\n${handoff.text}\n</context>`,
+        `Continuecamber://handoff/source-session.md\n<context ref=\"camber://handoff/source-session.md\">\n${handoff.text}\n</context>`,
       ),
     ).toBe("Continue");
   });
@@ -108,14 +108,19 @@ describe("stripInjectedContextFromText", () => {
   it("strips a bare handoff link at either end", () => {
     // An agent-derived title can be truncated before the <context> wrapper,
     // leaving only the flattened resource link glued to the user's text.
-    expect(stripInjectedContextFromText("continuepoolside://handoff/56a2ba59.md")).toBe("continue");
-    expect(stripInjectedContextFromText("poolside://handoff/56a2ba59.md\ncontinue")).toBe(
-      "continue",
-    );
+    expect(stripInjectedContextFromText("continuecamber://handoff/56a2ba59.md")).toBe("continue");
+    expect(stripInjectedContextFromText("camber://handoff/56a2ba59.md\ncontinue")).toBe("continue");
   });
 
   it("keeps a handoff link in the middle of user text", () => {
-    const text = "why does poolside://handoff/abc.md show up in my title?";
+    const text = "why does camber://handoff/abc.md show up in my title?";
     expect(stripInjectedContextFromText(text)).toBe(text);
+  });
+});
+
+describe("legacy transcript context", () => {
+  it.each(["camber", "poolside"])("strips %s host context from existing transcripts", (brand) => {
+    const text = `Hello${brand}://host-context.md\n<context ref="${brand}://host-context.md"><${brand}-system-instructions>internal</${brand}-system-instructions></context>`;
+    expect(stripInjectedContextFromText(text)).toBe("Hello");
   });
 });

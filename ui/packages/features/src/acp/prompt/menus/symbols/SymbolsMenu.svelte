@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { CodeSymbol } from "@poolsideai/rpc";
-  import type { IconName } from "@poolsideai/components/icon";
-  import * as Prompt from "@poolsideai/components/prompt";
+  import type { CodeSymbol } from "@camber/rpc";
+  import type { IconName } from "@camber/components/icon";
+  import * as Prompt from "@camber/components/prompt";
   import { getContextRepoContext } from "../../../../context";
   import { getFilenameFromPath } from "../../../shared/paths";
   import { rpc } from "../../../hostRpc";

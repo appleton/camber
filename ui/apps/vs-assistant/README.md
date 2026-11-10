@@ -1,15 +1,15 @@
 # Visual Studio extension
 
-The Poolside Visual Studio extension uses CefSharp to embed the web apps for
-the docked conversations pane and ACP chat. It also bundles the Poolside helper
+The Camber Visual Studio extension uses CefSharp to embed the web apps for
+the docked conversations pane and ACP chat. It also bundles the Camber helper
 and calls it through the OmniSharp LSP Client.
 
 To install the prebuilt Visual Studio extension, see
 [Install the Visual Studio extension](../../../INSTALL.md#visual-studio-extension).
 
-After installing, open **Tools > Poolside Assistant > Focus Input**. For setting
+After installing, open **Tools > Camber Assistant > Focus Input**. For setting
 up agents, adding connectors, and starting your first conversation, see
-[Getting started with Poolside Assistant](../../../docs/getting-started.md).
+[Getting started with Camber Assistant](../../../docs/getting-started.md).
 
 For the general source-build flow, see
 [Run the Visual Studio extension](../../../INSTALL.md#run-the-visual-studio-extension).
@@ -45,7 +45,7 @@ here, please add some notes about it!
 
 The **Build VSIX** workflow packages a complete extension — webview bundle and
 helper included — for every push and pull request that touches this directory.
-The `poolside-assistant-vsix` artifact on the run is installable, so reviewing
+The `camber-assistant-vsix` artifact on the run is installable, so reviewing
 or testing a change does not always need a local Windows build. It is unsigned
 and its version is whatever the manifest currently says, so it is for testing
 only, never for distribution.
@@ -92,7 +92,7 @@ only, never for distribution.
 
 ## Helper type OpenAPI generation
 
-NSwag is also used to generate types for the Poolside helper. It does not
+NSwag is also used to generate types for the Camber helper. It does not
 generate a client because the helper is not an HTTP API; the generated types are
 used with the OmniSharp LSP client. The generated types are committed, so you
 only need to follow these instructions when you update them.
@@ -104,14 +104,14 @@ Use the helper type update script. In the Visual Studio `Tools` menu, choose
 update-helper-types.bat
 ```
 
-This runs the `poolside-helper openapi` subcommand, installs the NSwag generator
+This runs the `camber-helper openapi` subcommand, installs the NSwag generator
 if needed, runs it, then shuts down the helper.
 
 ## Update the helper
 
 Run `pnpm run download:binaries` in the `app` directory. It resolves the highest
 published release in the independent `helper/v*` lineage. Set
-`POOLSIDE_HELPER_VERSION=helper/vM.m.p` to reproduce or test an exact helper
+`CAMBER_HELPER_VERSION=helper/vM.m.p` to reproduce or test an exact helper
 release. Follow the instructions above when helper API types also changed.
 
 ## Nightly releases from CI
@@ -156,7 +156,7 @@ nightlies take over from there.
 If this is your first release, set up code signing first. We use SSL.com's
 eSigner cloud-based code signing service.
 
-1. Ensure you have an SSL.com account that is part of the Poolside team, and
+1. Ensure you have an SSL.com account that is part of the Camber team, and
    that the code signing certificate is enrolled in eSigner (this is done in
    the SSL.com portal under Signing Credentials). **Important:** The "malware
    blocker" setting must be disabled on the signing credential, otherwise
@@ -223,7 +223,7 @@ from 1.2.5 to 1.2.6.
     sign-vsix.bat
     ```
 14. Close Visual Studio. Find the newly built release (in the `bin\Release\net472`
-    folder, named `poolside-assistant.vsix`). Install it into your Visual
+    folder, named `camber-assistant.vsix`). Install it into your Visual
     Studio instance.
 15. Open Visual Studio. Run some test prompt to make sure it works OK after
     install.

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { imageFilePathFromUri } from "@poolsideai/components/assistant-ui";
-  import Icon from "@poolsideai/components/icon";
+  import { imageFilePathFromUri } from "@camber/components/assistant-ui";
+  import Icon from "@camber/components/icon";
   import Tooltip from "../../ui/Tooltip.svelte";
   import { rpc } from "../../../hostRpc";
   import ToolFooter from "../../shared/ToolFooter.svelte";
@@ -9,7 +9,7 @@
   import { getReadableFileInfo } from "../../../shared/paths";
   import type { ToolCall } from "../../../types";
   import { getViewImagePreview } from "./viewImageTool";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import type { WorkspaceFolder } from "@camber/rpc";
 
   interface Props {
     event: ToolCall;
@@ -97,8 +97,8 @@
             class="max-h-80 max-w-full object-contain"
             {src}
             alt={`Viewed image ${fileName}`}
-            data-poolside-image-path={path}
-            data-poolside-image-name={fileName}
+            data-camber-image-path={path}
+            data-camber-image-name={fileName}
           />
         </button>
       {:else if hostLoadFailed}

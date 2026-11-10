@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { CollapsibleContent } from "@poolsideai/components/collapsible";
-  import { HighlightedShellCommand } from "@poolsideai/components/assistant-ui";
+  import { CollapsibleContent } from "@camber/components/collapsible";
+  import { HighlightedShellCommand } from "@camber/components/assistant-ui";
   import ToolRoot from "../../shared/ToolRoot.svelte";
   import ToolBody from "../../shared/ToolBody.svelte";
   import ToolFooter from "../../shared/ToolFooter.svelte";
   import type { ToolCall } from "../../../types";
   import ExecCommandToolHeader from "./ExecCommandToolHeader.svelte";
   import { getExecCommand, getExecOutput } from "./execCommandTool";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import type { WorkspaceFolder } from "@camber/rpc";
 
   interface Props {
     event: ToolCall;

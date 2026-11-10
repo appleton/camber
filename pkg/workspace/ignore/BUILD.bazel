@@ -8,7 +8,7 @@ go_library(
         "ignore.go",
         "options.go",
     ],
-    importpath = "github.com/poolsideai/assistant/pkg/workspace/ignore",
+    importpath = "github.com/appleton/camber/pkg/workspace/ignore",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/common/data",

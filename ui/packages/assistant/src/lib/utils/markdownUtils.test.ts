@@ -1,4 +1,4 @@
-import { encodeMarkdownHtmlEntries, sanitizeMarkdownHtml } from "@poolsideai/components/markdown";
+import { encodeMarkdownHtmlEntries, sanitizeMarkdownHtml } from "@camber/components/markdown";
 import { describe, expect, it } from "vitest";
 
 describe("encodeMarkdownHtmlEntries", () => {

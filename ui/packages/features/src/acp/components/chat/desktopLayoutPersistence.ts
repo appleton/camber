@@ -1,4 +1,4 @@
-import type { SerializedSplitsState, SplitNode, TabID } from "@poolsideai/splits";
+import type { SerializedSplitsState, SplitNode, TabID } from "@camber/splits";
 import type { AssistantTerminalPlacement } from "../../features/AssistantTerminalRepository.svelte";
 import { subagentKeyProvidesTranscript } from "../../subagents";
 import { readDesktopFilesTreePrefs } from "./desktopFilesTreePrefs";
@@ -9,12 +9,12 @@ import {
   type DesktopTabDescriptor,
 } from "./desktopSplitsCache";
 
-const DESKTOP_LAYOUT_STORAGE_KEY = "poolside.desktop.layouts.v1";
+const DESKTOP_LAYOUT_STORAGE_KEY = "camber.desktop.layouts.v1";
 const DESKTOP_LAYOUT_STORE_VERSION = 1;
 const DESKTOP_LAYOUT_VERSION = 1;
-const WORKTREE_SETUP_SURFACE_STORAGE_KEY = "poolside.desktop.worktreeSetupSurface.v1";
+const WORKTREE_SETUP_SURFACE_STORAGE_KEY = "camber.desktop.worktreeSetupSurface.v1";
 export const DESKTOP_LAYOUT_CONVERSATION_LIMIT = 50;
-export const DESKTOP_DEFAULT_LAYOUT_CHANGED_EVENT = "poolside:desktop-default-layout-changed";
+export const DESKTOP_DEFAULT_LAYOUT_CHANGED_EVENT = "camber:desktop-default-layout-changed";
 
 /** Where worktree setup scripts open their visible terminal on desktop. */
 export type DesktopWorktreeSetupSurface = "sidebar" | "bottomPanel" | "mainTab";

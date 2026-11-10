@@ -152,7 +152,7 @@
       properties: { value: schema },
       required: required ? ["value"] : [],
     } as unknown as FormSchema,
-    { "poolside/field_order": ["value"] },
+    { "camber/field_order": ["value"] },
   )}
   {@const entry = model.fields[0]}
   {#if entry}

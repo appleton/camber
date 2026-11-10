@@ -1,0 +1,28 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "git",
+    srcs = [
+        "diff_stream.go",
+        "git.go",
+        "handler.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/handler/git",
+    visibility = ["//pkg/camber-helper:__subpackages__"],
+    deps = [
+        "//pkg/camber-helper/methods",
+        "@com_github_pkg_errors//:errors",
+        "@com_github_tliron_glsp//:glsp",
+    ],
+)
+
+go_test(
+    name = "git_test",
+    srcs = ["handler_test.go"],
+    embed = [":git"],
+    deps = [
+        "//pkg/camber-helper/methods",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)

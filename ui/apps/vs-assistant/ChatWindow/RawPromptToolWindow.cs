@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Poolside.Assistant.ChatWindow
+namespace Camber.Assistant.ChatWindow
 {
     [Guid("1EF23B54-595F-4DEC-A664-C217CB051CB9")]
     public class RawPromptToolWindow : ToolWindowPane
@@ -23,7 +23,7 @@ namespace Poolside.Assistant.ChatWindow
         public static async Task ShowRawPromptToolWindowAsync(string raw)
         {
             await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-            var package = PoolsideAssistantPackage.GetInstance();
+            var package = CamberAssistantPackage.GetInstance();
             var window = await package.FindToolWindowAsync(typeof(RawPromptToolWindow), Math.Abs(raw.GetHashCode()), true, CancellationToken.None);
             if ((null == window) || (null == window.Frame))
             {

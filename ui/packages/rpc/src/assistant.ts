@@ -3,7 +3,7 @@ import type {
   ACPElicitationParams,
   ACPNavDidChangeParams,
   LocalInferenceDidChangeParams,
-} from "@poolsideai/helperapi/schemas";
+} from "@camber/helperapi/schemas";
 import type { Client, Error, Messages, Responses } from "./generics";
 import type {
   ActiveFileContext,
@@ -88,7 +88,7 @@ export function isError(m: AssistantResponse | AssistantError): m is AssistantEr
 
 // --- Helper notification routing ---
 //
-// Single mapping from a poolside-helper JSON-RPC notification to the webview
+// Single mapping from a camber-helper JSON-RPC notification to the webview
 // command that delivers it. Every host that bridges the helper to the shared
 // webview (the desktop app's DesktopHost, the mobile remote's RemoteHost)
 // routes through this table, so adding a helper notification means adding ONE
@@ -96,25 +96,25 @@ export function isError(m: AssistantResponse | AssistantError): m is AssistantEr
 // case silently drops the notification on that surface only.
 //
 // Hosts keep their genuinely host-specific handling (the desktop opens
-// poolside/mcpOAuthURL externally; the
-// mobile remote seq-gates poolside/jsonrpc/notify and dedups terminal output)
+// camber/mcpOAuthURL externally; the
+// mobile remote seq-gates camber/jsonrpc/notify and dedups terminal output)
 // as explicit cases BEFORE consulting the table. VS Code routes helper
 // notifications in its extension process instead (see acpChatPanels.ts).
 export const HELPER_NOTIFICATION_WEBVIEW_COMMANDS = {
-  "poolside/jsonrpc/notify": "jsonrpcNotify",
+  "camber/jsonrpc/notify": "jsonrpcNotify",
   // Pushed nav state carries per-conversation liveStatus (working, waiting,
   // unread) — it is how a surface learns about turns started on OTHER
   // surfaces (e.g. a phone remote prompting while the desktop watches).
-  "poolside/acpNav/didChange": "acpNavDidChange",
-  "poolside/acp/serverDidExit": "acpAgentServerDidExit",
+  "camber/acpNav/didChange": "acpNavDidChange",
+  "camber/acp/serverDidExit": "acpAgentServerDidExit",
   // Helper-owned pending approvals (permission prompts, elicitations) as a
   // reconciled state push — how every surface renders and clears approval
   // cards, including for conversations it does not have open.
-  "poolside/acp/approvals/didChange": "acpApprovalsDidChange",
+  "camber/acp/approvals/didChange": "acpApprovalsDidChange",
   // The user MCP connector store changed (any surface or app instance sharing
   // it) — the webview re-lists it and re-injects its live agent sessions.
-  "poolside/mcpServers/didChange": "mcpServersDidChange",
-  "poolside/localInference/didChange": "localInferenceDidChange",
+  "camber/mcpServers/didChange": "mcpServersDidChange",
+  "camber/localInference/didChange": "localInferenceDidChange",
 } as const satisfies Record<string, keyof Assistant>;
 
 export function webviewCommandForHelperNotification(method: string): keyof Assistant | undefined {

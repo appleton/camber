@@ -1,10 +1,10 @@
 <script lang="ts">
   import type { ImageContent } from "@agentclientprotocol/sdk";
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { imageFilePathFromUri } from "../../shared/imagePreview";
   import { appState } from "../../hostAdapter";
   import { getReadableFileInfo, shortenDirectoryPathsInText } from "../../shared/paths";
-  import type { WorkspaceFolder } from "@poolsideai/rpc";
+  import type { WorkspaceFolder } from "@camber/rpc";
 
   type Props = ImageContent & {
     alt?: string;
@@ -29,8 +29,8 @@
     class="max-h-64 max-w-full object-contain"
     {src}
     {alt}
-    data-poolside-image-path={path}
-    data-poolside-image-name={title}
+    data-camber-image-path={path}
+    data-camber-image-name={title}
   />
   <span
     class="border-psx-border text-psx-foreground-secondary flex items-center gap-1 border-t px-2 py-1 text-xs"

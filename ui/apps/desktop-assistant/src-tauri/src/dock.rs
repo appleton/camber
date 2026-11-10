@@ -1,15 +1,15 @@
-//! Per-worktree dock identity for spoolside-launched desktop instances.
+//! Per-worktree dock identity for camberqa-launched desktop instances.
 //!
 //! The app icon is compiled into the binary via `generate_context!()`, so the
-//! `--config` overlay spoolside passes cannot change it. When several worktree
+//! `--config` overlay camberqa passes cannot change it. When several worktree
 //! instances run side by side we instead set the dock icon and the dock-hover
-//! (process) name at runtime from environment variables provided by spoolside:
+//! (process) name at runtime from environment variables provided by camberqa:
 //!
-//!   SPOOLSIDE_DOCK_ICON_COLOR  hex colour the app icon is tinted with
-//!   SPOOLSIDE_APP_NAME         name shown in the menu bar / when hovering the dock
+//!   CAMBERQA_DOCK_ICON_COLOR  hex colour the app icon is tinted with
+//!   CAMBERQA_APP_NAME         name shown in the menu bar / when hovering the dock
 //!
-//! A normal (non-spoolside) launch sets neither, so the shipped purple icon and
-//! "Poolside" name are left untouched. The recolouring itself lives in
+//! A normal (non-camberqa) launch sets neither, so the shipped purple icon and
+//! "Camber" name are left untouched. The recolouring itself lives in
 //! app_icon.rs, shared with the user-facing icon tint setting.
 
 use tauri::AppHandle;
@@ -33,10 +33,10 @@ pub fn rename_executable_for_dock() {
         use std::os::unix::process::CommandExt;
         use std::process::Command;
 
-        if std::env::var_os("SPOOLSIDE_DOCK_REEXEC").is_some() {
+        if std::env::var_os("CAMBERQA_DOCK_REEXEC").is_some() {
             return; // already re-exec'd
         }
-        let name = match std::env::var("SPOOLSIDE_APP_NAME") {
+        let name = match std::env::var("CAMBERQA_APP_NAME") {
             Ok(value) if !value.is_empty() => value.replace('/', "-"),
             _ => return,
         };
@@ -58,10 +58,10 @@ pub fn rename_executable_for_dock() {
         }
         let err = Command::new(&link)
             .args(std::env::args_os().skip(1))
-            .env("SPOOLSIDE_DOCK_REEXEC", "1")
+            .env("CAMBERQA_DOCK_REEXEC", "1")
             .exec();
         // exec() only returns on failure; continue with the original image.
-        eprintln!("spoolside: dock re-exec failed: {err}");
+        eprintln!("camberqa: dock re-exec failed: {err}");
     }
 }
 
@@ -74,7 +74,7 @@ pub fn rename_executable_for_dock() {
 pub fn set_process_name() {
     #[cfg(target_os = "macos")]
     {
-        if let Ok(name) = std::env::var("SPOOLSIDE_APP_NAME") {
+        if let Ok(name) = std::env::var("CAMBERQA_APP_NAME") {
             if !name.is_empty() {
                 use objc2::runtime::AnyObject;
                 use objc2::{class, msg_send, sel};
@@ -118,11 +118,11 @@ pub fn set_process_name() {
     }
 }
 
-/// Tint the dock icon from `SPOOLSIDE_DOCK_ICON_COLOR`. Safe to call after the
+/// Tint the dock icon from `CAMBERQA_DOCK_ICON_COLOR`. Safe to call after the
 /// app has launched (Tauri `setup` and `RunEvent::Ready` both run on the main
 /// thread). macOS only; a no-op elsewhere.
 pub fn set_dock_icon(app_handle: &AppHandle) {
-    if let Some(color) = crate::app_icon::spoolside_tint() {
+    if let Some(color) = crate::app_icon::camberqa_tint() {
         crate::app_icon::apply_color(app_handle, Some(color));
     }
 }

@@ -1,4 +1,4 @@
-import type { GitHubPRDetail } from "@poolsideai/helperapi";
+import type { GitHubPRDetail } from "@camber/helperapi";
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { initializeStatefulModule } from "../../hostRpc";
@@ -6,12 +6,12 @@ import Harness from "./DesktopGitHubPanel.test.svelte";
 import TitleLoopHarness from "./DesktopGitHubPanel.title-loop.test.svelte";
 
 const helperApiMocks = vi.hoisted(() => ({
-  poolsideGithubPrDetail: vi.fn(),
+  camberGithubPrDetail: vi.fn(),
 }));
 
-vi.mock("@poolsideai/helperapi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@poolsideai/helperapi")>()),
-  poolsideGithubPrDetail: helperApiMocks.poolsideGithubPrDetail,
+vi.mock("@camber/helperapi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@camber/helperapi")>()),
+  camberGithubPrDetail: helperApiMocks.camberGithubPrDetail,
 }));
 
 function prDetail(overrides: Partial<GitHubPRDetail> = {}): GitHubPRDetail {
@@ -28,7 +28,7 @@ function prDetail(overrides: Partial<GitHubPRDetail> = {}): GitHubPRDetail {
     body: "Body text",
     author: "octocat",
     baseRefName: "main",
-    headRefName: "poolside/foo",
+    headRefName: "camber/foo",
     additions: 10,
     deletions: 2,
     changedFiles: 3,
@@ -43,7 +43,7 @@ describe("DesktopGitHubPanel", () => {
   let sender: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    helperApiMocks.poolsideGithubPrDetail.mockReset();
+    helperApiMocks.camberGithubPrDetail.mockReset();
     sender = vi.fn().mockResolvedValue(undefined);
     initializeStatefulModule(sender);
   });
@@ -51,18 +51,18 @@ describe("DesktopGitHubPanel", () => {
   it("prompts to connect when a GitHub repo has no auth", async () => {
     // A supported GitHub remote with no auth: the helper reports
     // repoSupported=true, configured=false.
-    helperApiMocks.poolsideGithubPrDetail.mockResolvedValue({
+    helperApiMocks.camberGithubPrDetail.mockResolvedValue({
       detail: null,
       configured: false,
       repoSupported: true,
-      branch: "poolside/foo",
+      branch: "camber/foo",
     });
     render(Harness, { worktreePath: "/repo/foo" });
     await waitFor(() => expect(screen.getByText(/Connect GitHub/i)).toBeTruthy());
   });
 
   it("explains how an unsupported GitHub remote is detected", async () => {
-    helperApiMocks.poolsideGithubPrDetail.mockResolvedValue({
+    helperApiMocks.camberGithubPrDetail.mockResolvedValue({
       detail: null,
       configured: false,
       repoSupported: false,
@@ -79,22 +79,22 @@ describe("DesktopGitHubPanel", () => {
   });
 
   it("shows the no-PR state for a supported repo without a pull request", async () => {
-    helperApiMocks.poolsideGithubPrDetail.mockResolvedValue({
+    helperApiMocks.camberGithubPrDetail.mockResolvedValue({
       detail: null,
       configured: true,
       repoSupported: true,
-      branch: "poolside/foo",
+      branch: "camber/foo",
     });
     render(Harness, { worktreePath: "/repo/foo" });
     await waitFor(() => expect(screen.getByText(/No open pull request/i)).toBeTruthy());
   });
 
   it("renders pull-request detail and opens the PR through the host", async () => {
-    helperApiMocks.poolsideGithubPrDetail.mockResolvedValue({
+    helperApiMocks.camberGithubPrDetail.mockResolvedValue({
       detail: prDetail(),
       configured: true,
       repoSupported: true,
-      branch: "poolside/foo",
+      branch: "camber/foo",
     });
     render(Harness, { worktreePath: "/repo/foo" });
 
@@ -107,7 +107,7 @@ describe("DesktopGitHubPanel", () => {
   });
 
   it("opens a check run from the full row link", async () => {
-    helperApiMocks.poolsideGithubPrDetail.mockResolvedValue({
+    helperApiMocks.camberGithubPrDetail.mockResolvedValue({
       detail: prDetail({
         checkRuns: [
           {
@@ -120,7 +120,7 @@ describe("DesktopGitHubPanel", () => {
       }),
       configured: true,
       repoSupported: true,
-      branch: "poolside/foo",
+      branch: "camber/foo",
     });
     render(Harness, { worktreePath: "/repo/foo" });
 
@@ -135,11 +135,11 @@ describe("DesktopGitHubPanel", () => {
 
   it("reports the PR number and title for the owning tab", async () => {
     const onTitleChange = vi.fn();
-    helperApiMocks.poolsideGithubPrDetail.mockResolvedValue({
+    helperApiMocks.camberGithubPrDetail.mockResolvedValue({
       detail: prDetail({ number: 42, title: "Ship the thing" }),
       configured: true,
       repoSupported: true,
-      branch: "poolside/foo",
+      branch: "camber/foo",
     });
     render(Harness, { worktreePath: "/repo/foo", onTitleChange });
 
@@ -149,16 +149,16 @@ describe("DesktopGitHubPanel", () => {
   });
 
   it("does not reload when the title callback rerenders the parent", async () => {
-    helperApiMocks.poolsideGithubPrDetail.mockResolvedValue({
+    helperApiMocks.camberGithubPrDetail.mockResolvedValue({
       detail: prDetail({ number: 42, title: "Ship the thing" }),
       configured: true,
       repoSupported: true,
-      branch: "poolside/foo",
+      branch: "camber/foo",
     });
     render(TitleLoopHarness, { worktreePath: "/repo/foo" });
 
     await waitFor(() => expect(screen.getByText("Ship the thing")).toBeTruthy());
     await waitFor(() => expect(screen.getByTestId("title-count").textContent).toBe("2"));
-    expect(helperApiMocks.poolsideGithubPrDetail).toHaveBeenCalledTimes(1);
+    expect(helperApiMocks.camberGithubPrDetail).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,9 +1,9 @@
 import {
-  poolsideDeleteSecret,
-  poolsideGetSecret,
-  poolsideListSecrets,
-  poolsideUpsertSecret,
-} from "@poolsideai/helperapi";
+  camberDeleteSecret,
+  camberGetSecret,
+  camberListSecrets,
+  camberUpsertSecret,
+} from "@camber/helperapi";
 import type {
   ACPAgentServers,
   AcpChatPanelMetadata,
@@ -15,12 +15,12 @@ import type {
   OpenAcpChatOptions,
   TelemetryEventInputEventType,
   TelemetryEventInputMetadata,
-} from "@poolsideai/rpc";
+} from "@camber/rpc";
 import { randomUUID } from "crypto";
 import { serializeError, type ErrorObject } from "serialize-error";
 import * as vscode from "vscode";
 import { executeSetContextCommand } from "../api/commands";
-import { POOLSIDE } from "../extensionIdentity";
+import { CAMBER } from "../extensionIdentity";
 import { getHelperSingleton, updateHelperConfig } from "../helper";
 import { System } from "../system";
 import type { AcpChatPanels } from "../views/acpChatPanels";
@@ -134,13 +134,13 @@ export class HostRPCServer implements Host {
     const trimmedCommand = command?.trim();
     // `nonInteractive` is the legacy name for command-argument delivery. The
     // shell itself remains interactive (`-i`) so its normal rc files apply,
-    // but the private Poolside wrapper is never echoed as terminal input.
+    // but the private Camber wrapper is never echoed as terminal input.
     const commandLaunch =
       commandMode === "nonInteractive" && trimmedCommand && !defaultTerminalProfileHasCustomLaunch()
         ? assistantTerminalCommandLaunch(vscode.env.shell, trimmedCommand)
         : undefined;
     const terminal = vscode.window.createTerminal({
-      name: "poolside",
+      name: "camber",
       cwd: resolvedCwd || undefined,
       env,
       ...commandLaunch,
@@ -213,10 +213,10 @@ export class HostRPCServer implements Host {
     if (this.options.acpChatPanels && conversationId) {
       let sessionId: string | undefined;
       switch (methodName) {
-        case "poolside/acp/session/new":
+        case "camber/acp/session/new":
           sessionId = sessionIdFromResult(result);
           break;
-        case "poolside/acp/session/load":
+        case "camber/acp/session/load":
           sessionId = sessionIdFromParams(params);
           break;
         default:
@@ -260,7 +260,7 @@ export class HostRPCServer implements Host {
 
   async setACPAgentServers(agentServers: ACPAgentServers, defaultAgentServer?: string) {
     const client = await getHelperSingleton(this.system);
-    await client.sendRequest("poolside/acpNav/setAgentServers", {
+    await client.sendRequest("camber/acpNav/setAgentServers", {
       agentServers,
       defaultAgentServer,
     });
@@ -329,13 +329,13 @@ export class HostRPCServer implements Host {
 
   // We set context so that keybindings can be enabled only when the webview is focused
   setWebviewFocus(focused: boolean) {
-    executeSetContextCommand(`${POOLSIDE}.webviewFocus`, focused);
+    executeSetContextCommand(`${CAMBER}.webviewFocus`, focused);
   }
 
-  upsertSecret = poolsideUpsertSecret;
-  deleteSecret = poolsideDeleteSecret;
-  listSecrets = poolsideListSecrets;
-  getSecret = poolsideGetSecret;
+  upsertSecret = camberUpsertSecret;
+  deleteSecret = camberDeleteSecret;
+  listSecrets = camberListSecrets;
+  getSecret = camberGetSecret;
 
   writeToClipboard(text: string): void {
     vscode.env.clipboard.writeText(text);
@@ -365,7 +365,7 @@ function agentServerFromParams(params: unknown): string {
   if (params && typeof params === "object" && typeof (params as any).agentServer === "string") {
     return (params as any).agentServer;
   }
-  return "poolside";
+  return "camber";
 }
 
 function sessionIdFromResult(result: unknown): string | undefined {

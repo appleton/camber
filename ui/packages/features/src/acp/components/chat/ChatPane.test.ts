@@ -1,5 +1,5 @@
-import { poolsideGitStatus, type GitStatusOutput } from "@poolsideai/helperapi";
-import { InfoMessageType } from "@poolsideai/rpc";
+import { camberGitStatus, type GitStatusOutput } from "@camber/helperapi";
+import { InfoMessageType } from "@camber/rpc";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { fromStore, get, writable } from "svelte/store";
@@ -14,25 +14,25 @@ vi.mock("./Prompt.svelte", async () => ({
   default: (await import("./Prompt.mock.svelte")).default,
 }));
 
-vi.mock("@poolsideai/components/interactive-logo", async () => ({
+vi.mock("@camber/components/interactive-logo", async () => ({
   default: (await import("./InteractiveLogo.mock.svelte")).default,
   InteractiveLogo: (await import("./InteractiveLogo.mock.svelte")).default,
 }));
 
-vi.mock("@poolsideai/helperapi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@poolsideai/helperapi")>()),
-  poolsideGitStatus: vi.fn(),
+vi.mock("@camber/helperapi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@camber/helperapi")>()),
+  camberGitStatus: vi.fn(),
 }));
 
 // jsdom cannot host @pierre/diffs' shadow-DOM renderer; swap PatchDiff for a
 // stub that renders the new-side text so assertions still see diff content.
-vi.mock("@poolsideai/components/file-diff", async () => ({
+vi.mock("@camber/components/file-diff", async () => ({
   PatchDiff: (await import("../shared/PatchDiff.mock.svelte")).default,
 }));
 
 describe("AcpChatPane", () => {
   let hostMessageSender: ReturnType<typeof vi.fn>;
-  const gitStatusMock = vi.mocked(poolsideGitStatus);
+  const gitStatusMock = vi.mocked(camberGitStatus);
   let resizeObserverCallbacks: ResizeObserverCallback[] = [];
 
   beforeAll(() => {
@@ -1087,8 +1087,8 @@ describe("AcpChatPane", () => {
 
     const image = screen.getByAltText("Image");
     expect(image).toHaveAttribute("src", `data:image/png;base64,${imageData}`);
-    expect(image).toHaveAttribute("data-poolside-image-path", "/workspace/screenshot.png");
-    expect(image).toHaveAttribute("data-poolside-image-name", "/workspace/screenshot.png");
+    expect(image).toHaveAttribute("data-camber-image-path", "/workspace/screenshot.png");
+    expect(image).toHaveAttribute("data-camber-image-name", "/workspace/screenshot.png");
     expect(screen.queryByRole("region", { name: "Image preview" })).not.toBeInTheDocument();
   });
 
@@ -1177,7 +1177,7 @@ describe("AcpChatPane", () => {
             toolCallId: "tool-1",
             title: 'Greet from the workspace: cd ./ && echo "hello"',
             kind: "execute",
-            _meta: { "poolside/permission_command_heads": ["cd", "echo"] },
+            _meta: { "camber/permission_command_heads": ["cd", "echo"] },
             rawInput: { cmd: 'cd ./ && echo "hello"' },
           },
           options: [
@@ -1186,7 +1186,7 @@ describe("AcpChatPane", () => {
               optionId: "allow-always",
               kind: "allow_always",
               name: "Always allow: gh pr checks 123 *",
-              _meta: { "poolside/permission_suggested_rules": ["gh pr checks 123 *"] },
+              _meta: { "camber/permission_suggested_rules": ["gh pr checks 123 *"] },
             },
             { optionId: "reject-once", kind: "reject_once", name: "Deny" },
           ],
@@ -1204,7 +1204,7 @@ describe("AcpChatPane", () => {
     const permissionRequest = screen.getByTestId("acp-permission-request");
     expect(permissionRequest).toBeInTheDocument();
     expect(screen.queryByText("TODO: follow up after approval")).not.toBeInTheDocument();
-    expect(screen.getByText("Poolside wants to")).toBeInTheDocument();
+    expect(screen.getByText("Camber wants to")).toBeInTheDocument();
     expect(screen.getByText("execute")).toBeInTheDocument();
     expect(screen.getByText("cd, echo")).toBeInTheDocument();
     expect(screen.getByText("$")).toBeInTheDocument();
@@ -1386,7 +1386,7 @@ EOF
               optionId: "allow-always",
               kind: "allow_always",
               name: "Always allow: gh pr checks 123 *",
-              _meta: { "poolside/permission_suggested_rules": ["gh pr checks 123 *"] },
+              _meta: { "camber/permission_suggested_rules": ["gh pr checks 123 *"] },
             },
             { optionId: "reject-once", kind: "reject_once", name: "Deny" },
           ],
@@ -1963,7 +1963,7 @@ EOF
       isChat: true,
       isPrompting: false,
       events: [],
-      pendingSessionCwd: "/state/poolside/chats/pending-chat",
+      pendingSessionCwd: "/state/camber/chats/pending-chat",
       pendingConversationId: "pending-chat",
     });
 
@@ -2068,8 +2068,8 @@ EOF
       }),
     );
     const agentMenu = screen.getByRole("menu", { name: "agent options" });
-    expect(within(agentMenu).getByText("Poolside")).toBeInTheDocument();
-    expect(within(agentMenu).queryByText("Poolside (handoff)")).toBeNull();
+    expect(within(agentMenu).getByText("Camber")).toBeInTheDocument();
+    expect(within(agentMenu).queryByText("Camber (handoff)")).toBeNull();
     expect(within(agentMenu).getByText("codex-acp (handoff)")).toBeInTheDocument();
     await fireEvent.click(
       within(agentMenu).getByRole("menuitem", {
@@ -2143,11 +2143,11 @@ EOF
     );
     await fireEvent.click(
       within(screen.getByRole("menu", { name: "agent options" })).getByRole("menuitem", {
-        name: "Poolside",
+        name: "Camber",
       }),
     );
 
-    const dialog = screen.getByRole("dialog", { name: "Hand off to Poolside?" });
+    const dialog = screen.getByRole("dialog", { name: "Hand off to Camber?" });
     await fireEvent.click(within(dialog).getByRole("button", { name: "Hand Off" }));
 
     expect(handoffSession).toHaveBeenCalledWith("conversation-staged", "poolside");

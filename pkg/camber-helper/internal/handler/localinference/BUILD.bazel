@@ -1,0 +1,36 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "localinference",
+    srcs = [
+        "catalog.go",
+        "download.go",
+        "estimate.go",
+        "huggingface.go",
+        "models.go",
+        "paths.go",
+        "residency.go",
+        "server.go",
+        "sidecar.go",
+        "watcher.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/handler/localinference",
+    visibility = ["//pkg/camber-helper:__subpackages__"],
+    deps = [
+        "//pkg/common/userconfig",
+        "//pkg/camber-helper/methods",
+        "@com_github_tliron_glsp//:glsp",
+    ],
+)
+
+go_test(
+    name = "localinference_test",
+    srcs = ["server_test.go"],
+    embed = [":localinference"],
+    deps = [
+        "//pkg/camber-helper/methods",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@com_github_tliron_glsp//:glsp",
+    ],
+)

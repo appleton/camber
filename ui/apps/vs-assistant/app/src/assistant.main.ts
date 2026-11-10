@@ -1,6 +1,6 @@
 import "./assistant.css";
 
-import { SidebarOnlyPanel, init } from "@poolsideai/assistant";
+import { SidebarOnlyPanel, init } from "@camber/assistant";
 import { mount } from "svelte";
 import { installNotificationShim } from "./notificationShim";
 import { rpcHostRequestHandler, rpcWebViewResponseHandler } from "./vs-handlers";

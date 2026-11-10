@@ -1,16 +1,15 @@
 {
-  "name": "@poolsideai/vs-assistant",
+  "name": "@camber/vs-assistant",
   "version": "1.4.0",
   "private": true,
-  "description": "The Poolside app to run in a tool window in Visual Studio.",
+  "description": "The Camber app to run in a tool window in Visual Studio.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/poolsideai/assistants"
+    "url": "https://github.com/appleton/camber"
   },
   "author": {
-    "name": "Poolside",
-    "email": "hello@poolside.ai",
-    "url": "https://poolside.ai"
+    "name": "Andy Appleton",
+    "url": "https://github.com/appleton"
   },
   "type": "module",
   "scripts": {
@@ -29,22 +28,22 @@
       "prettier --ignore-unknown --write"
     ]
   },
-  "prettier": "@poolsideai/prettier-config",
+  "prettier": "@camber/prettier-config",
   "dependencies": {
-    "@poolsideai/assistant": "workspace:*",
-    "@poolsideai/components": "workspace:*",
-    "@poolsideai/features": "workspace:*",
-    "@poolsideai/helperapi": "workspace:*",
-    "@poolsideai/lib": "workspace:*",
-    "@poolsideai/rpc": "workspace:*"
+    "@camber/assistant": "workspace:*",
+    "@camber/components": "workspace:*",
+    "@camber/features": "workspace:*",
+    "@camber/helperapi": "workspace:*",
+    "@camber/lib": "workspace:*",
+    "@camber/rpc": "workspace:*"
   },
   "devDependencies": {
-    "@poolsideai/eslint-config": "workspace:*",
-    "@poolsideai/prettier-config": "workspace:*",
-    "@poolsideai/svelte-config": "workspace:*",
-    "@poolsideai/tailwind-config": "workspace:*",
-    "@poolsideai/tsconfig": "workspace:*",
-    "@poolsideai/vite-config": "workspace:*",
+    "@camber/eslint-config": "workspace:*",
+    "@camber/prettier-config": "workspace:*",
+    "@camber/svelte-config": "workspace:*",
+    "@camber/tailwind-config": "workspace:*",
+    "@camber/tsconfig": "workspace:*",
+    "@camber/vite-config": "workspace:*",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "svelte": "catalog:",

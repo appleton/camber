@@ -1,4 +1,4 @@
-import type { LocalInferenceState } from "@poolsideai/helperapi/schemas";
+import type { LocalInferenceState } from "@camber/helperapi/schemas";
 import type { SessionEvent } from "./types";
 
 // Derivations for the ambient local-runtime indicator: which model is

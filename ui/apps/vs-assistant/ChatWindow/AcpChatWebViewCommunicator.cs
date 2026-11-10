@@ -1,8 +1,8 @@
 using CefSharp.Wpf;
 using Newtonsoft.Json;
-using Poolside.Assistant.WebViewInfrastructure;
+using Camber.Assistant.WebViewInfrastructure;
 
-namespace Poolside.Assistant.ChatWindow
+namespace Camber.Assistant.ChatWindow
 {
     // RPC bridge for a single ACP chat window. Injects the window's initial chat
     // state so the acp-chat webview renders the right conversation on load.
@@ -19,7 +19,7 @@ namespace Poolside.Assistant.ChatWindow
 
         internal AcpChatWebViewCommunicator(ChromiumWebBrowser browser, AcpChatInitialState initial)
             : base(browser,
-                $"this.POOLSIDE_INITIAL_ACP_CHAT_STATE = {JsonConvert.SerializeObject(initial, serializerSettings)};\n")
+                $"this.CAMBER_INITIAL_ACP_CHAT_STATE = {JsonConvert.SerializeObject(initial, serializerSettings)};\n")
         {
             ConversationId = initial.conversationId;
         }

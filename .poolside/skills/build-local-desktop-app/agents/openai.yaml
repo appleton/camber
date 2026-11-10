@@ -1,4 +1,0 @@
-interface:
-  display_name: "Build Local Desktop App"
-  short_description: "Build and install a local Poolside desktop app"
-  default_prompt: "Use $build-local-desktop-app to build the current Poolside desktop app with a fresh local helper and place it on my Desktop."

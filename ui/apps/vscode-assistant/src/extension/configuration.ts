@@ -1,14 +1,14 @@
-import type { Configuration } from "@poolsideai/rpc";
-import { getPoolsideConfigurationSection } from "./api/configuration";
+import type { Configuration } from "@camber/rpc";
+import { getCamberConfigurationSection } from "./api/configuration";
 
 /**
- * Gets the poolside configuration from VSCode and normalizes it.
+ * Gets the camber configuration from VSCode and normalizes it.
  */
-export function getPoolsideConfig() {
-  const workspaceConfig = getPoolsideConfigurationSection();
+export function getCamberConfig() {
+  const workspaceConfig = getCamberConfigurationSection();
   const config: Configuration = JSON.parse(JSON.stringify(workspaceConfig));
 
-  // The `poolside.uri` (Poolside API) setting was removed (ACP-chat-only), but
+  // The `camber.uri` (Camber API) setting was removed (ACP-chat-only), but
   // the shared `Configuration` type still requires `uri`. Emit a fixed empty
   // value to satisfy the type and downstream consumers.
   config.uri = "";

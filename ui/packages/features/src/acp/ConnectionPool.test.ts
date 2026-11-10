@@ -1,5 +1,5 @@
 import type { AnyMessage } from "@agentclientprotocol/sdk";
-import { poolsideAcpServerRestart } from "@poolsideai/helperapi";
+import { camberAcpServerRestart } from "@camber/helperapi";
 import { get } from "svelte/store";
 import { describe, expect, it, vi } from "vitest";
 import { ACPConnectionPool } from "./ConnectionPool";
@@ -9,9 +9,9 @@ import { appState } from "./hostAdapter";
 import type { HelperAPIClient } from "./hostRpc";
 import { RPCTransport } from "./RPCTransport";
 
-vi.mock("@poolsideai/helperapi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@poolsideai/helperapi")>();
-  return { ...actual, poolsideAcpServerRestart: vi.fn().mockResolvedValue(undefined) };
+vi.mock("@camber/helperapi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@camber/helperapi")>();
+  return { ...actual, camberAcpServerRestart: vi.fn().mockResolvedValue(undefined) };
 });
 
 describe("ACPConnectionPool", () => {
@@ -38,11 +38,11 @@ describe("ACPConnectionPool", () => {
       await pool.connect("poolside");
 
       expect(helperApiClient.jsonrpcCall).toHaveBeenCalledWith(
-        "poolside/acp/initialize",
+        "camber/acp/initialize",
         expect.objectContaining({
           agentServer: "poolside",
           clientInfo: {
-            name: "poolside-desktop",
+            name: "camber-desktop",
             version: "0.3.12",
           },
           clientCapabilities: expect.objectContaining({
@@ -67,7 +67,7 @@ describe("ACPConnectionPool", () => {
       agentServer: "poolside",
       message: {
         jsonrpc: "2.0",
-        method: "poolside/acpTask/didChange",
+        method: "camber/acpTask/didChange",
         params: { sessionId: "s1" },
       } as AnyMessage,
     });
@@ -113,7 +113,7 @@ describe("ACPConnectionPool", () => {
       expect(() => pool.receive({ agentServer: "poolside", message })).not.toThrow();
       await vi.waitFor(() =>
         expect(helperApiClient.jsonrpcCall).toHaveBeenCalledWith(
-          "poolside/acp/initialize",
+          "camber/acp/initialize",
           expect.objectContaining({ agentServer: "poolside" }),
         ),
       );
@@ -181,7 +181,7 @@ describe("ACPConnectionPool restart serialization", () => {
     vi.mocked(helperApiClient.jsonrpcCall).mockImplementation(
       (method: string) =>
         new Promise((resolve) => {
-          if (method === "poolside/acp/initialize") {
+          if (method === "camber/acp/initialize") {
             initializeResolvers.push(resolve);
           } else {
             resolve({ ok: true });
@@ -216,7 +216,7 @@ describe("ACPConnectionPool restart serialization", () => {
     vi.mocked(helperApiClient.jsonrpcCall).mockImplementation(
       (method: string) =>
         new Promise((resolve, reject) => {
-          if (method === "poolside/acp/initialize") {
+          if (method === "camber/acp/initialize") {
             initializeAttempts.push({ resolve, reject });
           } else {
             resolve({ ok: true });
@@ -258,7 +258,7 @@ describe("ACPConnectionPool restart serialization", () => {
       agentCapabilities: {},
     });
     let releaseRestart!: () => void;
-    vi.mocked(poolsideAcpServerRestart).mockReturnValueOnce(
+    vi.mocked(camberAcpServerRestart).mockReturnValueOnce(
       new Promise((resolve) => {
         releaseRestart = () => resolve({});
       }),
@@ -271,7 +271,7 @@ describe("ACPConnectionPool restart serialization", () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(helperApiClient.jsonrpcCall).not.toHaveBeenCalledWith(
-      "poolside/acp/initialize",
+      "camber/acp/initialize",
       expect.anything(),
     );
 
@@ -279,7 +279,7 @@ describe("ACPConnectionPool restart serialization", () => {
     await restarting;
     await connecting;
     expect(helperApiClient.jsonrpcCall).toHaveBeenCalledWith(
-      "poolside/acp/initialize",
+      "camber/acp/initialize",
       expect.objectContaining({ agentServer: "poolside" }),
     );
     expect(connections(pool).size).toBe(1);

@@ -1,15 +1,15 @@
 import {
-  poolsideAcpNavGetProjectSettings,
-  poolsideAcpNavList,
-  poolsideAcpNavRemoveProject,
-  poolsideAcpNavRenameProject,
-  poolsideAcpNavReorderProjects,
-  poolsideAcpNavReorderWorktrees,
-  poolsideAcpNavSetProjectCollapsed,
-  poolsideAcpNavSetProjectSettings,
-  poolsideAcpNavUpsertProject,
-} from "@poolsideai/helperapi";
-import { fromPromise, success, waiting, type AsyncState } from "@poolsideai/lib/async-state";
+  camberAcpNavGetProjectSettings,
+  camberAcpNavList,
+  camberAcpNavRemoveProject,
+  camberAcpNavRenameProject,
+  camberAcpNavReorderProjects,
+  camberAcpNavReorderWorktrees,
+  camberAcpNavSetProjectCollapsed,
+  camberAcpNavSetProjectSettings,
+  camberAcpNavUpsertProject,
+} from "@camber/helperapi";
+import { fromPromise, success, waiting, type AsyncState } from "@camber/lib/async-state";
 import { createContext } from "svelte";
 import { normalizeACPError, type ACPRequestError } from "../errors";
 import {
@@ -60,7 +60,7 @@ export class ACPProjectRepositoryWriter {
   async refresh({ showLoading = true }: ACPRefreshOptions = {}): Promise<void> {
     const result = await fromPromise(
       async () => {
-        const state = await poolsideAcpNavList({});
+        const state = await camberAcpNavList({});
         return state.projects ?? [];
       },
       (state) => {
@@ -86,7 +86,7 @@ export class ACPProjectRepositoryWriter {
     parentPath?: string;
   }): Promise<void> {
     if (!project.path) return;
-    await poolsideAcpNavUpsertProject({
+    await camberAcpNavUpsertProject({
       path: project.path,
       name: project.name,
       isWorktree: project.isWorktree ?? false,
@@ -96,36 +96,32 @@ export class ACPProjectRepositoryWriter {
   }
 
   async removeProject(path: string): Promise<void> {
-    this.applyProjects((await poolsideAcpNavRemoveProject({ path })).projects ?? []);
+    this.applyProjects((await camberAcpNavRemoveProject({ path })).projects ?? []);
   }
 
   async renameProject(path: string, name: string): Promise<void> {
     const trimmed = name.trim();
     if (!path || !trimmed) return;
-    this.applyProjects((await poolsideAcpNavRenameProject({ path, name: trimmed })).projects ?? []);
+    this.applyProjects((await camberAcpNavRenameProject({ path, name: trimmed })).projects ?? []);
   }
 
   async setProjectCollapsed(path: string, collapsed: boolean): Promise<void> {
     if (!path) return;
-    this.applyProjects(
-      (await poolsideAcpNavSetProjectCollapsed({ path, collapsed })).projects ?? [],
-    );
+    this.applyProjects((await camberAcpNavSetProjectCollapsed({ path, collapsed })).projects ?? []);
   }
 
   async reorderProjects(paths: string[]): Promise<void> {
-    this.applyProjects((await poolsideAcpNavReorderProjects({ paths })).projects ?? []);
+    this.applyProjects((await camberAcpNavReorderProjects({ paths })).projects ?? []);
   }
 
   async reorderWorktrees(parentPath: string, paths: string[]): Promise<void> {
     if (!parentPath) return;
-    this.applyProjects(
-      (await poolsideAcpNavReorderWorktrees({ parentPath, paths })).projects ?? [],
-    );
+    this.applyProjects((await camberAcpNavReorderWorktrees({ parentPath, paths })).projects ?? []);
   }
 
   async getProjectSettings(path: string): Promise<ACPNavProjectSettings | undefined> {
     if (!path) return undefined;
-    return (await poolsideAcpNavGetProjectSettings({ path })).settings;
+    return (await camberAcpNavGetProjectSettings({ path })).settings;
   }
 
   async setProjectSettings(
@@ -133,7 +129,7 @@ export class ACPProjectRepositoryWriter {
   ): Promise<ACPNavProjectSettings | undefined> {
     if (!settings.path) return undefined;
     const updated = (
-      await poolsideAcpNavSetProjectSettings({
+      await camberAcpNavSetProjectSettings({
         path: settings.path,
         setupScript: settings.setupScript,
         teardownScript: settings.teardownScript,

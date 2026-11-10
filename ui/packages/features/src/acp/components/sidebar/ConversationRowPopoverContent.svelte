@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Icon from "@poolsideai/components/icon";
+  import Icon from "@camber/components/icon";
   import { createTooltip, melt } from "@melt-ui/svelte";
   import { slide } from "svelte/transition";
   import { formatRelativeTimeWithoutAgo } from "../../shared/time";

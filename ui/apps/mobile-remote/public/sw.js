@@ -8,7 +8,7 @@
 // take effect, and /api carries auth cookies and live state. Requests outside
 // /assets/ fall through to the network untouched.
 
-const CACHE = "poolside-remote-assets-v1";
+const CACHE = "camber-remote-assets-v1";
 
 self.addEventListener("install", () => {
   self.skipWaiting();

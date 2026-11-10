@@ -54,12 +54,12 @@ describe("AcpAgentRegistryRepository", () => {
       ),
     );
 
-    expect(localStorage.getItem("poolside.acp.agentRegistry")).toContain('"id":"gemini"');
+    expect(localStorage.getItem("camber.acp.agentRegistry")).toContain('"id":"gemini"');
   });
 
   it("falls back to the cached registry when fetching fails", async () => {
     localStorage.setItem(
-      "poolside.acp.agentRegistry",
+      "camber.acp.agentRegistry",
       JSON.stringify({
         agents: [
           {

@@ -1,4 +1,4 @@
-import type { ACPNavConversationLeg } from "@poolsideai/helperapi/schemas";
+import type { ACPNavConversationLeg } from "@camber/helperapi/schemas";
 import { describe, expect, it } from "vitest";
 import { materializeConversationHistory } from "./handoffHistory";
 

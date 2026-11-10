@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import type { IconName } from "@poolsideai/components/icon";
+  import type { IconName } from "@camber/components/icon";
   import type { MenuSpecItem } from "../../../ui/menuSpec";
 
   // One picker row, shaped once so the DOM dropdown and the native menu spec
@@ -47,8 +47,8 @@
 <script lang="ts">
   import type { SessionConfigOption, SessionConfigSelectOption } from "@agentclientprotocol/sdk";
   import type { Snippet } from "svelte";
-  import Icon from "@poolsideai/components/icon";
-  import { fuzzyScore } from "@poolsideai/components/assistant-ui";
+  import Icon from "@camber/components/icon";
+  import { fuzzyScore } from "@camber/components/assistant-ui";
   import { Dropdown, DropdownItem, DropdownSeparator } from "../../../ui";
   import MobileSelectSheet, { type MobileSelectOption } from "../../../ui/MobileSelectSheet.svelte";
   import { presentNativeMenu } from "../../../ui/menuSpec";

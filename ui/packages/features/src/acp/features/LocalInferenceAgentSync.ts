@@ -1,4 +1,4 @@
-import type { LocalInferenceState } from "@poolsideai/helperapi/schemas";
+import type { LocalInferenceState } from "@camber/helperapi/schemas";
 import { LOCAL_AGENT_SERVER } from "../agentServers";
 import type { LocalInferenceRepository } from "./LocalInferenceRepository.svelte";
 

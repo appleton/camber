@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Documents;
 
-namespace Poolside.Assistant.Context.Prompt
+namespace Camber.Assistant.Context.Prompt
 {
     internal interface IPromptContextProvider
     {

@@ -1,4 +1,4 @@
-import type { TauriDragDropCallbacks } from "@poolsideai/assistant/tauri-drag-drop";
+import type { TauriDragDropCallbacks } from "@camber/assistant/tauri-drag-drop";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 
 // Subscribe to Tauri's native drag-drop events and forward them to the

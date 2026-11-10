@@ -1,5 +1,5 @@
-import { getOrSet } from "@poolsideai/lib/map";
-import type { Language } from "@poolsideai/rpc";
+import { getOrSet } from "@camber/lib/map";
+import type { Language } from "@camber/rpc";
 import type { SetFieldType } from "type-fest";
 import * as vscode from "vscode";
 import type { VSCodeLanguageContribution, VSCodePackageManifest } from "./types/packageJson";

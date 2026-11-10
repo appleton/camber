@@ -19,6 +19,6 @@ export function openImageFile(svgContent: string, filename?: string): void {
     });
   } catch (error) {
     console.error("Error creating or opening image file:", error);
-    vscode.window.showErrorMessage("poolside: Failed to open diagram image");
+    vscode.window.showErrorMessage("camber: Failed to open diagram image");
   }
 }

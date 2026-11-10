@@ -22,7 +22,7 @@
   const sampleText = $derived.by(() => {
     if (mode === "terminal") {
       return [
-        "$ pnpm -F @poolsideai/splits storybook",
+        "$ pnpm -F @camber/splits storybook",
         "Storybook 10.0.7",
         "Local: http://localhost:6009",
       ].join("\n");

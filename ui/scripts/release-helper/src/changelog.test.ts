@@ -11,7 +11,7 @@ import {
 
 const US = "\x1f";
 const RS = "\x1e";
-const REPO = "poolsideai/assistant";
+const REPO = "appleton/camber";
 const HEAD = "abcdef0123456789abcdef0123456789abcdef01";
 
 function record(sha: string, author: string, subject: string, files: string[] = ["src/a.ts"]) {

@@ -1,4 +1,4 @@
-import base, { mergeConfigs } from "@poolsideai/vite-config";
+import base, { mergeConfigs } from "@camber/vite-config";
 import path from "node:path";
 import { defineConfig } from "vite";
 
@@ -16,7 +16,7 @@ export default defineConfig((env) =>
             customResolver: (_, importer) => {
               if (!importer) return;
 
-              if (importer.includes("@poolsideai/assistant")) {
+              if (importer.includes("@camber/assistant")) {
                 return path.resolve(import.meta.dirname, "./src/assistant.css");
               }
 

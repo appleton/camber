@@ -1,5 +1,5 @@
+import type { AttachedUrl } from "@camber/rpc";
 import { Readability } from "@mozilla/readability";
-import type { AttachedUrl } from "@poolsideai/rpc";
 import { parseHTML } from "linkedom";
 import { Readable } from "node:stream";
 import type { System } from "../../system";

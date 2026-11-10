@@ -11,7 +11,7 @@ use crate::{
     settings::{validate_existing_directory_path, validate_existing_open_path, ExistingOpenPath},
 };
 
-const POOLSIDE_PASTEBOARD_OPERATION_TYPE: &str = "ai.poolside.assistant.file-operation";
+const CAMBER_PASTEBOARD_OPERATION_TYPE: &str = "io.github.appleton.camber.file-operation";
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -303,7 +303,7 @@ fn write_file_url_to_pasteboard_impl(
         }
         let marker = serde_json::to_string(&PasteboardOperationMarker { operation })
             .map_err(|err| err.to_string())?;
-        let marker_type = NSString::from_str(POOLSIDE_PASTEBOARD_OPERATION_TYPE);
+        let marker_type = NSString::from_str(CAMBER_PASTEBOARD_OPERATION_TYPE);
         if !item.setString_forType(&NSString::from_str(&marker), &marker_type) {
             return Err("Unable to write pasteboard operation metadata".to_string());
         }
@@ -520,7 +520,7 @@ fn read_file_url_pasteboard_on_main_thread() -> Result<FileUrlPasteboard, String
     use objc2_app_kit::{NSPasteboard, NSPasteboardTypeFileURL};
     use objc2_foundation::{NSString, NSURL};
 
-    let marker_type = NSString::from_str(POOLSIDE_PASTEBOARD_OPERATION_TYPE);
+    let marker_type = NSString::from_str(CAMBER_PASTEBOARD_OPERATION_TYPE);
     let pasteboard = NSPasteboard::generalPasteboard();
     let Some(items) = pasteboard.pasteboardItems() else {
         return Ok(FileUrlPasteboard {
@@ -623,7 +623,7 @@ mod tests {
 
     fn unique_temp_root(name: &str) -> PathBuf {
         std::env::temp_dir().join(format!(
-            "poolside-file-tree-context-menu-{name}-{}-{}",
+            "camber-file-tree-context-menu-{name}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

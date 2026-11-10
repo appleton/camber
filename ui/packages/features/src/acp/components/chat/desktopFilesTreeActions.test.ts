@@ -1,4 +1,4 @@
-import { InfoMessageType } from "@poolsideai/rpc";
+import { InfoMessageType } from "@camber/rpc";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   performDesktopFilesTreeAction,

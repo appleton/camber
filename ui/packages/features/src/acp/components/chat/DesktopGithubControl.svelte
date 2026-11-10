@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Icon, { type IconName } from "@poolsideai/components/icon";
-  import type { GitHubLinksOutput } from "@poolsideai/helperapi";
+  import Icon, { type IconName } from "@camber/components/icon";
+  import type { GitHubLinksOutput } from "@camber/helperapi";
   import { getACPGithubRepo } from "../../features/GithubRepository.svelte";
   import { githubDotColorClass } from "../../github/githubStatus";
   import { appState } from "../../hostAdapter";

@@ -2,7 +2,7 @@
   import { CanvasAddon } from "@xterm/addon-canvas";
   import { FitAddon } from "@xterm/addon-fit";
   import { Terminal, type ITheme, type ITerminalOptions } from "@xterm/xterm";
-  import { isMac } from "@poolsideai/components";
+  import { isMac } from "@camber/components";
   import { onDestroy, onMount, tick } from "svelte";
   import { getAssistantTerminalRepo } from "../features/AssistantTerminalRepository.svelte";
   import { macTerminalTextNavigationInput } from "./macTerminalTextNavigation";

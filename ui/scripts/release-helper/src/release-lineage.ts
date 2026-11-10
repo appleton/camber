@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 
 import type { ReleaseProduct } from "./release-plan.js";
 
-export const RELEASE_LINEAGE_KIND = "poolside-release-lineage";
+export const RELEASE_LINEAGE_KIND = "camber-release-lineage";
 export const RELEASE_LINEAGE_SCHEMA = 1;
 
 const NUMERIC_VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;

@@ -1,8 +1,8 @@
-# Poolside Assistant
+# Camber Assistant
 
 **An AI coding assistant for your editor and desktop.**
 
-Poolside Assistant is an open-source client for coding agents. Use it from the
+Camber Assistant is an open-source client for coding agents. Use it from the
 desktop app, VS Code, or Visual Studio.
 
 Connect agents that support the
@@ -18,11 +18,11 @@ Chat with your agent in one consistent UI across the surfaces you use.
   Cursor, install community agents from the
   [Agent Client Protocol](https://agentclientprotocol.com/) registry, or bring
   your own agent.
-- **Bundled Poolside agent.** Use Poolside's own ACP agent,
+- **Upstream agent compatibility.** The existing integration with
   [pool](https://github.com/poolsideai/pool), built around Poolside models
   trained specifically for software engineering and integrated into the
   assistant UI.
-- **Multiple surfaces.** Run Poolside Assistant as a desktop app or as an
+- **Multiple surfaces.** Run Camber Assistant as a desktop app or as an
   extension inside VS Code or Visual Studio, with a consistent assistant
   experience across each surface.
 - **Desktop workflows for larger changes.** Use worktrees, GitHub awareness,
@@ -37,30 +37,30 @@ Chat with your agent in one consistent UI across the surfaces you use.
 
 ## Install
 
-Prebuilt releases are available for the desktop app, VS Code extension, and
-Visual Studio extension.
+Camber releases have not been published yet. Build from source for now;
+the links below are the destinations for future releases.
 
 | Surface                             | Status    | Download                                                                                                      |
 | ----------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------- |
-| **Desktop** — macOS (Apple Silicon) | Available | [Newest `desktop/v*` release](https://github.com/poolsideai/assistants/releases?q=desktop%2Fv)                  |
-| **VS Code** extension               | Available | [Newest `vscode-assistant/v*` release](https://github.com/poolsideai/assistants/releases?q=vscode-assistant%2Fv) |
-| **Visual Studio** extension         | Available | [Newest `vs-assistant/v*` release](https://github.com/poolsideai/assistants/releases?q=vs-assistant%2Fv)        |
+| **Desktop** — macOS (Apple Silicon) | Planned | [Newest `desktop/v*` release](https://github.com/appleton/camber/releases?q=desktop%2Fv)                  |
+| **VS Code** extension               | Planned | [Newest `vscode-assistant/v*` release](https://github.com/appleton/camber/releases?q=vscode-assistant%2Fv) |
+| **Visual Studio** extension         | Planned | [Newest `vs-assistant/v*` release](https://github.com/appleton/camber/releases?q=vs-assistant%2Fv)        |
 
 For install instructions, see
 [Install a prebuilt release](./INSTALL.md#install-a-prebuilt-release). After
 installing, see
-[Getting started with Poolside Assistant](./docs/getting-started.md) to choose
+[Getting started with Camber Assistant](./docs/getting-started.md) to choose
 an agent and start a conversation.
 
 Need a build for another platform?
-[Start a discussion](https://github.com/poolsideai/assistants/discussions) or
-[build Poolside Assistant from source](./INSTALL.md#build-from-source).
+[Start a discussion](https://github.com/appleton/camber/discussions) or
+[build Camber Assistant from source](./INSTALL.md#build-from-source).
 
 ## Issues and discussions
 
 Bugs, feature requests, agent compatibility reports, rough edges, and questions —
 we'd like to hear all of it. Please start in
-[GitHub Discussions](https://github.com/poolsideai/assistants/discussions)
+[GitHub Discussions](https://github.com/appleton/camber/discussions)
 rather than opening an issue directly.
 
 We keep the issue tracker for accepted, well-understood work that's ready to pick
@@ -76,25 +76,25 @@ which keeps discussions and actionable work separate.
 For development docs, app README links, and contribution guidelines, see
 [Contributing](./CONTRIBUTING.md). If you use a coding agent to work on this
 repository, see
-[Working on Poolside Assistant with coding agents](./docs/coding-with-agents.md).
+[Working on Camber Assistant with coding agents](./docs/coding-with-agents.md).
 Dependency license policy docs live in
 [License checks](./docs/license-checks.md).
 
 ## License
 
-Poolside Assistant's source code and client applications are licensed under the
+Camber Assistant's source code and client applications are licensed under the
 [Apache License 2.0](./LICENSE). Third-party components retain their own licenses;
 see [Third-party licenses](./THIRD-PARTY-LICENSES.md).
 
-Agents and services you connect to through Poolside Assistant are subject to
+Agents and services you connect to through Camber Assistant are subject to
 their own licenses and terms.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 
-## Trademarks
+## Origin
 
-For usage of Poolside's brand, please see our [Trademark Guidelines](https://poolside.ai/legal/trademark-guidelines).
+Camber is an independent fork of Poolside Assistant, maintained by
+[Andy Appleton](https://github.com/appleton). Original copyright notices and
+third-party licenses are retained. Camber is not affiliated with Poolside.
 
----
-
-Built by [Poolside](https://poolside.ai).
+See [the rebrand notes](docs/camber-rebrand.md) for compatibility details.

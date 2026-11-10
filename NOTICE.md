@@ -1,4 +1,4 @@
-Poolside Assistant
+Camber Assistant
 
 Copyright 2026 Poolside, Inc.
 

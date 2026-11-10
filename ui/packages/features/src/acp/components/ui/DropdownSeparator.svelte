@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { DropdownSeparator as SharedDropdownSeparator } from "@poolsideai/components/assistant-ui";
+  import { DropdownSeparator as SharedDropdownSeparator } from "@camber/components/assistant-ui";
 
   interface Props {
     label?: string;

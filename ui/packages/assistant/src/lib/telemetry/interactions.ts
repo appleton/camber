@@ -1,4 +1,4 @@
-import { TelemetryEventInputEventType } from "@poolsideai/rpc";
+import { TelemetryEventInputEventType } from "@camber/rpc";
 import { get } from "svelte/store";
 import { getLastMessage, isCurrentConversationAgentic } from "../ConversationManager";
 import { rpc } from "../rpc/client";

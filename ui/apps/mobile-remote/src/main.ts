@@ -1,17 +1,17 @@
 import {
   init,
   MobilePanel,
-  type MobileSpoolsideInstance,
+  type MobileCamberQAInstance,
   type MobileThemePreference,
-} from "@poolsideai/assistant";
-import { appState } from "@poolsideai/features/acp";
+} from "@camber/assistant";
+import { appState } from "@camber/features/acp";
 import {
   adoptHandoffDeviceToken,
   deviceTokenHandoffHash,
   recoverSession,
   RemoteHost,
   type StaleSession,
-} from "@poolsideai/remote-client";
+} from "@camber/remote-client";
 import { mount } from "svelte";
 
 import "./app.css";
@@ -107,7 +107,7 @@ async function mountApp() {
   // Top-bar identity of the controlled desktop: the name comes from /api/me,
   // the connected flag tracks the socket (immediate, unlike the pill's
   // 10-second grace — a subtle dot can afford to be truthful about blips).
-  // On spoolside worktree helpers, /api/me also carries the worktree identity
+  // On camberqa worktree helpers, /api/me also carries the worktree identity
   // and live slots, shown as the worktree chip and the slot-switch action.
   const hostStatus = createHostStatus();
   void fetch("/api/me", { credentials: "same-origin" })
@@ -117,7 +117,7 @@ async function mountApp() {
         body: {
           hostName?: string;
           homeDirectory?: string;
-          spoolside?: MobileSpoolsideInstance;
+          camberqa?: MobileCamberQAInstance;
         } | null,
       ) => {
         if (body?.hostName) hostStatus.name = body.hostName;
@@ -128,8 +128,8 @@ async function mountApp() {
         // getHandoffHash carries this origin's device token to slot jumps so
         // the target origin signs in without re-pairing (localStorage is
         // per-origin; the shared helper state accepts the token everywhere).
-        if (body?.spoolside)
-          hostStatus.spoolside = { ...body.spoolside, getHandoffHash: deviceTokenHandoffHash };
+        if (body?.camberqa)
+          hostStatus.camberqa = { ...body.camberqa, getHandoffHash: deviceTokenHandoffHash };
       },
     )
     .catch(() => {});
