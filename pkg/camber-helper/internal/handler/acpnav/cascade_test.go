@@ -84,7 +84,7 @@ func TestWorktreeRemovalCascadesToDescendants(t *testing.T) {
 	pp := parentProject.Path
 	wtProject, err := store.UpsertProject(ctx, methods.ACPNavUpsertProjectParams{Path: wt, IsWorktree: true, ParentPath: &pp})
 	require.NoError(t, err)
-	store.runGit = func(context.Context, ...string) ([]byte, error) { return nil, nil }
+	store.runGit = func(context.Context, []string, ...string) ([]byte, error) { return nil, nil }
 	require.NoError(t, store.UpsertConversation(ctx, methods.ACPNavConversation{ID: "wtroot", WorkspacePath: wtProject.Path, Cwd: wtProject.Path, AgentServer: "agent", SessionID: "s-wtroot", UpdatedAt: "2026-01-01T00:00:00Z"}))
 	link(t, server, "child", "wtroot")
 

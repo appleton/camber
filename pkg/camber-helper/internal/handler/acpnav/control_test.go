@@ -24,7 +24,7 @@ func TestSafeWorktreeRemovalPreservesGitFailure(t *testing.T) {
 	parent = parentProject.Path
 	_, err = store.UpsertProject(ctx, methods.ACPNavUpsertProjectParams{Path: path, IsWorktree: true, ParentPath: &parent})
 	require.NoError(t, err)
-	store.runGit = func(_ context.Context, args ...string) ([]byte, error) {
+	store.runGit = func(_ context.Context, _ []string, args ...string) ([]byte, error) {
 		assert.NotContains(t, args, "--force")
 		return []byte("worktree is locked"), errors.New("exit status 128")
 	}

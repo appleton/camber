@@ -45,7 +45,10 @@ type Store struct {
 	db         *sql.DB
 	worktreeMu sync.Mutex
 	repoLocks  sync.Map
-	runGit     func(ctx context.Context, args ...string) ([]byte, error)
+	// runGit runs git with args. A non-nil env replaces any git config
+	// overrides inherited from the helper's environment and is appended to
+	// it (see runGitCommand).
+	runGit func(ctx context.Context, env []string, args ...string) ([]byte, error)
 	// preparedWorktrees holds worktree paths reserved by PrepareWorktree but
 	// not yet realized by CreateWorktree. Reservations are in-memory only so
 	// that a crash between prepare and create cannot orphan DB rows; the
@@ -106,8 +109,17 @@ func Open(ctx context.Context, dbPath string) (*Store, error) {
 	return store, nil
 }
 
-func runGitCommand(ctx context.Context, args ...string) ([]byte, error) {
-	return exec.CommandContext(ctx, "git", args...).CombinedOutput()
+// runGitCommand runs git. With a nil env git inherits the helper's
+// environment unchanged. Otherwise env is appended to the helper's
+// environment minus its command-line config (GIT_CONFIG_PARAMETERS,
+// GIT_CONFIG_COUNT and its numbered keys), so the overrides in env are the
+// only command-scope configuration git sees.
+func runGitCommand(ctx context.Context, env []string, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, "git", args...)
+	if env != nil {
+		cmd.Env = append(withoutGitConfigEnv(os.Environ()), env...)
+	}
+	return cmd.CombinedOutput()
 }
 
 func (s *Store) repoLock(parentPath string) *sync.Mutex {
@@ -812,7 +824,7 @@ func (s *Store) createWorktree(ctx context.Context, projectPath, worktreeName st
 		err = s.addWorktreeIsolated(ctx, projectPath, branch, worktreePath)
 	} else {
 		var out []byte
-		if out, err = s.runGit(ctx, "-C", projectPath, "worktree", "add", "-b", branch, worktreePath); err != nil {
+		if out, err = s.runGit(ctx, nil, "-C", projectPath, "worktree", "add", "-b", branch, worktreePath); err != nil {
 			err = fmt.Errorf("git worktree add failed: %w: %s", err, strings.TrimSpace(string(out)))
 		}
 	}
@@ -1496,8 +1508,9 @@ func (s *Store) RemoveWorktree(ctx context.Context, path string) error {
 
 // RemoveWorktreeSafely preserves Git failures and never forces removal.
 // It is reached only from control automation, so git runs isolated: repo
-// hooks and fsmonitor are disabled and the repo-configured filter drivers
-// visible inside the worktree are neutralised (see isolatedWorktreeArgs).
+// hooks and fsmonitor are disabled, the repo-configured filter drivers
+// visible inside the worktree are neutralised, and repositories whose config
+// sets command-running keys are refused (see isolatedWorktreeEnv).
 func (s *Store) RemoveWorktreeSafely(ctx context.Context, path string) error {
 	return s.removeWorktree(ctx, path, false)
 }
@@ -1517,21 +1530,21 @@ func (s *Store) removeWorktree(ctx context.Context, path string, force bool) err
 
 	if parent.Valid && parent.String != "" {
 		parentPath := cleanPath(parent.String)
-		var prefix []string
+		var env []string
 		if !force {
 			var err error
-			if prefix, _, err = s.isolatedWorktreeArgs(ctx, path); err != nil {
+			if env, _, err = s.isolatedWorktreeEnv(ctx, path); err != nil {
 				return err
 			}
 		}
 		rl := s.repoLock(parentPath)
 		rl.Lock()
-		args := append(prefix, "-C", parentPath, "worktree", "remove")
+		args := []string{"-C", parentPath, "worktree", "remove"}
 		if force {
 			args = append(args, "--force")
 		}
 		args = append(args, path)
-		output, removeErr := s.runGit(ctx, args...)
+		output, removeErr := s.runGit(ctx, env, args...)
 		rl.Unlock()
 		if !force && removeErr != nil {
 			return fmt.Errorf("removing worktree: %w: %s", removeErr, strings.TrimSpace(string(output)))
