@@ -112,7 +112,7 @@ func TestArchiveCascadeClosesDescendantSessionsNotRoot(t *testing.T) {
 		select {
 		case <-done:
 		case <-time.After(5 * time.Second):
-			t.Fatal("closer not invoked")
+			require.FailNow(t, "closer not invoked")
 		}
 	}
 	mu.Lock()
@@ -191,7 +191,7 @@ func TestCloseSweepGivesEveryDescendantALiveContext(t *testing.T) {
 		select {
 		case <-started:
 		case <-time.After(5 * time.Second):
-			t.Fatal("closers were not run concurrently")
+			require.FailNow(t, "closers were not run concurrently")
 		}
 	}
 	close(release)
@@ -217,7 +217,7 @@ func TestInsertUnderArchivedParentIsArchivedAndClosed(t *testing.T) {
 	case got := <-closed:
 		assert.Equal(t, "agent/s-kid", got)
 	case <-time.After(5 * time.Second):
-		t.Fatal("closer not invoked for child inserted under archived parent")
+		require.FailNow(t, "closer not invoked for child inserted under archived parent")
 	}
 }
 

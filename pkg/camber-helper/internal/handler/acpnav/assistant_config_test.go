@@ -489,7 +489,7 @@ func TestAssistantConfigAgentServerStoreDoesNotRepairCustomCamber(t *testing.T) 
 
 	require.NoError(t, store.SetAgentServers(ctx, methods.ACPAgentServers{"poolside": {Command: "custom-pool"}}, nil, nil))
 	require.NoError(t, store.RepairInstalledRegistryAgentServers(ctx, func(context.Context, string) (methods.ACPAgentServerConfig, error) {
-		t.Fatal("custom camber should not be repaired as a registry agent server")
+		require.FailNow(t, "custom camber should not be repaired as a registry agent server")
 		return methods.ACPAgentServerConfig{}, nil
 	}))
 
