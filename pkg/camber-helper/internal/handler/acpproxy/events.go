@@ -69,8 +69,8 @@ func (h *Handler) markSessionHistory(agentServer, sessionID string, complete boo
 	}
 }
 
-// trackProbeSession remembers a config-probe session so closing it also drops
-// whatever its streaming updates put in the session log.
+// trackProbeSession remembers a config-probe session so its updates bypass the
+// session log.
 func (h *Handler) trackProbeSession(agentServer, sessionID string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -80,10 +80,19 @@ func (h *Handler) trackProbeSession(agentServer, sessionID string) {
 	h.probeSessions[promptSessionKey{agentServer: normalizeServerName(agentServer), sessionID: sessionID}] = struct{}{}
 }
 
-// releaseProbeSession forgets a closed config-probe session's log entry. The
-// forget rides the agent's notification queue so updates the probe emitted
-// before closing are published (and then dropped) rather than recreating the
-// entry afterwards. Non-probe sessions are left untouched.
+// isProbeSession reports whether the session is an open config probe.
+func (h *Handler) isProbeSession(agentServer, sessionID string) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	_, ok := h.probeSessions[promptSessionKey{agentServer: normalizeServerName(agentServer), sessionID: sessionID}]
+	return ok
+}
+
+// releaseProbeSession untracks a closed config-probe session. Probe updates
+// never enter the session log (see probeGate), so the queued ForgetSession is
+// only a safety net for a stray entry. It rides the agent's notification queue
+// so it lands behind anything the probe emitted before closing. Non-probe
+// sessions only lose their gate bookkeeping.
 func (h *Handler) releaseProbeSession(agentServer, sessionID string) {
 	serverName := normalizeServerName(agentServer)
 	key := promptSessionKey{agentServer: serverName, sessionID: sessionID}
@@ -92,6 +101,9 @@ func (h *Handler) releaseProbeSession(agentServer, sessionID string) {
 	delete(h.probeSessions, key)
 	client := h.clients[serverName]
 	h.mu.Unlock()
+	if client != nil && !probe {
+		client.forgetSeen(sessionID)
+	}
 	sink, ok := h.events.(sessionForgetSink)
 	if !probe || !ok {
 		return

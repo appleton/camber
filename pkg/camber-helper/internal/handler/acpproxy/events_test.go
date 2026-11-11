@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	acphelpers "github.com/appleton/camber/pkg/acp"
+	"github.com/appleton/camber/pkg/camber-helper/internal/handler/remoteaccess"
 	"github.com/appleton/camber/pkg/camber-helper/methods"
 )
 
@@ -519,8 +520,8 @@ func (s *historyEventSink) callSnapshot() []string {
 }
 
 // TestConfigProbeSessionLeavesNoLogEntry checks that a config probe never
-// claims a history slot and that closing it forgets what its streaming
-// updates logged, while a real session keeps its history across close.
+// claims a history slot or publishes into the session log (its updates are
+// fanned out unretained), while a real session keeps its history across close.
 func TestConfigProbeSessionLeavesNoLogEntry(t *testing.T) {
 	agentInR, agentInW := io.Pipe()
 	agentOutR, agentOutW := io.Pipe()
@@ -581,9 +582,13 @@ func TestConfigProbeSessionLeavesNoLogEntry(t *testing.T) {
 		require.NoError(t, err)
 		id := string(resp.SessionId)
 		// The agent's update may still be in flight on the connection.
-		require.Eventually(t, func() bool {
-			return slices.Contains(sink.callSnapshot(), "publish:"+id)
-		}, 2*time.Second, 5*time.Millisecond)
+		if meta == nil {
+			require.Eventually(t, func() bool {
+				return slices.Contains(sink.callSnapshot(), "publish:"+id)
+			}, 2*time.Second, 5*time.Millisecond)
+		} else {
+			require.NoError(t, client.waitForSessionUpdates(ctx))
+		}
 		return id
 	}
 	closeSession := func(id string) {
@@ -601,10 +606,181 @@ func TestConfigProbeSessionLeavesNoLogEntry(t *testing.T) {
 	closeSession(real)
 
 	calls := sink.callSnapshot()
-	require.Len(t, calls, 4)
-	assert.Equal(t, []string{"publish:" + probe, "forget:" + probe}, calls[:2],
-		"a probe is never marked and is forgotten after its updates publish")
-	assert.ElementsMatch(t, []string{"publish:" + real, "mark:" + real + ":true"}, calls[2:],
+	require.Len(t, calls, 3)
+	assert.Equal(t, "forget:"+probe, calls[0],
+		"a probe is never published or marked; the forget is only a safety net")
+	assert.ElementsMatch(t, []string{"publish:" + real, "mark:" + real + ":true"}, calls[1:],
 		"a real session keeps its history across close")
+	assert.Len(t, sink.broadcastSnapshot(), 1, "the probe's update still reaches clients, unretained")
 	assert.Empty(t, h.probeSessions, "closed probes are no longer tracked")
+}
+
+// logBackedSink adapts a real SessionLog to the acpproxy sink interfaces.
+type logBackedSink struct {
+	log *remoteaccess.SessionLog
+	hub *remoteaccess.Hub
+}
+
+func (s *logBackedSink) PublishSessionUpdate(a, id, dev string, skip bool, m map[string]any) int64 {
+	return s.log.Publish(a, id, dev, skip, m)
+}
+func (s *logBackedSink) NotifyAll(method string, params any) { s.hub.NotifyAll(method, params) }
+func (s *logBackedSink) NotifyClient(o, method string, params any) {
+	s.hub.NotifyClient(o, method, params)
+}
+func (s *logBackedSink) BeginTurn(a, id string) { s.log.BeginTurn(a, id) }
+func (s *logBackedSink) EndTurn(a, id string)   { s.log.EndTurn(a, id) }
+func (s *logBackedSink) Cursor(a, id string) SessionCursor {
+	c := s.log.Cursor(a, id)
+	return SessionCursor{Epoch: c.Epoch, Seq: c.Seq, TurnActive: c.TurnActive}
+}
+func (s *logBackedSink) ForgetSession(a, id string) { s.log.ForgetSession(a, id) }
+
+// TestConfigProbeNeverEvictsRealSessionsFromFullLog runs probes against a real
+// session log holding 128 idle real sessions. The agent streams one update
+// before and one after answering session/new; neither may allocate a log
+// entry (which would evict the least recently used real session), and a real
+// session's early update must still be retained.
+func TestConfigProbeNeverEvictsRealSessionsFromFullLog(t *testing.T) {
+	const capacity = 128
+	agentInR, agentInW := io.Pipe()
+	agentOutR, agentOutW := io.Pipe()
+	t.Cleanup(func() {
+		agentInW.Close()
+		agentOutW.Close()
+	})
+	var sessions int
+	go func() {
+		scanner := bufio.NewScanner(agentInR)
+		for scanner.Scan() {
+			var req struct {
+				ID     any    `json:"id"`
+				Method string `json:"method"`
+			}
+			if json.Unmarshal(scanner.Bytes(), &req) != nil || req.ID == nil || req.Method != acpsdk.AgentMethodSessionNew {
+				continue
+			}
+			sessions++
+			id := fmt.Sprintf("s%d", sessions)
+			update := func() []byte {
+				b, _ := json.Marshal(map[string]any{
+					"jsonrpc": "2.0", "method": acpsdk.ClientMethodSessionUpdate,
+					"params": map[string]any{"sessionId": id, "update": map[string]any{
+						"sessionUpdate": "available_commands_update", "availableCommands": []any{},
+					}},
+				})
+				return append(b, '\n')
+			}
+			resp, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": req.ID, "result": map[string]any{"sessionId": id}})
+			out := append(append(update(), append(resp, '\n')...), update()...)
+			if _, err := agentOutW.Write(out); err != nil {
+				return
+			}
+		}
+	}()
+
+	hub := remoteaccess.NewHub()
+	log := remoteaccess.NewSessionLog(hub)
+	for i := range capacity {
+		id := fmt.Sprintf("real-%d", i)
+		log.MarkSessionHistory(DefaultAgentServerName, id, true)
+		log.Publish(DefaultAgentServerName, id, "", true, map[string]any{"n": i})
+	}
+
+	h := NewHandler(dummyConfig(), nil, nil)
+	h.SetSessionEvents(&logBackedSink{log: log, hub: hub})
+	gCtx := newGlspContext(nil, nil)
+	proc, client := h.processFor(DefaultAgentServerName, gCtx)
+	proc.state = processState{kind: processStateRunning}
+	proc.conn = acpsdk.NewClientSideConnection(client, agentInW, agentOutR)
+	proc.initResp = &acpsdk.InitializeResponse{ProtocolVersion: acpsdk.ProtocolVersionNumber}
+
+	ctx := context.Background()
+	newSession := func(meta map[string]any) string {
+		resp, err := h.NewSession(ctx, &methods.ACPNewSessionParams{
+			ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: DefaultAgentServerName},
+			NewSessionRequest:    acpsdk.NewSessionRequest{Cwd: t.TempDir(), McpServers: []acpsdk.McpServer{}, Meta: meta},
+		}, gCtx)
+		require.NoError(t, err)
+		return string(resp.SessionId)
+	}
+
+	var probes []string
+	for range 3 {
+		probes = append(probes, newSession(map[string]any{configProbeMetaKey: true}))
+	}
+	// The real session's updates queue behind every probe update on the same
+	// connection, so once both have landed the probes' updates were processed.
+	real := newSession(nil)
+	require.Eventually(t, func() bool {
+		return log.Cursor(DefaultAgentServerName, real).Seq == 2
+	}, 2*time.Second, 5*time.Millisecond, "a real session keeps both its pre- and post-response updates")
+
+	for _, probe := range probes {
+		assert.Zero(t, log.Cursor(DefaultAgentServerName, probe).Seq, "probe %s has no log entry", probe)
+	}
+	// The real session legitimately takes one slot, evicting only the oldest
+	// (real-0); a probe entry would have evicted another real session too.
+	for i := 1; i < capacity; i++ {
+		id := fmt.Sprintf("real-%d", i)
+		assert.EqualValues(t, 1, log.Cursor(DefaultAgentServerName, id).Seq, "real session %s was evicted", id)
+	}
+}
+
+// TestFailedConfigProbeLeavesNoLogEntry checks that a probe whose session/new
+// fails after streaming an update for a never-assigned id allocates no log
+// entry; the update is delivered unretained.
+func TestFailedConfigProbeLeavesNoLogEntry(t *testing.T) {
+	agentInR, agentInW := io.Pipe()
+	agentOutR, agentOutW := io.Pipe()
+	t.Cleanup(func() {
+		agentInW.Close()
+		agentOutW.Close()
+	})
+	go func() {
+		scanner := bufio.NewScanner(agentInR)
+		for scanner.Scan() {
+			var req struct {
+				ID     any    `json:"id"`
+				Method string `json:"method"`
+			}
+			if json.Unmarshal(scanner.Bytes(), &req) != nil || req.ID == nil || req.Method != acpsdk.AgentMethodSessionNew {
+				continue
+			}
+			update, _ := json.Marshal(map[string]any{
+				"jsonrpc": "2.0", "method": acpsdk.ClientMethodSessionUpdate,
+				"params": map[string]any{"sessionId": "orphan", "update": map[string]any{
+					"sessionUpdate": "available_commands_update", "availableCommands": []any{},
+				}},
+			})
+			resp, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": req.ID, "error": map[string]any{"code": -32000, "message": "boom"}})
+			if _, err := agentOutW.Write(append(append(update, '\n'), append(resp, '\n')...)); err != nil {
+				return
+			}
+		}
+	}()
+
+	hub := remoteaccess.NewHub()
+	log := remoteaccess.NewSessionLog(hub)
+	h := NewHandler(dummyConfig(), nil, nil)
+	h.SetSessionEvents(&logBackedSink{log: log, hub: hub})
+	gCtx := newGlspContext(nil, nil)
+	proc, client := h.processFor(DefaultAgentServerName, gCtx)
+	proc.state = processState{kind: processStateRunning}
+	proc.conn = acpsdk.NewClientSideConnection(client, agentInW, agentOutR)
+	proc.initResp = &acpsdk.InitializeResponse{ProtocolVersion: acpsdk.ProtocolVersionNumber}
+
+	ctx := context.Background()
+	_, err := h.NewSession(ctx, &methods.ACPNewSessionParams{
+		ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: DefaultAgentServerName},
+		NewSessionRequest:    acpsdk.NewSessionRequest{Cwd: t.TempDir(), McpServers: []acpsdk.McpServer{}, Meta: map[string]any{configProbeMetaKey: true}},
+	}, gCtx)
+	require.Error(t, err)
+	require.NoError(t, client.waitForSessionUpdates(ctx))
+
+	assert.Zero(t, log.Cursor(DefaultAgentServerName, "orphan").Seq)
+	client.probes.mu.Lock()
+	defer client.probes.mu.Unlock()
+	assert.Empty(t, client.probes.held)
+	assert.Zero(t, client.probes.pending)
 }

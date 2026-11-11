@@ -56,7 +56,7 @@ func (h *Handler) publishControlConfiguration(ctx context.Context, agentServer s
 		if h.events != nil {
 			// This is a live accepted mutation, never transcript replay. A
 			// concurrent load must not scope it away from existing clients.
-			h.events.PublishSessionUpdate(normalizeServerName(agentServer), string(sessionID), "", false,
+			client.publishSessionEvent(h.events, string(sessionID), "", false,
 				map[string]any{"jsonrpc": "2.0", "method": method, "params": params})
 		} else {
 			client.notify(ctx, method, params)

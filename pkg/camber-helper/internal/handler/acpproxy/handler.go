@@ -612,9 +612,29 @@ func (h *Handler) NewSession(ctx context.Context, params *methods.ACPNewSessionP
 	// Runs concurrently with session/new below; see claude_auth_probe.go.
 	claudeAuthResult := h.maybeProbeClaudeAuthStatus(ctx, proc, params.AgentServer, req.Meta)
 
+	// A probe's id is unknown until session/new returns, but the agent may
+	// stream its updates first: the gate holds unrecognised sessions' events
+	// until the probe is registered (see probeGate).
+	probe := isConfigProbeSession(req.Meta)
+	var probeClient *acpClient
+	if probe && h.events != nil {
+		_, probeClient = h.processFor(normalizeServerName(params.AgentServer), gCtx)
+		probeClient.beginProbe()
+	}
 	proc.mu.Lock()
 	resp, err := proc.newSessionLocked(ctx, req)
 	proc.mu.Unlock()
+	probeID := ""
+	if probe && err == nil {
+		probeID = string(resp.SessionId)
+		h.trackProbeSession(params.AgentServer, probeID)
+	}
+	if probeClient != nil {
+		events := h.events
+		probeClient.asyncNotifications.enqueue(func(_ context.Context, _ string, _ any) {
+			probeClient.endProbe(events, probeID)
+		}, "", nil)
+	}
 	if err != nil {
 		h.refreshAuthAfterCallError(ctx, params.AgentServer, err)
 		return nil, err
@@ -630,10 +650,8 @@ func (h *Handler) NewSession(ctx context.Context, params *methods.ACPNewSessionP
 	// client echoing it back over a possibly-flaky socket. Live status is
 	// keyed by session id and silently unattachable until this lands.
 	// Config probes are closed right after reading their options: they get no
-	// history slot, and closing one drops anything its updates logged.
-	if isConfigProbeSession(req.Meta) {
-		h.trackProbeSession(params.AgentServer, string(resp.SessionId))
-	} else {
+	// history slot, and their updates bypass the session log (tracked above).
+	if !probe {
 		h.markSessionHistory(params.AgentServer, string(resp.SessionId), true)
 	}
 	if convID := acp.DecodeSessionConversationID(req.Meta); convID != "" && h.liveStatusSink != nil {
@@ -1519,7 +1537,7 @@ func publishUserMessage(client *acpClient, events SessionEventSink, serverName, 
 			},
 		}
 		client.asyncNotifications.enqueue(func(ctx context.Context, method string, params any) {
-			events.PublishSessionUpdate(serverName, sessionID, originDevice, skipPrimary, message)
+			client.publishSessionEvent(events, sessionID, originDevice, skipPrimary, message)
 		}, methods.JSONRPCNotifyMethod, message)
 	}
 }

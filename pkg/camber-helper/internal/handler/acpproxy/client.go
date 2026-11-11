@@ -57,6 +57,7 @@ type acpClient struct {
 	handler       *Handler
 
 	asyncNotifications asyncNotificationQueue
+	probes             probeGate
 }
 
 var _ acpsdk.Client = (*acpClient)(nil)
@@ -269,7 +270,7 @@ func (c *acpClient) routeTurnEnded(ctx context.Context, method string, params an
 	// it even if a load begins after the prompt returns but before this queued
 	// callback runs; scoping it to the loader would strand other surfaces.
 	message := map[string]any{"jsonrpc": "2.0", "method": method, "params": params}
-	events.PublishSessionUpdate(c.agentServer, string(notif.SessionID), "", false, message)
+	c.publishSessionEvent(events, string(notif.SessionID), "", false, message)
 }
 
 // routeSessionEvent preserves the agent connection's event order while
@@ -295,7 +296,7 @@ func (c *acpClient) routeSessionEvent(
 		events.NotifyClient(origin, methods.JSONRPCNotifyMethod, bridgeMessage(c.agentServer, message))
 		return
 	}
-	events.PublishSessionUpdate(c.agentServer, sessionID, "", false, message)
+	c.publishSessionEvent(events, sessionID, "", false, message)
 }
 
 func (c *acpClient) persistSessionTitle(ctx context.Context, notif acpsdk.SessionNotification) {
