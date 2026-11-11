@@ -3827,6 +3827,7 @@ function makeSessionRepo(sessions: Map<string, any>) {
     getSessionById: vi.fn(),
     getConversationStatus: vi.fn(() => ({ working: false, waitingForUser: false, unread: false })),
     clearUnread: vi.fn(),
+    clearDescendantUnread: vi.fn(),
     claimVisibleConversation: vi.fn(() => vi.fn()),
     unboundPermissionRequestsFor: vi.fn(() => []),
     pendingApprovals: [],

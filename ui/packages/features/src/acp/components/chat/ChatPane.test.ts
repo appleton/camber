@@ -2271,6 +2271,7 @@ function makeSessionRepo(overrides: Record<string, any> = {}): any {
     ),
     getConversationStatus: vi.fn(() => ({ working: false, waitingForUser: false, unread: false })),
     clearUnread: vi.fn(),
+    clearDescendantUnread: vi.fn(),
     claimVisibleConversation: vi.fn(() => () => {}),
     retryLastPrompt: vi.fn().mockResolvedValue(undefined),
     retryAfterError: vi.fn().mockResolvedValue(undefined),
