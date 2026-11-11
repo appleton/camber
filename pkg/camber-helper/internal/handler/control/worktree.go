@@ -2,7 +2,6 @@ package control
 
 import (
 	"context"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -120,14 +119,11 @@ func (s *Service) removeWorktree(ctx context.Context, a Args, g *glsp.Context) (
 			return nil, pkgerrors.Errorf("worktree has a running conversation %s", c.ID)
 		}
 	}
-	// Store.RemoveWorktree follows the interactive UI's force-delete path.
-	// Automation must explicitly reject dirty/untracked work before invoking it.
-	dirty, err := exec.CommandContext(ctx, "git", "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", "-C", path, "status", "--porcelain", "--untracked-files=all").CombinedOutput()
-	if err != nil {
-		return nil, pkgerrors.Wrap(err, "checking worktree state")
-	}
-	if strings.TrimSpace(string(dirty)) != "" {
-		return nil, pkgerrors.Errorf("worktree contains uncommitted or untracked changes; preserve or commit them before removing it")
+	// Reject dirty/untracked work before the teardown script runs. The check
+	// is isolated git (no hooks, fsmonitor or repo filter drivers), as is the
+	// non-force removal below.
+	if err = s.nav.CheckWorktreeClean(ctx, path); err != nil {
+		return nil, err
 	}
 	settingsPath := path
 	if project.ParentPath != nil {

@@ -6,6 +6,7 @@ go_library(
         "assistant_config.go",
         "cascade.go",
         "control.go",
+        "isolated_git.go",
         "names.go",
         "server.go",
         "store.go",

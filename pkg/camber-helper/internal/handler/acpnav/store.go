@@ -15,7 +15,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime/trace"
-	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -775,65 +774,6 @@ func (s *Store) CreateWorktreeIsolated(ctx context.Context, projectPath, worktre
 	return s.createWorktree(ctx, projectPath, worktreeName, true)
 }
 
-// isolatedGitConfig stops git from running repo-controlled hooks or fsmonitor.
-var isolatedGitConfig = []string{"-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false"}
-
-// IsolatedGitArgs prefixes args with isolatedGitConfig.
-func IsolatedGitArgs(args ...string) []string {
-	return append(append([]string{}, isolatedGitConfig...), args...)
-}
-
-// lfsFilterOverrides pins git-lfs to its canonical commands so a repo cannot
-// repoint the lfs filter at something else.
-var lfsFilterOverrides = []string{
-	"-c", "filter.lfs.smudge=git-lfs smudge -- %f",
-	"-c", "filter.lfs.process=git-lfs filter-process",
-	"-c", "filter.lfs.clean=git-lfs clean -- %f",
-	"-c", "filter.lfs.required=true",
-}
-
-// filterDriverOverrides returns -c arguments that disable every repo-configured
-// clean/smudge/process filter driver (they run config-defined commands during
-// checkout), except lfs, which is pinned to its canonical values.
-func (s *Store) filterDriverOverrides(ctx context.Context, projectPath string) ([]string, error) {
-	out, err := s.runGit(ctx, IsolatedGitArgs("-C", projectPath, "config", "--null", "--get-regexp", `^filter\..*\.(smudge|clean|process|required)$`)...)
-	if err != nil {
-		var exitErr *exec.ExitError
-		if stderrors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
-			return nil, nil // no matching keys
-		}
-		return nil, fmt.Errorf("listing git filter drivers: %w: %s", err, strings.TrimSpace(string(out)))
-	}
-	names := map[string]struct{}{}
-	for _, record := range strings.Split(string(out), "\x00") {
-		key, _, _ := strings.Cut(record, "\n")
-		key = strings.TrimSpace(key)
-		rest, ok := strings.CutPrefix(key, "filter.")
-		if !ok {
-			continue
-		}
-		if i := strings.LastIndex(rest, "."); i > 0 {
-			names[rest[:i]] = struct{}{}
-		}
-	}
-	sorted := make([]string, 0, len(names))
-	for name := range names {
-		sorted = append(sorted, name)
-	}
-	sort.Strings(sorted)
-	var args []string
-	for _, name := range sorted {
-		if name == "lfs" {
-			args = append(args, lfsFilterOverrides...)
-			continue
-		}
-		for _, v := range []string{"smudge=", "clean=", "process=", "required=false"} {
-			args = append(args, "-c", "filter."+name+"."+v)
-		}
-	}
-	return args, nil
-}
-
 func (s *Store) createWorktree(ctx context.Context, projectPath, worktreeName string, isolated bool) (methods.ACPNavProject, error) {
 	projectPath = cleanPath(projectPath)
 	if projectPath == "" {
@@ -867,17 +807,14 @@ func (s *Store) createWorktree(ctx context.Context, projectPath, worktreeName st
 
 	rl := s.repoLock(projectPath)
 	rl.Lock()
-	addArgs := []string{"-C", projectPath, "worktree", "add", "-b", branch, worktreePath}
-	var out []byte
 	var err error
 	if isolated {
-		var overrides []string
-		if overrides, err = s.filterDriverOverrides(ctx, projectPath); err == nil {
-			addArgs = append(append([]string{}, isolatedGitConfig...), append(overrides, addArgs...)...)
-			out, err = s.runGit(ctx, addArgs...)
-		}
+		err = s.addWorktreeIsolated(ctx, projectPath, branch, worktreePath)
 	} else {
-		out, err = s.runGit(ctx, addArgs...)
+		var out []byte
+		if out, err = s.runGit(ctx, "-C", projectPath, "worktree", "add", "-b", branch, worktreePath); err != nil {
+			err = fmt.Errorf("git worktree add failed: %w: %s", err, strings.TrimSpace(string(out)))
+		}
 	}
 	rl.Unlock()
 	if err != nil {
@@ -887,7 +824,7 @@ func (s *Store) createWorktree(ctx context.Context, projectPath, worktreeName st
 		if owned {
 			_ = os.RemoveAll(worktreePath)
 		}
-		return methods.ACPNavProject{}, fmt.Errorf("git worktree add failed: %w: %s", err, strings.TrimSpace(string(out)))
+		return methods.ACPNavProject{}, err
 	}
 
 	s.worktreeMu.Lock()
@@ -1558,8 +1495,9 @@ func (s *Store) RemoveWorktree(ctx context.Context, path string) error {
 }
 
 // RemoveWorktreeSafely preserves Git failures and never forces removal.
-// It is reached only from control automation, so git runs isolated from
-// repo hooks and fsmonitor.
+// It is reached only from control automation, so git runs isolated: repo
+// hooks and fsmonitor are disabled and the repo-configured filter drivers
+// visible inside the worktree are neutralised (see isolatedWorktreeArgs).
 func (s *Store) RemoveWorktreeSafely(ctx context.Context, path string) error {
 	return s.removeWorktree(ctx, path, false)
 }
@@ -1579,16 +1517,20 @@ func (s *Store) removeWorktree(ctx context.Context, path string, force bool) err
 
 	if parent.Valid && parent.String != "" {
 		parentPath := cleanPath(parent.String)
+		var prefix []string
+		if !force {
+			var err error
+			if prefix, _, err = s.isolatedWorktreeArgs(ctx, path); err != nil {
+				return err
+			}
+		}
 		rl := s.repoLock(parentPath)
 		rl.Lock()
-		args := []string{"-C", parentPath, "worktree", "remove"}
+		args := append(prefix, "-C", parentPath, "worktree", "remove")
 		if force {
 			args = append(args, "--force")
 		}
 		args = append(args, path)
-		if !force {
-			args = IsolatedGitArgs(args...)
-		}
 		output, removeErr := s.runGit(ctx, args...)
 		rl.Unlock()
 		if !force && removeErr != nil {

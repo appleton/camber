@@ -62,6 +62,16 @@ func (s *Server) WriteControlState(ctx context.Context, id string, value any) er
 	return pkgerrors.WithStack(s.store.writeControlState(ctx, id, string(raw)))
 }
 
+// CheckWorktreeClean is Store.CheckWorktreeClean for control automation: an
+// isolated `git status` that fails unless the worktree has no uncommitted or
+// untracked changes.
+func (s *Server) CheckWorktreeClean(ctx context.Context, path string) error {
+	if s.store == nil {
+		return pkgerrors.WithStack(sql.ErrConnDone)
+	}
+	return s.store.CheckWorktreeClean(ctx, path)
+}
+
 // RemoveWorktreeSafely uses Git's normal dirty and lock guards for automation.
 func (s *Server) RemoveWorktreeSafely(ctx context.Context, path string, g *glsp.Context) (methods.ACPNavState, error) {
 	if s.store == nil {
