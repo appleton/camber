@@ -53,6 +53,15 @@ func (l *SessionLog) Poll(agent, session, cursor string) (ControlPoll, error) {
 
 // PollBetween bounds replay to an immutable completed turn when end is set.
 func (l *SessionLog) PollBetween(agent, session, cursor, end string) (ControlPoll, error) {
+	return l.PollBetweenRedacted(agent, session, cursor, end, nil)
+}
+
+// PollBetweenRedacted is PollBetween with redact applied to an oversized
+// event's encoding before it is reduced. Reduction truncates strings, so
+// redacting the page afterwards could miss a secret cut mid-way and leave its
+// prefix behind. Events that fit are returned unchanged; the caller still
+// redacts the page it emits.
+func (l *SessionLog) PollBetweenRedacted(agent, session, cursor, end string, redact func([]byte) []byte) (ControlPoll, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	entry := l.peekLocked(agent, session)
@@ -118,7 +127,17 @@ func (l *SessionLog) PollBetween(agent, session, cursor, end string) (ControlPol
 			if len(encoded) > controlEventCap {
 				// Reduce a copy for the control view; the stored log keeps the
 				// original for remote clients.
-				item.Params = reduceControlParams(event.params, len(encoded))
+				params := event.params
+				if redact != nil {
+					var redacted struct {
+						Params any `json:"params"`
+					}
+					if err = json.Unmarshal(redact(encoded), &redacted); err != nil {
+						return out, pkgerrors.WithStack(err)
+					}
+					params = redacted.Params
+				}
+				item.Params = reduceControlParams(params, len(encoded))
 				reduced = true
 				if encoded, err = json.Marshal(item); err != nil {
 					return out, pkgerrors.WithStack(err)
@@ -218,7 +237,7 @@ func isAgentMessageChunk(params any) bool {
 
 // reduceControlParams returns a reduced copy of params for control output,
 // keeping identifying fields and agent message text while truncating bulky
-// payloads. The result is marked with _poolside.truncated.
+// payloads. The result is marked with _camber.truncated.
 func reduceControlParams(params any, originalBytes int) any {
 	return ReduceControlValue(params, originalBytes, controlEventCap/2)
 }
@@ -227,7 +246,7 @@ func reduceControlParams(params any, originalBytes int) any {
 // target bytes where possible: bulky strings are truncated with a marker,
 // media, _meta, rawInput, rawOutput and toolResponse payloads are omitted, and
 // long arrays are cut. Short identifying fields survive. Object results carry
-// _poolside.truncated; control output uses this for oversized events and
+// _camber.truncated; control output uses this for oversized events and
 // pending interactions alike.
 func ReduceControlValue(params any, originalBytes, target int) any {
 	raw, err := json.Marshal(params)
@@ -237,18 +256,18 @@ func ReduceControlValue(params any, originalBytes, target int) any {
 	}
 	marker := map[string]any{"truncated": true, "originalBytes": originalBytes}
 	if err != nil {
-		return map[string]any{"_poolside": marker}
+		return map[string]any{"_camber": marker}
 	}
 	for _, level := range []struct{ text, str int }{{controlTextCap, controlStringCap}, {controlTextCap / 4, 256}, {1024, 64}} {
 		reduced := reduceNode(tree, level.text, level.str, "")
 		if m, ok := reduced.(map[string]any); ok {
-			m["_poolside"] = marker
+			m["_camber"] = marker
 			if enc, e := json.Marshal(m); e == nil && len(enc) <= target {
 				return m
 			}
 		}
 	}
-	return map[string]any{"_poolside": marker, "note": "event too large for control output"}
+	return map[string]any{"_camber": marker, "note": "event too large for control output"}
 }
 
 func reduceNode(n any, textCap, strCap int, key string) any {

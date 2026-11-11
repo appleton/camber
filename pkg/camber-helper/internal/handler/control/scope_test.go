@@ -5,14 +5,19 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tliron/glsp"
 
+	"github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2"
 	"github.com/appleton/camber/pkg/camber-helper/methods"
 )
 
@@ -188,10 +193,33 @@ func addChild(t *testing.T, s *Service, metadata string) {
 }
 
 // schemaAgent loads the parent session with a fixed schema, so a saved
-// selection's meaning is only known once the session is loaded.
+// selection's meaning is only known once the session is loaded. Like
+// acpproxy, it holds a non-reentrant idle reservation per session that
+// CloseSession needs too.
 type schemaAgent struct {
 	*driftAgent
-	schema string
+	schema   string
+	reserved map[string]bool
+}
+
+func (a *schemaAgent) ReserveIdleSession(_ context.Context, _, session string) (func(), error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.reserved[session] {
+		return nil, errors.New("CONVERSATION_BUSY")
+	}
+	if a.reserved == nil {
+		a.reserved = map[string]bool{}
+	}
+	a.reserved[session] = true
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			a.mu.Lock()
+			defer a.mu.Unlock()
+			delete(a.reserved, session)
+		})
+	}, nil
 }
 
 func (a *schemaAgent) LoadSession(context.Context, *methods.ACPLoadSessionParams, *glsp.Context) (*methods.ACPLoadSessionOutput, error) {
@@ -206,6 +234,11 @@ func (a *schemaAgent) LoadSession(context.Context, *methods.ACPLoadSessionParams
 }
 
 func (a *schemaAgent) CloseSession(ctx context.Context, p *methods.ACPCloseSessionParams, g *glsp.Context) (*methods.ACPCloseSessionOutput, error) {
+	release, err := a.ReserveIdleSession(ctx, p.AgentServer, string(p.SessionId))
+	if err != nil {
+		return nil, err
+	}
+	defer release()
 	out, err := a.fakeAgent.CloseSession(ctx, p, g)
 	a.mu.Lock()
 	a.parentLive = false
@@ -303,3 +336,141 @@ func TestSpawnUnderParentUsesExplicitProject(t *testing.T) {
 	err = dispatchErr(s, "chat.spawn", Args{ParentID: "parent", ProjectPath: t.TempDir(), Text: "task"})
 	require.ErrorContains(t, err, "not a registered project or worktree", "the project is still checked")
 }
+
+// relabelSchema has a mode value that is safe ("Auto") until the model
+// switches to large, after which the agent labels the same value "Full
+// access".
+func relabelSchema(model, mode, autoName string) string {
+	return `[{"id":"model","type":"select","category":"model","currentValue":"` + model + `","options":[{"value":"small"},{"value":"large"}]},` +
+		`{"id":"mode","type":"select","category":"mode","currentValue":"` + mode + `","options":[{"value":"ask","name":"Ask"},{"value":"x-auto","name":"` + autoName + `"},{"value":"bypassPermissions","name":"Bypass"}]}]`
+}
+
+// relabelAgent returns a new schema from the model setter, as real agents do.
+type relabelAgent struct {
+	*schemaAgent
+}
+
+func (a *relabelAgent) SetConfigOption(ctx context.Context, p *methods.ACPSetConfigOptionParams, g *glsp.Context) (*methods.ACPSetConfigOptionOutput, error) {
+	raw, _ := json.Marshal(p.SetSessionConfigOptionRequest)
+	var req struct {
+		ID    string `json:"configId"`
+		Value any    `json:"value"`
+	}
+	_ = json.Unmarshal(raw, &req)
+	if req.ID != "model" || req.Value != "large" {
+		return a.fakeAgent.SetConfigOption(ctx, p, g)
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.calls = append(a.calls, "set:model")
+	a.options = json.RawMessage(relabelSchema("large", modeCurrent(a.options), "Full access"))
+	var out methods.ACPSetConfigOptionOutput
+	err := json.Unmarshal([]byte(`{"configOptions":`+string(a.options)+`}`), &out)
+	return &out, err
+}
+
+func modeCurrent(options json.RawMessage) string {
+	for _, o := range parseOptions(options) {
+		if o.ID == "mode" {
+			value, _ := o.Current.(string)
+			return value
+		}
+	}
+	return ""
+}
+
+func relabelFixture(t *testing.T, schema, metadata string) (*Service, *relabelAgent) {
+	t.Helper()
+	s, base := schemaFixture(t, schema, metadata)
+	agent := &relabelAgent{schemaAgent: base}
+	s.agent = agent
+	return s, agent
+}
+
+func TestModelSwitchRelabellingModeNeedsProof(t *testing.T) {
+	batch := Args{ConversationID: "parent", Config: map[string]any{"model": "large", "mode": "x-auto"}}
+	t.Run("config set/unproven is rejected after the model switch", func(t *testing.T) {
+		for _, token := range []string{"", "tok-other", "tok-parent"} {
+			s, agent := relabelFixture(t, relabelSchema("small", "ask", "Auto"), `{}`)
+			agent.parentLive = true
+			agent.options = json.RawMessage(relabelSchema("small", "ask", "Auto"))
+			_, err := dispatchAs(s, token, "chat.config.set", batch)
+			require.ErrorContains(t, err, "PERMISSION_ESCALATION")
+			assert.Equal(t, []string{"set:model"}, agent.callList(), "no value applied after the refusal")
+			assert.Equal(t, "ask", childMode(t, agent.driftAgent))
+		}
+	})
+	t.Run("config set/unproven re-selection of a now-relabelled current mode is rejected", func(t *testing.T) {
+		s, agent := relabelFixture(t, relabelSchema("small", "x-auto", "Auto"), `{}`)
+		agent.parentLive = true
+		agent.options = json.RawMessage(relabelSchema("small", "x-auto", "Auto"))
+		_, err := dispatchAs(s, "", "chat.config.set", batch)
+		require.ErrorContains(t, err, "PERMISSION_ESCALATION")
+	})
+	t.Run("config set/proven caller is allowed", func(t *testing.T) {
+		s, agent := relabelFixture(t, relabelSchema("small", "bypassPermissions", "Auto"), `{}`)
+		agent.parentLive = true
+		agent.options = json.RawMessage(relabelSchema("small", "bypassPermissions", "Auto"))
+		_, err := dispatchAs(s, "tok-parent", "chat.config.set", batch)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"set:model", "set:mode"}, agent.callList())
+		assert.Equal(t, "x-auto", childMode(t, agent.driftAgent))
+	})
+
+	const saved = `{"sessionConfig":{"selections":{"model":"large","mode":"x-auto"}}}`
+	t.Run("restore/unproven send is rejected and the session closed", func(t *testing.T) {
+		for _, token := range []string{"", "tok-other"} {
+			s, agent := relabelFixture(t, relabelSchema("small", "ask", "Auto"), saved)
+			_, err := dispatchAs(s, token, "chat.send", Args{ConversationID: "parent", Text: "go"})
+			require.ErrorContains(t, err, "PERMISSION_ESCALATION")
+			assert.Equal(t, []string{"load", "set:model", "close"}, agent.callList())
+			_, _, live := agent.SessionConfiguration("test", "parent-session")
+			assert.False(t, live, "no loaded session is left behind")
+			parent, viewErr := s.view(context.Background(), "parent", nil)
+			require.NoError(t, viewErr)
+			assert.JSONEq(t, saved, string(parent.Metadata), "saved selections untouched")
+		}
+	})
+	t.Run("restore/unproven config list shows the saved view", func(t *testing.T) {
+		s, agent := relabelFixture(t, relabelSchema("small", "ask", "Auto"), saved)
+		out, err := dispatchAs(s, "", "chat.config.list", Args{ConversationID: "parent"})
+		require.NoError(t, err)
+		assert.Equal(t, false, out["restored"])
+		assert.Equal(t, []string{"load", "set:model", "close"}, agent.callList())
+	})
+	t.Run("restore/proven caller restores and prompts", func(t *testing.T) {
+		s, agent := relabelFixture(t, relabelSchema("small", "ask", "Auto"), saved)
+		_, err := dispatchAs(s, "tok-parent", "chat.send", Args{ConversationID: "parent", Text: "go"})
+		require.NoError(t, err)
+		finishSpawn(t, agent.driftAgent)
+		assert.Equal(t, []string{"load", "set:model", "set:mode", "prompt"}, agent.callList())
+	})
+}
+
+func TestDispatchErrorsRedactCallerTokens(t *testing.T) {
+	s, _ := tokenFixture(t, `{}`, false)
+	t.Run("plain error", func(t *testing.T) {
+		err := dispatchErr(s, "chat.inspect", Args{ConversationID: "tok-parent"})
+		require.Error(t, err)
+		assert.NotContains(t, err.Error(), "tok-parent")
+	})
+	t.Run("JSON-RPC error keeps its code", func(t *testing.T) {
+		err := s.redactError(wrapWithContext(&methods.JSONRPCError{Code: methods.CamberErrorCodeEntityInvalid, Message: "bad tok-parent"}))
+		var rpcErr *methods.JSONRPCError
+		require.ErrorAs(t, err, &rpcErr)
+		assert.Equal(t, methods.CamberErrorCodeEntityInvalid, rpcErr.Code)
+		assert.Equal(t, "bad [redacted]", rpcErr.Message)
+	})
+	t.Run("wire error keeps its code and redacts data", func(t *testing.T) {
+		data := json.RawMessage(`{"token":"tok-parent"}`)
+		err := s.redactError(&jsonrpc2.WireError{Code: -32001, Message: "busy tok-parent", Data: &data})
+		var wireErr *jsonrpc2.WireError
+		require.ErrorAs(t, err, &wireErr)
+		assert.Equal(t, int64(-32001), wireErr.Code)
+		assert.Equal(t, "busy [redacted]", wireErr.Message)
+		require.NotNil(t, wireErr.Data)
+		assert.False(t, strings.Contains(string(*wireErr.Data), "tok-parent"))
+	})
+}
+
+func wrapWithContext(err error) error { return fmt.Errorf("context: %w", err) }

@@ -174,7 +174,7 @@ func TestHugePendingApprovalIsBounded(t *testing.T) {
 			first := items[0].(map[string]any)
 			assert.Equal(t, "a1", first["id"])
 			assert.Equal(t, "permission", first["kind"])
-			assert.Equal(t, true, first["_poolside"].(map[string]any)["truncated"])
+			assert.Equal(t, true, first["_camber"].(map[string]any)["truncated"])
 			enc, err := json.Marshal(first)
 			require.NoError(t, err)
 			assert.LessOrEqual(t, len(enc), pendingInteractionCap)
@@ -190,7 +190,7 @@ func TestHugePendingApprovalIsBounded(t *testing.T) {
 func TestSmallPendingApprovalIsVerbatim(t *testing.T) {
 	approval := methods.ACPApproval{AgentServer: "test", SessionID: "session", Kind: "permission", ID: "p1",
 		Permission: &methods.ACPApprovalPermission{ToolCall: json.RawMessage(`{"toolCallId":"t","rawInput":{"command":"ls"}}`), Options: json.RawMessage(`[]`)}}
-	bounded, truncated := boundPendingInteractions([]methods.ACPApproval{approval})
+	bounded, truncated := boundPendingInteractions([]methods.ACPApproval{approval}, nil)
 	assert.False(t, truncated)
 	require.Len(t, bounded, 1)
 	assert.Equal(t, approval, bounded[0])
@@ -199,7 +199,7 @@ func TestSmallPendingApprovalIsVerbatim(t *testing.T) {
 func TestPollResponseFitsCap(t *testing.T) {
 	v := View{Record: Record{Task: strings.Repeat("t", 4096), ConfigOptions: json.RawMessage(`"` + strings.Repeat("c", 500*1024) + `"`)}}
 	out := map[string]any{"conversation": v, "text": strings.Repeat("x", 400*1024), "pendingInteractions": []any{}}
-	fitPollResponse(out, nil)
+	fitPollResponse(out, nil, nil)
 	assert.LessOrEqual(t, encodedLen(out), pollResponseCap)
 	assert.Equal(t, true, out["conversationReduced"])
 	assert.Equal(t, true, out["truncated"])

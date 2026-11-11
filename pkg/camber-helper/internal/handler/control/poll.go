@@ -91,7 +91,7 @@ func (s *Service) poll(ctx context.Context, a Args, command string, g *glsp.Cont
 		if command == "chat.snapshot" && a.Cursor == "" {
 			cursor = ""
 		}
-		page, err := s.log.PollBetween(v.AgentServer, v.SessionID, cursor, selected.EndCursor)
+		page, err := s.log.PollBetweenRedacted(v.AgentServer, v.SessionID, cursor, selected.EndCursor, s.redactor())
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +144,7 @@ func (s *Service) poll(ctx context.Context, a Args, command string, g *glsp.Cont
 		}
 		terminal := !running && !waiting
 		out := map[string]any{"events": page.Events, "cursor": page.Cursor, "nextCursor": page.NextCursor, "turnActive": running, "resetRequired": page.ResetRequired, "hasMore": page.HasMore, "conversation": v, "turnId": v.TurnID, "status": status, "result": v.Result, "error": v.Error, "terminal": terminal && !page.HasMore, "waitExpired": a.WaitMs > 0 && time.Now().After(deadline) && !terminal}
-		bounded, pendingTruncated := boundPendingInteractions(pending)
+		bounded, pendingTruncated := boundPendingInteractions(pending, s.redactor())
 		out["pendingInteractions"] = bounded
 		if page.ReducedEvents > 0 {
 			out["truncated"] = true
@@ -189,7 +189,7 @@ func (s *Service) poll(ctx context.Context, a Args, command string, g *glsp.Cont
 			out["truncated"] = true
 			out["pendingInteractionsTruncated"] = true
 		}
-		fitPollResponse(out, pending)
+		fitPollResponse(out, pending, s.redactor())
 		return out, nil
 	}
 }
@@ -228,10 +228,20 @@ const (
 	pollResponseCap = 768 * 1024
 )
 
+// redactor returns the caller-token redaction applied before any truncation
+// (see PollBetweenRedacted), or nil without a caller resolver.
+func (s *Service) redactor() func([]byte) []byte {
+	if s.callers == nil {
+		return nil
+	}
+	return s.callers.RedactCallerTokens
+}
+
 // boundPendingInteractions reduces oversized pending interactions (marked
-// _poolside.truncated) and stubs those past the total budget, reporting
-// whether anything was cut.
-func boundPendingInteractions(pending []methods.ACPApproval) ([]any, bool) {
+// _camber.truncated) and stubs those past the total budget, reporting
+// whether anything was cut. redact, when set, runs before reduction so a
+// truncation cannot leave part of a token behind.
+func boundPendingInteractions(pending []methods.ACPApproval, redact func([]byte) []byte) ([]any, bool) {
 	out := make([]any, 0, len(pending))
 	total, truncated := 0, false
 	for _, p := range pending {
@@ -241,7 +251,11 @@ func boundPendingInteractions(pending []methods.ACPApproval) ([]any, bool) {
 		case err != nil:
 			item, truncated = pendingStub(p, 0), true
 		case len(enc) > pendingInteractionCap:
-			item, truncated = withApprovalIdentity(remoteaccess.ReduceControlValue(p, len(enc), pendingInteractionCap), p), true
+			var value any = p
+			if redact != nil {
+				value = json.RawMessage(redact(enc))
+			}
+			item, truncated = withApprovalIdentity(remoteaccess.ReduceControlValue(value, len(enc), pendingInteractionCap), p), true
 		}
 		size := encodedLen(item)
 		if total+size > pendingInteractionsCap {
@@ -257,8 +271,9 @@ func boundPendingInteractions(pending []methods.ACPApproval) ([]any, bool) {
 // fitPollResponse shrinks out until its encoding fits pollResponseCap:
 // first pending interactions become stubs, then the conversation drops its
 // bulky metadata, then the derived text (still present in events) goes.
-// Event pages are already bounded by the session log.
-func fitPollResponse(out map[string]any, pending []methods.ACPApproval) {
+// Event pages are already bounded by the session log. redact, when set, runs
+// on the task before it is cut.
+func fitPollResponse(out map[string]any, pending []methods.ACPApproval, redact func([]byte) []byte) {
 	if encodedLen(out) <= pollResponseCap {
 		return
 	}
@@ -276,6 +291,9 @@ func fitPollResponse(out map[string]any, pending []methods.ACPApproval) {
 	}
 	if v, ok := out["conversation"].(View); ok {
 		v.Metadata, v.ConfigOptions, v.Modes = nil, nil, nil
+		if redact != nil {
+			v.Task = string(redact([]byte(v.Task)))
+		}
 		if len(v.Task) > 1024 {
 			v.Task = strings.ToValidUTF8(v.Task[:1024], "")
 		}
@@ -300,14 +318,14 @@ func pendingStub(p methods.ACPApproval, originalBytes int) map[string]any {
 	if originalBytes > 0 {
 		marker["originalBytes"] = originalBytes
 	}
-	return withApprovalIdentity(map[string]any{"_poolside": marker}, p).(map[string]any)
+	return withApprovalIdentity(map[string]any{"_camber": marker}, p).(map[string]any)
 }
 
 // withApprovalIdentity restores identifying fields a reduction may have cut.
 func withApprovalIdentity(reduced any, p methods.ACPApproval) any {
 	m, ok := reduced.(map[string]any)
 	if !ok {
-		m = map[string]any{"_poolside": map[string]any{"truncated": true}}
+		m = map[string]any{"_camber": map[string]any{"truncated": true}}
 	}
 	m["agentServer"], m["sessionId"], m["kind"], m["id"] = p.AgentServer, p.SessionID, p.Kind, p.ID
 	if p.CreatedAt != "" {

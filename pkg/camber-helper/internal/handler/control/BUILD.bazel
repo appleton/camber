@@ -14,6 +14,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/acp",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2",
         "//pkg/camber-helper/internal/handler/acpnav",
         "//pkg/camber-helper/internal/handler/remoteaccess",
         "//pkg/camber-helper/internal/handler/remoteterminal",
@@ -38,6 +39,7 @@ go_test(
     ],
     embed = [":control"],
     deps = [
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2",
         "//pkg/camber-helper/internal/handler/acpnav",
         "//pkg/camber-helper/internal/handler/remoteaccess",
         "//pkg/camber-helper/methods",

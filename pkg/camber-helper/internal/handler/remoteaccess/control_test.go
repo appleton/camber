@@ -1,6 +1,8 @@
 package remoteaccess
 
 import (
+	"bytes"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -74,4 +76,36 @@ func TestControlPollReportsEvictionAndPreservesSnapshotSuffix(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, snapshot.ResetRequired)
 	assert.NotEmpty(t, snapshot.Events)
+}
+
+func TestControlPollRedactsBeforeTruncating(t *testing.T) {
+	const token = "SECRETTOKEN0123456789ABCDEF"
+	// The token straddles the point where reduction cuts a text field, so
+	// redacting only the reduced output would leave its prefix behind.
+	text := strings.Repeat("a", controlTextCap-10) + token + strings.Repeat("b", 3*controlEventCap)
+	l := NewSessionLog(NewHub())
+	start := l.ControlCursor("agent", "session")
+	l.Publish("agent", "session", "", false, map[string]any{"text": text})
+	prefix := token[:10]
+
+	unredacted, err := l.PollBetween("agent", "session", start, "")
+	require.NoError(t, err)
+	require.Len(t, unredacted.Events, 1)
+	require.Equal(t, 1, unredacted.ReducedEvents)
+	raw, err := json.Marshal(unredacted.Events[0])
+	require.NoError(t, err)
+	require.Contains(t, string(raw), prefix, "the cut lands inside the token")
+	require.NotContains(t, string(raw), token)
+
+	redact := func(data []byte) []byte { return bytes.ReplaceAll(data, []byte(token), []byte("[redacted]")) }
+	page, err := l.PollBetweenRedacted("agent", "session", start, "", redact)
+	require.NoError(t, err)
+	require.Len(t, page.Events, 1)
+	assert.Equal(t, 1, page.ReducedEvents)
+	raw, err = json.Marshal(page.Events[0])
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), prefix)
+	assert.Contains(t, string(raw), "[redacted]")
+	assert.Contains(t, string(raw), `"_camber":{`)
+	assert.LessOrEqual(t, len(raw), controlEventCap)
 }

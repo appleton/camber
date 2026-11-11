@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"sort"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/tliron/glsp"
 
 	"github.com/appleton/camber/pkg/acp"
+	"github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2"
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/acpnav"
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/remoteaccess"
 	"github.com/appleton/camber/pkg/camber-helper/methods"
@@ -117,7 +119,46 @@ type storedRecord struct {
 
 var commands = []string{"actions.list", "actions.describe", "skill.show", "context", "status", "agents.list", "agents.inspect", "agents.config.options", "projects.list", "worktrees.list", "worktrees.inspect", "worktrees.create", "worktrees.remove", "chat.list", "chat.inspect", "chat.children", "chat.spawn", "chat.send", "chat.steer", "chat.stop", "chat.poll", "chat.output", "chat.snapshot", "chat.config.list", "chat.config.set"}
 
+// Dispatch runs one control action. Results and errors alike pass through
+// caller-token redaction: an error can quote agent or nav text too.
 func (s *Service) Dispatch(ctx context.Context, params *methods.ControlDispatchParams, g *glsp.Context) (json.RawMessage, error) {
+	raw, err := s.dispatch(ctx, params, g)
+	if err != nil {
+		return nil, s.redactError(err)
+	}
+	return raw, nil
+}
+
+// redactError returns err with caller tokens removed from its message,
+// keeping the JSON-RPC error code and data the wire encoding uses.
+func (s *Service) redactError(err error) error {
+	if s.callers == nil {
+		return err
+	}
+	redact := func(text string) string { return string(s.callers.RedactCallerTokens([]byte(text))) }
+	var rpcErr *methods.JSONRPCError
+	if errors.As(err, &rpcErr) {
+		if message := redact(rpcErr.Message); message != rpcErr.Message {
+			return &methods.JSONRPCError{Code: rpcErr.Code, Message: message, Data: rpcErr.Data}
+		}
+		return err
+	}
+	var wireErr *jsonrpc2.WireError
+	if errors.As(err, &wireErr) {
+		redacted := &jsonrpc2.WireError{Code: wireErr.Code, Message: redact(wireErr.Message)}
+		if wireErr.Data != nil {
+			data := json.RawMessage(s.callers.RedactCallerTokens(append([]byte(nil), (*wireErr.Data)...)))
+			redacted.Data = &data
+		}
+		return redacted
+	}
+	if message := redact(err.Error()); message != err.Error() {
+		return errors.New(message)
+	}
+	return err
+}
+
+func (s *Service) dispatch(ctx context.Context, params *methods.ControlDispatchParams, g *glsp.Context) (json.RawMessage, error) {
 	// CLI actions arrive over the primary desktop connection but render no local
 	// transcript. Tag them separately so user prompts reach every GUI surface.
 	ctx = methods.WithClientOrigin(ctx, "control")
@@ -531,6 +572,15 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 	if err = validateConfigKeys(v.ConfigOptions, a.Config); err != nil {
 		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
+	// A setter's new schema can give a pending selection a bypass meaning;
+	// applyConfig puts it to the spawn rule (see checkSpawnEscalation).
+	parentProven := a.ParentID != "" && s.provenDangerousCaller(caller, parent)
+	guard := func(value string) error {
+		if parentProven {
+			return nil
+		}
+		return escalationError("giving a child "+bypassModeText(value), "the parent conversation")
+	}
 	// The selected model determines which effort and mode selections can be
 	// inherited. Apply it before filtering inherited dependent values.
 	modelID, modelValue := "", a.Model
@@ -560,7 +610,7 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 		if modelID != "" {
 			modelArgs = Args{Config: map[string]any{modelID: modelValue}}
 		}
-		if err = s.applyConfig(ctx, &v, modelArgs, g); err != nil {
+		if err = s.applyConfig(ctx, &v, modelArgs, guard, g); err != nil {
 			return nil, s.abandonSpawn(ctx, &v, err, false, g)
 		}
 	}
@@ -591,13 +641,13 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 	// a now holds explicit and inherited selections; resolve them against the
 	// child's schema (value and display name) before applying any of them.
 	escalation, err := schemaDangerousValue(v.ConfigOptions, v.Modes, a)
-	if err == nil && escalation != "" && (a.ParentID == "" || !s.provenDangerousCaller(caller, parent)) {
-		err = escalationError("giving a child "+bypassModeText(escalation), "the parent conversation")
+	if err == nil && escalation != "" {
+		err = guard(escalation)
 	}
 	if err != nil {
 		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
-	if err = s.applyConfig(ctx, &v, a, g); err != nil {
+	if err = s.applyConfig(ctx, &v, a, guard, g); err != nil {
 		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
 	// Preparation can take minutes; the parent may have been archived

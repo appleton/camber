@@ -159,6 +159,12 @@ Permission and workspace guardrails apply to every control call:
 - `chat config set` selects a bypass value only when `--caller-token` proves the
   request comes from the target or its parent, and that conversation is loaded
   and running in a bypass mode right now.
+- Each value is judged again against the schema the agent returns after every
+  change. If changing one value (typically the model) makes the agent label a
+  value still to be applied, or the resulting mode, as a bypass mode, the same
+  rule applies there: without proof the call fails with `PERMISSION_ESCALATION`
+  and nothing further is applied. For `chat config set`, values already accepted
+  (such as the new model) stay applied.
 - Otherwise the call fails with `PERMISSION_ESCALATION` before any change: pass
   the caller token from your host context, or choose a non-bypass mode. A bypass
   mode the agent applies by default (for example from the agent's configured
@@ -177,8 +183,10 @@ Permission and workspace guardrails apply to every control call:
   exists, and always against the agent's real schema once the session is
   loaded, before any selection is re-applied: a saved opaque value labelled
   "Full access", or a bypass value under a mode option with any id, counts. An
-  unproven restore of such a selection fails with `PERMISSION_ESCALATION`, and
-  the just-loaded session is closed again without applying anything.
+  unproven restore of such a selection fails with `PERMISSION_ESCALATION`, the
+  saved selections are left unchanged, and the just-loaded session is closed
+  again. That includes a restore stopped partway because re-applying one saved
+  selection made the agent relabel another as a bypass mode.
 - `chat send`, `chat steer` and `chat config set` reject archived conversations;
   restore them first. `chat stop` still works.
 - An explicit `--workspace`/`--project`, and the `--workspace` used by
@@ -189,18 +197,31 @@ Permission and workspace guardrails apply to every control call:
 - `worktrees create` and `chat spawn --new-worktree` require the project path
   to be a registered root project itself: not a subdirectory and not a
   worktree.
-- When the CLI creates or removes a worktree, git runs without the
-  repository's hooks, fsmonitor or submodule recursion. Command-running
-  configuration from the repository's own local or worktree config (including
-  files it includes, read from inside the worktree so `includeIf "onbranch:"`
-  and `includeIf "gitdir:"` sections count) is disabled: filter drivers and
-  git-lfs custom transfer agents are blanked, and git-lfs is pinned to its
-  standard commands. Filters in your global or system git config run as normal.
-  If the repository needs its own smudge or process filter (such as git-crypt)
-  or a custom LFS transfer agent, CLI worktree creation refuses rather than
-  check out undecoded files; create that worktree from the desktop app. When
-  removing, disabled clean filters can make filtered files look modified, so
-  removal fails closed and the error names the filter.
+- When the CLI creates or removes a worktree, git runs isolated so the
+  repository cannot make it run its own commands. Hooks, fsmonitor, submodule
+  recursion, the `ext::` transport, lazy fetching from promisor remotes,
+  terminal prompts and git-lfs standalone transfer agents are disabled. These
+  overrides go through git's environment (`GIT_CONFIG_COUNT`) rather than `-c`,
+  and replace any inherited command-line config.
+- Filter drivers and git-lfs custom transfer agents from the repository's own
+  config (local or worktree scope, including included files, read from inside
+  the worktree so `includeIf "onbranch:"` and `includeIf "gitdir:"` sections
+  count) are disabled, and the lfs filter is pinned to the standard git-lfs
+  commands. Create refuses a repository that needs its own smudge or process
+  filter (such as git-crypt) or a custom transfer agent to check files out.
+- Create and remove refuse a repository whose own config sets a key that can
+  run a command: `core.sshCommand`, `core.askPass`, `core.gitProxy`,
+  credential helpers, a remote's `uploadpack`/`receivepack`/`vcs`,
+  `uploadpack.packObjectsHook` or git-lfs extensions. They also refuse when a
+  committed `.lfsconfig` points git-lfs at a non-HTTP(S) endpoint or declares
+  extensions or transfer agents, and when a repository-defined filter driver,
+  remote, credential context, or git-lfs transfer agent or extension has `=` or
+  a newline in its name. The error names the key; do that operation
+  from the desktop app, which runs git normally. The same settings in your
+  global or system git config are your own and still apply.
+- Remove checks that the worktree is clean with the repository's clean filters
+  disabled, so filtered files can show as modified; removal then fails closed
+  and the error names the filter.
 
 ### Caller identity
 
@@ -209,7 +230,7 @@ Each prompt's Camber host context carries a `callerToken` beside the
 lives in the desktop helper's memory until the helper restarts. The desktop
 puts it only in that conversation's host context. It is not exported through
 the agent process environment, which several conversations share, and it is not
-shown in conversation lists or other CLI output (control responses replace
+shown in conversation lists or other CLI output (control responses, error messages included, replace
 known tokens with `[redacted]`). Pass it with `--caller-token TOKEN`, or set
 `CAMBER_CALLER_TOKEN` in your own command's environment (read when the command
 runs; `--help` never prints it, and an explicit `--caller-token` wins). Do not write it to
@@ -217,8 +238,9 @@ files, task text, or other conversations. If the token appears in a
 conversation's messages or reasoning, even split across several messages, or
 another conversation's token appears anywhere in its output, the desktop revokes
 it immediately. Token-gated actions then fail until that conversation's next
-prompt, which carries a new token. Pass it only as `--caller-token` on the
-command line.
+prompt, which carries a new token. Either way, the token belongs only on the
+command that uses it: as `--caller-token`, or as `CAMBER_CALLER_TOKEN` in that
+command's own environment.
 
 The token is checked where it unlocks extra permission: bypass modes on
 `chat spawn` and `chat config set`, and sending to, steering or restoring a
@@ -282,7 +304,7 @@ Each page stays small enough for the CLI transport. An event larger than
 192 KiB is reduced in poll, watch, output and snapshot responses: bulky tool
 output, raw input/output, `_meta` and images become size placeholders, long
 text is truncated with a marker, and the event carries
-`_poolside: {"truncated": true, "originalBytes": N}`. The stored history and
+`_camber: {"truncated": true, "originalBytes": N}`. The stored history and
 remote clients keep the full event.
 When any event on a page was reduced, that page returns `truncated: true` and
 `reducedEvents: N`. In `output` and `snapshot` responses,
@@ -292,7 +314,7 @@ sit on an earlier page of a multi-page read, so treat the answer as complete
 only if no page you read had `truncated: true`; read the full text in the
 desktop transcript instead.
 `pendingInteractions` lists approvals waiting on the user. Very large tool-call
-payloads are shortened and marked `_poolside.truncated`, and the response then
+payloads are shortened and marked `_camber.truncated`, and the response then
 sets `truncated: true` and `pendingInteractionsTruncated: true`. If a response
 would still be too large, it may also drop conversation metadata
 (`conversationReduced: true`) or the joined `text` field (`textOmitted: true`,
@@ -335,6 +357,8 @@ The current CLI command surface is:
 - `worktrees list`, `inspect`, `create`, `remove`
 - `chat list`, `inspect`, `children`, `snapshot`, `spawn`, `config list`,
   `config set`, `send`, `steer`, `stop`, `poll`, `output`, `watch`
+- `skill show`, `skill setup`, `skill status`, `skill remove`
+- `cli install`
 
 `chat list` returns one summary row per conversation (id, title, workspace,
 agent, parent/root, status, turn, archived, updatedAt), most recently updated
@@ -352,8 +376,6 @@ page's position instead, so rows are not repeated.
 
 `--workspace`, `--worktree`, `--project` and worktree path arguments may be
 relative; the CLI turns them into absolute paths before sending.
-- `skill show`, `skill setup`, `skill status`, `skill remove`
-- `cli install`
 
 Use `camber --help` and `camber COMMAND --help` for syntax and flags. Add
 `--json` for structured results and machine-readable errors.

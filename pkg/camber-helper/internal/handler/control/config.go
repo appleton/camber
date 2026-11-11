@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	acpsdk "github.com/coder/acp-go-sdk"
 	pkgerrors "github.com/pkg/errors"
@@ -161,10 +163,14 @@ func (s *Service) configure(ctx context.Context, a Args, set bool, caller string
 	if err != nil {
 		return nil, err
 	}
+	release = sync.OnceFunc(release)
 	defer release()
 	if !cached {
 		recorded := v
 		if err = s.restoreSessionReserved(ctx, &v, caller, g); err != nil {
+			// Closing a refused restore takes the idle reservation itself.
+			release()
+			err = s.closeRefusedRestore(ctx, v, err, g)
 			if !set && isPermissionEscalation(err) {
 				// The loaded schema showed the saved selection is a bypass mode
 				// the caller may not restore: list the saved view instead.
@@ -184,7 +190,17 @@ func (s *Service) configure(ctx context.Context, a Args, set bool, caller string
 		if err = s.checkConfigEscalation(a, caller, true, v, refs); err != nil {
 			return nil, err
 		}
-		if err = s.applyConfig(ctx, &v, a, g); err != nil {
+		// A setter can return a new schema that relabels a later selection;
+		// the guard re-judges what is left by the same caller rule, decided
+		// now: the batch itself may change the target's live mode.
+		proven := s.provenDangerousCaller(caller, refs...)
+		guard := func(value string) error {
+			if proven {
+				return nil
+			}
+			return escalationError("selecting "+bypassModeText(value), "the conversation or its parent")
+		}
+		if err = s.applyConfig(ctx, &v, a, guard, g); err != nil {
 			return nil, err
 		}
 	}
@@ -193,13 +209,27 @@ func (s *Service) configure(ctx context.Context, a Args, set bool, caller string
 	}
 	return map[string]any{"conversationId": v.ID, "configOptions": v.ConfigOptions, "modes": v.Modes}, nil
 }
-func (s *Service) applyConfig(ctx context.Context, v *View, a Args, g *glsp.Context) error {
-	return s.applyConfigWithPersistence(ctx, v, a, g, true)
+
+// bypassGuard decides whether the caller may move a session to the named
+// permission-bypass value, returning a PERMISSION_ESCALATION error if not.
+// Each path supplies its own caller rule (config set, restore, spawn).
+type bypassGuard func(value string) error
+
+func (s *Service) applyConfig(ctx context.Context, v *View, a Args, guard bypassGuard, g *glsp.Context) error {
+	return s.applyConfigWithPersistence(ctx, v, a, guard, g, true)
 }
 
 // Explicit updates retain accepted partial changes. Restoration must preserve
 // the saved selections until all of them have been successfully reapplied.
-func (s *Service) applyConfigWithPersistence(ctx context.Context, v *View, a Args, g *glsp.Context, persist bool) (resultErr error) {
+//
+// Callers judge the request against the schema before applying it, but every
+// setter may return a new schema (a model switch commonly does) that gives a
+// still-pending value a permission-bypass meaning. After each set, the pending
+// selections are judged again against the returned schema and guard decides;
+// a refusal stops before any further value is applied. Finally, a session the
+// caller's mode selection left in a bypass mode it was not in before is put
+// to guard as well.
+func (s *Service) applyConfigWithPersistence(ctx context.Context, v *View, a Args, guard bypassGuard, g *glsp.Context, persist bool) (resultErr error) {
 	if persist {
 		defer func() {
 			if persistErr := s.persistSessionConfig(context.WithoutCancel(ctx), v, g); resultErr == nil && persistErr != nil {
@@ -207,6 +237,7 @@ func (s *Service) applyConfigWithPersistence(ctx context.Context, v *View, a Arg
 			}
 		}()
 	}
+	startedDangerous := optionsDangerous(v.ConfigOptions, v.Modes)
 	opts := parseOptions(v.ConfigOptions)
 	values := map[string]any{}
 	for k, x := range a.Config {
@@ -273,10 +304,19 @@ func (s *Service) applyConfigWithPersistence(ctx context.Context, v *View, a Arg
 		}
 		if len(values) > 1 {
 			modelOnly := Args{Config: map[string]any{o.ID: value}}
-			if err := s.applyConfigWithPersistence(ctx, v, modelOnly, g, persist); err != nil {
+			if err := s.applyConfigWithPersistence(ctx, v, modelOnly, guard, g, persist); err != nil {
 				return err
 			}
 			opts = parseOptions(v.ConfigOptions)
+			pending := map[string]any{}
+			for id, x := range values {
+				if id != o.ID {
+					pending[id] = x
+				}
+			}
+			if err := recheckPendingBypass(*v, pending, a.Mode, guard); err != nil {
+				return err
+			}
 		}
 		break
 	}
@@ -342,7 +382,7 @@ func (s *Service) applyConfigWithPersistence(ctx context.Context, v *View, a Arg
 		}
 		return ids[i] < ids[j]
 	})
-	for _, id := range ids {
+	for i, id := range ids {
 		if byID[id].Current == values[id] {
 			continue
 		}
@@ -365,6 +405,13 @@ func (s *Service) applyConfigWithPersistence(ctx context.Context, v *View, a Arg
 				return err
 			}
 		}
+		pending := map[string]any{}
+		for _, later := range ids[i+1:] {
+			pending[later] = values[later]
+		}
+		if err = recheckPendingBypass(*v, pending, a.Mode, guard); err != nil {
+			return err
+		}
 	}
 	syncLegacyMode(v)
 	if modeLegacy {
@@ -379,6 +426,13 @@ func (s *Service) applyConfigWithPersistence(ctx context.Context, v *View, a Arg
 			v.Modes, _ = json.Marshal(modes)
 		}
 	}
+	// A mode the caller selected that the agent now reports as a bypass mode
+	// (for example relabelled by the new schema) needs the same proof.
+	if !startedDangerous && optionsDangerous(v.ConfigOptions, v.Modes) && requestsMode(v.ConfigOptions, values, a.Mode) {
+		if err := guardBypass(guard, currentModeValue(v.ConfigOptions, v.Modes)); err != nil {
+			return err
+		}
+	}
 	// Agent responses are authoritative: reject a silently ignored setting.
 	current := map[string]any{}
 	for _, o := range parseOptions(v.ConfigOptions) {
@@ -390,6 +444,52 @@ func (s *Service) applyConfigWithPersistence(ctx context.Context, v *View, a Arg
 		}
 	}
 	return nil
+}
+
+// recheckPendingBypass judges selections not yet applied against the schema
+// the last setter returned, and puts a bypass value to guard.
+func recheckPendingBypass(v View, pending map[string]any, mode string, guard bypassGuard) error {
+	value, err := schemaDangerousValue(v.ConfigOptions, v.Modes, Args{Config: pending, Mode: mode})
+	if err != nil || value == "" {
+		return err
+	}
+	return guardBypass(guard, value)
+}
+
+func guardBypass(guard bypassGuard, value string) error {
+	if guard == nil {
+		return escalationError("selecting "+bypassModeText(value), "the conversation or its parent")
+	}
+	return guard(value)
+}
+
+// requestsMode reports whether values (by option id) or a legacy mode select
+// the session's mode.
+func requestsMode(options json.RawMessage, values map[string]any, mode string) bool {
+	if mode != "" {
+		return true
+	}
+	for _, o := range parseOptions(options) {
+		if _, ok := values[o.ID]; ok && optionInCategory(o, "mode") {
+			return true
+		}
+	}
+	return false
+}
+
+// currentModeValue returns the effective mode: a mode-category option's value,
+// else the legacy current mode id.
+func currentModeValue(options, modes json.RawMessage) string {
+	for _, o := range parseOptions(options) {
+		if value, ok := o.Current.(string); ok && optionInCategory(o, "mode") {
+			return value
+		}
+	}
+	var legacy struct {
+		Current string `json:"currentModeId"`
+	}
+	_ = json.Unmarshal(modes, &legacy)
+	return legacy.Current
 }
 
 func (s *Service) persistSessionConfig(ctx context.Context, v *View, g *glsp.Context) error {
@@ -448,15 +548,41 @@ func (s *Service) restoreSession(ctx context.Context, v *View, caller string, g 
 	if err != nil {
 		return err
 	}
-	defer release()
-	return s.restoreSessionReserved(ctx, v, caller, g)
+	err = s.restoreSessionReserved(ctx, v, caller, g)
+	release()
+	return s.closeRefusedRestore(ctx, *v, err, g)
+}
+
+// restoreRefusedError marks a restore refused after LoadSession. The loaded
+// session must not be left behind for a later unproven call to use, but
+// closing it takes the idle-session reservation, which is not reentrant: the
+// caller closes it with closeRefusedRestore after releasing its reservation.
+type restoreRefusedError struct{ err error }
+
+func (e *restoreRefusedError) Error() string { return e.err.Error() }
+func (e *restoreRefusedError) Unwrap() error { return e.err }
+
+// closeRefusedRestore closes the session a refused restore loaded and returns
+// the refusal itself; other errors pass through. The caller must no longer
+// hold the session's idle reservation. A failed close is logged, not hidden.
+func (s *Service) closeRefusedRestore(ctx context.Context, v View, err error, g *glsp.Context) error {
+	var refused *restoreRefusedError
+	if !errors.As(err, &refused) {
+		return err
+	}
+	if _, closeErr := s.agent.CloseSession(context.WithoutCancel(ctx), &methods.ACPCloseSessionParams{ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: v.AgentServer}, CloseSessionRequest: acpsdk.CloseSessionRequest{SessionId: acpsdk.SessionId(v.SessionID)}}, g); closeErr != nil {
+		slog.Warn("control: failed to close session after refusing its restore", "conversationId", v.ID, "agentServer", v.AgentServer, "sessionId", v.SessionID, "error", closeErr)
+	}
+	return refused.err
 }
 
 // The caller already holds the idle-session reservation. Configuration reads
 // and partial updates must restore the same saved selections as a continuation.
 // The loaded schema is the authority on what the saved selections mean: a
 // saved bypass selection is re-applied only for a proven caller (the same rule
-// as checkPromptEscalation); otherwise the session is closed unchanged.
+// as checkPromptEscalation), including one a setter's new schema reveals while
+// re-applying. Otherwise the restore is refused with a restoreRefusedError,
+// and the caller closes the loaded session once its reservation is released.
 func (s *Service) restoreSessionReserved(ctx context.Context, v *View, caller string, g *glsp.Context) (resultErr error) {
 	saved, _, err := savedConfiguration(v.Metadata)
 	if err != nil {
@@ -486,16 +612,24 @@ func (s *Service) restoreSessionReserved(ctx context.Context, v *View, caller st
 		saved.Mode = ""
 	}
 	if err = s.checkRestoreEscalation(ctx, *v, saved, caller, g); err != nil {
-		// Leave no loaded session behind that a later unproven call could use.
-		_, _ = s.agent.CloseSession(context.WithoutCancel(ctx), &methods.ACPCloseSessionParams{ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: v.AgentServer}, CloseSessionRequest: acpsdk.CloseSessionRequest{SessionId: acpsdk.SessionId(v.SessionID)}}, g)
-		return err
+		return &restoreRefusedError{err: err}
 	}
 	if len(saved.Config) == 0 && saved.Mode == "" {
 		return nil
 	}
+	loaded := *v
+	guard := func(string) error {
+		if s.provenPromptCaller(ctx, caller, loaded, g) {
+			return nil
+		}
+		return promptEscalationError(loaded, "restoring")
+	}
 	// A continuation must not silently substitute a different model or effort
 	// when the persisted selection is no longer supported by this agent.
-	if err = s.applyConfigWithPersistence(ctx, v, saved, g, false); err != nil {
+	if err = s.applyConfigWithPersistence(ctx, v, saved, guard, g, false); err != nil {
+		if isPermissionEscalation(err) {
+			return &restoreRefusedError{err: err}
+		}
 		return err
 	}
 	return s.persistSessionConfig(ctx, v, g)
