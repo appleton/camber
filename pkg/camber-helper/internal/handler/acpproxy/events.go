@@ -57,10 +57,52 @@ type sessionReplaySink interface {
 	SessionReplay(agentServer, sessionID, originID string) ([]map[string]any, SessionCursor, bool)
 }
 
+// Optional sink capability: drop a throwaway session's retained events so
+// config probes do not occupy the bounded session log.
+type sessionForgetSink interface {
+	ForgetSession(agentServer, sessionID string)
+}
+
 func (h *Handler) markSessionHistory(agentServer, sessionID string, complete bool) {
 	if sink, ok := h.events.(sessionReplaySink); ok {
 		sink.MarkSessionHistory(normalizeServerName(agentServer), sessionID, complete)
 	}
+}
+
+// trackProbeSession remembers a config-probe session so closing it also drops
+// whatever its streaming updates put in the session log.
+func (h *Handler) trackProbeSession(agentServer, sessionID string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.probeSessions == nil {
+		h.probeSessions = map[promptSessionKey]struct{}{}
+	}
+	h.probeSessions[promptSessionKey{agentServer: normalizeServerName(agentServer), sessionID: sessionID}] = struct{}{}
+}
+
+// releaseProbeSession forgets a closed config-probe session's log entry. The
+// forget rides the agent's notification queue so updates the probe emitted
+// before closing are published (and then dropped) rather than recreating the
+// entry afterwards. Non-probe sessions are left untouched.
+func (h *Handler) releaseProbeSession(agentServer, sessionID string) {
+	serverName := normalizeServerName(agentServer)
+	key := promptSessionKey{agentServer: serverName, sessionID: sessionID}
+	h.mu.Lock()
+	_, probe := h.probeSessions[key]
+	delete(h.probeSessions, key)
+	client := h.clients[serverName]
+	h.mu.Unlock()
+	sink, ok := h.events.(sessionForgetSink)
+	if !probe || !ok {
+		return
+	}
+	if client == nil {
+		sink.ForgetSession(serverName, sessionID)
+		return
+	}
+	client.asyncNotifications.enqueue(func(_ context.Context, _ string, _ any) {
+		sink.ForgetSession(serverName, sessionID)
+	}, "", nil)
 }
 
 func activeSessionLoadError() error {
@@ -186,25 +228,4 @@ func (h *Handler) loadScopeFor(agentServer, sessionID string) (string, bool) {
 	defer h.mu.Unlock()
 	origin, ok := h.loadScopes[promptSessionKey{agentServer: agentServer, sessionID: sessionID}]
 	return origin, ok
-}
-
-// waitForLoadScopeClear blocks until no session/load is in flight for the
-// session. Prompt calls this while holding the turn reservation: if a turn
-// started while a load window was open, its agent updates would be scoped to
-// the loading client and lost for everyone else.
-func (h *Handler) waitForLoadScopeClear(ctx context.Context, agentServer, sessionID string) error {
-	key := promptSessionKey{agentServer: agentServer, sessionID: sessionID}
-	for {
-		h.mu.Lock()
-		wait, busy := h.loadDone[key]
-		h.mu.Unlock()
-		if !busy {
-			return nil
-		}
-		select {
-		case <-wait:
-		case <-ctx.Done():
-			return fmt.Errorf("acpproxy: waiting for session load to finish: %w", ctx.Err())
-		}
-	}
 }

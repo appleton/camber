@@ -1,8 +1,12 @@
 package acpproxy
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -479,29 +483,128 @@ func TestBeginSessionLoadHonorsContextCancel(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestWaitForLoadScopeClear(t *testing.T) {
-	h := NewHandler(dummyConfig(), nil, nil)
-	require.NoError(t, h.waitForLoadScopeClear(context.Background(), DefaultAgentServerName, "s1"))
+// historyEventSink records session-log bookkeeping in call order.
+type historyEventSink struct {
+	fakeEventSink
+	calls []string
+}
 
-	release, err := h.beginSessionLoad(context.Background(), DefaultAgentServerName, "s1", "remote:dev/a")
-	require.NoError(t, err)
+func (s *historyEventSink) PublishSessionUpdate(agentServer, sessionID, originDevice string, skipPrimary bool, message map[string]any) int64 {
+	s.mu.Lock()
+	s.calls = append(s.calls, "publish:"+sessionID)
+	s.mu.Unlock()
+	return s.fakeEventSink.PublishSessionUpdate(agentServer, sessionID, originDevice, skipPrimary, message)
+}
 
-	cleared := make(chan struct{})
+func (s *historyEventSink) MarkSessionHistory(_, sessionID string, complete bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.calls = append(s.calls, fmt.Sprintf("mark:%s:%t", sessionID, complete))
+}
+
+func (s *historyEventSink) SessionReplay(_, _, _ string) ([]map[string]any, SessionCursor, bool) {
+	return nil, SessionCursor{}, false
+}
+
+func (s *historyEventSink) ForgetSession(_, sessionID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.calls = append(s.calls, "forget:"+sessionID)
+}
+
+func (s *historyEventSink) callSnapshot() []string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]string(nil), s.calls...)
+}
+
+// TestConfigProbeSessionLeavesNoLogEntry checks that a config probe never
+// claims a history slot and that closing it forgets what its streaming
+// updates logged, while a real session keeps its history across close.
+func TestConfigProbeSessionLeavesNoLogEntry(t *testing.T) {
+	agentInR, agentInW := io.Pipe()
+	agentOutR, agentOutW := io.Pipe()
+	t.Cleanup(func() {
+		agentInW.Close()
+		agentOutW.Close()
+	})
+	var sessions int
 	go func() {
-		assert.NoError(t, h.waitForLoadScopeClear(context.Background(), DefaultAgentServerName, "s1"))
-		close(cleared)
+		scanner := bufio.NewScanner(agentInR)
+		for scanner.Scan() {
+			var req struct {
+				ID     any    `json:"id"`
+				Method string `json:"method"`
+			}
+			if json.Unmarshal(scanner.Bytes(), &req) != nil || req.ID == nil {
+				continue
+			}
+			if req.Method != acpsdk.AgentMethodSessionNew {
+				continue
+			}
+			sessions++
+			id := fmt.Sprintf("s%d", sessions)
+			// Emit an update before answering, as agents announce commands.
+			update, _ := json.Marshal(map[string]any{
+				"jsonrpc": "2.0",
+				"method":  acpsdk.ClientMethodSessionUpdate,
+				"params": map[string]any{
+					"sessionId": id,
+					"update": map[string]any{
+						"sessionUpdate":     "available_commands_update",
+						"availableCommands": []any{},
+					},
+				},
+			})
+			resp, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": req.ID, "result": map[string]any{"sessionId": id}})
+			if _, err := agentOutW.Write(append(append(update, '\n'), append(resp, '\n')...)); err != nil {
+				return
+			}
+		}
 	}()
 
-	select {
-	case <-cleared:
-		t.Fatal("wait must block while the load is in flight")
-	case <-time.After(50 * time.Millisecond):
+	h := NewHandler(dummyConfig(), nil, nil)
+	sink := &historyEventSink{}
+	h.SetSessionEvents(sink)
+	gCtx := newGlspContext(nil, nil)
+	proc, client := h.processFor(DefaultAgentServerName, gCtx)
+	proc.state = processState{kind: processStateRunning}
+	proc.conn = acpsdk.NewClientSideConnection(client, agentInW, agentOutR)
+	proc.initResp = &acpsdk.InitializeResponse{ProtocolVersion: acpsdk.ProtocolVersionNumber}
+
+	ctx := context.Background()
+	newSession := func(meta map[string]any) string {
+		resp, err := h.NewSession(ctx, &methods.ACPNewSessionParams{
+			ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: DefaultAgentServerName},
+			NewSessionRequest:    acpsdk.NewSessionRequest{Cwd: t.TempDir(), McpServers: []acpsdk.McpServer{}, Meta: meta},
+		}, gCtx)
+		require.NoError(t, err)
+		id := string(resp.SessionId)
+		// The agent's update may still be in flight on the connection.
+		require.Eventually(t, func() bool {
+			return slices.Contains(sink.callSnapshot(), "publish:"+id)
+		}, 2*time.Second, 5*time.Millisecond)
+		return id
+	}
+	closeSession := func(id string) {
+		_, err := h.CloseSession(ctx, &methods.ACPCloseSessionParams{
+			ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: DefaultAgentServerName},
+			CloseSessionRequest:  acpsdk.CloseSessionRequest{SessionId: acpsdk.SessionId(id)},
+		}, gCtx)
+		require.NoError(t, err)
+		require.NoError(t, client.waitForSessionUpdates(ctx))
 	}
 
-	release()
-	select {
-	case <-cleared:
-	case <-time.After(2 * time.Second):
-		t.Fatal("wait never returned after the load released")
-	}
+	probe := newSession(map[string]any{configProbeMetaKey: true})
+	closeSession(probe)
+	real := newSession(nil)
+	closeSession(real)
+
+	calls := sink.callSnapshot()
+	require.Len(t, calls, 4)
+	assert.Equal(t, []string{"publish:" + probe, "forget:" + probe}, calls[:2],
+		"a probe is never marked and is forgotten after its updates publish")
+	assert.ElementsMatch(t, []string{"publish:" + real, "mark:" + real + ":true"}, calls[2:],
+		"a real session keeps its history across close")
+	assert.Empty(t, h.probeSessions, "closed probes are no longer tracked")
 }

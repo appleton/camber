@@ -51,6 +51,10 @@ func (s *sessionEventSink) MarkSessionHistory(agentServer, sessionID string, com
 	s.log.MarkSessionHistory(agentServer, sessionID, complete)
 }
 
+func (s *sessionEventSink) ForgetSession(agentServer, sessionID string) {
+	s.log.ForgetSession(agentServer, sessionID)
+}
+
 func (s *sessionEventSink) SessionReplay(agentServer, sessionID, originID string) ([]map[string]any, acpproxy.SessionCursor, bool) {
 	messages, info, ok := s.log.SessionReplay(agentServer, sessionID, originID)
 	return messages, acpproxy.SessionCursor{Epoch: info.Epoch, Seq: info.Seq, TurnActive: info.TurnActive}, ok

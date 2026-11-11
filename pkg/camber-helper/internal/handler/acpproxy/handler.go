@@ -85,8 +85,11 @@ type Handler struct {
 	finishedTurnOrder []string
 	// loadScopes maps sessions with a session/load in flight to the client
 	// that requested it; loadDone signals the load's completion to waiters.
-	loadScopes     map[promptSessionKey]string
-	loadDone       map[promptSessionKey]chan struct{}
+	loadScopes map[promptSessionKey]string
+	loadDone   map[promptSessionKey]chan struct{}
+	// probeSessions holds open config-probe sessions (configProbeMetaKey) so
+	// CloseSession can drop their session-log entries; lazily allocated.
+	probeSessions  map[promptSessionKey]struct{}
 	readFile       ReadFileFn
 	configFn       ConfigFn
 	liveStatusSink LiveStatusSink
@@ -626,7 +629,13 @@ func (h *Handler) NewSession(ctx context.Context, params *methods.ACPNewSessionP
 	// the helper witnesses session/new, so the binding must not depend on the
 	// client echoing it back over a possibly-flaky socket. Live status is
 	// keyed by session id and silently unattachable until this lands.
-	h.markSessionHistory(params.AgentServer, string(resp.SessionId), true)
+	// Config probes are closed right after reading their options: they get no
+	// history slot, and closing one drops anything its updates logged.
+	if isConfigProbeSession(req.Meta) {
+		h.trackProbeSession(params.AgentServer, string(resp.SessionId))
+	} else {
+		h.markSessionHistory(params.AgentServer, string(resp.SessionId), true)
+	}
 	if convID := acp.DecodeSessionConversationID(req.Meta); convID != "" && h.liveStatusSink != nil {
 		handoffID := acp.DecodeSessionHandoffID(req.Meta)
 		if handoffID != "" {
@@ -801,6 +810,7 @@ func (h *Handler) CloseSession(ctx context.Context, params *methods.ACPCloseSess
 		return nil, err
 	}
 	defer releaseIdle()
+	defer h.releaseProbeSession(params.AgentServer, string(params.SessionId))
 	h.mu.Lock()
 	proc := h.procs[normalizeServerName(params.AgentServer)]
 	h.mu.Unlock()
@@ -1131,13 +1141,10 @@ func errFromTurnPanic(rv any) error {
 // runTurn executes one reserved prompt turn; Prompt owns the turn
 // reservation and result bookkeeping around it.
 func (h *Handler) runTurn(ctx context.Context, params *methods.ACPPromptParams, gCtx *glsp.Context, client *acpClient, proc *process, conn *acpsdk.ClientSideConnection, serverName string, sessionID acpsdk.SessionId, turn *activeTurn) (*methods.ACPPromptOutput, error) {
-	// A session/load in flight scopes this session's updates to the loading
-	// client; starting a turn now would stream its output only there. Loads
-	// finish in seconds, and the turn reservation above already rejects
-	// competing prompts while we wait.
-	if err := h.waitForLoadScopeClear(ctx, serverName, string(sessionID)); err != nil {
-		return nil, err
-	}
+	// No session/load can be in flight here: beginPromptInFlight refuses a
+	// prompt while a load scopes the session's updates to the loading client
+	// (SESSION_LOADING), and beginSessionLoad refuses a load while this turn
+	// holds the reservation, so the turn's output reaches every client.
 	if h.events != nil {
 		h.events.BeginTurn(serverName, string(sessionID))
 		h.mu.Lock()

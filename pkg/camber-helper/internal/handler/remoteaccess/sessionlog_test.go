@@ -342,3 +342,98 @@ func TestOverlappingTurnBoundariesKeepSessionActive(t *testing.T) {
 	log.BeginTurn("poolside", "s1")
 	assert.True(t, log.Cursor("poolside", "s1").TurnActive)
 }
+
+// Reads across many conversations (control polls, cursors, load invalidation
+// of idle sessions) must not take slots from, or reorder eviction against, a
+// session whose retained history is still needed.
+func TestReadsOfUnknownSessionsDoNotEvictHistory(t *testing.T) {
+	log := NewSessionLog(NewHub())
+	log.MarkSessionHistory("claude", "child", true)
+	for i := 0; i < 3; i++ {
+		log.Publish("claude", "child", "", false, testMessage(i))
+	}
+	for i := 0; i < 2*sessionLogMaxSessions; i++ {
+		session := fmt.Sprintf("unknown-%d", i)
+		page, err := log.Poll("claude", session, "")
+		require.NoError(t, err)
+		assert.Empty(t, page.Events)
+		_, err = log.PollBetween("claude", session, log.ControlCursor("claude", session), log.TurnCursor("claude", session))
+		require.NoError(t, err)
+		assert.Equal(t, int64(0), log.Cursor("claude", session).Seq)
+		log.MarkSessionHistory("claude", session, false)
+	}
+
+	log.mu.Lock()
+	assert.Len(t, log.sessions, 1, "reads must not create session entries")
+	log.mu.Unlock()
+	messages, cursor, ok := log.SessionReplay("claude", "child", PrimaryOrigin)
+	require.True(t, ok, "retained history survives reads of other conversations")
+	assert.Len(t, messages, 3)
+	assert.Equal(t, int64(3), cursor.Seq)
+	page, err := log.Poll("claude", "child", "")
+	require.NoError(t, err)
+	assert.False(t, page.ResetRequired)
+	assert.Len(t, page.Events, 3)
+}
+
+// Reads must not bump recency: under slot pressure the least recently
+// *written* idle session is the one evicted, however often others are read.
+func TestReadsDoNotBumpEvictionRecency(t *testing.T) {
+	log := NewSessionLog(NewHub())
+	log.Publish("claude", "old", "", false, testMessage(0))
+	log.Publish("claude", "kept", "", false, testMessage(0))
+	for i := 0; i < sessionLogMaxSessions-2; i++ {
+		log.Publish("claude", fmt.Sprintf("s%d", i), "", false, testMessage(i))
+	}
+	_, err := log.Poll("claude", "old", "")
+	require.NoError(t, err)
+	log.ControlCursor("claude", "old")
+	log.Cursor("claude", "old")
+	log.Publish("claude", "new", "", false, testMessage(0))
+
+	log.mu.Lock()
+	defer log.mu.Unlock()
+	_, oldKept := log.sessions[sessionLogKey{agentServer: "claude", sessionID: "old"}]
+	_, keptKept := log.sessions[sessionLogKey{agentServer: "claude", sessionID: "kept"}]
+	assert.False(t, oldKept, "reads must not refresh a session's eviction order")
+	assert.True(t, keptKept)
+}
+
+// A cursor taken before a session has any entry must replay everything the
+// session publishes afterwards.
+func TestPollBeforeFirstEventReplaysLaterEvents(t *testing.T) {
+	log := NewSessionLog(NewHub())
+	start := log.ControlCursor("claude", "fresh")
+	page, err := log.Poll("claude", "fresh", "")
+	require.NoError(t, err)
+	assert.Empty(t, page.Events)
+	assert.False(t, page.ResetRequired)
+	for i := 0; i < 3; i++ {
+		log.Publish("claude", "fresh", "", false, testMessage(i))
+	}
+	for _, cursor := range []string{start, page.NextCursor} {
+		next, err := log.Poll("claude", "fresh", cursor)
+		require.NoError(t, err)
+		assert.False(t, next.ResetRequired)
+		require.Len(t, next.Events, 3)
+		assert.Equal(t, int64(1), next.Events[0].Seq)
+		assert.Equal(t, int64(3), next.Events[2].Seq)
+	}
+}
+
+func TestForgetSessionDropsIdleEntryOnly(t *testing.T) {
+	log := NewSessionLog(NewHub())
+	log.Publish("claude", "probe", "", false, testMessage(0))
+	log.BeginTurn("claude", "busy")
+	log.ForgetSession("claude", "probe")
+	log.ForgetSession("claude", "busy")
+	log.ForgetSession("claude", "unknown")
+
+	log.mu.Lock()
+	defer log.mu.Unlock()
+	_, probeKept := log.sessions[sessionLogKey{agentServer: "claude", sessionID: "probe"}]
+	_, busyKept := log.sessions[sessionLogKey{agentServer: "claude", sessionID: "busy"}]
+	assert.False(t, probeKept)
+	assert.True(t, busyKept, "a session with a turn in flight keeps its stream")
+	assert.Len(t, log.sessions, 1)
+}

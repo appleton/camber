@@ -55,7 +55,7 @@ func (l *SessionLog) Poll(agent, session, cursor string) (ControlPoll, error) {
 func (l *SessionLog) PollBetween(agent, session, cursor, end string) (ControlPoll, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	entry := l.entryLocked(agent, session)
+	entry := l.peekLocked(agent, session)
 	out := ControlPoll{Events: []ControlEvent{}, TurnActive: entry.activeTurns > 0}
 	after := int64(0)
 	if cursor != "" {
@@ -154,7 +154,7 @@ func (l *SessionLog) PollBetween(agent, session, cursor, end string) (ControlPol
 func (l *SessionLog) ControlCursor(agent, session string) string {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	entry := l.entryLocked(agent, session)
+	entry := l.peekLocked(agent, session)
 	raw, _ := json.Marshal(controlCursor{Agent: agent, Session: session, Epoch: l.epoch, Seq: entry.seq})
 	return base64.RawURLEncoding.EncodeToString(raw)
 }
@@ -163,7 +163,7 @@ func (l *SessionLog) ControlCursor(agent, session string) string {
 func (l *SessionLog) TurnCursor(agent, session string) string {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	entry := l.entryLocked(agent, session)
+	entry := l.peekLocked(agent, session)
 	seq := entry.turnStartSeq - 1
 	if seq < 0 {
 		seq = 0

@@ -154,11 +154,12 @@ func (l *SessionLog) EndTurn(agentServer, sessionID string) {
 }
 
 // Cursor reports the session's current stream position for stamping into a
-// session/load response.
+// session/load response. It is a pure read: an unknown session reports seq 0
+// without gaining a slot (see peekLocked).
 func (l *SessionLog) Cursor(agentServer, sessionID string) SessionCursorInfo {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	entry := l.entryLocked(agentServer, sessionID)
+	entry := l.peekLocked(agentServer, sessionID)
 	return SessionCursorInfo{
 		Epoch:        l.epoch,
 		Seq:          entry.seq,
@@ -169,10 +170,28 @@ func (l *SessionLog) Cursor(agentServer, sessionID string) SessionCursorInfo {
 
 // MarkSessionHistory records whether live events can reconstruct this session.
 // Loading persisted agent history invalidates this: replay is not in our log.
+// Invalidating an unknown session is a no-op — a missing entry already has no
+// complete history, and a later publish creates one marked incomplete — so
+// loads of idle conversations do not take slots from sessions with history.
 func (l *SessionLog) MarkSessionHistory(agentServer, sessionID string, complete bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	if !complete && l.sessions[sessionLogKey{agentServer: agentServer, sessionID: sessionID}] == nil {
+		return
+	}
 	l.entryLocked(agentServer, sessionID).completeHistory = complete
+}
+
+// ForgetSession drops a session's slot and buffered events. It is for
+// throwaway sessions (config probes) closed right after creation; a session
+// with a turn in flight is kept so its stream stays intact.
+func (l *SessionLog) ForgetSession(agentServer, sessionID string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	key := sessionLogKey{agentServer: agentServer, sessionID: sessionID}
+	if entry := l.sessions[key]; entry != nil && entry.activeTurns == 0 {
+		delete(l.sessions, key)
+	}
 }
 
 // SessionReplay returns a complete, ordered snapshot or refuses it. Callers
@@ -251,6 +270,9 @@ func (l *SessionLog) replayLocked(originID string, entry *sessionLogEntry, curso
 	return true
 }
 
+// entryLocked returns the session's entry, creating it (and evicting the least
+// recently used idle session when full) and bumping its recency. Only writers
+// — publishes, turn boundaries, history marks — may call it.
 func (l *SessionLog) entryLocked(agentServer, sessionID string) *sessionLogEntry {
 	key := sessionLogKey{agentServer: agentServer, sessionID: sessionID}
 	entry := l.sessions[key]
@@ -264,6 +286,20 @@ func (l *SessionLog) entryLocked(agentServer, sessionID string) *sessionLogEntry
 	l.useTick++
 	entry.lastUse = l.useTick
 	return entry
+}
+
+// peekLocked returns the session's entry without creating it or bumping its
+// recency, so reads (control polls, cursors) across many conversations cannot
+// evict the retained history of sessions that are actually publishing. An
+// unknown session reads as an empty stream at seq 0 in the current epoch; a
+// cursor taken from it stays valid because the first publish creates the entry
+// and stamps seq 1. The returned zero entry is detached and must not be
+// mutated.
+func (l *SessionLog) peekLocked(agentServer, sessionID string) *sessionLogEntry {
+	if entry := l.sessions[sessionLogKey{agentServer: agentServer, sessionID: sessionID}]; entry != nil {
+		return entry
+	}
+	return &sessionLogEntry{}
 }
 
 // compactLocked drops the oldest buffered events past the buffer cap.
