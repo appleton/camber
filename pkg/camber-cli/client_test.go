@@ -95,7 +95,7 @@ func TestDefaultDirectoryUsesNativeLocation(t *testing.T) {
 	if runtime.GOOS == "darwin" {
 		assert.Equal(t, filepath.Join(home, "Library", "Application Support", "Camber", "control"), directory)
 	} else {
-		assert.Equal(t, filepath.Join(home, ".local", "state", "poolside", "control"), directory)
+		assert.Equal(t, filepath.Join(home, ".local", "state", "camber", "control"), directory)
 	}
 }
 

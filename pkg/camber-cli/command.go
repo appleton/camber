@@ -27,7 +27,7 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 	var callerToken string
 	var jsonOutput bool
 	var timeout time.Duration
-	root := &cobra.Command{Use: "poolside", Short: "Control a running Camber desktop", SilenceUsage: true, SilenceErrors: true}
+	root := &cobra.Command{Use: "camber", Short: "Control a running Camber desktop", SilenceUsage: true, SilenceErrors: true}
 	root.PersistentFlags().StringVar(&instanceID, "instance", os.Getenv("CAMBER_INSTANCE_ID"), "Desktop instance ID (otherwise use inherited context or the unique running instance)")
 	root.PersistentFlags().StringVar(&callerToken, "caller-token", os.Getenv("CAMBER_CALLER_TOKEN"), "Caller token from your Camber host context; proves which conversation is asking (needed for permission-bypass modes on chat spawn and chat config set)")
 	root.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Print structured JSON (NDJSON when following)")

@@ -33,14 +33,14 @@ impl ControlState {
                 .unwrap_or_default();
             if let Ok(executable) = std::env::current_exe() {
                 if let Some(parent) = executable.parent() {
-                    if parent.join("poolside").is_file() {
+                    if parent.join("camber").is_file() {
                         search_paths.push(parent.to_path_buf());
                     }
                 }
             }
             if cfg!(debug_assertions) {
                 let binaries = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("binaries");
-                if binaries.join("poolside").is_file() {
+                if binaries.join("camber").is_file() {
                     search_paths.push(binaries);
                 }
             }
@@ -111,7 +111,7 @@ mod unix {
         pub(super) fn start(app: AppHandle) -> io::Result<Self> {
             let discovery_dir = discovery_dir()?;
             let uid = unsafe { libc::geteuid() };
-            let socket_dir = PathBuf::from(format!("/tmp/poolside-control-{uid}"));
+            let socket_dir = PathBuf::from(format!("/tmp/camber-control-{uid}"));
             let version = app.package_info().version.to_string();
             Self::bind(
                 &discovery_dir,

@@ -69,7 +69,7 @@ func DefaultDirectory() (string, error) {
 	if state == "" {
 		state = filepath.Join(home, ".local", "state")
 	}
-	return filepath.Join(state, "poolside", "control"), nil
+	return filepath.Join(state, "camber", "control"), nil
 }
 
 // Instances lists only endpoints whose live identity matches their discovery file.

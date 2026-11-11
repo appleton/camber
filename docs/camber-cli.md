@@ -1,13 +1,13 @@
 # Camber CLI
 
-The `poolside` command controls a running Camber desktop. It does not start an
+The `camber` command controls a running Camber desktop. It does not start an
 agent or helper itself. Start the desktop app first; requests use the desktop's
 existing helper and its registered agents, projects, worktrees, and conversations.
 The CLI currently supports macOS and other Unix desktop builds.
 
 ## Install
 
-Packaged desktop builds include a `poolside` executable beside the app
+Packaged desktop builds include a `camber` executable beside the app
 executable. On macOS, it is at
 `Camber.app/Contents/MacOS/camber`. You can link it into a directory already
 on `PATH`:

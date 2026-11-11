@@ -9,7 +9,7 @@ go_library(
 )
 
 go_binary(
-    name = "poolside",
+    name = "camber",
     embed = [":camber_lib"],
     gc_linkopts = [
         "-s",

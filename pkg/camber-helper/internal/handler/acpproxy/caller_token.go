@@ -95,7 +95,7 @@ func (h *Handler) RedactCallerTokens(data []byte) []byte {
 // Streamed agent message and thought text is matched through a rolling
 // per-session window, so a token split across chunks is caught; every other
 // string in the notification is scanned whole. The session's own token in a
-// tool call is not a leak: the agent passes it to `poolside` on the command
+// tool call is not a leak: the agent passes it to `camber` on the command
 // line, and exact redaction covers that whole token in control output.
 // User message chunks are skipped: they echo the prompt (including the host
 // context) during session/load replay, where the token is whole and redacted.

@@ -36,7 +36,7 @@ func TestInstallLinkPreservesExistingFilesAndLinks(t *testing.T) {
 	assert.Equal(t, "user binary", string(content))
 }
 func TestSkillInstallRemoveAndOwnership(t *testing.T) {
-	directory := filepath.Join(t.TempDir(), "poolside")
+	directory := filepath.Join(t.TempDir(), "camber")
 	f := &fakeCaller{}
 	output, err := execute(t, f, "skill", "setup", "--directory", directory, "--json")
 	require.NoError(t, err)

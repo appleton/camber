@@ -58,11 +58,11 @@ pnpm -F @camber/desktop-assistant tauri icon src-tauri/icons/icon-source.png
 pnpm -F @camber/desktop-assistant icons:macos
 ```
 
-The desktop bundles the `poolside` CLI beside its app executable. For standalone
+The desktop bundles the `camber` CLI beside its app executable. For standalone
 installation, source builds, agent skill setup, and orchestration examples, see
 the [Camber CLI guide](../../../docs/camber-cli.md).
 The internal desktop executable is named `camber-desktop` so it can coexist
-with `poolside` on case-insensitive macOS filesystems.
+with `camber` on case-insensitive macOS filesystems.
 
 Keep Icon Composer sources under `src-tauri/icons`, outside `public`: Vite copies
 every public file into the shipped webview. The remaining public files are the

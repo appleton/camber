@@ -1,6 +1,6 @@
 # Camber desktop CLI implementation plan
 
-Build `poolside` as a supported, self-describing client of the running desktop app. Every user-facing desktop operation should have a discoverable CLI equivalent, execute through the same application logic, and expose enough state for an agent to verify the result. Ship a tiny skill that loads its instructions from the installed CLI.
+Build `camber` as a supported, self-describing client of the running desktop app. Every user-facing desktop operation should have a discoverable CLI equivalent, execute through the same application logic, and expose enough state for an agent to verify the result. Ship a tiny skill that loads its instructions from the installed CLI.
 
 Milestone 1 is implemented in this branch; see the [current CLI guide](camber-cli.md)
 for its supported commands and installation. The complete catalog below is the
@@ -12,7 +12,7 @@ Deliver a usable CLI that lets any desktop conversation delegate work to ordinar
 
 Milestone 1 includes:
 
-- A native `poolside` executable and a production local desktop endpoint, with instance discovery, identity validation, explicit targeting, status, action discovery, and a tiny skill that delegates to `camber skill show`.
+- A native `camber` executable and a production local desktop endpoint, with instance discovery, identity validation, explicit targeting, status, action discovery, and a tiny skill that delegates to `camber skill show`.
 - Agent listing and configuration discovery through `agents config options AGENT`, plus effective conversation configuration through `chat config list CHAT`. Expose the agent's actual option IDs, allowed values, categories, and current values. Session-dependent options must be discovered through an initialized session rather than guessed.
 - `chat config set` for a single value or a configuration object. Validate the requested options and values, report unsupported options, and return effective values. Reject changes while a turn is active unless the agent explicitly supports them.
 - `chat spawn PARENT` with explicit task text, optional agent/model/effort/configuration overrides, and an existing or newly created worktree. Ordering is create session, discover options, validate and apply configuration, verify effective values, then submit the prompt. A configuration failure must not start the task.

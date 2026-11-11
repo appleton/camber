@@ -40,7 +40,7 @@ func addInstallCommands(root, skill *cobra.Command, emit func(*cobra.Command, js
 	install.Flags().String("directory", "", "Directory on PATH in which to install the camber link")
 	cli.AddCommand(install)
 	for _, action := range []string{"setup", "status", "remove"} {
-		command := &cobra.Command{Use: action, Short: action + " the tiny Poolside agent skill", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
+		command := &cobra.Command{Use: action, Short: action + " the tiny Camber agent skill", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
 			directory, err := skillDirectory(cmd)
 			if err != nil {
 				return err
@@ -110,7 +110,7 @@ func installLink(directory, executable string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	path := filepath.Join(absolute, "poolside")
+	path := filepath.Join(absolute, "camber")
 	if path == executable {
 		return path, nil
 	}
@@ -167,5 +167,5 @@ func skillDirectory(cmd *cobra.Command) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(root, folder, "skills", "poolside"), nil
+	return filepath.Join(root, folder, "skills", "camber"), nil
 }
