@@ -10,6 +10,7 @@ go_library(
         "acp_nav.go",
         "acp_session.go",
         "client_origin.go",
+        "control.go",
         "doc.go",
         "elicitation.go",
         "environment.go",

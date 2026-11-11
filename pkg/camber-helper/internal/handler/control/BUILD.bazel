@@ -1,0 +1,51 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "control",
+    srcs = [
+        "config.go",
+        "discover.go",
+        "list.go",
+        "poll.go",
+        "service.go",
+        "worktree.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/handler/control",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/acp",
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2",
+        "//pkg/camber-helper/internal/handler/acpnav",
+        "//pkg/camber-helper/internal/handler/remoteaccess",
+        "//pkg/camber-helper/internal/handler/remoteterminal",
+        "//pkg/camber-helper/methods",
+        "@com_github_coder_acp_go_sdk//:acp-go-sdk",
+        "@com_github_google_uuid//:uuid",
+        "@com_github_pkg_errors//:errors",
+        "@com_github_tliron_glsp//:glsp",
+    ],
+)
+
+go_test(
+    name = "control_test",
+    srcs = [
+        "config_recovery_test.go",
+        "lifecycle_test.go",
+        "list_test.go",
+        "permission_test.go",
+        "poll_test.go",
+        "scope_test.go",
+        "service_test.go",
+    ],
+    embed = [":control"],
+    deps = [
+        "//pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2",
+        "//pkg/camber-helper/internal/handler/acpnav",
+        "//pkg/camber-helper/internal/handler/remoteaccess",
+        "//pkg/camber-helper/methods",
+        "@com_github_coder_acp_go_sdk//:acp-go-sdk",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@com_github_tliron_glsp//:glsp",
+    ],
+)

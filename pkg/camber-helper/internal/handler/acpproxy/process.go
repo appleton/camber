@@ -67,13 +67,14 @@ type process struct {
 	mu sync.Mutex
 	// serverName identifies the agent server this slot serves. It outlives any
 	// one subprocess instance, so resetLocked leaves it alone.
-	serverName string
-	state      processState
-	cmd        *exec.Cmd
-	conn       *acpsdk.ClientSideConnection
-	initResp   *acpsdk.InitializeResponse
-	initReq    *acpsdk.InitializeRequest
-	session    acpsdk.SessionId
+	serverName    string
+	state         processState
+	cmd           *exec.Cmd
+	conn          *acpsdk.ClientSideConnection
+	configuration *sessionConfigurationCache
+	initResp      *acpsdk.InitializeResponse
+	initReq       *acpsdk.InitializeRequest
+	session       acpsdk.SessionId
 	// sessionIsProbe records whether `session` came from a config probe, so a
 	// later probe may replace it while a real session may not be displaced.
 	// See adoptSessionLocked.
@@ -147,6 +148,8 @@ func (p *process) adoptSessionLocked(id acpsdk.SessionId, probe bool) {
 // resetLocked clears all runtime fields that are tied to one subprocess
 // instance and records the lifecycle state that should follow.
 func (p *process) resetLocked(state processState) {
+	p.configuration.invalidate()
+	p.configuration = nil
 	p.cmd = nil
 	p.conn = nil
 	p.initResp = nil
@@ -431,7 +434,8 @@ func (p *process) spawnAndInitializeLocked(ctx context.Context, cfg startConfig,
 	teedStdout := io.TeeReader(stdout, sniffPipeW)
 	go scanForAuthUpdates(cfg.serverName, sniffPipeR, client.notify)
 
-	conn := acpsdk.NewClientSideConnection(client, stdin, teedStdout)
+	configuration := &sessionConfigurationCache{}
+	conn := acpsdk.NewClientSideConnection(&configurationClient{acpClient: client, configuration: configuration}, stdin, teedStdout)
 
 	initCtx, cancelInitialize := context.WithTimeout(ctx, initializeHandshakeTimeout)
 	defer cancelInitialize()
@@ -452,6 +456,7 @@ func (p *process) spawnAndInitializeLocked(ctx context.Context, cfg startConfig,
 	p.serverName = cfg.serverName
 	p.cmd = cmd
 	p.conn = conn
+	p.configuration = configuration
 	p.initResp = &initResp
 	initReqCopy := initReq
 	p.initReq = &initReqCopy
@@ -556,6 +561,7 @@ func (p *process) newSessionLocked(ctx context.Context, req acpsdk.NewSessionReq
 		return nil, preserveACPError("acpproxy: new session", err)
 	}
 	p.adoptSessionLocked(resp.SessionId, isConfigProbeSession(req.Meta))
+	p.configuration.capture(string(resp.SessionId), resp.ConfigOptions, resp.Modes)
 	slog.Info("acpproxy: session created", "session_id", string(resp.SessionId), "resp", resp)
 	return &resp, nil
 }
@@ -578,6 +584,7 @@ func (p *process) loadSessionLocked(ctx context.Context, req acpsdk.LoadSessionR
 	// documented as valid here too (configProbeMetaKey), so route this path
 	// through the same rule and the bug cannot come back.
 	p.adoptSessionLocked(req.SessionId, isConfigProbeSession(req.Meta))
+	p.configuration.capture(string(req.SessionId), resp.ConfigOptions, resp.Modes)
 	slog.Info("acpproxy: session loaded", "session_id", string(req.SessionId))
 	return &resp, nil
 }
@@ -598,6 +605,7 @@ func (p *process) resumeSessionLocked(ctx context.Context, req acpsdk.ResumeSess
 	}
 	// See loadSessionLocked: same latent-probe path, kept consistent.
 	p.adoptSessionLocked(req.SessionId, isConfigProbeSession(req.Meta))
+	p.configuration.capture(string(req.SessionId), resp.ConfigOptions, resp.Modes)
 	slog.Info("acpproxy: session resumed", "session_id", string(req.SessionId))
 	return &resp, nil
 }

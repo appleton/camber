@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"time"
 
 	acpsdk "github.com/coder/acp-go-sdk"
 	"github.com/google/uuid"
@@ -72,6 +73,11 @@ type Handler struct {
 	procs           map[string]*process
 	clients         map[string]*acpClient
 	promptsInFlight map[promptSessionKey]*activeTurn
+	// idleSessions excludes prompts while a control operation configures or
+	// tears down a session. It shares mu with prompt turn reservations.
+	idleSessions          map[promptSessionKey]struct{}
+	reservedWorkspaces    map[string]struct{}
+	workspaceSessionCalls map[string]int
 	// finishedTurns keeps recent turnID -> result so a client that lost its
 	// connection mid-turn can re-issue the same prompt and get the stored
 	// outcome instead of running a duplicate turn.
@@ -79,8 +85,11 @@ type Handler struct {
 	finishedTurnOrder []string
 	// loadScopes maps sessions with a session/load in flight to the client
 	// that requested it; loadDone signals the load's completion to waiters.
-	loadScopes     map[promptSessionKey]string
-	loadDone       map[promptSessionKey]chan struct{}
+	loadScopes map[promptSessionKey]string
+	loadDone   map[promptSessionKey]chan struct{}
+	// probeSessions holds open config-probe sessions (configProbeMetaKey) so
+	// CloseSession can drop their session-log entries; lazily allocated.
+	probeSessions  map[promptSessionKey]struct{}
 	readFile       ReadFileFn
 	configFn       ConfigFn
 	liveStatusSink LiveStatusSink
@@ -89,6 +98,8 @@ type Handler struct {
 	// helper-owned state; agent requests block on it and surfaces answer via
 	// camber/acp/approvals/respond. Set once at wiring time.
 	approvals *approvals.Store
+	// callers holds per-conversation control caller tokens (caller_token.go).
+	callers callerTokens
 	// closed is set by Close, before it stops the processes. A session call
 	// that arrives during shutdown must not restart an agent (see
 	// processReadyForSession): nothing would stop the new subprocess, leaving
@@ -315,11 +326,10 @@ func (h *Handler) processFor(serverName string, gCtx *glsp.Context) (*process, *
 			return proc.session
 		}
 		h.clients[serverName] = client
-	} else {
-		client.liveStatus = h.liveStatusSink
-		client.agentServer = serverName
-		client.gCtx = gCtx
 	}
+	// Client routing and the helper-owned status sink are fixed when the
+	// connection is created. Reassigning them on unrelated RPCs races queued
+	// agent notifications and would not update the closures captured above.
 
 	return proc, client
 }
@@ -592,14 +602,39 @@ func (h *Handler) NewSession(ctx context.Context, params *methods.ACPNewSessionP
 			req.Cwd = fallback
 		}
 	}
+	releaseWorkspace, err := h.beginWorkspaceSession(req.Cwd)
+	if err != nil {
+		return nil, err
+	}
+	defer releaseWorkspace()
 	unavailable := h.injectUserMCPServers(ctx, proc, params.AgentServer, req.Meta, &req.McpServers)
 
 	// Runs concurrently with session/new below; see claude_auth_probe.go.
 	claudeAuthResult := h.maybeProbeClaudeAuthStatus(ctx, proc, params.AgentServer, req.Meta)
 
+	// A probe's id is unknown until session/new returns, but the agent may
+	// stream its updates first: the gate holds unrecognised sessions' events
+	// until the probe is registered (see probeGate).
+	probe := isConfigProbeSession(req.Meta)
+	var probeClient *acpClient
+	if probe && h.events != nil {
+		_, probeClient = h.processFor(normalizeServerName(params.AgentServer), gCtx)
+		probeClient.beginProbe()
+	}
 	proc.mu.Lock()
 	resp, err := proc.newSessionLocked(ctx, req)
 	proc.mu.Unlock()
+	probeID := ""
+	if probe && err == nil {
+		probeID = string(resp.SessionId)
+		h.trackProbeSession(params.AgentServer, probeID)
+	}
+	if probeClient != nil {
+		events := h.events
+		probeClient.asyncNotifications.enqueue(func(_ context.Context, _ string, _ any) {
+			probeClient.endProbe(events, probeID)
+		}, "", nil)
+	}
 	if err != nil {
 		h.refreshAuthAfterCallError(ctx, params.AgentServer, err)
 		return nil, err
@@ -614,6 +649,11 @@ func (h *Handler) NewSession(ctx context.Context, params *methods.ACPNewSessionP
 	// the helper witnesses session/new, so the binding must not depend on the
 	// client echoing it back over a possibly-flaky socket. Live status is
 	// keyed by session id and silently unattachable until this lands.
+	// Config probes are closed right after reading their options: they get no
+	// history slot, and their updates bypass the session log (tracked above).
+	if !probe {
+		h.markSessionHistory(params.AgentServer, string(resp.SessionId), true)
+	}
 	if convID := acp.DecodeSessionConversationID(req.Meta); convID != "" && h.liveStatusSink != nil {
 		handoffID := acp.DecodeSessionHandoffID(req.Meta)
 		if handoffID != "" {
@@ -642,21 +682,28 @@ func (h *Handler) LoadSession(ctx context.Context, params *methods.ACPLoadSessio
 	_, client := h.processFor(serverName, gCtx)
 
 	req := params.LoadSessionRequest
+	if response, attached, err := h.attachLiveSession(ctx, serverName, req, client); attached {
+		return response, err
+	}
+	releaseWorkspace, err := h.beginWorkspaceSession(req.Cwd)
+	if err != nil {
+		return nil, err
+	}
+	defer releaseWorkspace()
 	unavailable := h.injectUserMCPServers(ctx, proc, serverName, req.Meta, &req.McpServers)
 
 	// Scope this session's update traffic to the requesting client for the
 	// duration of the load (through the notification flush below): the agent
 	// interleaves replay updates with any in-flight turn's live updates, and
 	// replayed history must not be broadcast to clients that already have it.
-	if h.events != nil {
-		release, scopeErr := h.beginSessionLoad(ctx, serverName, string(req.SessionId), methods.ClientOriginFromContext(ctx))
-		if scopeErr != nil {
-			return nil, scopeErr
-		}
-		defer release()
+	release, scopeErr := h.beginSessionLoad(ctx, serverName, string(req.SessionId), methods.ClientOriginFromContext(ctx))
+	if scopeErr != nil {
+		return nil, scopeErr
 	}
+	defer release()
 
 	proc.mu.Lock()
+	h.markSessionHistory(serverName, string(req.SessionId), false)
 	resp, err := proc.loadSessionLocked(ctx, req)
 	proc.mu.Unlock()
 	if err != nil {
@@ -695,9 +742,20 @@ func (h *Handler) ResumeSession(ctx context.Context, params *methods.ACPResumeSe
 	}
 
 	req := params.ResumeSessionRequest
+	releaseIdle, err := h.ReserveIdleSession(ctx, serverName, string(req.SessionId))
+	if err != nil {
+		return nil, err
+	}
+	defer releaseIdle()
+	releaseWorkspace, err := h.beginWorkspaceSession(req.Cwd)
+	if err != nil {
+		return nil, err
+	}
+	defer releaseWorkspace()
 	unavailable := h.injectUserMCPServers(ctx, proc, serverName, req.Meta, &req.McpServers)
 
 	proc.mu.Lock()
+	h.markSessionHistory(serverName, string(req.SessionId), false)
 	resp, err := proc.resumeSessionLocked(ctx, req)
 	proc.mu.Unlock()
 	if err != nil {
@@ -756,7 +814,21 @@ func (h *Handler) DeleteSession(ctx context.Context, params *methods.ACPDeleteSe
 // no-ops (success) when the agent does not advertise session/close, or
 // advertises no way to reopen a closed session — closing would strand the
 // conversation — so callers may invoke it unconditionally.
+//
+// With params.CancelInFlight a running prompt is cancelled first and awaited
+// (bounded by closeCancelTimeout); without it a running prompt fails as busy.
 func (h *Handler) CloseSession(ctx context.Context, params *methods.ACPCloseSessionParams, gCtx *glsp.Context) (*methods.ACPCloseSessionOutput, error) {
+	if params.CancelInFlight {
+		if err := h.cancelInFlightForClose(ctx, params, gCtx); err != nil {
+			return nil, err
+		}
+	}
+	releaseIdle, err := h.ReserveIdleSession(ctx, params.AgentServer, string(params.SessionId))
+	if err != nil {
+		return nil, err
+	}
+	defer releaseIdle()
+	defer h.releaseProbeSession(params.AgentServer, string(params.SessionId))
 	h.mu.Lock()
 	proc := h.procs[normalizeServerName(params.AgentServer)]
 	h.mu.Unlock()
@@ -779,13 +851,47 @@ func (h *Handler) CloseSession(ctx context.Context, params *methods.ACPCloseSess
 		// closed by another trigger — archive then evict, or an agent restart)
 		// is in the desired state.
 		if isSessionGoneError(err) {
+			proc.configurationForConn(conn).closeSession(string(params.SessionId))
 			return &methods.ACPCloseSessionOutput{}, nil
 		}
 		h.refreshAuthAfterCallError(ctx, params.AgentServer, err)
 		return nil, preserveACPError("acpproxy: close session", err)
 	}
 
+	proc.configurationForConn(conn).closeSession(string(params.SessionId))
 	return &resp, nil
+}
+
+// closeCancelTimeout bounds how long CloseSession waits for a cancelled prompt
+// to finish before giving up.
+const closeCancelTimeout = 5 * time.Second
+
+func (h *Handler) cancelInFlightForClose(ctx context.Context, params *methods.ACPCloseSessionParams, gCtx *glsp.Context) error {
+	key := promptSessionKey{agentServer: normalizeServerName(params.AgentServer), sessionID: string(params.SessionId)}
+	h.mu.Lock()
+	turn := h.promptsInFlight[key]
+	h.mu.Unlock()
+	if turn == nil {
+		return nil
+	}
+	if _, err := h.Cancel(ctx, &methods.ACPCancelParams{
+		ACPAgentServerParams: params.ACPAgentServerParams,
+		CancelNotification:   acpsdk.CancelNotification{SessionId: params.SessionId},
+	}, gCtx); err != nil {
+		return err
+	}
+	timer := time.NewTimer(closeCancelTimeout)
+	defer timer.Stop()
+	select {
+	case <-turn.done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		err := &jsonrpc2.WireError{Code: -32001, Message: "Timed out waiting for the running turn to stop before closing the conversation"}
+		err.SetError(map[string]any{"code": "CLOSE_CANCEL_TIMEOUT"})
+		return err
+	}
 }
 
 func (h *Handler) RenameSession(ctx context.Context, params *methods.ACPRenameSessionParams, gCtx *glsp.Context) (*methods.ACPRenameSessionOutput, error) {
@@ -823,6 +929,11 @@ func (h *Handler) Steer(ctx context.Context, params *methods.ACPSteerParams, gCt
 	// after accepting the injected message, racing the extension response.
 	// runTurn waits for this attempt to resolve before deciding whether that
 	// prompt response is the real turn boundary.
+	releaseControl, err := h.acquireTurnControl(serverName, string(params.SessionID), expectedTurnID(params.Meta))
+	if err != nil {
+		return nil, err
+	}
+	defer releaseControl()
 	tracked := h.beginPromptSteer(serverName, string(params.SessionID))
 	accepted := false
 	defer func() {
@@ -1009,7 +1120,7 @@ func (h *Handler) Prompt(ctx context.Context, params *methods.ACPPromptParams, g
 	turn, reserved := h.beginPromptInFlight(serverName, string(sessionID), turnID)
 	if !reserved {
 		if turn == nil {
-			return nil, fmt.Errorf("a turn is already running in this conversation; wait for it to finish or stop it first")
+			return nil, h.promptBusyError(serverName, string(sessionID))
 		}
 		// Same turnID as the running turn: this is a retry of a call whose
 		// response was lost to a dropped connection. Attach to the turn
@@ -1048,16 +1159,27 @@ func errFromTurnPanic(rv any) error {
 // runTurn executes one reserved prompt turn; Prompt owns the turn
 // reservation and result bookkeeping around it.
 func (h *Handler) runTurn(ctx context.Context, params *methods.ACPPromptParams, gCtx *glsp.Context, client *acpClient, proc *process, conn *acpsdk.ClientSideConnection, serverName string, sessionID acpsdk.SessionId, turn *activeTurn) (*methods.ACPPromptOutput, error) {
-	// A session/load in flight scopes this session's updates to the loading
-	// client; starting a turn now would stream its output only there. Loads
-	// finish in seconds, and the turn reservation above already rejects
-	// competing prompts while we wait.
-	if err := h.waitForLoadScopeClear(ctx, serverName, string(sessionID)); err != nil {
-		return nil, err
-	}
+	// No session/load can be in flight here: beginPromptInFlight refuses a
+	// prompt while a load scopes the session's updates to the loading client
+	// (SESSION_LOADING), and beginSessionLoad refuses a load while this turn
+	// holds the reservation, so the turn's output reaches every client.
 	if h.events != nil {
 		h.events.BeginTurn(serverName, string(sessionID))
-		defer client.enqueueTurnEnded(sessionID)
+		h.mu.Lock()
+		turn.eventsQueued = true
+		h.mu.Unlock()
+		defer client.enqueueTurnEndedForTurn(sessionID, turn)
+		// Capture the boundary on the publication queue, after prior turns'
+		// final events and before this turn's user message or agent output.
+		client.asyncNotifications.enqueue(func(_ context.Context, _ string, _ any) {
+			cursor := h.events.Cursor(serverName, string(sessionID))
+			h.mu.Lock()
+			turn.startCursor = cursor
+			h.mu.Unlock()
+		}, "", nil)
+		if err := client.waitForSessionUpdates(ctx); err != nil {
+			return nil, err
+		}
 	}
 	if h.liveStatusSink != nil {
 		if statusErr := h.liveStatusSink.SetConversationLiveStatus(ctx, gCtx, serverName, string(sessionID), acpnav.ConversationLiveStatusPatch{
@@ -1091,6 +1213,12 @@ func (h *Handler) runTurn(ctx context.Context, params *methods.ACPPromptParams, 
 		return nil, err
 	}
 	defer releasePrompt()
+
+	// Add caller identity only to the agent-bound request. The user-message
+	// relay above keeps the user's original content and existing host context.
+	initResp, _ := proc.initializeResponse()
+	embeddedContext := initResp != nil && initResp.AgentCapabilities.PromptCapabilities.EmbeddedContext
+	req.Prompt = withControlContext(req.Prompt, h.promptControlContext(ctx, serverName, string(sessionID)), embeddedContext)
 
 	resp, promptErr := conn.Prompt(promptCtx, req)
 	if proc.isClaudeAgent() {
@@ -1135,13 +1263,19 @@ func (h *Handler) runTurn(ctx context.Context, params *methods.ACPPromptParams, 
 }
 
 // activeTurn tracks one running (or recently finished) prompt turn. turnID is
-// the client-generated idempotency key from the prompt's _meta (empty when
-// the client sends none); resp/err are set before done closes.
+// the client-generated idempotency key from the prompt's _meta, or a helper
+// generated identity when omitted; resp/err are set before done closes.
 type activeTurn struct {
-	turnID string
-	done   chan struct{}
-	resp   *methods.ACPPromptOutput
-	err    error
+	key            promptSessionKey
+	turnID         string
+	done           chan struct{}
+	resp           *methods.ACPPromptOutput
+	err            error
+	controlPending int
+	eventsQueued   bool
+	eventsDone     chan struct{}
+	endCursor      SessionCursor
+	startCursor    SessionCursor
 
 	// Claude's adapter currently returns from session/prompt at the result
 	// boundary interrupted by steering, while the injected continuation keeps
@@ -1168,6 +1302,17 @@ func (h *Handler) beginPromptInFlight(serverName, sessionID, turnID string) (att
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	key := promptSessionKey{agentServer: serverName, sessionID: sessionID}
+	// Completion may race Prompt's early cache lookup. Check again under the
+	// reservation lock so a retry cannot start the finished turn a second time.
+	if finished := h.finishedTurns[turnID]; turnID != "" && finished != nil && finished.key == key {
+		return finished, false
+	}
+	if _, reserved := h.idleSessions[key]; reserved {
+		return nil, false
+	}
+	if _, loading := h.loadScopes[key]; loading {
+		return nil, false
+	}
 	if running := h.promptsInFlight[key]; running != nil {
 		if turnID != "" && running.turnID == turnID {
 			return running, false
@@ -1175,9 +1320,14 @@ func (h *Handler) beginPromptInFlight(serverName, sessionID, turnID string) (att
 		return nil, false
 	}
 	turn := &activeTurn{
+		key:               key,
 		turnID:            turnID,
 		done:              make(chan struct{}),
 		steerStateChanged: make(chan struct{}),
+		eventsDone:        make(chan struct{}),
+	}
+	if turn.turnID == "" {
+		turn.turnID = uuid.NewString()
 	}
 	h.promptsInFlight[key] = turn
 	return turn, true
@@ -1186,7 +1336,15 @@ func (h *Handler) beginPromptInFlight(serverName, sessionID, turnID string) (att
 func (h *Handler) completeTurn(serverName, sessionID string, turn *activeTurn, resp *methods.ACPPromptOutput, err error) {
 	turn.resp = resp
 	turn.err = err
-	h.mu.Lock()
+	for {
+		h.mu.Lock()
+		if turn.controlPending == 0 {
+			break
+		}
+		changed := turn.steerStateChanged
+		h.mu.Unlock()
+		<-changed
+	}
 	delete(h.promptsInFlight, promptSessionKey{agentServer: serverName, sessionID: sessionID})
 	if turn.turnID != "" {
 		h.finishedTurns[turn.turnID] = turn
@@ -1379,7 +1537,7 @@ func publishUserMessage(client *acpClient, events SessionEventSink, serverName, 
 			},
 		}
 		client.asyncNotifications.enqueue(func(ctx context.Context, method string, params any) {
-			events.PublishSessionUpdate(serverName, sessionID, originDevice, skipPrimary, message)
+			client.publishSessionEvent(events, sessionID, originDevice, skipPrimary, message)
 		}, methods.JSONRPCNotifyMethod, message)
 	}
 }
@@ -1432,6 +1590,11 @@ func (h *Handler) Cancel(ctx context.Context, params *methods.ACPCancelParams, g
 	if sessionID == "" {
 		return nil, fmt.Errorf("acpproxy: no active session; call session/new first")
 	}
+	releaseControl, err := h.acquireTurnControl(params.AgentServer, string(sessionID), expectedTurnID(params.Meta))
+	if err != nil {
+		return nil, err
+	}
+	defer releaseControl()
 	if h.liveStatusSink != nil {
 		defer func() {
 			if statusErr := h.liveStatusSink.CompletePrompt(context.Background(), gCtx, params.AgentServer, string(sessionID)); statusErr != nil {
@@ -1487,6 +1650,12 @@ func (h *Handler) SetMode(ctx context.Context, params *methods.ACPSetModeParams,
 		h.refreshAuthAfterCallError(ctx, params.AgentServer, err)
 		return nil, preserveACPError("acpproxy: set mode", err)
 	}
+	proc.configurationForConn(conn).setMode(string(sessionID), params.ModeId)
+	if err := h.publishControlConfiguration(ctx, params.AgentServer, sessionID, acpsdk.SessionUpdate{
+		CurrentModeUpdate: &acpsdk.SessionCurrentModeUpdate{CurrentModeId: params.ModeId, SessionUpdate: "current_mode_update"},
+	}, gCtx); err != nil {
+		return nil, err
+	}
 
 	return &resp, nil
 }
@@ -1501,7 +1670,7 @@ func (h *Handler) SetConfigOption(ctx context.Context, params *methods.ACPSetCon
 	if err != nil {
 		return nil, err
 	}
-	req, _, err := setConfigOptionRequestSessionID(params.SetSessionConfigOptionRequest, activeSession)
+	req, sessionID, err := setConfigOptionRequestSessionID(params.SetSessionConfigOptionRequest, activeSession)
 	if err != nil {
 		return nil, err
 	}
@@ -1510,6 +1679,12 @@ func (h *Handler) SetConfigOption(ctx context.Context, params *methods.ACPSetCon
 	if err != nil {
 		h.refreshAuthAfterCallError(ctx, params.AgentServer, err)
 		return nil, preserveACPError("acpproxy: set config option", err)
+	}
+	proc.configurationForConn(conn).capture(string(sessionID), resp.ConfigOptions, nil)
+	if err := h.publishControlConfiguration(ctx, params.AgentServer, sessionID, acpsdk.SessionUpdate{
+		ConfigOptionUpdate: &acpsdk.SessionConfigOptionUpdate{ConfigOptions: resp.ConfigOptions, SessionUpdate: "config_option_update"},
+	}, gCtx); err != nil {
+		return nil, err
 	}
 
 	return &resp, nil

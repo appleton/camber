@@ -1,5 +1,6 @@
 mod app_icon;
 mod bundle_guard;
+mod control;
 mod desktop_notification;
 mod desktop_openers;
 mod dock;
@@ -148,6 +149,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .manage(file_watcher::FileWatcherState::default())
         .manage(helper::HelperState::default())
+        .manage(control::ControlState::default())
         .manage(terminal::TerminalState::default())
         .manage(updater::DesktopUpdaterState::default())
         .invoke_handler(tauri::generate_handler![
@@ -242,6 +244,7 @@ pub fn run() {
             dock::set_dock_icon(app.handle());
             settings::apply_app_icon_tint_from_settings(app.handle());
 
+            control::start_on_setup(app);
             helper::start_on_setup(app);
             Ok(())
         })
@@ -255,6 +258,8 @@ pub fn run() {
             settings::apply_app_icon_tint_from_settings(app_handle);
         }
         tauri::RunEvent::ExitRequested { .. } => {
+            use tauri::Manager;
+            app_handle.state::<control::ControlState>().shutdown();
             helper::shutdown_from_run_event(app_handle);
         }
         // macOS open-URL events (e.g. camber:// deep links). Tauri v2 delivers

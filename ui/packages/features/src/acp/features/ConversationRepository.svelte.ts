@@ -233,7 +233,7 @@ export class ACPConversationRepositoryWriter {
       // archive-cancels-the-selected-conversation behavior (DesktopSideBar)
       // to background rows — archiving means the user is done with the work.
       try {
-        await camberAcpSessionClose({ agentServer, sessionId });
+        await camberAcpSessionClose({ agentServer, sessionId, cancelInFlight: true });
       } catch (e) {
         console.error("Failed to close ACP session on archive", e);
       }

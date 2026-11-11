@@ -1,0 +1,1074 @@
+package control
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"log/slog"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+
+	acpsdk "github.com/coder/acp-go-sdk"
+	pkgerrors "github.com/pkg/errors"
+	"github.com/tliron/glsp"
+
+	"github.com/appleton/camber/pkg/camber-helper/methods"
+)
+
+type option struct {
+	ID       string            `json:"id"`
+	Category string            `json:"category"`
+	Type     string            `json:"type"`
+	Current  any               `json:"currentValue"`
+	Options  []json.RawMessage `json:"options"`
+}
+
+func parseOptions(raw json.RawMessage) []option {
+	var out []option
+	_ = json.Unmarshal(raw, &out)
+	return out
+}
+func allowed(raw []json.RawMessage, value string) bool {
+	for _, r := range raw {
+		var v struct {
+			Value   string            `json:"value"`
+			Options []json.RawMessage `json:"options"`
+		}
+		if json.Unmarshal(r, &v) == nil && (v.Value == value || allowed(v.Options, value)) {
+			return true
+		}
+	}
+	return false
+}
+
+// configSetsCategory reports whether config sets any option of the child
+// schema that belongs to category (by category, or by the conventional id).
+func configSetsCategory(child json.RawMessage, config map[string]any, category string) bool {
+	for _, o := range parseOptions(child) {
+		if _, ok := config[o.ID]; ok && optionInCategory(o, category) {
+			return true
+		}
+	}
+	return false
+}
+
+func optionInCategory(o option, category string) bool {
+	return o.Category == category || o.ID == category || (category == "thought_level" && (o.ID == "reasoning_effort" || o.ID == "effort"))
+}
+
+func inheritCompatible(parent, child json.RawMessage, a Args) map[string]any {
+	explicit := a.Config
+	skip := map[string]bool{}
+	for _, category := range []string{"model", "thought_level", "mode"} {
+		if configSetsCategory(child, explicit, category) {
+			skip[category] = true
+		}
+	}
+	out := map[string]any{}
+	byID := map[string]option{}
+	for _, o := range parseOptions(child) {
+		byID[o.ID] = o
+	}
+	for _, p := range parseOptions(parent) {
+		o, ok := byID[p.ID]
+		if !ok {
+			continue
+		}
+		if (a.Model != "" || skip["model"]) && optionInCategory(o, "model") {
+			continue
+		}
+		if (a.Effort != "" || skip["thought_level"]) && optionInCategory(o, "thought_level") {
+			continue
+		}
+		if (a.Mode != "" || skip["mode"]) && optionInCategory(o, "mode") {
+			continue
+		}
+		switch o.Type {
+		case "select":
+			text, ok := p.Current.(string)
+			if ok && allowed(o.Options, text) {
+				out[p.ID] = text
+			}
+		case "boolean":
+			if v, ok := p.Current.(bool); ok {
+				out[p.ID] = v
+			}
+		}
+	}
+	for k, v := range explicit {
+		out[k] = v
+	}
+	return out
+}
+
+func (s *Service) configure(ctx context.Context, a Args, set bool, caller string, g *glsp.Context) (any, error) {
+	releaseOperation, lockErr := s.lockConversation(ctx, a.ConversationID)
+	if lockErr != nil {
+		return nil, lockErr
+	}
+	defer releaseOperation()
+	v, err := s.view(ctx, a.ConversationID, g)
+	if err != nil {
+		return nil, err
+	}
+	if set {
+		if err = archivedError(v); err != nil {
+			return nil, err
+		}
+	}
+	cached := false
+	if source, ok := s.agent.(interface {
+		SessionConfiguration(string, string) (json.RawMessage, json.RawMessage, bool)
+	}); ok {
+		if options, modes, found := source.SessionConfiguration(v.AgentServer, v.SessionID); found {
+			v.ConfigOptions = options
+			v.Modes = modes
+			cached = true
+			if !set {
+				return map[string]any{"conversationId": v.ID, "configOptions": options, "modes": modes}, nil
+			}
+		}
+	}
+	// Agent-origin calls may select a bypass mode only when the token-proven
+	// caller (the target or its parent) is live in one; see checkConfigEscalation.
+	refs := []View{v}
+	if set {
+		if v.ParentID != "" {
+			if parent, perr := s.view(ctx, v.ParentID, g); perr == nil {
+				refs = append(refs, parent)
+			}
+		}
+		if err = s.checkConfigEscalation(a, caller, false, v, refs); err != nil {
+			return nil, err
+		}
+	}
+	// A restore re-applies saved selections; it may bring back a saved bypass
+	// mode only for a proven caller (see checkPromptEscalation). Listing still
+	// works without proof, from the recorded schema and saved selections.
+	if !cached {
+		if gateErr := s.checkPromptEscalation(ctx, v, caller, "restoring", g); gateErr != nil {
+			if set {
+				return nil, gateErr
+			}
+			savedConfigurationView(&v)
+			return map[string]any{"conversationId": v.ID, "configOptions": v.ConfigOptions, "modes": v.Modes, "restored": false}, nil
+		}
+	}
+	if v.Status == "running" || s.log.Cursor(v.AgentServer, v.SessionID).TurnActive {
+		return nil, pkgerrors.Errorf("configuration discovery and changes require an idle conversation")
+	}
+	release, err := s.reserveIdle(ctx, v.AgentServer, v.SessionID)
+	if err != nil {
+		return nil, err
+	}
+	release = sync.OnceFunc(release)
+	defer release()
+	if !cached {
+		recorded := v
+		if err = s.restoreSessionReserved(ctx, &v, caller, g); err != nil {
+			// Closing a refused restore takes the idle reservation itself.
+			release()
+			err = s.closeRefusedRestore(ctx, v, err, g)
+			if !set && isPermissionEscalation(err) {
+				// The loaded schema showed the saved selection is a bypass mode
+				// the caller may not restore: list the saved view instead.
+				savedConfigurationView(&recorded)
+				return map[string]any{"conversationId": recorded.ID, "configOptions": recorded.ConfigOptions, "modes": recorded.Modes, "restored": false}, nil
+			}
+			return nil, err
+		}
+	}
+
+	if set {
+		if len(a.Config) == 0 && a.Model == "" && a.Effort == "" && a.Mode == "" {
+			return nil, pkgerrors.Errorf("config, model, effort or mode is required")
+		}
+		// Resolve against the loaded schema so display names count, before
+		// any setter runs.
+		if err = s.checkConfigEscalation(a, caller, true, v, refs); err != nil {
+			return nil, err
+		}
+		// A setter can return a new schema that relabels a later selection;
+		// the guard re-judges what is left by the same caller rule, decided
+		// now: the batch itself may change the target's live mode.
+		proven := s.provenDangerousCaller(caller, refs...)
+		guard := func(value string) error {
+			if proven {
+				return nil
+			}
+			return escalationError("selecting "+bypassModeText(value), "the conversation or its parent")
+		}
+		if err = s.applyConfig(ctx, &v, a, guard, g); err != nil {
+			return nil, err
+		}
+	}
+	if err = s.save(ctx, v); err != nil {
+		return nil, err
+	}
+	return map[string]any{"conversationId": v.ID, "configOptions": v.ConfigOptions, "modes": v.Modes}, nil
+}
+
+// bypassGuard decides whether the caller may move a session to the named
+// permission-bypass value, returning a PERMISSION_ESCALATION error if not.
+// Each path supplies its own caller rule (config set, restore, spawn).
+type bypassGuard func(value string) error
+
+func (s *Service) applyConfig(ctx context.Context, v *View, a Args, guard bypassGuard, g *glsp.Context) error {
+	return s.applyConfigWithPersistence(ctx, v, a, guard, g, true)
+}
+
+// Explicit updates retain accepted partial changes. Restoration must preserve
+// the saved selections until all of them have been successfully reapplied.
+//
+// Callers judge the request against the schema before applying it, but every
+// setter may return a new schema (a model switch commonly does) that gives a
+// still-pending value a permission-bypass meaning. After each set, the pending
+// selections are judged again against the returned schema and guard decides;
+// a refusal stops before any further value is applied. Finally, a session the
+// caller's mode selection left in a bypass mode it was not in before is put
+// to guard as well.
+func (s *Service) applyConfigWithPersistence(ctx context.Context, v *View, a Args, guard bypassGuard, g *glsp.Context, persist bool) (resultErr error) {
+	if persist {
+		defer func() {
+			if persistErr := s.persistSessionConfig(context.WithoutCancel(ctx), v, g); resultErr == nil && persistErr != nil {
+				resultErr = persistErr
+			}
+		}()
+	}
+	startedDangerous := optionsDangerous(v.ConfigOptions, v.Modes)
+	opts := parseOptions(v.ConfigOptions)
+	values := map[string]any{}
+	for k, x := range a.Config {
+		values[k] = x
+	}
+	for category, value := range map[string]string{"model": a.Model, "thought_level": a.Effort, "mode": a.Mode} {
+		if value == "" {
+			continue
+		}
+		found := ""
+		for _, o := range opts {
+			if o.Category == category || o.ID == category || (category == "thought_level" && (o.ID == "reasoning_effort" || o.ID == "effort")) {
+				if found != "" && found != o.ID {
+					return pkgerrors.Errorf("multiple %s options; use an explicit option id", category)
+				}
+				found = o.ID
+			}
+		}
+		if found == "" {
+			if category == "mode" {
+				continue
+			}
+			return pkgerrors.Errorf("agent does not expose a %s configuration option", category)
+		}
+		if prior, ok := values[found]; ok && prior != value {
+			return pkgerrors.Errorf("conflicting values for option %s", found)
+		}
+		values[found] = value
+	}
+	// Validate option identities and wire types before changing the model. A
+	// model change may advertise a different set of effort values, so validate
+	// those selections against the authoritative schema returned afterwards.
+	initial := map[string]option{}
+	for _, o := range opts {
+		initial[o.ID] = o
+	}
+	for id, value := range values {
+		o, ok := initial[id]
+		if !ok {
+			return pkgerrors.Errorf("unknown configuration option %q", id)
+		}
+		if o.Type == "boolean" {
+			if _, ok := value.(bool); !ok {
+				return pkgerrors.Errorf("configuration option %s requires a boolean", id)
+			}
+		} else if o.Type == "select" {
+			if _, ok := value.(string); !ok {
+				return pkgerrors.Errorf("configuration option %s requires a string", id)
+			}
+		} else {
+			return pkgerrors.Errorf("unsupported configuration option type %q", o.Type)
+		}
+	}
+	for _, o := range opts {
+		if o.Category != "model" && o.ID != "model" {
+			continue
+		}
+		value, wanted := values[o.ID]
+		if !wanted || value == o.Current {
+			continue
+		}
+		if text, ok := value.(string); !ok || !allowed(o.Options, text) {
+			return pkgerrors.Errorf("unsupported value for configuration option %s", o.ID)
+		}
+		if len(values) > 1 {
+			modelOnly := Args{Config: map[string]any{o.ID: value}}
+			if err := s.applyConfigWithPersistence(ctx, v, modelOnly, guard, g, persist); err != nil {
+				return err
+			}
+			opts = parseOptions(v.ConfigOptions)
+			pending := map[string]any{}
+			for id, x := range values {
+				if id != o.ID {
+					pending[id] = x
+				}
+			}
+			if err := recheckPendingBypass(*v, pending, a.Mode, guard); err != nil {
+				return err
+			}
+		}
+		break
+	}
+	// A later failure can leave the requested model applied. Explicit updates
+	// persist this effective state; failed restoration will invalidate it.
+
+	byID := map[string]option{}
+	for _, o := range opts {
+		byID[o.ID] = o
+	}
+	for id, value := range values {
+		o, ok := byID[id]
+		if !ok {
+			return pkgerrors.Errorf("unknown configuration option %q", id)
+		}
+		switch o.Type {
+		case "boolean":
+			if _, ok = value.(bool); !ok {
+				return pkgerrors.Errorf("configuration option %s requires a boolean", id)
+			}
+		case "select":
+			text, ok := value.(string)
+			if !ok || !allowed(o.Options, text) {
+				return pkgerrors.Errorf("unsupported value for configuration option %s", id)
+			}
+		default:
+			return pkgerrors.Errorf("unsupported configuration option type %q", o.Type)
+		}
+	}
+	modeLegacy := a.Mode != ""
+	for _, o := range opts {
+		if o.Category == "mode" || o.ID == "mode" {
+			modeLegacy = false
+		}
+	}
+	if modeLegacy {
+		var modes struct {
+			Available []struct {
+				ID string `json:"id"`
+			} `json:"availableModes"`
+		}
+		_ = json.Unmarshal(v.Modes, &modes)
+		valid := false
+		for _, m := range modes.Available {
+			if m.ID == a.Mode {
+				valid = true
+			}
+		}
+		if !valid {
+			return pkgerrors.Errorf("unsupported mode %q", a.Mode)
+		}
+	}
+	ids := make([]string, 0, len(values))
+	for id := range values {
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(i, j int) bool {
+		if byID[ids[i]].Category == "model" {
+			return byID[ids[j]].Category != "model"
+		}
+		if byID[ids[j]].Category == "model" {
+			return false
+		}
+		return ids[i] < ids[j]
+	})
+	for i, id := range ids {
+		if byID[id].Current == values[id] {
+			continue
+		}
+		payload := map[string]any{"sessionId": v.SessionID, "configId": id, "value": values[id]}
+		if byID[id].Type == "boolean" {
+			payload["type"] = "boolean"
+		}
+		raw, _ := json.Marshal(payload)
+		var req acpsdk.SetSessionConfigOptionRequest
+		if err := json.Unmarshal(raw, &req); err != nil {
+			return pkgerrors.WithStack(err)
+		}
+		resp, err := s.agent.SetConfigOption(ctx, &methods.ACPSetConfigOptionParams{ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: v.AgentServer}, SetSessionConfigOptionRequest: req}, g)
+		if err != nil {
+			return err
+		}
+		v.ConfigOptions, _ = captureConfig(resp)
+		if persist {
+			if err = s.save(ctx, *v); err != nil {
+				return err
+			}
+		}
+		pending := map[string]any{}
+		for _, later := range ids[i+1:] {
+			pending[later] = values[later]
+		}
+		if err = recheckPendingBypass(*v, pending, a.Mode, guard); err != nil {
+			return err
+		}
+	}
+	syncLegacyMode(v)
+	if modeLegacy {
+		_, err := s.agent.SetMode(ctx, &methods.ACPSetModeParams{ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: v.AgentServer}, SetSessionModeRequest: acpsdk.SetSessionModeRequest{SessionId: acpsdk.SessionId(v.SessionID), ModeId: acpsdk.SessionModeId(a.Mode)}}, g)
+		if err != nil {
+			return err
+		}
+		var modes map[string]any
+		_ = json.Unmarshal(v.Modes, &modes)
+		if modes != nil {
+			modes["currentModeId"] = a.Mode
+			v.Modes, _ = json.Marshal(modes)
+		}
+	}
+	// A mode the caller selected that the agent now reports as a bypass mode
+	// (for example relabelled by the new schema) needs the same proof.
+	if !startedDangerous && optionsDangerous(v.ConfigOptions, v.Modes) && requestsMode(v.ConfigOptions, values, a.Mode) {
+		if err := guardBypass(guard, currentModeValue(v.ConfigOptions, v.Modes)); err != nil {
+			return err
+		}
+	}
+	// Agent responses are authoritative: reject a silently ignored setting.
+	current := map[string]any{}
+	for _, o := range parseOptions(v.ConfigOptions) {
+		current[o.ID] = o.Current
+	}
+	for id, value := range values {
+		if current[id] != value {
+			return pkgerrors.Errorf("agent did not apply configuration option %s", id)
+		}
+	}
+	return nil
+}
+
+// recheckPendingBypass judges selections not yet applied against the schema
+// the last setter returned, and puts a bypass value to guard.
+func recheckPendingBypass(v View, pending map[string]any, mode string, guard bypassGuard) error {
+	value, err := schemaDangerousValue(v.ConfigOptions, v.Modes, Args{Config: pending, Mode: mode})
+	if err != nil || value == "" {
+		return err
+	}
+	return guardBypass(guard, value)
+}
+
+func guardBypass(guard bypassGuard, value string) error {
+	if guard == nil {
+		return escalationError("selecting "+bypassModeText(value), "the conversation or its parent")
+	}
+	return guard(value)
+}
+
+// requestsMode reports whether values (by option id) or a legacy mode select
+// the session's mode.
+func requestsMode(options json.RawMessage, values map[string]any, mode string) bool {
+	if mode != "" {
+		return true
+	}
+	for _, o := range parseOptions(options) {
+		if _, ok := values[o.ID]; ok && optionInCategory(o, "mode") {
+			return true
+		}
+	}
+	return false
+}
+
+// currentModeValue returns the effective mode: a mode-category option's value,
+// else the legacy current mode id.
+func currentModeValue(options, modes json.RawMessage) string {
+	for _, o := range parseOptions(options) {
+		if value, ok := o.Current.(string); ok && optionInCategory(o, "mode") {
+			return value
+		}
+	}
+	var legacy struct {
+		Current string `json:"currentModeId"`
+	}
+	_ = json.Unmarshal(modes, &legacy)
+	return legacy.Current
+}
+
+func (s *Service) persistSessionConfig(ctx context.Context, v *View, g *glsp.Context) error {
+	if len(v.ConfigOptions) == 0 && len(v.Modes) == 0 {
+		return nil
+	}
+	selections := map[string]any{}
+	for _, o := range parseOptions(v.ConfigOptions) {
+		switch value := o.Current.(type) {
+		case string, bool:
+			selections[o.ID] = value
+		}
+	}
+	syncLegacyMode(v)
+	var mode struct {
+		Current any `json:"currentModeId"`
+	}
+	_ = json.Unmarshal(v.Modes, &mode)
+	snapshot, err := json.Marshal(map[string]any{"selections": selections, "modeId": mode.Current})
+	if err != nil {
+		return pkgerrors.WithStack(err)
+	}
+	return s.nav.SetConversationConfig(ctx, v.ID, v.AgentServer, v.SessionID, snapshot, g)
+}
+
+func validateConfigKeys(raw json.RawMessage, values map[string]any) error {
+	byID := map[string]option{}
+	for _, o := range parseOptions(raw) {
+		byID[o.ID] = o
+	}
+	for id, value := range values {
+		o, found := byID[id]
+		if !found {
+			return pkgerrors.Errorf("unknown configuration option %q", id)
+		}
+		switch o.Type {
+		case "select":
+			if _, ok := value.(string); !ok {
+				return pkgerrors.Errorf("configuration option %s requires a string", id)
+			}
+		case "boolean":
+			if _, ok := value.(bool); !ok {
+				return pkgerrors.Errorf("configuration option %s requires a boolean", id)
+			}
+		default:
+			return pkgerrors.Errorf("unsupported configuration option type %q", o.Type)
+		}
+	}
+	return nil
+}
+
+// restoreSession follows the desktop loader's persisted selection semantics
+// when a detached conversation is used after helper/agent restart or close.
+func (s *Service) restoreSession(ctx context.Context, v *View, caller string, g *glsp.Context) error {
+	release, err := s.reserveIdle(ctx, v.AgentServer, v.SessionID)
+	if err != nil {
+		return err
+	}
+	err = s.restoreSessionReserved(ctx, v, caller, g)
+	release()
+	return s.closeRefusedRestore(ctx, *v, err, g)
+}
+
+// restoreRefusedError marks a restore refused after LoadSession. The loaded
+// session must not be left behind for a later unproven call to use, but
+// closing it takes the idle-session reservation, which is not reentrant: the
+// caller closes it with closeRefusedRestore after releasing its reservation.
+type restoreRefusedError struct{ err error }
+
+func (e *restoreRefusedError) Error() string { return e.err.Error() }
+func (e *restoreRefusedError) Unwrap() error { return e.err }
+
+// closeRefusedRestore closes the session a refused restore loaded and returns
+// the refusal itself; other errors pass through. The caller must no longer
+// hold the session's idle reservation. A failed close is logged, not hidden.
+func (s *Service) closeRefusedRestore(ctx context.Context, v View, err error, g *glsp.Context) error {
+	var refused *restoreRefusedError
+	if !errors.As(err, &refused) {
+		return err
+	}
+	if _, closeErr := s.agent.CloseSession(context.WithoutCancel(ctx), &methods.ACPCloseSessionParams{ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: v.AgentServer}, CloseSessionRequest: acpsdk.CloseSessionRequest{SessionId: acpsdk.SessionId(v.SessionID)}}, g); closeErr != nil {
+		slog.Warn("control: failed to close session after refusing its restore", "conversationId", v.ID, "agentServer", v.AgentServer, "sessionId", v.SessionID, "error", closeErr)
+	}
+	return refused.err
+}
+
+// The caller already holds the idle-session reservation. Configuration reads
+// and partial updates must restore the same saved selections as a continuation.
+// The loaded schema is the authority on what the saved selections mean: a
+// saved bypass selection is re-applied only for a proven caller (the same rule
+// as checkPromptEscalation), including one a setter's new schema reveals while
+// re-applying. Otherwise the restore is refused with a restoreRefusedError,
+// and the caller closes the loaded session once its reservation is released.
+func (s *Service) restoreSessionReserved(ctx context.Context, v *View, caller string, g *glsp.Context) (resultErr error) {
+	saved, _, err := savedConfiguration(v.Metadata)
+	if err != nil {
+		return err
+	}
+	if err = s.initialize(ctx, v.AgentServer, g); err != nil {
+		return err
+	}
+	defer func() {
+		if resultErr != nil {
+			// LoadSession and setters populate the live cache before recovery
+			// finishes. A failure must force the next operation to retry it.
+			if cache, ok := s.agent.(interface {
+				InvalidateSessionConfiguration(string, string)
+			}); ok {
+				cache.InvalidateSessionConfiguration(v.AgentServer, v.SessionID)
+			}
+		}
+	}()
+	resp, err := s.agent.LoadSession(ctx, &methods.ACPLoadSessionParams{ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: v.AgentServer}, LoadSessionRequest: acpsdk.LoadSessionRequest{SessionId: acpsdk.SessionId(v.SessionID), Cwd: v.Cwd, McpServers: []acpsdk.McpServer{}}}, g)
+	if err != nil {
+		return err
+	}
+	v.ConfigOptions, v.Modes = captureConfig(resp)
+	if saved.Mode != "" && configSetsCategory(v.ConfigOptions, saved.Config, "mode") {
+		// The option is authoritative; never replay both representations.
+		saved.Mode = ""
+	}
+	if err = s.checkRestoreEscalation(ctx, *v, saved, caller, g); err != nil {
+		return &restoreRefusedError{err: err}
+	}
+	if len(saved.Config) == 0 && saved.Mode == "" {
+		return nil
+	}
+	loaded := *v
+	guard := func(string) error {
+		if s.provenPromptCaller(ctx, caller, loaded, g) {
+			return nil
+		}
+		return promptEscalationError(loaded, "restoring")
+	}
+	// A continuation must not silently substitute a different model or effort
+	// when the persisted selection is no longer supported by this agent.
+	if err = s.applyConfigWithPersistence(ctx, v, saved, guard, g, false); err != nil {
+		if isPermissionEscalation(err) {
+			return &restoreRefusedError{err: err}
+		}
+		return err
+	}
+	return s.persistSessionConfig(ctx, v, g)
+}
+
+func savedConfiguration(raw json.RawMessage) (Args, bool, error) {
+	var metadata struct {
+		Config *struct {
+			Selections map[string]any `json:"selections"`
+			Mode       string         `json:"modeId"`
+		} `json:"sessionConfig"`
+	}
+	if len(raw) == 0 {
+		return Args{}, false, nil
+	}
+	if err := json.Unmarshal(raw, &metadata); err != nil {
+		return Args{}, false, pkgerrors.WithStack(err)
+	}
+	if metadata.Config == nil {
+		return Args{}, false, nil
+	}
+	return Args{Config: metadata.Config.Selections, Mode: metadata.Config.Mode}, true, nil
+}
+
+// Persisted UI selections are authoritative when the parent's session is not
+// live. Only supply values here: compatibility is checked against the child's
+// discovered schema, after applying its selected model.
+func useSavedParentConfiguration(parent *View) error {
+	saved, found, err := savedConfiguration(parent.Metadata)
+	if err != nil || !found {
+		return err
+	}
+	opts := make([]option, 0, len(saved.Config))
+	for id, value := range saved.Config {
+		opts = append(opts, option{ID: id, Current: value})
+	}
+	sort.Slice(opts, func(i, j int) bool { return opts[i].ID < opts[j].ID })
+	parent.ConfigOptions, err = json.Marshal(opts)
+	if err != nil {
+		return pkgerrors.WithStack(err)
+	}
+	parent.Modes, err = json.Marshal(map[string]any{"currentModeId": saved.Mode})
+	if err != nil {
+		return pkgerrors.WithStack(err)
+	}
+	return nil
+}
+
+// syncLegacyMode keeps the legacy modes state aligned with a mode-category
+// config option, which is authoritative when an agent exposes both.
+func syncLegacyMode(v *View) {
+	if len(v.Modes) == 0 {
+		return
+	}
+	for _, o := range parseOptions(v.ConfigOptions) {
+		if !optionInCategory(o, "mode") {
+			continue
+		}
+		value, ok := o.Current.(string)
+		if !ok {
+			continue
+		}
+		var modes map[string]any
+		if json.Unmarshal(v.Modes, &modes) != nil || modes == nil {
+			return
+		}
+		available, _ := modes["availableModes"].([]any)
+		for _, m := range available {
+			if entry, ok := m.(map[string]any); ok && entry["id"] == value {
+				modes["currentModeId"] = value
+				v.Modes, _ = json.Marshal(modes)
+				return
+			}
+		}
+		return
+	}
+}
+
+// savedConfigurationView overlays a conversation's saved selections onto its
+// recorded schema without loading the session.
+func savedConfigurationView(v *View) {
+	saved, found, err := savedConfiguration(v.Metadata)
+	if err != nil || !found {
+		return
+	}
+	var opts []map[string]any
+	if json.Unmarshal(v.ConfigOptions, &opts) != nil || len(opts) == 0 {
+		_ = useSavedParentConfiguration(v)
+		return
+	}
+	overlaySelections(v, saved)
+}
+
+// overlaySelections sets saved selections as the current values of v's
+// schema, keeping each option's category and value names so the result can be
+// judged like a live session.
+func overlaySelections(v *View, saved Args) {
+	var opts []map[string]any
+	if json.Unmarshal(v.ConfigOptions, &opts) == nil && len(opts) > 0 {
+		for _, o := range opts {
+			id, _ := o["id"].(string)
+			if value, ok := saved.Config[id]; ok {
+				o["currentValue"] = value
+			}
+		}
+		v.ConfigOptions, _ = json.Marshal(opts)
+	}
+	var modes map[string]any
+	if saved.Mode != "" && json.Unmarshal(v.Modes, &modes) == nil && modes != nil {
+		modes["currentModeId"] = saved.Mode
+		v.Modes, _ = json.Marshal(modes)
+	}
+	syncLegacyMode(v)
+}
+
+// isDangerousModeValue reports permission-bypass mode values (no approval
+// gates). Keep in sync with modeValueAppearance in
+// ui/packages/features/src/acp/components/chat/menus/config/configOptions.ts.
+func isDangerousModeValue(value string) bool {
+	var b strings.Builder
+	for _, r := range strings.ToLower(value) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
+	}
+	switch n := b.String(); n {
+	case "alwaysallow", "allowall", "fullaccess", "agentfullaccess", "yolo":
+		return true
+	default:
+		return strings.HasPrefix(n, "bypass")
+	}
+}
+
+// escalationError explains how an agent can prove it may use a bypass mode.
+func escalationError(what, who string) error {
+	return &methods.JSONRPCError{Code: methods.CamberErrorCodeEntityInvalid, Message: "PERMISSION_ESCALATION: " + what + " is only allowed when the request carries --caller-token proving it comes from " + who + ", and that conversation is running in a permission-bypass mode right now. Pass the callerToken from your Camber host context, or choose a non-bypass mode."}
+}
+
+func bypassModeText(value string) string {
+	return "permission-bypass mode " + strconv.Quote(value)
+}
+
+// explicitDangerousValue returns a permission-bypass value the caller asked
+// for, judged by the raw value alone. It needs no schema, so it can run
+// before any side effect; schemaDangerousValue adds option display names.
+func explicitDangerousValue(a Args) string {
+	for _, v := range []string{a.Mode, a.Model, a.Effort} {
+		if isDangerousModeValue(v) {
+			return v
+		}
+	}
+	for _, v := range a.Config {
+		if text, ok := v.(string); ok && isDangerousModeValue(text) {
+			return text
+		}
+	}
+	return ""
+}
+
+// schemaDangerousValue resolves requested values against a session's schema
+// and returns one that changes the session to a permission-bypass choice,
+// judged by value or display name (as the UI does). Re-selecting the current
+// value is not a change. A mode value the schema does not offer is rejected,
+// so an opaque value cannot slip past the name check.
+func schemaDangerousValue(options, modes json.RawMessage, a Args) (string, error) {
+	modeOption := false
+	for _, o := range parseOptions(options) {
+		var requested []string
+		if text, ok := a.Config[o.ID].(string); ok {
+			requested = append(requested, text)
+		}
+		isMode := optionInCategory(o, "mode")
+		for category, value := range map[string]string{"mode": a.Mode, "model": a.Model, "thought_level": a.Effort} {
+			if value != "" && optionInCategory(o, category) {
+				requested = append(requested, value)
+			}
+		}
+		modeOption = modeOption || isMode
+		for _, value := range requested {
+			name, found := optionEntryName(o.Options, value)
+			if !found {
+				if isMode {
+					return "", pkgerrors.Errorf("unsupported value %q for mode option %s", value, o.ID)
+				}
+				continue
+			}
+			if current, ok := o.Current.(string); ok && current == value {
+				continue
+			}
+			if isDangerousModeValue(value) || isDangerousModeValue(name) {
+				return value, nil
+			}
+		}
+	}
+	if a.Mode == "" || modeOption {
+		return "", nil
+	}
+	var legacy struct {
+		Current   string `json:"currentModeId"`
+		Available []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"availableModes"`
+	}
+	_ = json.Unmarshal(modes, &legacy)
+	for _, m := range legacy.Available {
+		if m.ID != a.Mode {
+			continue
+		}
+		if m.ID != legacy.Current && (isDangerousModeValue(m.ID) || isDangerousModeValue(m.Name)) {
+			return m.ID, nil
+		}
+		return "", nil
+	}
+	return "", pkgerrors.Errorf("unsupported mode %q", a.Mode)
+}
+
+// optionEntryName finds a select value, including inside option groups.
+func optionEntryName(raw []json.RawMessage, value string) (string, bool) {
+	for _, r := range raw {
+		var entry struct {
+			Value   string            `json:"value"`
+			Name    string            `json:"name"`
+			Options []json.RawMessage `json:"options"`
+		}
+		if json.Unmarshal(r, &entry) != nil {
+			continue
+		}
+		if entry.Value == value && len(entry.Options) == 0 {
+			return entry.Name, true
+		}
+		if name, ok := optionEntryName(entry.Options, value); ok {
+			return name, true
+		}
+	}
+	return "", false
+}
+
+// optionsDangerous reports whether the effective mode is a bypass mode. A
+// mode-category option is authoritative over legacy modes.
+func optionsDangerous(options, modes json.RawMessage) bool {
+	found := false
+	for _, o := range parseOptions(options) {
+		if !optionInCategory(o, "mode") {
+			continue
+		}
+		value, ok := o.Current.(string)
+		if !ok {
+			continue
+		}
+		found = true
+		if isDangerousModeValue(value) {
+			return true
+		}
+		if name, ok := optionEntryName(o.Options, value); ok && isDangerousModeValue(name) {
+			return true
+		}
+	}
+	if found {
+		return false
+	}
+	var legacy struct {
+		Current   string `json:"currentModeId"`
+		Available []struct {
+			ID   string `json:"id"`
+			Name string `json:"name"`
+		} `json:"availableModes"`
+	}
+	_ = json.Unmarshal(modes, &legacy)
+	if isDangerousModeValue(legacy.Current) {
+		return true
+	}
+	for _, m := range legacy.Available {
+		if m.ID == legacy.Current && isDangerousModeValue(m.Name) {
+			return true
+		}
+	}
+	return false
+}
+
+// conversationDangerous reports whether a conversation runs, or would resume,
+// in a permission-bypass mode: live session state, else saved selections. It
+// decides whether a child would inherit a bypass mode, never authorization.
+func (s *Service) conversationDangerous(v View) bool {
+	if options, modes, found := s.liveConfiguration(v); found {
+		return optionsDangerous(options, modes)
+	}
+	if _, found, _ := savedConfiguration(v.Metadata); found {
+		// Judge the saved selections against the recorded schema (categories
+		// and value names), and by raw value under the conventional ids. An
+		// opaque value with no recorded schema can only be judged once the
+		// session is loaded; restoreSessionReserved re-checks it there.
+		recorded := v
+		savedConfigurationView(&recorded)
+		synthesized := v
+		if useSavedParentConfiguration(&synthesized) == nil && optionsDangerous(synthesized.ConfigOptions, synthesized.Modes) {
+			return true
+		}
+		return optionsDangerous(recorded.ConfigOptions, recorded.Modes)
+	}
+	return optionsDangerous(v.ConfigOptions, v.Modes)
+}
+
+// liveConfiguration returns a session's configuration only while it is loaded.
+func (s *Service) liveConfiguration(v View) (json.RawMessage, json.RawMessage, bool) {
+	source, ok := s.agent.(interface {
+		SessionConfiguration(string, string) (json.RawMessage, json.RawMessage, bool)
+	})
+	if !ok || v.SessionID == "" {
+		return nil, nil, false
+	}
+	return source.SessionConfiguration(v.AgentServer, v.SessionID)
+}
+
+// provenDangerousCaller reports whether the token-proven caller is one of
+// refs and that conversation's loaded session is in a permission-bypass mode
+// now. Saved metadata alone never qualifies: an idle conversation cannot be
+// the one asking.
+func (s *Service) provenDangerousCaller(caller string, refs ...View) bool {
+	if caller == "" {
+		return false
+	}
+	for _, ref := range refs {
+		if ref.ID != caller || ref.Archived {
+			continue
+		}
+		if options, modes, found := s.liveConfiguration(ref); found && optionsDangerous(options, modes) {
+			return true
+		}
+	}
+	return false
+}
+
+// checkPromptEscalation gates control prompts (send, steer) and
+// control-origin session restores. A conversation that runs, or would resume
+// from saved selections, in a permission-bypass mode accepts them only from a
+// token-proven caller that is the conversation itself, or its parent while the
+// parent is live in a bypass mode.
+func (s *Service) checkPromptEscalation(ctx context.Context, v View, caller, action string, g *glsp.Context) error {
+	if !s.conversationDangerous(v) || s.provenPromptCaller(ctx, caller, v, g) {
+		return nil
+	}
+	return promptEscalationError(v, action)
+}
+
+// checkRestoreEscalation runs after LoadSession and before saved selections
+// are re-applied. Against the session's real schema it judges whether the
+// restored session would run in a permission-bypass mode, by the saved
+// selections (value or display name) or the loaded state they leave in place,
+// and then applies checkPromptEscalation's caller rule.
+func (s *Service) checkRestoreEscalation(ctx context.Context, loaded View, saved Args, caller string, g *glsp.Context) error {
+	// An unsupported saved value is reported by applyConfig, not here.
+	value, _ := schemaDangerousValue(loaded.ConfigOptions, loaded.Modes, saved)
+	effective := loaded
+	overlaySelections(&effective, saved)
+	if value == "" && !optionsDangerous(effective.ConfigOptions, effective.Modes) {
+		return nil
+	}
+	if s.provenPromptCaller(ctx, caller, loaded, g) {
+		return nil
+	}
+	return promptEscalationError(loaded, "restoring")
+}
+
+// isPermissionEscalation reports a PERMISSION_ESCALATION rejection.
+func isPermissionEscalation(err error) bool {
+	var rpcErr *methods.JSONRPCError
+	return errors.As(err, &rpcErr) && strings.HasPrefix(rpcErr.Message, "PERMISSION_ESCALATION")
+}
+
+func promptEscalationError(v View, action string) error {
+	return &methods.JSONRPCError{Code: methods.CamberErrorCodeEntityInvalid, Message: "PERMISSION_ESCALATION: conversation " + v.ID + " runs, or would resume, in a permission-bypass mode, so " + action + " it is only allowed when the request carries --caller-token proving it comes from that conversation, or from its parent while the parent is running in a permission-bypass mode right now. Pass the callerToken from your Camber host context, or ask the user to act on the conversation in the Camber desktop app."}
+}
+
+// provenPromptCaller reports whether the token-proven caller is the target
+// itself, or the target's control parent live in a permission-bypass mode.
+func (s *Service) provenPromptCaller(ctx context.Context, caller string, v View, g *glsp.Context) bool {
+	if caller == "" {
+		return false
+	}
+	if caller == v.ID {
+		return !v.Archived
+	}
+	if v.ParentID == "" || caller != v.ParentID {
+		return false
+	}
+	parent, err := s.view(ctx, v.ParentID, g)
+	return err == nil && s.provenDangerousCaller(caller, parent)
+}
+
+// configNamesMode reports whether config selects a mode option, judged by the
+// parent's known schema (live, else recorded) and the conventional "mode" id.
+func (s *Service) configNamesMode(parent View, config map[string]any) bool {
+	if len(config) == 0 {
+		return false
+	}
+	if _, ok := config["mode"]; ok {
+		return true
+	}
+	options := parent.ConfigOptions
+	if live, _, found := s.liveConfiguration(parent); found {
+		options = live
+	}
+	return configSetsCategory(options, config, "mode")
+}
+
+// checkSpawnEscalation runs before any spawn side effect. A child may get a
+// permission-bypass mode, explicitly or by inheriting it from a same-agent
+// parent, only when the caller proves it is that parent and the parent is
+// live in a bypass mode. Agent defaults are not caller choices.
+func (s *Service) checkSpawnEscalation(a Args, caller string, parent View, hasParent bool) error {
+	proven := hasParent && s.provenDangerousCaller(caller, parent)
+	if proven {
+		return nil
+	}
+	if value := explicitDangerousValue(a); value != "" {
+		return escalationError("giving a child "+bypassModeText(value), "the parent conversation")
+	}
+	sameAgent := a.AgentServer == "" || a.AgentServer == parent.AgentServer
+	if hasParent && sameAgent && a.Mode == "" && !s.configNamesMode(parent, a.Config) && s.conversationDangerous(parent) {
+		return escalationError("inheriting parent conversation "+parent.ID+"'s permission-bypass mode", "that parent conversation")
+	}
+	return nil
+}
+
+// checkConfigEscalation rejects a bypass value for config.set unless the
+// proven caller is the target or its parent and is live in a bypass mode.
+// Without a schema it judges raw values, so it can run before agent calls.
+func (s *Service) checkConfigEscalation(a Args, caller string, schema bool, v View, refs []View) error {
+	value := explicitDangerousValue(a)
+	if schema {
+		resolved, err := schemaDangerousValue(v.ConfigOptions, v.Modes, a)
+		if err != nil {
+			return err
+		}
+		value = resolved
+	}
+	if value == "" || s.provenDangerousCaller(caller, refs...) {
+		return nil
+	}
+	return escalationError("selecting "+bypassModeText(value), "the conversation or its parent")
+}

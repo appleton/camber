@@ -29,7 +29,8 @@ type Server struct {
 	// then by live-status key. A conversation counts as watched — so a
 	// completing turn does not mark it unread — while ANY origin views it, and
 	// unread survives one surface closing a conversation another still shows.
-	activeSessions map[string]map[string]bool
+	activeSessions        map[string]map[string]bool
+	archivedSessionCloser ArchivedSessionCloser
 }
 
 type InstalledRegistryAgentServerStore interface {
@@ -48,9 +49,31 @@ func (s *Server) SetStore(store *Store) {
 		_ = s.store.Close()
 	}
 	s.store = store
+	s.applyArchivedSessionCloser()
 	if s.agentServerStore == nil {
 		s.agentServerStore = store
 	}
+}
+
+// SetArchivedSessionCloser installs the hook that cancels and closes the
+// sessions of sub-agent conversations archived by an ancestor's archive. It
+// runs best-effort in the background and never for the directly archived
+// conversation, whose close remains the client's responsibility.
+func (s *Server) SetArchivedSessionCloser(closer ArchivedSessionCloser) {
+	s.archivedSessionCloser = closer
+	s.applyArchivedSessionCloser()
+}
+
+func (s *Server) applyArchivedSessionCloser() {
+	if s.store == nil {
+		return
+	}
+	if s.archivedSessionCloser == nil {
+		s.store.archivedSessionCloser.Store(nil)
+		return
+	}
+	closer := s.archivedSessionCloser
+	s.store.archivedSessionCloser.Store(&closer)
 }
 
 func (s *Server) CreateChat(_ context.Context, req *methods.ACPNavCreateChatParams, _ *glsp.Context) (methods.ACPNavCreateChatOutput, error) {
@@ -382,10 +405,24 @@ func (s *Server) ReleasePreparedWorktree(_ context.Context, req *methods.ACPNavR
 }
 
 func (s *Server) CreateWorktree(ctx context.Context, req *methods.ACPNavCreateWorktreeParams, gCtx *glsp.Context) (methods.ACPNavProject, error) {
+	return s.createWorktree(ctx, req, gCtx, false)
+}
+
+// CreateWorktreeIsolated is CreateWorktree for control automation: git runs
+// without repo hooks or fsmonitor. The desktop UI keeps CreateWorktree.
+func (s *Server) CreateWorktreeIsolated(ctx context.Context, req *methods.ACPNavCreateWorktreeParams, gCtx *glsp.Context) (methods.ACPNavProject, error) {
+	return s.createWorktree(ctx, req, gCtx, true)
+}
+
+func (s *Server) createWorktree(ctx context.Context, req *methods.ACPNavCreateWorktreeParams, gCtx *glsp.Context, isolated bool) (methods.ACPNavProject, error) {
 	if s.store == nil {
 		return methods.ACPNavProject{}, sql.ErrConnDone
 	}
-	project, err := s.store.CreateWorktree(ctx, req.ProjectPath, req.WorktreeName)
+	create := s.store.CreateWorktree
+	if isolated {
+		create = s.store.CreateWorktreeIsolated
+	}
+	project, err := create(ctx, req.ProjectPath, req.WorktreeName)
 	if err != nil {
 		return methods.ACPNavProject{}, err
 	}
@@ -582,6 +619,16 @@ func (s *Server) SetConversationViewState(ctx context.Context, req *methods.ACPN
 		return s.listWithLiveStatus(ctx)
 	}
 
+	// Resolved before taking s.mu: it reads the database. Best-effort: a
+	// failed lookup must not stop the conversation itself being marked viewed.
+	var descendantKeys []string
+	if hasKey && req.Active {
+		var err error
+		if descendantKeys, err = s.descendantLiveStatusKeys(ctx, key); err != nil {
+			slog.WarnContext(ctx, "acpnav: resolving descendant conversations failed", "error", err)
+		}
+	}
+
 	statusChanged := false
 	s.mu.Lock()
 	if req.Reset {
@@ -598,6 +645,17 @@ func (s *Server) SetConversationViewState(ctx context.Context, req *methods.ACPN
 				status.Unread = false
 				statusChanged = true
 				s.setLiveStatusLocked(key, status)
+			}
+			// Viewing a parent also reads its spawned descendants' completed
+			// turns. Ones still needing input keep their state.
+			for _, descendantKey := range descendantKeys {
+				status, ok := s.liveStatuses[descendantKey]
+				if !ok || !status.Unread || status.WaitingForUser {
+					continue
+				}
+				status.Unread = false
+				statusChanged = true
+				s.setLiveStatusLocked(descendantKey, status)
 			}
 		} else {
 			delete(s.activeSessions[origin], key)
@@ -616,6 +674,43 @@ func (s *Server) SetConversationViewState(ctx context.Context, req *methods.ACPN
 		s.notifyState(ctx, gCtx, state)
 	}
 	return state, nil
+}
+
+// descendantLiveStatusKeys returns the live status keys of every conversation
+// descended (via ParentID) from the conversation bound to key. Cycle-safe.
+func (s *Server) descendantLiveStatusKeys(ctx context.Context, key string) ([]string, error) {
+	state, err := s.store.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	children := map[string][]methods.ACPNavConversation{}
+	var queue []string
+	seen := map[string]bool{}
+	for _, conversation := range state.Conversations {
+		if conversationKey, ok := liveStatusKey(conversation.AgentServer, conversation.SessionID); ok && conversationKey == key && !seen[conversation.ID] {
+			seen[conversation.ID] = true
+			queue = append(queue, conversation.ID)
+		}
+		if conversation.ParentID != "" && conversation.ParentID != conversation.ID {
+			children[conversation.ParentID] = append(children[conversation.ParentID], conversation)
+		}
+	}
+	var keys []string
+	for len(queue) > 0 {
+		id := queue[0]
+		queue = queue[1:]
+		for _, child := range children[id] {
+			if seen[child.ID] {
+				continue
+			}
+			seen[child.ID] = true
+			queue = append(queue, child.ID)
+			if childKey, ok := liveStatusKey(child.AgentServer, child.SessionID); ok && childKey != key {
+				keys = append(keys, childKey)
+			}
+		}
+	}
+	return keys, nil
 }
 
 type ConversationLiveStatusPatch struct {

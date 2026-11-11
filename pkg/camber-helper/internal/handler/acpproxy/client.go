@@ -57,6 +57,7 @@ type acpClient struct {
 	handler       *Handler
 
 	asyncNotifications asyncNotificationQueue
+	probes             probeGate
 }
 
 var _ acpsdk.Client = (*acpClient)(nil)
@@ -171,6 +172,9 @@ func (c *acpClient) SessionUpdate(_ context.Context, params acpsdk.SessionNotifi
 	// order even if the async delivery queue is busy.
 	if c.handler != nil {
 		c.handler.observeSessionUpdate(c.agentServer, string(params.SessionId), params.Update)
+		// Revoke a leaked caller token before the update reaches any surface
+		// or the control event log.
+		c.handler.observeCallerTokenLeak(c.agentServer, string(params.SessionId), params.Update)
 	}
 	c.asyncNotifications.enqueue(c.routeSessionUpdate, acpsdk.ClientMethodSessionUpdate, params)
 	return nil
@@ -238,6 +242,17 @@ func (c *acpClient) enqueueTurnEnded(sessionID acpsdk.SessionId) {
 	})
 }
 
+func (c *acpClient) enqueueTurnEndedForTurn(sessionID acpsdk.SessionId, turn *activeTurn) {
+	c.asyncNotifications.enqueue(func(ctx context.Context, method string, params any) {
+		c.routeTurnEnded(ctx, method, params)
+		cursor := c.handler.events.Cursor(c.agentServer, string(sessionID))
+		c.handler.mu.Lock()
+		turn.endCursor = cursor
+		close(turn.eventsDone)
+		c.handler.mu.Unlock()
+	}, methods.ACPTurnEndedMethod, methods.ACPTurnEndedNotification{SessionID: sessionID})
+}
+
 func (c *acpClient) routeTurnEnded(ctx context.Context, method string, params any) {
 	notif, ok := params.(methods.ACPTurnEndedNotification)
 	if !ok {
@@ -255,7 +270,7 @@ func (c *acpClient) routeTurnEnded(ctx context.Context, method string, params an
 	// it even if a load begins after the prompt returns but before this queued
 	// callback runs; scoping it to the loader would strand other surfaces.
 	message := map[string]any{"jsonrpc": "2.0", "method": method, "params": params}
-	events.PublishSessionUpdate(c.agentServer, string(notif.SessionID), "", false, message)
+	c.publishSessionEvent(events, string(notif.SessionID), "", false, message)
 }
 
 // routeSessionEvent preserves the agent connection's event order while
@@ -281,7 +296,7 @@ func (c *acpClient) routeSessionEvent(
 		events.NotifyClient(origin, methods.JSONRPCNotifyMethod, bridgeMessage(c.agentServer, message))
 		return
 	}
-	events.PublishSessionUpdate(c.agentServer, sessionID, "", false, message)
+	c.publishSessionEvent(events, sessionID, "", false, message)
 }
 
 func (c *acpClient) persistSessionTitle(ctx context.Context, notif acpsdk.SessionNotification) {

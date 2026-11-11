@@ -60,6 +60,13 @@
     // animation finishes instead of showing under the leaving row.
     rowExitAnimating?: boolean;
     sessionShortcutHint?: (session: ACPConversationSummary) => string | undefined;
+    descendantsFor?: (session: ACPConversationSummary) => readonly ACPConversationSummary[];
+    isSubAgentsExpanded?: (session: ACPConversationSummary) => boolean;
+    onToggleSubAgents?: (session: ACPConversationSummary) => void;
+    subAgentBadge?: (
+      child: ACPConversationSummary,
+      parent: ACPConversationSummary,
+    ) => string | undefined;
     onReorderWorktrees: (parentPath: string, from: number, to: number) => void | Promise<void>;
     onWorktreeDragActiveChange: (active: boolean) => void;
   }
@@ -90,6 +97,10 @@
     isSessionExiting,
     rowExitAnimating = false,
     sessionShortcutHint,
+    descendantsFor,
+    isSubAgentsExpanded,
+    onToggleSubAgents,
+    subAgentBadge,
     onReorderWorktrees,
     onWorktreeDragActiveChange,
   }: Props = $props();
@@ -142,16 +153,20 @@
   // yet) keeps the button enabled so it doesn't flash disabled on startup.
   let projectIsGitRepo = $derived(github.isRepoFor(project.path) !== false);
 
+  // A collapsed row's nested sub-agent counts: the open chat lives under it.
+  function isSessionOrNestedSelected(session: ACPConversationSummary): boolean {
+    return (
+      sidebar.rowState(session).selected ||
+      (descendantsFor?.(session) ?? []).some((child) => sidebar.rowState(child).selected)
+    );
+  }
+
   // the project owning the open chat directly (not through a worktree)
-  let ownsActiveChat = $derived(
-    projectSessions.some((session) => sidebar.rowState(session).selected),
-  );
+  let ownsActiveChat = $derived(projectSessions.some(isSessionOrNestedSelected));
   // the project owning the open chat, directly or through one of its worktrees
   let containsActiveChat = $derived(
     ownsActiveChat ||
-      worktrees.some((worktree) =>
-        sessionsFor(worktree.path).some((session) => sidebar.rowState(session).selected),
-      ),
+      worktrees.some((worktree) => sessionsFor(worktree.path).some(isSessionOrNestedSelected)),
   );
 
   function handleWorktreeReorder(from: number, to: number) {
@@ -338,6 +353,10 @@
                 {onSessionContextMenu}
                 {isSessionExiting}
                 {sessionShortcutHint}
+                {descendantsFor}
+                {isSubAgentsExpanded}
+                {onToggleSubAgents}
+                {subAgentBadge}
               />
             </div>
           {/if}
@@ -385,9 +404,7 @@
                   worktreeBusy === "running_setup")}
               {@const worktreeSessions = sessionsFor(worktree.path)}
               {@const hasWorktreeSessions = worktreeSessions.length > 0}
-              {@const worktreeOwnsActiveChat = worktreeSessions.some(
-                (session) => sidebar.rowState(session).selected,
-              )}
+              {@const worktreeOwnsActiveChat = worktreeSessions.some(isSessionOrNestedSelected)}
               {@const worktreeContentVisible =
                 searchQuery.trim() !== "" || worktree.collapsed !== true}
               {@const worktreeSessionsExpanded =
@@ -613,6 +630,10 @@
                         {onSessionContextMenu}
                         {isSessionExiting}
                         {sessionShortcutHint}
+                        {descendantsFor}
+                        {isSubAgentsExpanded}
+                        {onToggleSubAgents}
+                        {subAgentBadge}
                       />
                     </div>
                   </div>

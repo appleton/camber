@@ -76,6 +76,7 @@ export * from "./aCPRestartServerOutput";
 export * from "./aCPTurnEndedNotification";
 export * from "./closeSessionResponse";
 export * from "./codeDescription";
+export * from "./controlDispatchParams";
 export * from "./deleteSecretOutput";
 export * from "./deleteSecretParams";
 export * from "./deleteSessionResponse";

@@ -1,0 +1,27 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "camber-cli",
+    srcs = [
+        "client.go",
+        "command.go",
+        "install.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-cli",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_spf13_cobra//:cobra"],
+)
+
+go_test(
+    name = "camber-cli_test",
+    srcs = [
+        "client_test.go",
+        "command_test.go",
+        "install_test.go",
+    ],
+    embed = [":camber-cli"],
+    deps = [
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)

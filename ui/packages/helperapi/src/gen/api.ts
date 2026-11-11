@@ -52,6 +52,7 @@ import type {
   ACPRenameSessionParams,
   ACPRestartServerOutput,
   CloseSessionResponse,
+  ControlDispatchParams,
   DeleteSecretOutput,
   DeleteSecretParams,
   DeleteSessionResponse,
@@ -461,6 +462,17 @@ export const camberAcpNavUpsertProject = async (
   return await runtime.jsonrpcCall(
     toJsonrpcMethod("/camber/acpNav/upsertProject"),
     aCPNavUpsertProjectParams,
+  );
+};
+/**
+ * dispatches discoverable local desktop orchestration actions
+ */
+export const camberControlDispatch = async (
+  controlDispatchParams: NonReadonly<ControlDispatchParams>,
+): Promise<unknown> => {
+  return await runtime.jsonrpcCall(
+    toJsonrpcMethod("/camber/control/dispatch"),
+    controlDispatchParams,
   );
 };
 /**

@@ -243,4 +243,44 @@ describe("DesktopProjectSection", () => {
     const projectHeader = screen.getByRole("button", { name: "Expand Repo" }).parentElement;
     expect(projectHeader).toHaveTextContent("Open");
   });
+
+  it("marks a worktree open when its collapsed row hides the selected sub-agent", () => {
+    const nested = { ...activeWorktreeSession, id: "nested", conversationId: "nested" };
+    sidebar.rowState.mockImplementation((session: { id: string }) => ({
+      selected: session.id === "nested",
+    }));
+
+    render(DesktopProjectSection, {
+      props: {
+        project,
+        projectSessions: [],
+        worktrees: [worktree],
+        searchQuery: "",
+        sessionVisibleLimit: 5,
+        projectContentVisible: true,
+        projectCollapsed: false,
+        projectSessionsExpanded: true,
+        canOpenWorkspace: false,
+        isCurrentWorkspace: () => false,
+        sessionsFor: (path: string) => (path === worktree.path ? [activeWorktreeSession] : []),
+        descendantsFor: (session: ACPConversationSummary) =>
+          session.id === activeWorktreeSession.id ? [nested] : [],
+        isSessionGroupExpanded: () => true,
+        onToggleProjectCollapsed: vi.fn(),
+        onToggleSessionsExpanded: vi.fn(),
+        onAddWorktree: vi.fn(),
+        onOpenWorkspace: vi.fn(),
+        onRemoveWorktree: vi.fn(),
+        onArchiveSession: vi.fn(),
+        onArchiveSessionNow: vi.fn(),
+        onProjectContextMenu: vi.fn(),
+        onWorktreeContextMenu: vi.fn(),
+        onSessionContextMenu: vi.fn(),
+        onReorderWorktrees: vi.fn(),
+        onWorktreeDragActiveChange: vi.fn(),
+      },
+    });
+
+    expect(screen.getAllByText("Open").length).toBeGreaterThan(0);
+  });
 });

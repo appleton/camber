@@ -15,6 +15,8 @@ export interface ACPNavConversation {
   liveStatus?: ACPNavConversationLiveStatus;
   metadata?: unknown;
   nickname?: string;
+  parentId?: string;
+  rootId?: string;
   sessionId?: string;
   title?: string;
   updatedAt?: string;

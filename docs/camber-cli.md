@@ -1,0 +1,381 @@
+# Camber CLI
+
+The `camber` command controls a running Camber desktop. It does not start an
+agent or helper itself. Start the desktop app first; requests use the desktop's
+existing helper and its registered agents, projects, worktrees, and conversations.
+The CLI currently supports macOS and other Unix desktop builds.
+
+## Install
+
+Packaged desktop builds include a `camber` executable beside the app
+executable. On macOS, it is at
+`Camber.app/Contents/MacOS/camber`. You can link it into a directory already
+on `PATH`:
+
+```sh
+"/Applications/Camber.app/Contents/MacOS/camber" cli install --directory "$HOME/.local/bin"
+```
+
+Add that directory to `PATH` if needed, then check the connection:
+
+```sh
+camber status --json
+camber instances list --json
+```
+
+For a source build, from the repository root run:
+
+```sh
+go build -o "$PWD/camber" ./cmd/camber
+./camber status --json
+```
+
+The desktop development build also compiles a host CLI when it downloads its
+bundled binaries. You can build just that executable with
+`pnpm -F @camber/desktop-assistant build:cli`; it appears under
+`ui/apps/desktop-assistant/src-tauri/binaries/camber` on the host platform.
+
+## Agent skill
+
+Install the small Camber skill so an agent can discover the live guide and
+commands. For example, for Codex at user scope:
+
+```sh
+camber skill setup --agent codex --scope user
+camber skill status --agent codex --scope user
+camber skill show
+```
+
+Use `--agent shared` for `.agents/skills`, `--agent claude` for
+`.claude/skills`, or `--scope project` to install under the current project.
+`camber skill setup --directory PATH` selects an exact skill directory. Setup
+will not replace an existing user-owned skill file.
+
+## Sandboxed agents
+
+The CLI needs permission to connect to the desktop's local Unix socket.
+The agent's shell sandbox can deny this even when the CLI is on `PATH` and the
+desktop is running. Currently a blocked handshake can appear as “instance
+unavailable” or an empty instance list. Use the agent runtime's normal approval
+flow when access is blocked.
+
+Automatic socket grants are not currently implemented. Testing Codex 0.160.1
+with codex-acp 2.2.2 did not establish a working configuration-only grant that
+preserves disabled network access; see the
+[sandbox investigation in the plan](camber-cli-plan.md).
+
+## Find agents and configuration options
+
+Ask the running desktop for its live agent list and an agent's configuration
+schema. Option discovery may depend on the workspace:
+
+```sh
+camber agents list --json
+camber agents inspect AGENT --workspace /absolute/project --json
+camber agents config options AGENT --workspace /absolute/project --json
+```
+
+The returned option IDs and allowed values are authoritative for that agent and
+workspace. This CLI exposes live discovery through the desktop; it does not ship
+a separate complete catalog of every agent's options.
+
+## Spawn and configure a conversation
+
+Spawn accepts a batch configuration, plus shortcuts for model, reasoning effort,
+and mode. The desktop validates and applies configuration before submitting the
+initial prompt:
+
+```sh
+camber chat spawn PARENT \
+  --project /absolute/project \
+  --new-worktree api-task \
+  --agent AGENT \
+  --model MODEL \
+  --effort EFFORT \
+  --input '{"OPTION_ID":"VALUE"}' \
+  --text @task.txt \
+  --request-id api-task-001 \
+  --caller-token CALLER_TOKEN \
+  --timeout 10m \
+  --json
+```
+
+Use `--workspace PATH` (or `--worktree PATH`) to share an existing workspace
+instead of creating one. A child runs in `--workspace` if given, else in
+`--project` (or the new worktree created from it), else in its parent's
+workspace; `--project` without `--workspace` or `--new-worktree` runs the child
+in that project whether or not there is a parent. With a parent, the
+`CAMBER_PROJECT_PATH` default applies only together with `--new-worktree`, so a
+plain `chat spawn PARENT` stays in the parent's workspace. Pass the parent ID and caller token from your
+per-prompt Camber host context (see [Caller identity](#caller-identity)). The desktop supplies the instance environment, but does not export a
+conversation ID from its shared agent process. An external wrapper may set
+`CAMBER_CONVERSATION_ID`, `CAMBER_PROJECT_PATH`, and
+`CAMBER_WORKSPACE_PATH` as optional defaults; `camber context` reports
+those explicit values and never guesses from UI focus. Save the returned
+conversation ID, turn ID, and cursor. A request ID makes retrying an identical
+spawn safe; do not reuse it for a different task. If no model or effort is
+specified, the desktop applies its compatible inherited settings and agent
+defaults.
+
+Preparation and configuration operations serialize per conversation, so a slow
+setup does not block controls for other conversations. Setup and teardown
+scripts have a five-minute deadline; helper control requests have a nine-minute
+deadline. Once a prompt starts, generation continues independently of the
+request or CLI reader.
+CLI setup uses the helper's terminal runner; its output is not yet mirrored into
+the desktop setup-output panel. A failure is returned by the CLI and recorded
+on a spawned conversation for inspection.
+
+Inspect current values and update them before a later prompt:
+
+```sh
+camber chat config list CHILD --json
+camber chat config set CHILD reasoning_effort --value-json '"high"' --json
+camber chat config set CHILD --input '{"model":"MODEL","mode":"MODE"}' --json
+```
+
+Config values are strings or booleans. `--input` accepts JSON, `@FILE`, or
+`@-` for stdin. `--value-json` parses one JSON string or boolean.
+Escape a literal leading `@` in prompt text as `@@`, for example
+`--text '@@team please review'`.
+Some options depend on the selected model. A batch applies the model first and
+then validates dependent choices; if a later choice fails, inspect
+`chat config list` for the effective settings. The task is never submitted with
+an unapplied requested configuration.
+
+Permission and workspace guardrails apply to every control call:
+
+- A permission-bypass mode is one whose value or display name matches
+  `bypassPermissions`, `agent-full-access`, `full-access`, `always-allow`,
+  `allow-all`, `yolo` or `bypass*` (ignoring case and punctuation, so an opaque
+  value labelled "Full access" counts). Requested values are resolved against
+  the session's option schema; a mode value the schema does not offer is
+  rejected.
+- `chat spawn` gives a child a bypass mode, whether requested with `--mode` or
+  `--input` or inherited from a same-agent parent, only when the request's
+  `--caller-token` proves it comes from that parent and the parent's session is
+  loaded and running in a bypass mode right now. A parent that only has a saved
+  bypass selection (an idle conversation) does not qualify.
+- `chat config set` selects a bypass value only when `--caller-token` proves the
+  request comes from the target or its parent, and that conversation is loaded
+  and running in a bypass mode right now.
+- Each value is judged again against the schema the agent returns after every
+  change. If changing one value (typically the model) makes the agent label a
+  value still to be applied, or the resulting mode, as a bypass mode, the same
+  rule applies there: without proof the call fails with `PERMISSION_ESCALATION`
+  and nothing further is applied. For `chat config set`, values already accepted
+  (such as the new model) stay applied.
+- Otherwise the call fails with `PERMISSION_ESCALATION` before any change: pass
+  the caller token from your host context, or choose a non-bypass mode. A bypass
+  mode the agent applies by default (for example from the agent's configured
+  default options, or a different child agent) is not a caller choice and is
+  allowed.
+- `chat send` and `chat steer` to a conversation that runs in a bypass mode, or
+  would resume in one from its saved selections, require `--caller-token`
+  proving the request comes from that conversation itself, or from its parent
+  while the parent is loaded and running in a bypass mode. Otherwise they fail
+  with `PERMISSION_ESCALATION` before anything is restored or sent. `chat stop`
+  is never scoped.
+- Control actions restore a conversation whose saved selection is a bypass mode
+  only for such a proven caller. Without proof, `chat config list` returns the
+  saved selections with `restored: false`, and `chat config set` fails.
+  Saved selections are judged by the conversation's recorded schema where one
+  exists, and always against the agent's real schema once the session is
+  loaded, before any selection is re-applied: a saved opaque value labelled
+  "Full access", or a bypass value under a mode option with any id, counts. An
+  unproven restore of such a selection fails with `PERMISSION_ESCALATION`, the
+  saved selections are left unchanged, and the just-loaded session is closed
+  again. That includes a restore stopped partway because re-applying one saved
+  selection made the agent relabel another as a bypass mode.
+- `chat send`, `chat steer` and `chat config set` reject archived conversations;
+  restore them first. `chat stop` still works.
+- An explicit `--workspace`/`--project`, and the `--workspace` used by
+  `agents inspect` and `agents config options`, must be a registered project or
+  worktree (symlinks resolved) or a subdirectory of one. The helper requires an
+  absolute path with no `..` segments; the CLI resolves relative flag values
+  before sending them.
+- `worktrees create` and `chat spawn --new-worktree` require the project path
+  to be a registered root project itself: not a subdirectory and not a
+  worktree.
+- When the CLI creates or removes a worktree, git runs isolated so the
+  repository cannot make it run its own commands. Hooks, fsmonitor, submodule
+  recursion, the `ext::` transport, lazy fetching from promisor remotes,
+  terminal prompts and git-lfs standalone transfer agents are disabled. These
+  overrides go through git's environment (`GIT_CONFIG_COUNT`) rather than `-c`,
+  and replace any inherited command-line config.
+- Filter drivers and git-lfs custom transfer agents from the repository's own
+  config (local or worktree scope, including included files, read from inside
+  the worktree so `includeIf "onbranch:"` and `includeIf "gitdir:"` sections
+  count) are disabled, and the lfs filter is pinned to the standard git-lfs
+  commands. Create refuses a repository that needs its own smudge or process
+  filter (such as git-crypt) or a custom transfer agent to check files out.
+- Create and remove refuse a repository whose own config sets a key that can
+  run a command: `core.sshCommand`, `core.askPass`, `core.gitProxy`,
+  credential helpers, a remote's `uploadpack`/`receivepack`/`vcs`,
+  `uploadpack.packObjectsHook` or git-lfs extensions. They also refuse when a
+  committed `.lfsconfig` points git-lfs at a non-HTTP(S) endpoint or declares
+  extensions or transfer agents, and when a repository-defined filter driver,
+  remote, credential context, or git-lfs transfer agent or extension has `=` or
+  a newline in its name. The error names the key; do that operation
+  from the desktop app, which runs git normally. The same settings in your
+  global or system git config are your own and still apply.
+- Remove checks that the worktree is clean with the repository's clean filters
+  disabled, so filtered files can show as modified; removal then fails closed
+  and the error names the filter.
+
+### Caller identity
+
+Each prompt's Camber host context carries a `callerToken` beside the
+`instanceId` and `conversationId`. It is a random per-conversation secret that
+lives in the desktop helper's memory until the helper restarts. The desktop
+puts it only in that conversation's host context. It is not exported through
+the agent process environment, which several conversations share, and it is not
+shown in conversation lists or other CLI output (control responses, error messages included, replace
+known tokens with `[redacted]`). Pass it with `--caller-token TOKEN`, or set
+`CAMBER_CALLER_TOKEN` in your own command's environment (read when the command
+runs; `--help` never prints it, and an explicit `--caller-token` wins). Do not write it to
+files, task text, or other conversations. If the token appears in a
+conversation's messages or reasoning, even split across several messages, or
+another conversation's token appears anywhere in its output, the desktop revokes
+it immediately. Token-gated actions then fail until that conversation's next
+prompt, which carries a new token. Either way, the token belongs only on the
+command that uses it: as `--caller-token`, or as `CAMBER_CALLER_TOKEN` in that
+command's own environment.
+
+The token is checked where it unlocks extra permission: bypass modes on
+`chat spawn` and `chat config set`, and sending to, steering or restoring a
+conversation that is (or would resume) in a bypass mode. A missing or unknown
+token makes those requests unproven; it does not otherwise fail them. Any local
+process that can reach the desktop's control socket (the same OS user) can
+still list, inspect, read or stop any conversation, send to or steer any
+conversation not in a bypass mode, and spawn non-bypass children under any
+parent. The token stops
+one conversation borrowing another's bypass mode through the CLI; it is not a
+sandbox against a process that can read your files.
+
+After a session closes or the helper restarts, configuration discovery,
+updates, and continuations restore saved selections before proceeding, except
+that a saved bypass selection is restored only for a proven caller (see
+above).
+Same-agent children also inherit saved parent selections when the parent is
+not currently loaded.
+
+## Read and follow output
+
+Send to an existing conversation and follow the response:
+
+```sh
+camber chat send CHILD --text @follow-up.txt --follow --json
+```
+
+Or resume from a saved cursor:
+
+```sh
+camber chat poll CHILD --turn TURN --cursor CURSOR --wait-ms 30000 --json
+camber chat watch CHILD --turn TURN --cursor CURSOR --json
+camber chat output CHILD --turn TURN --json
+camber chat snapshot CHILD --json
+```
+
+Follow/watch output is newline-delimited JSON. Save `nextCursor` after
+processing each poll page. Disconnecting a reader does not stop generation;
+`camber chat stop CHILD --turn TURN` is explicit cancellation. Transport
+failure does not mean a task failed, and should not cause an automatic resubmit.
+Inspect the conversation result and status to confirm completion.
+Watch retries an unexpectedly closed connection up to three times from the
+last emitted cursor. It does not resend the prompt. Persistent connection
+failure exits with an error so a caller can inspect and resume explicitly.
+Watch exits unsuccessfully for failed, cancelled, or interrupted turns.
+Pending approvals remain in the desktop workflow. Steering requires support
+from the selected agent; inspect the returned outcome before assuming it was
+accepted.
+Steering has no idempotency key: inspect uncertain delivery before retrying.
+While waiting for approval, watch polls every five seconds and suppresses
+identical waiting pages.
+
+Output replay is bounded. A response with `resetRequired: true` or
+`truncated: true` does not contain a complete replay. `chat snapshot` returns
+the session output that is still retained and a cursor for continuing from
+there; it cannot restore evicted output. Check the desktop transcript for
+earlier or missing content, and do not treat partial text as a completed
+answer. `--wait-ms` accepts values from 0 through 30000.
+
+Each page stays small enough for the CLI transport. An event larger than
+192 KiB is reduced in poll, watch, output and snapshot responses: bulky tool
+output, raw input/output, `_meta` and images become size placeholders, long
+text is truncated with a marker, and the event carries
+`_camber: {"truncated": true, "originalBytes": N}`. The stored history and
+remote clients keep the full event.
+When any event on a page was reduced, that page returns `truncated: true` and
+`reducedEvents: N`. In `output` and `snapshot` responses,
+`agentTextTruncated: true` means agent message text on that page was cut, and
+`complete` is then `false` even though the turn finished. A reduced event can
+sit on an earlier page of a multi-page read, so treat the answer as complete
+only if no page you read had `truncated: true`; read the full text in the
+desktop transcript instead.
+`pendingInteractions` lists approvals waiting on the user. Very large tool-call
+payloads are shortened and marked `_camber.truncated`, and the response then
+sets `truncated: true` and `pendingInteractionsTruncated: true`. If a response
+would still be too large, it may also drop conversation metadata
+(`conversationReduced: true`) or the joined `text` field (`textOmitted: true`,
+with `complete: false`; the text is still in `events`).
+UI-started turns can also be read by their original turn ID after a later turn
+starts, while their turn records and output remain retained in the helper.
+
+Opening a running child in the desktop attaches to the helper's retained
+conversation stream without reloading the agent session. Running tools and
+the agent's current configuration are preserved. If a complete transcript is
+unavailable (for example, its beginning was evicted or the session was restored
+from disk), opening it returns `SESSION_ACTIVE`; the agent continues working.
+Wait for completion and reopen it to load its persisted history. Older clients
+without live-attachment support also receive this error instead of interrupting
+the agent. Closing or resuming an active session is rejected as busy.
+
+## Choose a desktop instance
+
+The CLI uses the inherited `CAMBER_INSTANCE_ID` when available. Otherwise it
+connects when exactly one live desktop instance is discoverable, and reports an
+error if there are none or several. List live instances with:
+
+```sh
+camber instances list --json
+```
+
+Select one explicitly with `--instance ID`, or set `CAMBER_INSTANCE_ID`.
+`CAMBER_CONTROL_DIR` can override the platform's discovery directory. The CLI
+checks the selected instance's live identity before sending each command and
+pins that identity for a streaming invocation.
+
+## Command groups
+
+The current CLI command surface is:
+
+- `instances list`, `status`, `context`
+- `actions list`, `actions describe`, `do`
+- `agents list`, `agents inspect`, `agents config options`
+- `projects list`
+- `worktrees list`, `inspect`, `create`, `remove`
+- `chat list`, `inspect`, `children`, `snapshot`, `spawn`, `config list`,
+  `config set`, `send`, `steer`, `stop`, `poll`, `output`, `watch`
+- `skill show`, `skill setup`, `skill status`, `skill remove`
+- `cli install`
+
+`chat list` returns one summary row per conversation (id, title, workspace,
+agent, parent/root, status, turn, archived, updatedAt), most recently updated
+first. Archived conversations are left out unless you pass `--archived`.
+Results are paged: up to `--limit` rows per page (default 200, max 500); while
+`hasMore` is true, pass `nextCursor` back with `--cursor`. A page can end early
+if it gets large. Use `chat inspect` for full detail.
+
+`chat children CHAT` returns the same summary rows for that conversation's
+direct children, most recently updated first, and pages the same way with
+`--limit` and `--cursor`. Archived children are always included (check each
+row's `archived`). A page cursor resumes after the last row returned; if that
+conversation was updated and moved meanwhile, the next page resumes from the
+page's position instead, so rows are not repeated.
+
+`--workspace`, `--worktree`, `--project` and worktree path arguments may be
+relative; the CLI turns them into absolute paths before sending.
+
+Use `camber --help` and `camber COMMAND --help` for syntax and flags. Add
+`--json` for structured results and machine-readable errors.

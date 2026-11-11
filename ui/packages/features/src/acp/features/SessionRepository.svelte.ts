@@ -40,6 +40,7 @@ import {
 } from "../localInferenceModelOptions";
 import { newConversationID, type ACPClosedSession } from "../navTypes";
 import { buildSessionInfo, type ACPResolvedSessionInfo } from "../sessionInfo";
+import { TurnMaterializer } from "../TurnMaterializer";
 import {
   ACPAgentRepository,
   type ACPAgentServerConfigurationChange,
@@ -47,6 +48,7 @@ import {
 import {
   ACPConversationStatusRepositoryWriter,
   type ACPConversationStatusRepository,
+  type DescendantCandidate,
 } from "./ConversationStatusRepository.svelte";
 import { supportsSessionList } from "./HistoryRepository.svelte";
 import { ACPPermissionCoordinator } from "./PermissionCoordinator";
@@ -137,6 +139,11 @@ export class ACPSessionRepositoryWriter {
     markUnread: (sessionId, agentServer) =>
       this.conversationStatus.markUnread(sessionId, agentServer),
     publishLiveStatuses: () => this.publishLiveStatuses(),
+    isConversationWorking: (sessionId, agentServer) =>
+      this.conversationStatus.getConversationStatus(
+        sessionId,
+        normalizeAgentServerName(agentServer),
+      ).working,
   };
 
   constructor(
@@ -421,6 +428,14 @@ export class ACPSessionRepositoryWriter {
 
   clearUnread(sessionId: SessionId, agentServer: string): void {
     this.conversationStatus.clearUnread(sessionId, normalizeAgentServerName(agentServer));
+  }
+
+  /** Clears unread for all descendants of a just-viewed parent; see the status repository. */
+  clearDescendantUnread(
+    conversationId: string,
+    conversations: readonly DescendantCandidate[],
+  ): void {
+    this.conversationStatus.clearDescendantUnread(conversationId, conversations);
   }
 
   /**
@@ -1341,6 +1356,14 @@ export class ACPSessionRepositoryWriter {
     }
 
     session.applySessionUpdate(params);
+  }
+
+  handleSessionReplayStarted(agentServer: string, sessionId: string): void {
+    const session = this.sessionFor(sessionId, agentServer);
+    if (!session?.replayMaterializer) return;
+    // A helper-owned live snapshot starts here. Discard live updates that
+    // arrived while the request was in flight; the snapshot includes them.
+    session.replayMaterializer = new TurnMaterializer();
   }
 
   handleRequestPermission(

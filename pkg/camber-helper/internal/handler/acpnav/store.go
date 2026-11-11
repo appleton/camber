@@ -17,6 +17,7 @@ import (
 	"runtime/trace"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/appleton/camber/pkg/camber-helper/internal/dbmigrate"
@@ -44,13 +45,29 @@ type Store struct {
 	db         *sql.DB
 	worktreeMu sync.Mutex
 	repoLocks  sync.Map
-	runGit     func(ctx context.Context, args ...string) ([]byte, error)
+	// runGit runs git with args. A non-nil env replaces any git config
+	// overrides inherited from the helper's environment and is appended to
+	// it (see runGitCommand).
+	runGit func(ctx context.Context, env []string, args ...string) ([]byte, error)
 	// preparedWorktrees holds worktree paths reserved by PrepareWorktree but
 	// not yet realized by CreateWorktree. Reservations are in-memory only so
 	// that a crash between prepare and create cannot orphan DB rows; the
 	// trade-off is that pending reservations are lost on process restart,
 	// which is fine because the on-disk worktree does not exist yet either.
 	preparedWorktrees map[string]struct{}
+	// archivedSessionCloser closes sessions of descendants archived by the
+	// cascade; see Server.SetArchivedSessionCloser.
+	archivedSessionCloser atomic.Pointer[ArchivedSessionCloser]
+	// linksMu guards parentLinks, a lazily loaded cache of control-state
+	// parent/root links keyed by conversation id (nil until first load). It is
+	// kept coherent by writeControlState, the only writer of control state.
+	linksMu     sync.Mutex
+	parentLinks map[string]controlLink
+}
+
+type controlLink struct {
+	ParentID string `json:"parentId"`
+	RootID   string `json:"rootId"`
 }
 
 func Open(ctx context.Context, dbPath string) (*Store, error) {
@@ -84,11 +101,25 @@ func Open(ctx context.Context, dbPath string) (*Store, error) {
 		return nil, fmt.Errorf("migrating acp nav db: %w", migrationErr)
 	}
 
-	return &Store{db: db, preparedWorktrees: map[string]struct{}{}, runGit: runGitCommand}, nil
+	store := &Store{db: db, preparedWorktrees: map[string]struct{}{}, runGit: runGitCommand}
+	if _, err := store.reconcileArchivedOrphans(ctx); err != nil {
+		_ = db.Close()
+		return nil, fmt.Errorf("reconciling archived sub-agents: %w", err)
+	}
+	return store, nil
 }
 
-func runGitCommand(ctx context.Context, args ...string) ([]byte, error) {
-	return exec.CommandContext(ctx, "git", args...).CombinedOutput()
+// runGitCommand runs git. With a nil env git inherits the helper's
+// environment unchanged. Otherwise env is appended to the helper's
+// environment minus its command-line config (GIT_CONFIG_PARAMETERS,
+// GIT_CONFIG_COUNT and its numbered keys), so the overrides in env are the
+// only command-scope configuration git sees.
+func runGitCommand(ctx context.Context, env []string, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, "git", args...)
+	if env != nil {
+		cmd.Env = append(withoutGitConfigEnv(os.Environ()), env...)
+	}
+	return cmd.CombinedOutput()
 }
 
 func (s *Store) repoLock(parentPath string) *sync.Mutex {
@@ -504,6 +535,7 @@ func (s *Store) UpsertProject(ctx context.Context, p methods.ACPNavUpsertProject
 
 type dbExecutor interface {
 	ExecContext(context.Context, string, ...any) (sql.Result, error)
+	QueryRowContext(context.Context, string, ...any) *sql.Row
 }
 
 func (s *Store) upsertProjectTx(ctx context.Context, db dbExecutor, p methods.ACPNavUpsertProjectParams, now string) error {
@@ -745,6 +777,16 @@ func (s *Store) ReleasePreparedWorktree(path string) {
 }
 
 func (s *Store) CreateWorktree(ctx context.Context, projectPath, worktreeName string) (methods.ACPNavProject, error) {
+	return s.createWorktree(ctx, projectPath, worktreeName, false)
+}
+
+// CreateWorktreeIsolated is CreateWorktree for automation: git runs with repo
+// hooks and fsmonitor disabled so repo-controlled code is not executed.
+func (s *Store) CreateWorktreeIsolated(ctx context.Context, projectPath, worktreeName string) (methods.ACPNavProject, error) {
+	return s.createWorktree(ctx, projectPath, worktreeName, true)
+}
+
+func (s *Store) createWorktree(ctx context.Context, projectPath, worktreeName string, isolated bool) (methods.ACPNavProject, error) {
 	projectPath = cleanPath(projectPath)
 	if projectPath == "" {
 		return methods.ACPNavProject{}, fmt.Errorf("project path is required")
@@ -777,7 +819,15 @@ func (s *Store) CreateWorktree(ctx context.Context, projectPath, worktreeName st
 
 	rl := s.repoLock(projectPath)
 	rl.Lock()
-	out, err := s.runGit(ctx, "-C", projectPath, "worktree", "add", "-b", branch, worktreePath)
+	var err error
+	if isolated {
+		err = s.addWorktreeIsolated(ctx, projectPath, branch, worktreePath)
+	} else {
+		var out []byte
+		if out, err = s.runGit(ctx, nil, "-C", projectPath, "worktree", "add", "-b", branch, worktreePath); err != nil {
+			err = fmt.Errorf("git worktree add failed: %w: %s", err, strings.TrimSpace(string(out)))
+		}
+	}
 	rl.Unlock()
 	if err != nil {
 		s.worktreeMu.Lock()
@@ -786,7 +836,7 @@ func (s *Store) CreateWorktree(ctx context.Context, projectPath, worktreeName st
 		if owned {
 			_ = os.RemoveAll(worktreePath)
 		}
-		return methods.ACPNavProject{}, fmt.Errorf("git worktree add failed: %w: %s", err, strings.TrimSpace(string(out)))
+		return methods.ACPNavProject{}, err
 	}
 
 	s.worktreeMu.Lock()
@@ -884,7 +934,14 @@ func (s *Store) UpsertConversation(ctx context.Context, c methods.ACPNavConversa
 		}
 		c.ID = id
 	}
-	return s.upsertConversationTx(ctx, s.db, c, nowString())
+	insertedArchived, err := s.upsertConversationTx(ctx, s.db, c, nowString())
+	if err != nil {
+		return err
+	}
+	if insertedArchived && c.SessionID != "" {
+		s.closeArchivedSessions(ctx, []archivedSession{{AgentServer: c.AgentServer, SessionID: c.SessionID}})
+	}
+	return nil
 }
 
 // UpdateConversationTitle updates every nav record bound to the agent session.
@@ -916,16 +973,31 @@ WHERE agent_server = ? AND session_id = ? AND title != ?
 // upsertConversationTx creates pending rows and enriches existing rows. Once a
 // row has a session, only the helper's BindConversationSession methods may
 // change its agent/session binding; client upserts can arrive late after a
-// handoff and therefore cannot be authoritative for those two fields.
-func (s *Store) upsertConversationTx(ctx context.Context, db dbExecutor, c methods.ACPNavConversation, now string) error {
+// handoff and therefore cannot be authoritative for those two fields. An
+// archived sub-agent stays archived: late saves from its still-finishing turn
+// (control turn records, client metadata) must not revive it after the parent
+// cascade archived it. RestoreConversation unarchives explicitly.
+//
+// A NEW row whose control parent link points at an archived conversation is
+// inserted archived (the spawn can race the parent's archive cascade); the
+// returned bool reports that so the caller can close its session.
+func (s *Store) upsertConversationTx(ctx context.Context, db dbExecutor, c methods.ACPNavConversation, now string) (bool, error) {
 	workingDirectoriesJSON, err := marshalJSONField(c.WorkingDirectories, []string{})
 	if err != nil {
-		return fmt.Errorf("encoding conversation working directories: %w", err)
+		return false, fmt.Errorf("encoding conversation working directories: %w", err)
 	}
 	metadataJSON := strings.TrimSpace(rawJSONOrDefault(c.Metadata, ""))
+	var existing int
+	existed := true
+	if err := db.QueryRowContext(ctx, `SELECT 1 FROM conversations WHERE id = ?`, c.ID).Scan(&existing); err != nil {
+		if !stderrors.Is(err, sql.ErrNoRows) {
+			return false, fmt.Errorf("checking conversation: %w", err)
+		}
+		existed = false
+	}
 	_, err = db.ExecContext(ctx, `
 INSERT INTO conversations(id, workspace_path, agent_server, session_id, cwd, title, nickname, updated_at, active, archived, working_directories_json, metadata_json, created_at, touched_at)
-VALUES (?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, 1, 0, ?, ?, ?, ?)
+VALUES (?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, 1, `+parentArchivedSQL+`, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   workspace_path = excluded.workspace_path,
   agent_server = CASE
@@ -940,17 +1012,39 @@ ON CONFLICT(id) DO UPDATE SET
   nickname = CASE WHEN excluded.nickname != '' THEN excluded.nickname ELSE conversations.nickname END,
   updated_at = CASE WHEN excluded.updated_at != '' THEN excluded.updated_at ELSE conversations.updated_at END,
   active = 1,
-  archived = 0,
+  archived = CASE
+    WHEN conversations.archived != 0 AND EXISTS (
+      SELECT 1 FROM metadata
+      WHERE metadata.key = 'control/conversation/' || conversations.id
+        AND COALESCE(json_extract(metadata.value, '$.parentId'), '') != ''
+    ) THEN 1
+    ELSE 0
+  END,
   touched_at = CASE
     WHEN excluded.session_id IS NULL AND excluded.updated_at = '' THEN conversations.touched_at
     ELSE excluded.touched_at
   END
-`, c.ID, c.WorkspacePath, c.AgentServer, c.SessionID, c.Cwd, c.Title, c.Nickname, c.UpdatedAt, workingDirectoriesJSON, metadataJSON, now, now)
+`, c.ID, c.WorkspacePath, c.AgentServer, c.SessionID, c.Cwd, c.Title, c.Nickname, c.UpdatedAt, c.ID, workingDirectoriesJSON, metadataJSON, now, now)
 	if err != nil {
-		return fmt.Errorf("upserting conversation: %w", err)
+		return false, fmt.Errorf("upserting conversation: %w", err)
 	}
-	return nil
+	if existed {
+		return false, nil
+	}
+	var archived int
+	if err := db.QueryRowContext(ctx, `SELECT archived FROM conversations WHERE id = ?`, c.ID).Scan(&archived); err != nil {
+		return false, fmt.Errorf("reading inserted conversation: %w", err)
+	}
+	return archived != 0, nil
 }
+
+// parentArchivedSQL evaluates to 1 when the (bound) conversation id's control
+// state names a parent that is archived, else 0.
+const parentArchivedSQL = `CASE WHEN EXISTS (
+  SELECT 1 FROM conversations parent
+  WHERE parent.archived != 0
+    AND parent.id = (SELECT COALESCE(json_extract(m.value, '$.parentId'), '') FROM metadata m WHERE m.key = 'control/conversation/' || ?)
+) THEN 1 ELSE 0 END`
 
 // BindConversationSession records the session id the agent created for a
 // conversation. Called by the helper itself at session/new time (it proxies
@@ -1333,8 +1427,15 @@ func (s *Store) RestoreConversation(ctx context.Context, c methods.ACPNavConvers
 			return err
 		}
 	}
-	if err := s.upsertConversationTx(ctx, tx, c, now); err != nil {
+	if _, err := s.upsertConversationTx(ctx, tx, c, now); err != nil {
 		return err
+	}
+	// Upserts keep an archived sub-agent archived; restoring is explicit.
+	if _, err := tx.ExecContext(ctx, `UPDATE conversations SET archived = 0 WHERE id = ?`, c.ID); err != nil {
+		return fmt.Errorf("restoring conversation: %w", err)
+	}
+	if _, err := tx.ExecContext(ctx, `INSERT INTO metadata(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`, restoredKey(c.ID), "1"); err != nil {
+		return fmt.Errorf("recording restore marker: %w", err)
 	}
 	return tx.Commit()
 }
@@ -1402,6 +1503,19 @@ WHERE workspace_path = ?
 }
 
 func (s *Store) RemoveWorktree(ctx context.Context, path string) error {
+	return s.removeWorktree(ctx, path, true)
+}
+
+// RemoveWorktreeSafely preserves Git failures and never forces removal.
+// It is reached only from control automation, so git runs isolated: repo
+// hooks and fsmonitor are disabled, the repo-configured filter drivers
+// visible inside the worktree are neutralised, and repositories whose config
+// sets command-running keys are refused (see isolatedWorktreeEnv).
+func (s *Store) RemoveWorktreeSafely(ctx context.Context, path string) error {
+	return s.removeWorktree(ctx, path, false)
+}
+
+func (s *Store) removeWorktree(ctx context.Context, path string, force bool) error {
 	path = cleanPath(path)
 	if path == "" {
 		return fmt.Errorf("worktree path is required")
@@ -1416,10 +1530,25 @@ func (s *Store) RemoveWorktree(ctx context.Context, path string) error {
 
 	if parent.Valid && parent.String != "" {
 		parentPath := cleanPath(parent.String)
+		var env []string
+		if !force {
+			var err error
+			if env, _, err = s.isolatedWorktreeEnv(ctx, path); err != nil {
+				return err
+			}
+		}
 		rl := s.repoLock(parentPath)
 		rl.Lock()
-		_, _ = s.runGit(ctx, "-C", parentPath, "worktree", "remove", "--force", path)
+		args := []string{"-C", parentPath, "worktree", "remove"}
+		if force {
+			args = append(args, "--force")
+		}
+		args = append(args, path)
+		output, removeErr := s.runGit(ctx, env, args...)
 		rl.Unlock()
+		if !force && removeErr != nil {
+			return fmt.Errorf("removing worktree: %w: %s", removeErr, strings.TrimSpace(string(output)))
+		}
 	}
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -1435,7 +1564,21 @@ func (s *Store) RemoveWorktree(ctx context.Context, path string) error {
 	// whose session already exists under the parent would violate the
 	// (workspace_path, agent_server, session_id) unique index, so they are
 	// left behind for the DELETE below.
+	var archivedRoots []string
 	if parent.Valid && cleanPath(parent.String) != "" {
+		archivedRoots, err = queryIDs(ctx, tx, `
+SELECT id FROM conversations
+WHERE workspace_path = ?1 AND session_id != ''
+  AND NOT EXISTS (
+    SELECT 1 FROM conversations other
+    WHERE other.workspace_path = ?2
+      AND other.agent_server = conversations.agent_server
+      AND other.session_id = conversations.session_id
+  )
+`, path, cleanPath(parent.String))
+		if err != nil {
+			return err
+		}
 		if _, err := tx.ExecContext(ctx, `
 UPDATE conversations
 SET workspace_path = ?1, active = 0, archived = 1, touched_at = ?2
@@ -1450,54 +1593,77 @@ WHERE workspace_path = ?3 AND session_id != ''
 			return fmt.Errorf("archiving worktree conversations: %w", err)
 		}
 	}
+	for _, id := range archivedRoots {
+		if err := clearRestoredTx(ctx, tx, id); err != nil {
+			return err
+		}
+	}
+	cascaded, _, err := archiveDescendantsTx(ctx, tx, archivedRoots, false)
+	if err != nil {
+		return err
+	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM conversations WHERE workspace_path = ?`, path); err != nil {
 		return fmt.Errorf("deleting worktree conversations: %w", err)
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM projects WHERE path = ?`, path); err != nil {
 		return fmt.Errorf("deleting worktree: %w", err)
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	s.closeArchivedSessions(ctx, cascaded)
+	return nil
 }
 
 func (s *Store) ArchiveConversation(ctx context.Context, workspacePath, conversationID, agentServer, sessionID string) error {
 	workspacePath = cleanWorkspacePath(workspacePath)
 	conversationID = strings.TrimSpace(conversationID)
-	if conversationID != "" {
-		_, err := s.db.ExecContext(ctx, `
-UPDATE conversations
-SET active = 0, archived = 1, touched_at = ?
-WHERE id = ?
-`, nowString(), conversationID)
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("starting tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Archiving is idempotent: an already-archived conversation succeeds, so
+	// racing archive callers (UI cascade vs. helper cascade) never error.
+	var roots []string
+	archive := func(where string, args ...any) error {
+		ids, err := queryIDs(ctx, tx, `SELECT id FROM conversations WHERE `+where, args...)
 		if err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE conversations SET active = 0, archived = 1, touched_at = ? WHERE `+where, append([]any{nowString()}, args...)...); err != nil {
 			return fmt.Errorf("archiving conversation: %w", err)
 		}
+		for _, id := range ids {
+			if err := clearRestoredTx(ctx, tx, id); err != nil {
+				return err
+			}
+		}
+		roots = append(roots, ids...)
 		return nil
 	}
-
-	res, err := s.db.ExecContext(ctx, `
-UPDATE conversations
-SET active = 0, archived = 1, touched_at = ?
-WHERE agent_server = ? AND session_id = ? AND (workspace_path = ? OR cwd = ?)
-`, nowString(), agentServer, sessionID, workspacePath, workspacePath)
+	switch {
+	case conversationID != "":
+		err = archive(`id = ?`, conversationID)
+	default:
+		err = archive(`agent_server = ? AND session_id = ? AND (workspace_path = ? OR cwd = ?)`, agentServer, sessionID, workspacePath, workspacePath)
+		if err == nil && len(roots) == 0 && sessionID != "" {
+			err = archive(`agent_server = ? AND session_id = ?`, agentServer, sessionID)
+		}
+	}
 	if err != nil {
-		return fmt.Errorf("archiving conversation: %w", err)
+		return err
 	}
-	rowsAffected, err := res.RowsAffected()
+	cascaded, _, err := archiveDescendantsTx(ctx, tx, roots, false)
 	if err != nil {
-		return fmt.Errorf("checking archived conversation count: %w", err)
+		return err
 	}
-	if rowsAffected > 0 || sessionID == "" {
-		return nil
+	if err := tx.Commit(); err != nil {
+		return err
 	}
-
-	_, err = s.db.ExecContext(ctx, `
-UPDATE conversations
-SET active = 0, archived = 1, touched_at = ?
-WHERE agent_server = ? AND session_id = ?
-`, nowString(), agentServer, sessionID)
-	if err != nil {
-		return fmt.Errorf("archiving conversation: %w", err)
-	}
+	s.closeArchivedSessions(ctx, cascaded)
 	return nil
 }
 
@@ -1668,13 +1834,24 @@ ORDER BY
 }
 
 func (s *Store) listConversations(ctx context.Context) ([]methods.ACPNavConversation, error) {
-	rows, err := s.db.QueryContext(ctx, `
+	return s.queryConversations(ctx, "")
+}
+
+func (s *Store) queryConversations(ctx context.Context, id string) ([]methods.ACPNavConversation, error) {
+	query := `
 SELECT id, workspace_path, agent_server, COALESCE(session_id, ''), cwd, title, nickname, updated_at, active, archived, working_directories_json, metadata_json
 FROM conversations
-ORDER BY
+`
+	var args []any
+	if id != "" {
+		query += "WHERE id = ?\n"
+		args = append(args, id)
+	}
+	query += `ORDER BY
   CASE WHEN updated_at = '' THEN touched_at ELSE updated_at END DESC,
   touched_at DESC
-`)
+`
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("listing conversations: %w", err)
 	}
@@ -1713,7 +1890,85 @@ ORDER BY
 		c.Archived = archived != 0
 		conversations = append(conversations, c)
 	}
-	return conversations, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	return conversations, s.attachControlParents(ctx, conversations)
+}
+
+// attachControlParents fills ParentID/RootID from the cached control-state
+// links. The control package owns the record shape; only the link fields are
+// decoded, and only once per record write (not per list).
+func (s *Store) attachControlParents(ctx context.Context, conversations []methods.ACPNavConversation) error {
+	if len(conversations) == 0 {
+		return nil
+	}
+	s.linksMu.Lock()
+	defer s.linksMu.Unlock()
+	if err := s.loadParentLinksLocked(ctx); err != nil {
+		return err
+	}
+	for i := range conversations {
+		l := s.parentLinks[conversations[i].ID]
+		conversations[i].ParentID, conversations[i].RootID = l.ParentID, l.RootID
+	}
+	return nil
+}
+
+func (s *Store) loadParentLinksLocked(ctx context.Context) error {
+	if s.parentLinks != nil {
+		return nil
+	}
+	// A key range (not LIKE, which cannot use the BINARY primary key index)
+	// keeps this off the never-pruned control/turn/ records.
+	rows, err := s.db.QueryContext(ctx, `SELECT key, value FROM metadata WHERE key >= ? AND key < ?`, "control/conversation/", "control/conversation0")
+	if err != nil {
+		return fmt.Errorf("listing control state: %w", err)
+	}
+	defer rows.Close()
+	links := map[string]controlLink{}
+	for rows.Next() {
+		var key, raw string
+		if err := rows.Scan(&key, &raw); err != nil {
+			return fmt.Errorf("scanning control state: %w", err)
+		}
+		if l, ok := decodeControlLink(raw); ok {
+			links[strings.TrimPrefix(key, "control/conversation/")] = l
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	s.parentLinks = links
+	return nil
+}
+
+func decodeControlLink(raw string) (controlLink, bool) {
+	var l controlLink
+	ok := json.Unmarshal([]byte(raw), &l) == nil && (l.ParentID != "" || l.RootID != "")
+	return l, ok
+}
+
+// writeControlState upserts a control-state record and keeps the parent-link
+// cache coherent. The lock spans the write so concurrent writers to one key
+// cannot leave the cache disagreeing with the row.
+func (s *Store) writeControlState(ctx context.Context, id, raw string) error {
+	s.linksMu.Lock()
+	defer s.linksMu.Unlock()
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO metadata(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`, "control/"+id, raw); err != nil {
+		return err
+	}
+	convID, ok := strings.CutPrefix(id, "conversation/")
+	if !ok || s.parentLinks == nil {
+		return nil
+	}
+	if l, ok := decodeControlLink(raw); ok {
+		s.parentLinks[convID] = l
+	} else {
+		delete(s.parentLinks, convID)
+	}
+	return nil
 }
 
 func normalizeAgentServers(agentServers methods.ACPAgentServers) (methods.ACPAgentServers, error) {

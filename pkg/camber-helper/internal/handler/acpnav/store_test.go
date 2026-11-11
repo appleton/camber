@@ -535,7 +535,7 @@ func TestPrepareWorktreeDoesNotWaitForCreateGit(t *testing.T) {
 	gitStarted := make(chan struct{})
 	releaseGit := make(chan struct{})
 	createDone := make(chan error, 1)
-	store.runGit = func(context.Context, ...string) ([]byte, error) {
+	store.runGit = func(context.Context, []string, ...string) ([]byte, error) {
 		close(gitStarted)
 		<-releaseGit
 		return nil, nil
@@ -576,7 +576,7 @@ func TestCreateWorktreeSerializesGitForSameParentRepo(t *testing.T) {
 	var mu sync.Mutex
 	active := 0
 	calls := 0
-	store.runGit = func(_ context.Context, args ...string) ([]byte, error) {
+	store.runGit = func(_ context.Context, _ []string, args ...string) ([]byte, error) {
 		mu.Lock()
 		active++
 		assert.Equal(t, 1, active, "same-repo git commands must not overlap")
@@ -634,7 +634,7 @@ func TestCreateWorktreeRunsGitInParallelForDifferentParentRepos(t *testing.T) {
 
 	started := make(chan string, 2)
 	releaseGit := make(chan struct{})
-	store.runGit = func(_ context.Context, args ...string) ([]byte, error) {
+	store.runGit = func(_ context.Context, _ []string, args ...string) ([]byte, error) {
 		started <- args[1]
 		<-releaseGit
 		return nil, nil
@@ -670,7 +670,7 @@ func TestCreateWorktreeSelfGeneratedNamesAreReservedWhileGitRuns(t *testing.T) {
 	releaseFirst := make(chan struct{})
 	calls := 0
 	var mu sync.Mutex
-	store.runGit = func(_ context.Context, args ...string) ([]byte, error) {
+	store.runGit = func(_ context.Context, _ []string, args ...string) ([]byte, error) {
 		mu.Lock()
 		calls++
 		call := calls
@@ -715,7 +715,7 @@ func TestCreateWorktreeFailingExplicitNameDoesNotRemoveExistingDirectory(t *test
 	existingPath := filepath.Join(worktreeStorageDir("/repo"), "feature")
 	require.NoError(t, os.MkdirAll(existingPath, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(existingPath, "keep.txt"), []byte("keep"), 0o644))
-	store.runGit = func(context.Context, ...string) ([]byte, error) {
+	store.runGit = func(context.Context, []string, ...string) ([]byte, error) {
 		return []byte("already exists"), errors.New("git failed")
 	}
 
@@ -1655,7 +1655,7 @@ func TestRemoveWorktreeUsesPerRepoLock(t *testing.T) {
 	t.Cleanup(func() { store.repoLock(parentA).Unlock() })
 
 	gitCalled := make(chan string, 1)
-	store.runGit = func(_ context.Context, args ...string) ([]byte, error) {
+	store.runGit = func(_ context.Context, _ []string, args ...string) ([]byte, error) {
 		gitCalled <- args[1]
 		return []byte("failed"), errors.New("git failed")
 	}

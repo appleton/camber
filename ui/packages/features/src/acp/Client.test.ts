@@ -7,6 +7,7 @@ import type { ACPSessionRepositoryWriter } from "./features/SessionRepository.sv
 function createMockRepo(): ACPSessionRepositoryWriter {
   return {
     handleSessionUpdate: vi.fn(),
+    handleSessionReplayStarted: vi.fn(),
     handleCompactionUpdate: vi.fn(),
     handleTurnEnded: vi.fn(),
     handlePromptSuggestion: vi.fn(),
@@ -59,6 +60,14 @@ describe("ACPClient", () => {
 
       expect(repo.handleTurnEnded).toHaveBeenCalledWith("codex-acp", { sessionId: "s1" });
     });
+  });
+
+  it("routes live replay resets only with a valid session id", async () => {
+    const repo = createMockRepo();
+    const client = new ACPClient(repo, "claude-acp");
+    await client.extNotification("camber/acp/session_replay_started", { sessionId: "s1" });
+    await client.extNotification("camber/acp/session_replay_started", {});
+    expect(repo.handleSessionReplayStarted).toHaveBeenCalledExactlyOnceWith("claude-acp", "s1");
   });
 
   describe("Claude prompt suggestions", () => {

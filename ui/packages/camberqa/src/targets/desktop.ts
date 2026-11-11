@@ -511,11 +511,9 @@ export class DesktopTarget {
     }
 
     return (
-      descendants.find(
-        (row) =>
-          row.command.includes("/src-tauri/target/debug/") ||
-          row.command.includes("target/debug/Camber"),
-      ) ?? null
+      // The overlay names the dev binary after the slot title, so match any
+      // binary built into the desktop app's debug target.
+      descendants.find((row) => row.command.includes("/src-tauri/target/debug/")) ?? null
     );
   }
 }
