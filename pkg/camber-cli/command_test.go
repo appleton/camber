@@ -292,3 +292,55 @@ func TestPathFlagsAreSentAbsolute(t *testing.T) {
 	require.Len(t, f.calls, 1)
 	assert.Equal(t, "", f.calls[0].params["args"].(map[string]any)["workspacePath"], "an omitted path stays empty")
 }
+
+func TestHelpNeverPrintsCallerToken(t *testing.T) {
+	t.Setenv("CAMBER_CALLER_TOKEN", "tok-secret-env")
+	for _, args := range [][]string{{"--help"}, {"chat", "send", "--help"}, {"chat", "spawn", "--help"}} {
+		output, err := execute(t, &fakeCaller{}, args...)
+		require.NoError(t, err, args)
+		assert.Contains(t, output, "--caller-token", args)
+		assert.NotContains(t, output, "tok-secret-env", args)
+	}
+	f := &fakeCaller{}
+	_, err := execute(t, f, "chat", "send", "child", "--text", "go")
+	require.NoError(t, err)
+	require.Len(t, f.calls, 1)
+	assert.Equal(t, "tok-secret-env", f.calls[0].params["callerToken"], "the environment still supplies the token at runtime")
+	f = &fakeCaller{}
+	_, err = execute(t, f, "chat", "send", "child", "--text", "go", "--caller-token", "")
+	require.NoError(t, err)
+	require.Len(t, f.calls, 1)
+	_, present := f.calls[0].params["callerToken"]
+	assert.False(t, present, "an explicit empty flag overrides the environment")
+}
+
+func TestChatChildrenPagingFlags(t *testing.T) {
+	f := &fakeCaller{}
+	_, err := execute(t, f, "chat", "children", "parent")
+	require.NoError(t, err)
+	require.Len(t, f.calls, 1)
+	assert.Equal(t, "chat.children", f.calls[0].params["command"])
+	assert.Equal(t, map[string]any{"conversationId": "parent", "cursor": ""}, f.calls[0].params["args"])
+
+	f = &fakeCaller{}
+	_, err = execute(t, f, "chat", "children", "parent", "--limit", "20", "--cursor", "abc")
+	require.NoError(t, err)
+	require.Len(t, f.calls, 1)
+	assert.Equal(t, map[string]any{"conversationId": "parent", "limit": 20, "cursor": "abc"}, f.calls[0].params["args"])
+}
+
+func TestSpawnProjectEnvironmentDefaultDoesNotOverrideParentWorkspace(t *testing.T) {
+	t.Setenv("CAMBER_PROJECT_PATH", "/env/project")
+	spawnProject := func(args ...string) any {
+		f := &fakeCaller{}
+		_, err := execute(t, f, append([]string{"chat", "spawn", "--text", "x"}, args...)...)
+		require.NoError(t, err, args)
+		require.Len(t, f.calls, 1)
+		return f.calls[0].params["args"].(map[string]any)["projectPath"]
+	}
+	assert.Equal(t, "", spawnProject("parent"), "a child stays in its parent's workspace")
+	assert.Equal(t, "/explicit", spawnProject("parent", "--project", "/explicit"))
+	assert.Equal(t, "/env/project", spawnProject("parent", "--new-worktree", "wt"))
+	t.Setenv("CAMBER_CONVERSATION_ID", "")
+	assert.Equal(t, "/env/project", spawnProject(), "without a parent the default applies")
+}

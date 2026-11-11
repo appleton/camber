@@ -77,7 +77,8 @@ type Args struct {
 	Mode           string         `json:"mode,omitempty"`
 	Cursor         string         `json:"cursor,omitempty"`
 	WaitMs         int            `json:"waitMs,omitempty"`
-	// Archived and Limit page chat.list (list.go); Cursor carries its page token.
+	// Archived and Limit page chat.list and chat.children (list.go); Cursor
+	// carries their page token.
 	Archived bool `json:"archived,omitempty"`
 	Limit    int  `json:"limit,omitempty"`
 }
@@ -252,32 +253,20 @@ func (s *Service) viewFrom(ctx context.Context, c methods.ACPNavConversation) (V
 	return v, err
 }
 func (s *Service) list(ctx context.Context, a Args, children bool, g *glsp.Context) (any, error) {
+	if !children {
+		return s.listSummaries(ctx, a, "", g)
+	}
 	parent := a.ParentID
 	if parent == "" {
 		parent = a.ConversationID
 	}
-	if children && parent == "" {
+	if parent == "" {
 		return nil, pkgerrors.Errorf("parentId is required")
 	}
-	if !children {
-		return s.listSummaries(ctx, a, g)
+	if a.Archived {
+		return nil, pkgerrors.Errorf("chat.children always includes archived children; omit archived")
 	}
-	state, err := s.nav.List(ctx, &methods.ACPNavListParams{}, g)
-	if err != nil {
-		return nil, err
-	}
-	out := []View{}
-	for _, c := range state.Conversations {
-		v, viewErr := s.viewFrom(ctx, c)
-		if viewErr != nil {
-			return nil, viewErr
-		}
-
-		if !children || v.ParentID == parent {
-			out = append(out, s.withLiveState(v))
-		}
-	}
-	return map[string]any{"conversations": out}, nil
+	return s.listSummaries(ctx, a, parent, g)
 }
 func (s *Service) projects(ctx context.Context, command string, a Args, g *glsp.Context) (any, error) {
 	state, err := s.nav.List(ctx, &methods.ACPNavListParams{}, g)
@@ -421,7 +410,10 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 		}
 	}
 	if a.ParentID != "" {
-		if a.WorkspacePath == "" {
+		// An explicit project wins over the parent's workspace, exactly as
+		// without a parent: the child runs in that project (or a new worktree
+		// of it) rather than silently in the parent's workspace.
+		if a.WorkspacePath == "" && a.ProjectPath == "" {
 			a.WorkspacePath = parent.WorkspacePath
 		}
 		if a.AgentServer == "" {
@@ -760,7 +752,7 @@ func (s *Service) send(ctx context.Context, a Args, caller string, g *glsp.Conte
 		SessionConfiguration(string, string) (json.RawMessage, json.RawMessage, bool)
 	}); ok {
 		if _, _, found := source.SessionConfiguration(v.AgentServer, v.SessionID); !found {
-			if err = s.restoreSession(ctx, &v, g); err != nil {
+			if err = s.restoreSession(ctx, &v, caller, g); err != nil {
 				return nil, err
 			}
 		}

@@ -23,8 +23,8 @@ const (
 	listStringCap = 512
 )
 
-// ConversationSummary is chat.list's slim per-conversation row. Detail
-// (metadata, configuration, the delegated task and result) is for
+// ConversationSummary is chat.list and chat.children's slim per-conversation
+// row. Detail (metadata, configuration, the delegated task and result) is for
 // chat.inspect.
 type ConversationSummary struct {
 	ID            string                                `json:"id"`
@@ -42,17 +42,21 @@ type ConversationSummary struct {
 	LiveStatus    *methods.ACPNavConversationLiveStatus `json:"liveStatus,omitempty"`
 }
 
-// listCursor is the opaque chat.list page token: the last returned id, plus
-// its position as a fallback when that conversation has since moved.
+// listCursor is the opaque page token: the last returned id and its
+// updatedAt, plus the next row's position as a fallback when that
+// conversation is gone or has since moved.
 type listCursor struct {
-	After  string `json:"after"`
-	Offset int    `json:"offset"`
+	After     string `json:"after"`
+	UpdatedAt string `json:"updatedAt,omitempty"`
+	Offset    int    `json:"offset"`
 }
 
-// listSummaries pages slim conversation summaries in navigation order
-// (most recently updated first), excluding archived conversations unless
-// a.Archived is set.
-func (s *Service) listSummaries(ctx context.Context, a Args, g *glsp.Context) (any, error) {
+// listSummaries pages slim conversation summaries in navigation order (most
+// recently updated first). With parent set it pages that conversation's
+// direct children, archived ones included (chat.children); otherwise it pages
+// every conversation, excluding archived ones unless a.Archived is set
+// (chat.list).
+func (s *Service) listSummaries(ctx context.Context, a Args, parent string, g *glsp.Context) (any, error) {
 	limit := a.Limit
 	if limit == 0 {
 		limit = defaultListLimit
@@ -64,7 +68,7 @@ func (s *Service) listSummaries(ctx context.Context, a Args, g *glsp.Context) (a
 	if a.Cursor != "" {
 		raw, err := base64.RawURLEncoding.DecodeString(a.Cursor)
 		if err != nil || json.Unmarshal(raw, &cursor) != nil || cursor.Offset < 0 {
-			return nil, pkgerrors.Errorf("invalid cursor; pass nextCursor from a previous chat.list page")
+			return nil, pkgerrors.Errorf("invalid cursor; pass nextCursor from the previous page of the same command")
 		}
 	}
 	state, err := s.nav.List(ctx, &methods.ACPNavListParams{}, g)
@@ -73,22 +77,20 @@ func (s *Service) listSummaries(ctx context.Context, a Args, g *glsp.Context) (a
 	}
 	rows := make([]methods.ACPNavConversation, 0, len(state.Conversations))
 	for _, c := range state.Conversations {
-		if c.Archived && !a.Archived {
+		if parent != "" {
+			of, parentErr := s.parentOf(ctx, c)
+			if parentErr != nil {
+				return nil, parentErr
+			}
+			if of != parent {
+				continue
+			}
+		} else if c.Archived && !a.Archived {
 			continue
 		}
 		rows = append(rows, c)
 	}
-	start := min(cursor.Offset, len(rows))
-	if cursor.After != "" {
-		// Resume after the last returned conversation where it still is, so
-		// conversations created or updated meanwhile do not shift the page.
-		for i, c := range rows {
-			if c.ID == cursor.After {
-				start = i + 1
-				break
-			}
-		}
-	}
+	start := resumeIndex(rows, cursor)
 
 	out := []ConversationSummary{}
 	size, end := 0, start
@@ -108,10 +110,47 @@ func (s *Service) listSummaries(ctx context.Context, a Args, g *glsp.Context) (a
 	}
 	result := map[string]any{"conversations": out, "hasMore": end < len(rows), "nextCursor": ""}
 	if end < len(rows) && len(out) > 0 {
-		token, _ := json.Marshal(listCursor{After: out[len(out)-1].ID, Offset: end})
+		token, _ := json.Marshal(listCursor{After: out[len(out)-1].ID, UpdatedAt: rows[end-1].UpdatedAt, Offset: end})
 		result["nextCursor"] = base64.RawURLEncoding.EncodeToString(token)
 	}
 	return result, nil
+}
+
+// resumeIndex finds where the next page starts. It resumes after the last
+// returned conversation where it still is, so conversations created or
+// updated above it do not shift the page. If that conversation is gone or has
+// itself moved (its updatedAt changed, or, ordered by touch time, it now sits
+// above its old position), resuming after it would repeat or skip rows, so
+// the recorded offset is used instead.
+func resumeIndex(rows []methods.ACPNavConversation, cursor listCursor) int {
+	start := min(cursor.Offset, len(rows))
+	if cursor.After == "" {
+		return start
+	}
+	for i, c := range rows {
+		if c.ID != cursor.After {
+			continue
+		}
+		moved := c.UpdatedAt != cursor.UpdatedAt || (c.UpdatedAt == "" && i < cursor.Offset-1)
+		if !moved {
+			return i + 1
+		}
+		return start
+	}
+	return start
+}
+
+// parentOf returns a conversation's control parent: the nav row's link, else
+// the durable control record's.
+func (s *Service) parentOf(ctx context.Context, c methods.ACPNavConversation) (string, error) {
+	if c.ParentID != "" {
+		return c.ParentID, nil
+	}
+	var stored storedRecord
+	if err := s.nav.ReadControlState(ctx, "conversation/"+c.ID, &stored); err != nil {
+		return "", err
+	}
+	return stored.ParentID, nil
 }
 
 func summarize(v View) ConversationSummary {

@@ -3,6 +3,7 @@ package control
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"sort"
 	"strconv"
 	"strings"
@@ -162,7 +163,14 @@ func (s *Service) configure(ctx context.Context, a Args, set bool, caller string
 	}
 	defer release()
 	if !cached {
-		if err = s.restoreSessionReserved(ctx, &v, g); err != nil {
+		recorded := v
+		if err = s.restoreSessionReserved(ctx, &v, caller, g); err != nil {
+			if !set && isPermissionEscalation(err) {
+				// The loaded schema showed the saved selection is a bypass mode
+				// the caller may not restore: list the saved view instead.
+				savedConfigurationView(&recorded)
+				return map[string]any{"conversationId": recorded.ID, "configOptions": recorded.ConfigOptions, "modes": recorded.Modes, "restored": false}, nil
+			}
 			return nil, err
 		}
 	}
@@ -435,18 +443,21 @@ func validateConfigKeys(raw json.RawMessage, values map[string]any) error {
 
 // restoreSession follows the desktop loader's persisted selection semantics
 // when a detached conversation is used after helper/agent restart or close.
-func (s *Service) restoreSession(ctx context.Context, v *View, g *glsp.Context) error {
+func (s *Service) restoreSession(ctx context.Context, v *View, caller string, g *glsp.Context) error {
 	release, err := s.reserveIdle(ctx, v.AgentServer, v.SessionID)
 	if err != nil {
 		return err
 	}
 	defer release()
-	return s.restoreSessionReserved(ctx, v, g)
+	return s.restoreSessionReserved(ctx, v, caller, g)
 }
 
 // The caller already holds the idle-session reservation. Configuration reads
 // and partial updates must restore the same saved selections as a continuation.
-func (s *Service) restoreSessionReserved(ctx context.Context, v *View, g *glsp.Context) (resultErr error) {
+// The loaded schema is the authority on what the saved selections mean: a
+// saved bypass selection is re-applied only for a proven caller (the same rule
+// as checkPromptEscalation); otherwise the session is closed unchanged.
+func (s *Service) restoreSessionReserved(ctx context.Context, v *View, caller string, g *glsp.Context) (resultErr error) {
 	saved, _, err := savedConfiguration(v.Metadata)
 	if err != nil {
 		return err
@@ -473,6 +484,11 @@ func (s *Service) restoreSessionReserved(ctx context.Context, v *View, g *glsp.C
 	if saved.Mode != "" && configSetsCategory(v.ConfigOptions, saved.Config, "mode") {
 		// The option is authoritative; never replay both representations.
 		saved.Mode = ""
+	}
+	if err = s.checkRestoreEscalation(ctx, *v, saved, caller, g); err != nil {
+		// Leave no loaded session behind that a later unproven call could use.
+		_, _ = s.agent.CloseSession(context.WithoutCancel(ctx), &methods.ACPCloseSessionParams{ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: v.AgentServer}, CloseSessionRequest: acpsdk.CloseSessionRequest{SessionId: acpsdk.SessionId(v.SessionID)}}, g)
+		return err
 	}
 	if len(saved.Config) == 0 && saved.Mode == "" {
 		return nil
@@ -570,13 +586,23 @@ func savedConfigurationView(v *View) {
 		_ = useSavedParentConfiguration(v)
 		return
 	}
-	for _, o := range opts {
-		id, _ := o["id"].(string)
-		if value, ok := saved.Config[id]; ok {
-			o["currentValue"] = value
+	overlaySelections(v, saved)
+}
+
+// overlaySelections sets saved selections as the current values of v's
+// schema, keeping each option's category and value names so the result can be
+// judged like a live session.
+func overlaySelections(v *View, saved Args) {
+	var opts []map[string]any
+	if json.Unmarshal(v.ConfigOptions, &opts) == nil && len(opts) > 0 {
+		for _, o := range opts {
+			id, _ := o["id"].(string)
+			if value, ok := saved.Config[id]; ok {
+				o["currentValue"] = value
+			}
 		}
+		v.ConfigOptions, _ = json.Marshal(opts)
 	}
-	v.ConfigOptions, _ = json.Marshal(opts)
 	var modes map[string]any
 	if saved.Mode != "" && json.Unmarshal(v.Modes, &modes) == nil && modes != nil {
 		modes["currentModeId"] = saved.Mode
@@ -758,10 +784,17 @@ func (s *Service) conversationDangerous(v View) bool {
 		return optionsDangerous(options, modes)
 	}
 	if _, found, _ := savedConfiguration(v.Metadata); found {
-		saved := v
-		if useSavedParentConfiguration(&saved) == nil {
-			return optionsDangerous(saved.ConfigOptions, saved.Modes)
+		// Judge the saved selections against the recorded schema (categories
+		// and value names), and by raw value under the conventional ids. An
+		// opaque value with no recorded schema can only be judged once the
+		// session is loaded; restoreSessionReserved re-checks it there.
+		recorded := v
+		savedConfigurationView(&recorded)
+		synthesized := v
+		if useSavedParentConfiguration(&synthesized) == nil && optionsDangerous(synthesized.ConfigOptions, synthesized.Modes) {
+			return true
 		}
+		return optionsDangerous(recorded.ConfigOptions, recorded.Modes)
 	}
 	return optionsDangerous(v.ConfigOptions, v.Modes)
 }
@@ -805,6 +838,35 @@ func (s *Service) checkPromptEscalation(ctx context.Context, v View, caller, act
 	if !s.conversationDangerous(v) || s.provenPromptCaller(ctx, caller, v, g) {
 		return nil
 	}
+	return promptEscalationError(v, action)
+}
+
+// checkRestoreEscalation runs after LoadSession and before saved selections
+// are re-applied. Against the session's real schema it judges whether the
+// restored session would run in a permission-bypass mode, by the saved
+// selections (value or display name) or the loaded state they leave in place,
+// and then applies checkPromptEscalation's caller rule.
+func (s *Service) checkRestoreEscalation(ctx context.Context, loaded View, saved Args, caller string, g *glsp.Context) error {
+	// An unsupported saved value is reported by applyConfig, not here.
+	value, _ := schemaDangerousValue(loaded.ConfigOptions, loaded.Modes, saved)
+	effective := loaded
+	overlaySelections(&effective, saved)
+	if value == "" && !optionsDangerous(effective.ConfigOptions, effective.Modes) {
+		return nil
+	}
+	if s.provenPromptCaller(ctx, caller, loaded, g) {
+		return nil
+	}
+	return promptEscalationError(loaded, "restoring")
+}
+
+// isPermissionEscalation reports a PERMISSION_ESCALATION rejection.
+func isPermissionEscalation(err error) bool {
+	var rpcErr *methods.JSONRPCError
+	return errors.As(err, &rpcErr) && strings.HasPrefix(rpcErr.Message, "PERMISSION_ESCALATION")
+}
+
+func promptEscalationError(v View, action string) error {
 	return &methods.JSONRPCError{Code: methods.CamberErrorCodeEntityInvalid, Message: "PERMISSION_ESCALATION: conversation " + v.ID + " runs, or would resume, in a permission-bypass mode, so " + action + " it is only allowed when the request carries --caller-token proving it comes from that conversation, or from its parent while the parent is running in a permission-bypass mode right now. Pass the callerToken from your Camber host context, or ask the user to act on the conversation in the Camber desktop app."}
 }
 

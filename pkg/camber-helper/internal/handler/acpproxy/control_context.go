@@ -62,7 +62,7 @@ func withControlContext(prompt []acpsdk.ContentBlock, origin *controlContext, em
 	identity, _ := json.Marshal(origin)
 	text := "\nCamber CLI origin (the conversation running this agent, independent of UI focus):\n" +
 		string(identity) +
-		"\nUse `camber skill show` for current CLI instructions. Pass the instanceId with --instance and use conversationId as the parent when spawning child conversations. Pass callerToken with --caller-token on `chat spawn` and `chat config set` so the desktop can verify which conversation is asking; it is required to give a child or conversation a permission-bypass mode. Keep the token private: do not write it to files, task text, or other conversations. Use explicit target IDs; do not infer your origin from the focused desktop conversation.\n"
+		"\nUse `camber skill show` for current CLI instructions. Pass the instanceId with --instance and use conversationId as the parent when spawning child conversations. Pass callerToken with --caller-token on `chat spawn`, `chat config set`, `chat send` and `chat steer` so the desktop can verify which conversation is asking; it is required to give a child or conversation a permission-bypass mode, and to send to or steer a conversation that is (or would resume) in one. Keep the token private: do not write it to files, task text, or other conversations. Use explicit target IDs; do not infer your origin from the focused desktop conversation.\n"
 	out := append([]acpsdk.ContentBlock(nil), prompt...)
 	for i, block := range out {
 		if block.Resource == nil || block.Resource.Resource.TextResourceContents == nil {

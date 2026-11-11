@@ -88,6 +88,9 @@ func TestControlContextCarriesResolvableCallerToken(t *testing.T) {
 	require.NotNil(t, out[1].Text)
 	assert.Contains(t, out[1].Text.Text, `"callerToken":"`+origin.CallerToken+`"`)
 	assert.Contains(t, out[1].Text.Text, "--caller-token")
+	for _, command := range []string{"chat spawn", "chat config set", "chat send", "chat steer"} {
+		assert.Contains(t, out[1].Text.Text, command, "token instructions name %s", command)
+	}
 
 	id, ok := h.ResolveCallerToken(origin.CallerToken)
 	require.True(t, ok)

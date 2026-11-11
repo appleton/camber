@@ -101,7 +101,12 @@ camber chat spawn PARENT \
 ```
 
 Use `--workspace PATH` (or `--worktree PATH`) to share an existing workspace
-instead of creating one. Pass the parent ID and caller token from your
+instead of creating one. A child runs in `--workspace` if given, else in
+`--project` (or the new worktree created from it), else in its parent's
+workspace; `--project` without `--workspace` or `--new-worktree` runs the child
+in that project whether or not there is a parent. With a parent, the
+`CAMBER_PROJECT_PATH` default applies only together with `--new-worktree`, so a
+plain `chat spawn PARENT` stays in the parent's workspace. Pass the parent ID and caller token from your
 per-prompt Camber host context (see [Caller identity](#caller-identity)). The desktop supplies the instance environment, but does not export a
 conversation ID from its shared agent process. An external wrapper may set
 `CAMBER_CONVERSATION_ID`, `CAMBER_PROJECT_PATH`, and
@@ -168,6 +173,12 @@ Permission and workspace guardrails apply to every control call:
 - Control actions restore a conversation whose saved selection is a bypass mode
   only for such a proven caller. Without proof, `chat config list` returns the
   saved selections with `restored: false`, and `chat config set` fails.
+  Saved selections are judged by the conversation's recorded schema where one
+  exists, and always against the agent's real schema once the session is
+  loaded, before any selection is re-applied: a saved opaque value labelled
+  "Full access", or a bypass value under a mode option with any id, counts. An
+  unproven restore of such a selection fails with `PERMISSION_ESCALATION`, and
+  the just-loaded session is closed again without applying anything.
 - `chat send`, `chat steer` and `chat config set` reject archived conversations;
   restore them first. `chat stop` still works.
 - An explicit `--workspace`/`--project`, and the `--workspace` used by
@@ -178,6 +189,18 @@ Permission and workspace guardrails apply to every control call:
 - `worktrees create` and `chat spawn --new-worktree` require the project path
   to be a registered root project itself: not a subdirectory and not a
   worktree.
+- When the CLI creates or removes a worktree, git runs without the
+  repository's hooks, fsmonitor or submodule recursion. Command-running
+  configuration from the repository's own local or worktree config (including
+  files it includes, read from inside the worktree so `includeIf "onbranch:"`
+  and `includeIf "gitdir:"` sections count) is disabled: filter drivers and
+  git-lfs custom transfer agents are blanked, and git-lfs is pinned to its
+  standard commands. Filters in your global or system git config run as normal.
+  If the repository needs its own smudge or process filter (such as git-crypt)
+  or a custom LFS transfer agent, CLI worktree creation refuses rather than
+  check out undecoded files; create that worktree from the desktop app. When
+  removing, disabled clean filters can make filtered files look modified, so
+  removal fails closed and the error names the filter.
 
 ### Caller identity
 
@@ -188,7 +211,8 @@ puts it only in that conversation's host context. It is not exported through
 the agent process environment, which several conversations share, and it is not
 shown in conversation lists or other CLI output (control responses replace
 known tokens with `[redacted]`). Pass it with `--caller-token TOKEN`, or set
-`CAMBER_CALLER_TOKEN` in your own command's environment. Do not write it to
+`CAMBER_CALLER_TOKEN` in your own command's environment (read when the command
+runs; `--help` never prints it, and an explicit `--caller-token` wins). Do not write it to
 files, task text, or other conversations. If the token appears in a
 conversation's messages or reasoning, even split across several messages, or
 another conversation's token appears anywhere in its output, the desktop revokes
@@ -318,6 +342,13 @@ first. Archived conversations are left out unless you pass `--archived`.
 Results are paged: up to `--limit` rows per page (default 200, max 500); while
 `hasMore` is true, pass `nextCursor` back with `--cursor`. A page can end early
 if it gets large. Use `chat inspect` for full detail.
+
+`chat children CHAT` returns the same summary rows for that conversation's
+direct children, most recently updated first, and pages the same way with
+`--limit` and `--cursor`. Archived children are always included (check each
+row's `archived`). A page cursor resumes after the last row returned; if that
+conversation was updated and moved meanwhile, the next page resumes from the
+page's position instead, so rows are not repeated.
 
 `--workspace`, `--worktree`, `--project` and worktree path arguments may be
 relative; the CLI turns them into absolute paths before sending.

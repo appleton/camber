@@ -342,7 +342,7 @@ func TestReloadRestoresPersistedConfigBeforeContinuation(t *testing.T) {
 	v.Metadata = json.RawMessage(`{"explored":["keep"],"sessionConfig":{"selections":{"model":"large","reasoning_effort":"high"},"modeId":null}}`)
 	_, err = s.nav.UpsertConversation(context.Background(), &methods.ACPNavUpsertConversationParams{Conversation: v.ACPNavConversation}, nil)
 	require.NoError(t, err)
-	require.NoError(t, s.restoreSession(context.Background(), &v, nil))
+	require.NoError(t, s.restoreSession(context.Background(), &v, "", nil))
 	assert.Equal(t, 1, agent.loads)
 	base.mu.Lock()
 	assert.Equal(t, []string{"set:model", "set:reasoning_effort"}, base.calls)

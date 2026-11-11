@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tliron/glsp"
 
 	"github.com/appleton/camber/pkg/camber-helper/methods"
 )
@@ -184,4 +185,121 @@ func addChild(t *testing.T, s *Service, metadata string) {
 	require.NoError(t, s.save(context.Background(), view))
 	_, err := s.nav.UpsertConversation(context.Background(), &methods.ACPNavUpsertConversationParams{Conversation: kid}, nil)
 	require.NoError(t, err)
+}
+
+// schemaAgent loads the parent session with a fixed schema, so a saved
+// selection's meaning is only known once the session is loaded.
+type schemaAgent struct {
+	*driftAgent
+	schema string
+}
+
+func (a *schemaAgent) LoadSession(context.Context, *methods.ACPLoadSessionParams, *glsp.Context) (*methods.ACPLoadSessionOutput, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.calls = append(a.calls, "load")
+	a.parentLive = true
+	a.options = json.RawMessage(a.schema)
+	var out methods.ACPLoadSessionOutput
+	raw, _ := json.Marshal(map[string]any{"configOptions": json.RawMessage(a.schema)})
+	return &out, json.Unmarshal(raw, &out)
+}
+
+func (a *schemaAgent) CloseSession(ctx context.Context, p *methods.ACPCloseSessionParams, g *glsp.Context) (*methods.ACPCloseSessionOutput, error) {
+	out, err := a.fakeAgent.CloseSession(ctx, p, g)
+	a.mu.Lock()
+	a.parentLive = false
+	a.mu.Unlock()
+	return out, err
+}
+
+// approvalOptions has a mode-category option whose id is not "mode".
+const approvalOptions = `[{"id":"approval","type":"select","category":"mode","currentValue":"ask","options":[{"value":"ask","name":"Ask"},{"value":"bypassPermissions","name":"Bypass"}]}]`
+
+func schemaFixture(t *testing.T, schema, metadata string) (*Service, *schemaAgent) {
+	t.Helper()
+	s, drift := tokenFixture(t, metadata, false)
+	agent := &schemaAgent{driftAgent: drift, schema: schema}
+	s.agent = agent
+	return s, agent
+}
+
+func TestRestoreJudgesSavedSelectionsAgainstLoadedSchema(t *testing.T) {
+	cases := map[string]struct{ schema, metadata, option, value string }{
+		"opaque value named Full access under id mode":    {opaqueOptions, `{"sessionConfig":{"selections":{"mode":"danger-full-access"}}}`, "mode", "danger-full-access"},
+		"bypass value under a mode option not named mode": {approvalOptions, `{"sessionConfig":{"selections":{"approval":"bypassPermissions"}}}`, "approval", "bypassPermissions"},
+	}
+	for name, tc := range cases {
+		t.Run(name+"/unproven send is rejected and nothing applied", func(t *testing.T) {
+			for _, token := range []string{"", "tok-other"} {
+				s, agent := schemaFixture(t, tc.schema, tc.metadata)
+				_, err := dispatchAs(s, token, "chat.send", Args{ConversationID: "parent", Text: "go"})
+				require.ErrorContains(t, err, "PERMISSION_ESCALATION")
+				assert.ErrorContains(t, err, "--caller-token")
+				assert.Equal(t, []string{"load", "close"}, agent.callList(), "loaded to read the schema, then closed without applying or prompting")
+				_, _, live := agent.SessionConfiguration("test", "parent-session")
+				assert.False(t, live, "no loaded session is left behind")
+				parent, viewErr := s.view(context.Background(), "parent", nil)
+				require.NoError(t, viewErr)
+				assert.NotEqual(t, "running", parent.Status)
+				assert.JSONEq(t, tc.metadata, string(parent.Metadata), "saved selections untouched")
+			}
+		})
+		t.Run(name+"/unproven config set is rejected", func(t *testing.T) {
+			s, agent := schemaFixture(t, tc.schema, tc.metadata)
+			_, err := dispatchAs(s, "", "chat.config.set", Args{ConversationID: "parent", Config: map[string]any{tc.option: tc.value}})
+			require.ErrorContains(t, err, "PERMISSION_ESCALATION")
+			for _, call := range agent.callList() {
+				assert.NotContains(t, []string{"set:" + tc.option, "prompt"}, call)
+			}
+		})
+		t.Run(name+"/unproven config list shows saved selections without restoring", func(t *testing.T) {
+			s, agent := schemaFixture(t, tc.schema, tc.metadata)
+			out, err := dispatchAs(s, "", "chat.config.list", Args{ConversationID: "parent"})
+			require.NoError(t, err)
+			assert.Equal(t, false, out["restored"])
+			assert.Equal(t, tc.value, recoveryValues(mustJSON(t, out["configOptions"]))[tc.option])
+			assert.Equal(t, []string{"load", "close"}, agent.callList())
+		})
+		t.Run(name+"/proven caller restores and prompts", func(t *testing.T) {
+			s, agent := schemaFixture(t, tc.schema, tc.metadata)
+			_, err := dispatchAs(s, "tok-parent", "chat.send", Args{ConversationID: "parent", Text: "go"})
+			require.NoError(t, err)
+			finishSpawn(t, agent.driftAgent)
+			assert.Equal(t, []string{"load", "set:" + tc.option, "prompt"}, agent.callList())
+		})
+	}
+}
+
+func TestSavedBypassJudgedByRecordedSchemaBeforeLoading(t *testing.T) {
+	for name, tc := range map[string]struct{ schema, metadata string }{
+		"named Full access": {opaqueOptions, `{"sessionConfig":{"selections":{"mode":"danger-full-access"}}}`},
+		"mode category":     {approvalOptions, `{"sessionConfig":{"selections":{"approval":"bypassPermissions"}}}`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			s, agent := schemaFixture(t, tc.schema, tc.metadata)
+			v, err := s.view(context.Background(), "parent", nil)
+			require.NoError(t, err)
+			v.ConfigOptions = json.RawMessage(tc.schema)
+			require.NoError(t, s.save(context.Background(), v))
+			_, err = dispatchAs(s, "", "chat.send", Args{ConversationID: "parent", Text: "go"})
+			require.ErrorContains(t, err, "PERMISSION_ESCALATION")
+			assert.Empty(t, agent.callList(), "the recorded schema rejects before any agent call")
+		})
+	}
+}
+
+func TestSpawnUnderParentUsesExplicitProject(t *testing.T) {
+	s, agent := driftFixture(t, `{}`)
+	project, err := s.nav.UpsertProject(context.Background(), &methods.ACPNavUpsertProjectParams{Path: t.TempDir()}, nil)
+	require.NoError(t, err)
+	out := invoke(t, s, "chat.spawn", Args{ParentID: "parent", ProjectPath: project.Path, Text: "task"})
+	finishSpawn(t, agent)
+	conversation := out["conversation"].(map[string]any)
+	assert.Equal(t, project.Path, conversation["workspacePath"], "the explicit project, not the parent's workspace")
+	assert.Equal(t, project.Path, conversation["cwd"])
+	assert.Equal(t, "parent", conversation["parentId"])
+
+	err = dispatchErr(s, "chat.spawn", Args{ParentID: "parent", ProjectPath: t.TempDir(), Text: "task"})
+	require.ErrorContains(t, err, "not a registered project or worktree", "the project is still checked")
 }

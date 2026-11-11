@@ -29,7 +29,9 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 	var timeout time.Duration
 	root := &cobra.Command{Use: "camber", Short: "Control a running Camber desktop", SilenceUsage: true, SilenceErrors: true}
 	root.PersistentFlags().StringVar(&instanceID, "instance", os.Getenv("CAMBER_INSTANCE_ID"), "Desktop instance ID (otherwise use inherited context or the unique running instance)")
-	root.PersistentFlags().StringVar(&callerToken, "caller-token", os.Getenv("CAMBER_CALLER_TOKEN"), "Caller token from your Camber host context; proves which conversation is asking (needed for permission-bypass modes on chat spawn and chat config set)")
+	// No flag default: --help must never print the token. CAMBER_CALLER_TOKEN
+	// is read at dispatch time instead.
+	root.PersistentFlags().StringVar(&callerToken, "caller-token", "", "Caller token from your Camber host context (default $CAMBER_CALLER_TOKEN); proves which conversation is asking. Needed for permission-bypass modes on chat spawn and chat config set, and for chat send and chat steer to conversations in a permission-bypass mode")
 	root.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Print structured JSON (NDJSON when following)")
 	root.PersistentFlags().DurationVar(&timeout, "timeout", 10*time.Minute, "Deadline for each desktop request (including workspace setup)")
 	root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
@@ -50,8 +52,12 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 	}
 	dispatch := func(cmd *cobra.Command, name string, args map[string]any) (json.RawMessage, error) {
 		params := map[string]any{"command": name, "args": args}
-		if callerToken != "" {
-			params["callerToken"] = callerToken
+		token := callerToken
+		if !cmd.Flags().Changed("caller-token") {
+			token = os.Getenv("CAMBER_CALLER_TOKEN")
+		}
+		if token != "" {
+			params["callerToken"] = token
 		}
 		return caller.Call(cmd.Context(), "camber/control/dispatch", params)
 	}
@@ -180,9 +186,22 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 	listChats.Flags().Bool("archived", false, "Include archived conversations")
 	listChats.Flags().Int("limit", 0, "Conversations per page (default 200, max 500)")
 	listChats.Flags().String("cursor", "", "nextCursor from a previous page; repeat while hasMore is true")
-	for _, name := range []string{"inspect", "children", "snapshot"} {
+	for _, name := range []string{"inspect", "snapshot"} {
 		add(chat, name+" [CHAT]", "Inspect or select a conversation", "chat."+name, cobra.MaximumNArgs(1), chatArgs)
 	}
+	children := add(chat, "children [CHAT]", "List a conversation's direct children as summaries, archived included (paged)", "chat.children", cobra.MaximumNArgs(1), func(cmd *cobra.Command, args []string) (map[string]any, error) {
+		input, err := chatArgs(cmd, args)
+		if err != nil {
+			return nil, err
+		}
+		input["cursor"] = getString(cmd, "cursor")
+		if limit, _ := cmd.Flags().GetInt("limit"); limit != 0 {
+			input["limit"] = limit
+		}
+		return input, nil
+	})
+	children.Flags().Int("limit", 0, "Children per page (default 200, max 500)")
+	children.Flags().String("cursor", "", "nextCursor from a previous page; repeat while hasMore is true")
 	config := &cobra.Command{Use: "config", Short: "Inspect and change effective conversation configuration"}
 	chat.AddCommand(config)
 	add(config, "list [CHAT]", "Inspect effective options, values, and modes", "chat.config.list", cobra.MaximumNArgs(1), chatArgs)
@@ -208,7 +227,13 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"parentId": parent, "agentServer": getString(cmd, "agent"), "workspacePath": getPath(cmd, "workspace"), "projectPath": getPath(cmd, "project"), "worktreeName": getString(cmd, "new-worktree"), "config": cfg, "model": getString(cmd, "model"), "effort": getString(cmd, "effort"), "mode": getString(cmd, "mode"), "text": text, "requestId": getString(cmd, "request-id")}, nil
+		project := getPath(cmd, "project")
+		if parent != "" && !cmd.Flags().Changed("project") && getString(cmd, "new-worktree") == "" {
+			// CAMBER_PROJECT_PATH is only a default: without an explicit
+			// --project a child stays in its parent's workspace.
+			project = ""
+		}
+		return map[string]any{"parentId": parent, "agentServer": getString(cmd, "agent"), "workspacePath": getPath(cmd, "workspace"), "projectPath": project, "worktreeName": getString(cmd, "new-worktree"), "config": cfg, "model": getString(cmd, "model"), "effort": getString(cmd, "effort"), "mode": getString(cmd, "mode"), "text": text, "requestId": getString(cmd, "request-id")}, nil
 	})
 	configFlags(spawn)
 	spawn.Flags().String("agent", "", "Destination agent ID")

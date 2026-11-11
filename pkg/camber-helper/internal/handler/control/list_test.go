@@ -123,3 +123,94 @@ func TestChatListRejectsBadPaging(t *testing.T) {
 		assert.Error(t, err, args)
 	}
 }
+
+func TestChatListMovedAnchorFallsBackToOffset(t *testing.T) {
+	s, _ := fixture(t)
+	addConversations(t, s, 7, t.TempDir(), nil)
+	first, _, next, _ := listPage(t, s, Args{Limit: 3})
+	require.Equal(t, []string{"parent", "c006", "c005"}, first)
+	// The page's last conversation is updated and moves to the top.
+	_, err := s.nav.UpsertConversation(context.Background(), &methods.ACPNavUpsertConversationParams{Conversation: methods.ACPNavConversation{
+		ID: "c005", AgentServer: "test", WorkspacePath: t.TempDir(), Title: "chat c005", UpdatedAt: "2027-01-01T00:00:00Z"}}, nil)
+	require.NoError(t, err)
+	second, _, _, _ := listPage(t, s, Args{Limit: 3, Cursor: next})
+	assert.Equal(t, []string{"c004", "c003", "c002"}, second, "no repeated rows after the anchor moved")
+}
+
+func childrenPage(t *testing.T, s *Service, args Args) (ids []string, hasMore bool, next string, raw []byte) {
+	t.Helper()
+	encoded, err := json.Marshal(args)
+	require.NoError(t, err)
+	raw, err = s.Dispatch(context.Background(), &methods.ControlDispatchParams{Command: "chat.children", Args: encoded}, nil)
+	require.NoError(t, err)
+	var out struct {
+		Conversations []map[string]any `json:"conversations"`
+		HasMore       bool             `json:"hasMore"`
+		NextCursor    string           `json:"nextCursor"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &out))
+	for _, c := range out.Conversations {
+		ids = append(ids, c["id"].(string))
+	}
+	return ids, out.HasMore, out.NextCursor, raw
+}
+
+func TestChatChildrenPagesSlimSummariesOfDirectChildren(t *testing.T) {
+	s, _ := fixture(t)
+	workspace := t.TempDir()
+	ids := addConversations(t, s, 5, workspace, json.RawMessage(`{"big":"`+strings.Repeat("m", 4096)+`"}`))
+	// c000..c003 are children of parent; c004 is a grandchild.
+	for i, id := range ids {
+		v, err := s.view(context.Background(), id, nil)
+		require.NoError(t, err)
+		v.ParentID, v.RootID = "parent", "parent"
+		if i == 4 {
+			v.ParentID = "c000"
+		}
+		v.Task = strings.Repeat("t", 4096)
+		require.NoError(t, s.save(context.Background(), v))
+	}
+	_, err := s.nav.ArchiveConversation(context.Background(), &methods.ACPNavArchiveConversationParams{WorkspacePath: workspace, ConversationID: "c001", AgentServer: "test"}, nil)
+	require.NoError(t, err)
+
+	var all []string
+	cursor := ""
+	for page := 0; page < 5; page++ {
+		got, hasMore, next, raw := childrenPage(t, s, Args{ConversationID: "parent", Limit: 2, Cursor: cursor})
+		assert.LessOrEqual(t, len(got), 2)
+		assert.NotContains(t, string(raw), "metadata")
+		assert.NotContains(t, string(raw), "task")
+		all = append(all, got...)
+		if !hasMore {
+			break
+		}
+		cursor = next
+	}
+	assert.Equal(t, []string{"c003", "c002", "c001", "c000"}, all, "direct children only, archived included")
+
+	grandchildren, _, _, _ := childrenPage(t, s, Args{ParentID: "c000"})
+	assert.Equal(t, []string{"c004"}, grandchildren)
+
+	for _, args := range []string{`{}`, `{"parentId":"parent","limit":501}`, `{"parentId":"parent","cursor":"!!"}`, `{"parentId":"parent","archived":true}`} {
+		_, err := s.Dispatch(context.Background(), &methods.ControlDispatchParams{Command: "chat.children", Args: json.RawMessage(args)}, nil)
+		assert.Error(t, err, args)
+	}
+}
+
+func TestChatChildrenByteCapEndsPageEarly(t *testing.T) {
+	s, _ := fixture(t)
+	ids := addConversations(t, s, 40, "/"+strings.Repeat("w", 20*1024), nil)
+	for _, id := range ids {
+		v, err := s.view(context.Background(), id, nil)
+		require.NoError(t, err)
+		v.ParentID = "parent"
+		require.NoError(t, s.save(context.Background(), v))
+	}
+	got, hasMore, next, raw := childrenPage(t, s, Args{ParentID: "parent", Limit: maxListLimit})
+	assert.Less(t, len(raw), listPageCap+4096)
+	assert.NotEmpty(t, got)
+	assert.True(t, hasMore)
+	rest, more, _, _ := childrenPage(t, s, Args{ParentID: "parent", Limit: maxListLimit, Cursor: next})
+	assert.False(t, more)
+	assert.Len(t, append(got, rest...), 40)
+}
