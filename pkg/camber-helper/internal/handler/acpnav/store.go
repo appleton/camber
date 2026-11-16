@@ -1024,7 +1024,7 @@ ON CONFLICT(id) DO UPDATE SET
     WHEN excluded.session_id IS NULL AND excluded.updated_at = '' THEN conversations.touched_at
     ELSE excluded.touched_at
   END
-`, c.ID, c.WorkspacePath, c.AgentServer, c.SessionID, c.Cwd, c.Title, c.Nickname, c.UpdatedAt, c.ID, workingDirectoriesJSON, metadataJSON, now, now)
+`, c.ID, c.WorkspacePath, c.AgentServer, c.SessionID, c.Cwd, c.Title, c.Nickname, c.UpdatedAt, c.ID, c.WorkspacePath, c.WorkspacePath, c.Cwd, workingDirectoriesJSON, metadataJSON, now, now)
 	if err != nil {
 		return false, fmt.Errorf("upserting conversation: %w", err)
 	}
@@ -1039,11 +1039,18 @@ ON CONFLICT(id) DO UPDATE SET
 }
 
 // parentArchivedSQL evaluates to 1 when the (bound) conversation id's control
-// state names a parent that is archived, else 0.
+// state names a parent that is archived and in the same sidebar group as the
+// new row (both chats, or the same working directory; see sidebarGroup), else
+// 0. Binds: id, workspace path, workspace path, cwd.
 const parentArchivedSQL = `CASE WHEN EXISTS (
   SELECT 1 FROM conversations parent
   WHERE parent.archived != 0
     AND parent.id = (SELECT COALESCE(json_extract(m.value, '$.parentId'), '') FROM metadata m WHERE m.key = 'control/conversation/' || ?)
+    AND CASE
+      WHEN parent.workspace_path = '` + chatWorkspacePath + `' OR ? = '` + chatWorkspacePath + `'
+        THEN parent.workspace_path = ?
+      ELSE parent.cwd = ?
+    END
 ) THEN 1 ELSE 0 END`
 
 // BindConversationSession records the session id the agent created for a

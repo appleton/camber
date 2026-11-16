@@ -26,9 +26,13 @@ type archivedSession struct {
 }
 
 // archiveDescendantsTx archives every non-archived conversation descended from
-// roots through control-state parent links, transitively and cycle-safe. Roots
-// themselves are never touched. It returns the sessions of the newly archived
-// descendants and how many rows it archived.
+// roots through control-state parent links, transitively and cycle-safe, that
+// renders as the root's sub-agent: one in the same sidebar group as the root
+// (both chats, or the same working directory; see sameSidebarGroup). A
+// descendant working in another worktree is left alone, but the walk continues
+// through it so same-group descendants below it still go. Roots themselves are
+// never touched. It returns the sessions of the newly archived descendants and
+// how many rows it archived.
 //
 // With skipRestored, conversations carrying a restore marker (see
 // RestoreConversation) are neither archived nor walked through: the user
@@ -42,58 +46,93 @@ func archiveDescendantsTx(ctx context.Context, tx *sql.Tx, roots []string, skipR
 	if err != nil {
 		return nil, 0, err
 	}
-	visited := make(map[string]bool, len(roots))
-	queue := make([]string, 0, len(roots))
-	for _, id := range roots {
-		if !visited[id] {
-			visited[id] = true
-			queue = append(queue, id)
-		}
-	}
 	now := nowString()
 	var sessions []archivedSession
 	count := 0
-	for len(queue) > 0 {
-		id := queue[0]
-		queue = queue[1:]
-		for _, child := range children[id] {
-			if visited[child] {
-				continue
-			}
-			visited[child] = true
-			if skipRestored {
-				var one int
-				err := tx.QueryRowContext(ctx, `SELECT 1 FROM metadata WHERE key = ?`, restoredKey(child)).Scan(&one)
-				if err == nil {
+	done := make(map[string]bool, len(roots))
+	for _, root := range roots {
+		if done[root] {
+			continue
+		}
+		done[root] = true
+		rootGroup, ok, err := sidebarGroupTx(ctx, tx, root)
+		if err != nil {
+			return nil, 0, err
+		}
+		if !ok {
+			continue
+		}
+		visited := map[string]bool{root: true}
+		queue := []string{root}
+		for len(queue) > 0 {
+			id := queue[0]
+			queue = queue[1:]
+			for _, child := range children[id] {
+				if visited[child] {
 					continue
 				}
-				if err != sql.ErrNoRows {
-					return nil, 0, fmt.Errorf("reading restore marker: %w", err)
+				visited[child] = true
+				if skipRestored {
+					var one int
+					err := tx.QueryRowContext(ctx, `SELECT 1 FROM metadata WHERE key = ?`, restoredKey(child)).Scan(&one)
+					if err == nil {
+						continue
+					}
+					if err != sql.ErrNoRows {
+						return nil, 0, fmt.Errorf("reading restore marker: %w", err)
+					}
 				}
-			}
-			queue = append(queue, child)
-			var archived int
-			var agentServer, sessionID string
-			err := tx.QueryRowContext(ctx, `SELECT archived, agent_server, COALESCE(session_id, '') FROM conversations WHERE id = ?`, child).Scan(&archived, &agentServer, &sessionID)
-			if err == sql.ErrNoRows || (err == nil && archived != 0) {
-				continue
-			}
-			if err != nil {
-				return nil, 0, fmt.Errorf("reading descendant conversation: %w", err)
-			}
-			if _, err := tx.ExecContext(ctx, `UPDATE conversations SET active = 0, archived = 1, touched_at = ? WHERE id = ?`, now, child); err != nil {
-				return nil, 0, fmt.Errorf("archiving descendant conversation: %w", err)
-			}
-			if err := clearRestoredTx(ctx, tx, child); err != nil {
-				return nil, 0, err
-			}
-			count++
-			if sessionID != "" {
-				sessions = append(sessions, archivedSession{AgentServer: agentServer, SessionID: sessionID})
+				queue = append(queue, child)
+				var archived int
+				var agentServer, sessionID, workspacePath, cwd string
+				err := tx.QueryRowContext(ctx, `SELECT archived, agent_server, COALESCE(session_id, ''), workspace_path, cwd FROM conversations WHERE id = ?`, child).Scan(&archived, &agentServer, &sessionID, &workspacePath, &cwd)
+				if err == sql.ErrNoRows || (err == nil && archived != 0) {
+					continue
+				}
+				if err != nil {
+					return nil, 0, fmt.Errorf("reading descendant conversation: %w", err)
+				}
+				if sidebarGroup(workspacePath, cwd) != rootGroup {
+					continue
+				}
+				if _, err := tx.ExecContext(ctx, `UPDATE conversations SET active = 0, archived = 1, touched_at = ? WHERE id = ?`, now, child); err != nil {
+					return nil, 0, fmt.Errorf("archiving descendant conversation: %w", err)
+				}
+				if err := clearRestoredTx(ctx, tx, child); err != nil {
+					return nil, 0, err
+				}
+				count++
+				if sessionID != "" {
+					sessions = append(sessions, archivedSession{AgentServer: agentServer, SessionID: sessionID})
+				}
 			}
 		}
 	}
 	return sessions, count, nil
+}
+
+// sidebarGroup names the desktop sidebar group a conversation renders in:
+// Chats, or the project or worktree matching its working directory. A
+// sub-agent only nests under (and is archived with) an ancestor in its group.
+func sidebarGroup(workspacePath, cwd string) string {
+	if workspacePath == chatWorkspacePath {
+		return "chat"
+	}
+	return "cwd:" + cwd
+}
+
+// sidebarGroupTx reads a conversation's sidebar group; ok is false when the
+// conversation does not exist.
+func sidebarGroupTx(ctx context.Context, tx *sql.Tx, id string) (string, bool, error) {
+	var workspacePath, cwd string
+	err := tx.QueryRowContext(ctx, `SELECT workspace_path, cwd FROM conversations WHERE id = ?`, id).Scan(&workspacePath, &cwd)
+	if err == sql.ErrNoRows {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, fmt.Errorf("reading conversation: %w", err)
+	}
+	return sidebarGroup(workspacePath, cwd), true, nil
 }
 
 // restoredKey names the metadata marker recording that a conversation was

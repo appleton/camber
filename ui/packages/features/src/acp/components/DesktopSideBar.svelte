@@ -1358,10 +1358,12 @@
   function beginCascade(session: ACPConversationSummary): ACPConversationSummary[] {
     // Parent links over every current conversation, not the rendered tree:
     // search, collapsed containers and flattened grandchildren must not hide any.
+    // Only descendants that render as its sub-agents (same project, worktree or
+    // Chats group) go with it; one working in another worktree stays.
     const descendants = collectDescendantIds(
       navSessions.filter((item) => !exitingConversationIds.has(item.id)),
       session.id,
-    );
+    ).filter((child) => sharesSidebarGroup(child, session));
     if (descendants.length === 0) return descendants;
     cascadedArchives.set(session.id, descendants);
     for (const child of descendants) setConversationExiting(child.id, true);
@@ -1410,7 +1412,10 @@
       // pick up sub-agents spawned since the snapshot was taken.
       const known = new Set(cascaded.map((child) => child.id));
       const spawned = collectDescendantIds(navSessions, session.id).filter(
-        (child) => !known.has(child.id) && !exitingConversationIds.has(child.id),
+        (child) =>
+          !known.has(child.id) &&
+          !exitingConversationIds.has(child.id) &&
+          sharesSidebarGroup(child, session),
       );
       for (const child of spawned) setConversationExiting(child.id, true);
       await archiveCascadedDescendants([...cascaded, ...spawned]);

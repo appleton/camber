@@ -253,6 +253,25 @@ describe("DesktopSideBar sub-agent nesting", () => {
       await waitFor(() => expect(archivedIds(archiveSession)).toEqual(["m", "g"]));
     });
 
+    it("leaves a sub-agent in another worktree when the parent is archived", async () => {
+      const archiveSession = vi.fn(async () => {});
+      render(Harness, {
+        props: {
+          projects: [project("/repo"), worktree("/wt", "/repo")],
+          conversations: [
+            conv("p", "/repo"),
+            child("c", "/repo", "p", { age: 1 }),
+            child("w", "/wt", "p", { age: 2 }),
+            child("wg", "/repo", "w", { age: 3, rootId: "p" }),
+          ],
+          archiveSession,
+        },
+      });
+      await middleClick("Title p");
+      await waitFor(() => expect(archivedIds(archiveSession).sort()).toEqual(["c", "p", "wg"]));
+      expect(present("Title w")).toBe(true);
+    });
+
     it("leaves sub-agents alone when the parent archive fails", async () => {
       const archiveSession = vi.fn(async (...args: unknown[]) => {
         if (args[3] === "p") throw new Error("boom");

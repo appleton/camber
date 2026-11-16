@@ -77,7 +77,7 @@ func TestArchiveCascadeBySessionAndCycleSafe(t *testing.T) {
 
 func TestWorktreeRemovalCascadesToDescendants(t *testing.T) {
 	ctx := context.Background()
-	server, store := cascadeFixture(t, filepath.Join(t.TempDir(), "nav.db"), "child")
+	server, store := cascadeFixture(t, filepath.Join(t.TempDir(), "nav.db"), "elsewhere")
 	parent, wt := t.TempDir(), t.TempDir()
 	parentProject, err := store.UpsertProject(ctx, methods.ACPNavUpsertProjectParams{Path: parent})
 	require.NoError(t, err)
@@ -86,10 +86,65 @@ func TestWorktreeRemovalCascadesToDescendants(t *testing.T) {
 	require.NoError(t, err)
 	store.runGit = func(context.Context, []string, ...string) ([]byte, error) { return nil, nil }
 	require.NoError(t, store.UpsertConversation(ctx, methods.ACPNavConversation{ID: "wtroot", WorkspacePath: wtProject.Path, Cwd: wtProject.Path, AgentServer: "agent", SessionID: "s-wtroot", UpdatedAt: "2026-01-01T00:00:00Z"}))
-	link(t, server, "child", "wtroot")
+	link(t, server, "elsewhere", "wtroot")
 
 	require.NoError(t, store.RemoveWorktree(ctx, wtProject.Path))
-	assert.Equal(t, map[string]bool{"wtroot": true, "child": true}, archivedSet(t, store))
+	// A sub-agent working in another project renders there, so it stays.
+	assert.Equal(t, map[string]bool{"wtroot": true, "elsewhere": false}, archivedSet(t, store))
+}
+
+func TestArchiveCascadesOnlyToSameGroupDescendants(t *testing.T) {
+	ctx := context.Background()
+	server, store := cascadeFixture(t, filepath.Join(t.TempDir(), "nav.db"), "p", "c", "wg")
+	for _, row := range []methods.ACPNavConversation{
+		{ID: "w", WorkspacePath: "/wt", Cwd: "/wt", AgentServer: "agent", SessionID: "s-w", UpdatedAt: "2026-01-01T00:00:00Z"},
+		{ID: "chat-p", WorkspacePath: chatWorkspacePath, Cwd: "/chats/a", AgentServer: "agent", SessionID: "s-chat-p", UpdatedAt: "2026-01-01T00:00:00Z"},
+		{ID: "chat-c", WorkspacePath: chatWorkspacePath, Cwd: "/chats/b", AgentServer: "agent", SessionID: "s-chat-c", UpdatedAt: "2026-01-01T00:00:00Z"},
+	} {
+		require.NoError(t, store.UpsertConversation(ctx, row))
+	}
+	link(t, server, "c", "p")
+	link(t, server, "w", "p")  // spawned into another worktree
+	link(t, server, "wg", "w") // back in p's project below it
+	link(t, server, "chat-c", "chat-p")
+
+	_, err := server.ArchiveConversation(ctx, &methods.ACPNavArchiveConversationParams{ConversationID: "p"}, nil)
+	require.NoError(t, err)
+	_, err = server.ArchiveConversation(ctx, &methods.ACPNavArchiveConversationParams{ConversationID: "chat-p"}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]bool{"p": true, "c": true, "w": false, "wg": true, "chat-p": true, "chat-c": true}, archivedSet(t, store))
+}
+
+func TestOpenReconcileLeavesOtherGroupDescendants(t *testing.T) {
+	ctx := context.Background()
+	dbPath := filepath.Join(t.TempDir(), "nav.db")
+	server, store := cascadeFixture(t, dbPath, "p", "c")
+	require.NoError(t, store.UpsertConversation(ctx, methods.ACPNavConversation{ID: "w", WorkspacePath: "/wt", Cwd: "/wt", AgentServer: "agent", SessionID: "s-w", UpdatedAt: "2026-01-01T00:00:00Z"}))
+	link(t, server, "c", "p")
+	link(t, server, "w", "p")
+	// Archive the parent alone, as an older build without the cascade would.
+	_, err := store.db.ExecContext(ctx, `UPDATE conversations SET archived = 1 WHERE id = 'p'`)
+	require.NoError(t, err)
+	require.NoError(t, server.Close())
+
+	reopened, err := Open(ctx, dbPath)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = reopened.Close() })
+	assert.Equal(t, map[string]bool{"p": true, "c": true, "w": false}, archivedSet(t, reopened))
+}
+
+func TestInsertUnderArchivedParentInAnotherGroupStaysActive(t *testing.T) {
+	ctx := context.Background()
+	server, store := cascadeFixture(t, filepath.Join(t.TempDir(), "nav.db"), "p")
+	_, err := server.ArchiveConversation(ctx, &methods.ACPNavArchiveConversationParams{ConversationID: "p"}, nil)
+	require.NoError(t, err)
+	link(t, server, "w", "p")
+	link(t, server, "c", "p")
+	require.NoError(t, store.UpsertConversation(ctx, methods.ACPNavConversation{ID: "w", WorkspacePath: "/wt", Cwd: "/wt", AgentServer: "agent", UpdatedAt: "2026-01-01T00:00:00Z"}))
+	require.NoError(t, store.UpsertConversation(ctx, methods.ACPNavConversation{ID: "c", WorkspacePath: "/ws", Cwd: "/ws", AgentServer: "agent", UpdatedAt: "2026-01-01T00:00:00Z"}))
+	set := archivedSet(t, store)
+	assert.False(t, set["w"])
+	assert.True(t, set["c"])
 }
 
 func TestArchiveCascadeClosesDescendantSessionsNotRoot(t *testing.T) {
