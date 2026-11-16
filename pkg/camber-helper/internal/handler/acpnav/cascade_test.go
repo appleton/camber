@@ -115,6 +115,45 @@ func TestArchiveCascadesOnlyToSameGroupDescendants(t *testing.T) {
 	assert.Equal(t, map[string]bool{"p": true, "c": true, "w": false, "wg": true, "chat-p": true, "chat-c": true}, archivedSet(t, store))
 }
 
+func TestViewStateClearsOnlySameGroupDescendantUnread(t *testing.T) {
+	ctx := context.Background()
+	server, store := cascadeFixture(t, filepath.Join(t.TempDir(), "nav.db"), "p", "c", "wg")
+	for _, row := range []methods.ACPNavConversation{
+		{ID: "w", WorkspacePath: "/wt", Cwd: "/wt", AgentServer: "agent", SessionID: "s-w", UpdatedAt: "2026-01-01T00:00:00Z"},
+		{ID: "chat-p", WorkspacePath: chatWorkspacePath, Cwd: "/chats/a", AgentServer: "agent", SessionID: "s-chat-p", UpdatedAt: "2026-01-01T00:00:00Z"},
+		{ID: "chat-c", WorkspacePath: chatWorkspacePath, Cwd: "/chats/b", AgentServer: "agent", SessionID: "s-chat-c", UpdatedAt: "2026-01-01T00:00:00Z"},
+		{ID: "chat-w", WorkspacePath: "/ws", Cwd: "/ws", AgentServer: "agent", SessionID: "s-chat-w", UpdatedAt: "2026-01-01T00:00:00Z"},
+	} {
+		require.NoError(t, store.UpsertConversation(ctx, row))
+	}
+	link(t, server, "c", "p")
+	link(t, server, "w", "p")  // spawned into another worktree
+	link(t, server, "wg", "w") // back in p's project below it
+	link(t, server, "chat-c", "chat-p")
+	link(t, server, "chat-w", "chat-p") // spawned from a chat into a project
+	descendants := []string{"c", "w", "wg", "chat-c", "chat-w"}
+	for _, id := range descendants {
+		require.NoError(t, server.SetConversationLiveStatus(ctx, nil, "agent", "s-"+id, ConversationLiveStatusPatch{Unread: Bool(true)}))
+	}
+
+	for _, parent := range []string{"p", "chat-p"} {
+		_, err := server.SetConversationViewState(ctx, &methods.ACPNavSetConversationViewStateParams{
+			AgentServer: "agent", SessionID: "s-" + parent, Active: true,
+		}, nil)
+		require.NoError(t, err)
+	}
+
+	state, err := server.List(ctx, &methods.ACPNavListParams{}, nil)
+	require.NoError(t, err)
+	unread := map[string]bool{}
+	for _, c := range state.Conversations {
+		unread[c.ID] = c.LiveStatus != nil && c.LiveStatus.Unread
+	}
+	assert.Equal(t, map[string]bool{"c": false, "w": true, "wg": false, "chat-c": false, "chat-w": true}, map[string]bool{
+		"c": unread["c"], "w": unread["w"], "wg": unread["wg"], "chat-c": unread["chat-c"], "chat-w": unread["chat-w"],
+	})
+}
+
 func TestOpenReconcileLeavesOtherGroupDescendants(t *testing.T) {
 	ctx := context.Background()
 	dbPath := filepath.Join(t.TempDir(), "nav.db")

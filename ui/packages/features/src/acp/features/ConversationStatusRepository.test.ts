@@ -276,6 +276,48 @@ describe("ACPConversationStatusRepositoryWriter", () => {
       expect(notificationRepo.dismiss).not.toHaveBeenCalledWith(sessionId("s-other"), "agent-a");
     });
 
+    it("leaves other-worktree descendants but clears same-group ones below them", () => {
+      const notificationRepo = notifications();
+      const repo = new ACPConversationStatusRepositoryWriter(notificationRepo);
+      const ids = ["parent", "elsewhere", "back-home"];
+      repo.syncLiveSessions(
+        ids.map((id) => ({
+          conversationId: id,
+          sessionId: sessionId(`s-${id}`),
+          agentServer: "agent-a",
+          working: false,
+          waitingForUser: false,
+        })),
+      );
+      for (const id of ["elsewhere", "back-home"]) {
+        repo.markUnread(sessionId(`s-${id}`), "agent-a");
+      }
+      vi.mocked(notificationRepo.dismiss).mockClear();
+      const summary = (id: string, cwd: string, parentId?: string) => ({
+        id,
+        parentId,
+        workspacePath: "/ws",
+        cwd,
+        sessionId: `s-${id}`,
+        agentServer: "agent-a",
+      });
+
+      repo.clearDescendantUnread("parent", [
+        summary("parent", "/ws"),
+        summary("elsewhere", "/wt", "parent"),
+        summary("back-home", "/ws", "elsewhere"),
+      ]);
+
+      const unread = (id: string) =>
+        repo.getConversationStatus(sessionId(`s-${id}`), "agent-a").unread;
+      expect(unread("elsewhere")).toBe(true);
+      expect(unread("back-home")).toBe(false);
+      expect(notificationRepo.dismiss).not.toHaveBeenCalledWith(
+        sessionId("s-elsewhere"),
+        "agent-a",
+      );
+    });
+
     it("survives parent cycles", () => {
       const { repo, summaries, unread } = setup();
       repo.markUnread(sessionId("s-child"), "agent-a");

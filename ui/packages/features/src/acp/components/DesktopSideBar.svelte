@@ -54,7 +54,6 @@
   import ConversationGroup from "./sidebar/ConversationGroup.svelte";
   import {
     buildConversationTree,
-    collectDescendantIds,
     hasAttentionDescendant,
     sliceVisibleSessions,
   } from "./sidebar/conversationTree";
@@ -69,6 +68,7 @@
   } from "./chat/desktopSystemContextMenu";
   import ConfirmationDialog from "./ui/ConfirmationDialog.svelte";
   import { getOptionalACPConnectionPoolContext } from "../connectionPoolContext";
+  import { collectSubAgentDescendants, sharesSidebarGroup } from "../conversationDescendants";
   import ACPLogCaptureConfirmation from "./sidebar/ACPLogCaptureConfirmation.svelte";
   import { acpLogCaptureMenuAction, type ACPLogCaptureTarget } from "./sidebar/acpLogCapture";
   import SidebarNavButton from "./sidebar/SidebarNavButton.svelte";
@@ -485,18 +485,6 @@
   // Whether a conversation's own row is rendered right now, i.e. whether its
   // sub-agents can nest beneath it. Reads only section/collapse state, never
   // the tree, so it cannot cycle.
-  // Rows group by working directory (projects and worktrees) or into Chats.
-  function sharesSidebarGroup(
-    child: ACPConversationSummary,
-    ancestor: ACPConversationSummary,
-  ): boolean {
-    const childIsChat = isACPChatConversation(child);
-    if (childIsChat || isACPChatConversation(ancestor)) {
-      return childIsChat && isACPChatConversation(ancestor);
-    }
-    return child.cwd === ancestor.cwd;
-  }
-
   function isParentRowRendered(parent: ACPConversationSummary): boolean {
     if (exitingConversationIds.has(parent.id)) return false;
     if (isACPChatConversation(parent)) return chatsSectionContentVisible;
@@ -1360,10 +1348,10 @@
     // search, collapsed containers and flattened grandchildren must not hide any.
     // Only descendants that render as its sub-agents (same project, worktree or
     // Chats group) go with it; one working in another worktree stays.
-    const descendants = collectDescendantIds(
+    const descendants = collectSubAgentDescendants(
       navSessions.filter((item) => !exitingConversationIds.has(item.id)),
       session.id,
-    ).filter((child) => sharesSidebarGroup(child, session));
+    );
     if (descendants.length === 0) return descendants;
     cascadedArchives.set(session.id, descendants);
     for (const child of descendants) setConversationExiting(child.id, true);
@@ -1411,11 +1399,8 @@
       // The tree kept running during the undo countdown and the parent archive:
       // pick up sub-agents spawned since the snapshot was taken.
       const known = new Set(cascaded.map((child) => child.id));
-      const spawned = collectDescendantIds(navSessions, session.id).filter(
-        (child) =>
-          !known.has(child.id) &&
-          !exitingConversationIds.has(child.id) &&
-          sharesSidebarGroup(child, session),
+      const spawned = collectSubAgentDescendants(navSessions, session.id).filter(
+        (child) => !known.has(child.id) && !exitingConversationIds.has(child.id),
       );
       for (const child of spawned) setConversationExiting(child.id, true);
       await archiveCascadedDescendants([...cascaded, ...spawned]);

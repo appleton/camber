@@ -677,36 +677,48 @@ func (s *Server) SetConversationViewState(ctx context.Context, req *methods.ACPN
 }
 
 // descendantLiveStatusKeys returns the live status keys of every conversation
-// descended (via ParentID) from the conversation bound to key. Cycle-safe.
+// that renders as a sub-agent of the conversation bound to key: descended via
+// control-state ParentID links and in the same sidebar group (see
+// sidebarGroup). The walk continues through descendants in other groups, so
+// same-group conversations below them still count, matching the archive
+// cascade. Cycle-safe.
 func (s *Server) descendantLiveStatusKeys(ctx context.Context, key string) ([]string, error) {
 	state, err := s.store.List(ctx)
 	if err != nil {
 		return nil, err
 	}
 	children := map[string][]methods.ACPNavConversation{}
-	var queue []string
-	seen := map[string]bool{}
+	var roots []methods.ACPNavConversation
 	for _, conversation := range state.Conversations {
-		if conversationKey, ok := liveStatusKey(conversation.AgentServer, conversation.SessionID); ok && conversationKey == key && !seen[conversation.ID] {
-			seen[conversation.ID] = true
-			queue = append(queue, conversation.ID)
+		if conversationKey, ok := liveStatusKey(conversation.AgentServer, conversation.SessionID); ok && conversationKey == key {
+			roots = append(roots, conversation)
 		}
 		if conversation.ParentID != "" && conversation.ParentID != conversation.ID {
 			children[conversation.ParentID] = append(children[conversation.ParentID], conversation)
 		}
 	}
 	var keys []string
-	for len(queue) > 0 {
-		id := queue[0]
-		queue = queue[1:]
-		for _, child := range children[id] {
-			if seen[child.ID] {
-				continue
-			}
-			seen[child.ID] = true
-			queue = append(queue, child.ID)
-			if childKey, ok := liveStatusKey(child.AgentServer, child.SessionID); ok && childKey != key {
-				keys = append(keys, childKey)
+	added := map[string]bool{key: true}
+	for _, root := range roots {
+		rootGroup := sidebarGroup(root.WorkspacePath, root.Cwd)
+		seen := map[string]bool{root.ID: true}
+		queue := []string{root.ID}
+		for len(queue) > 0 {
+			id := queue[0]
+			queue = queue[1:]
+			for _, child := range children[id] {
+				if seen[child.ID] {
+					continue
+				}
+				seen[child.ID] = true
+				queue = append(queue, child.ID)
+				if sidebarGroup(child.WorkspacePath, child.Cwd) != rootGroup {
+					continue
+				}
+				if childKey, ok := liveStatusKey(child.AgentServer, child.SessionID); ok && !added[childKey] {
+					added[childKey] = true
+					keys = append(keys, childKey)
+				}
 			}
 		}
 	}
