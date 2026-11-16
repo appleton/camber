@@ -31,7 +31,7 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 	root.PersistentFlags().StringVar(&instanceID, "instance", os.Getenv("CAMBER_INSTANCE_ID"), "Desktop instance ID (otherwise use inherited context or the unique running instance)")
 	// No flag default: --help must never print the token. CAMBER_CALLER_TOKEN
 	// is read at dispatch time instead.
-	root.PersistentFlags().StringVar(&callerToken, "caller-token", "", "Caller token from your Camber host context (default $CAMBER_CALLER_TOKEN); proves which conversation is asking. Needed for permission-bypass modes on chat spawn and chat config set, and for chat send and chat steer to conversations in a permission-bypass mode")
+	root.PersistentFlags().StringVar(&callerToken, "caller-token", "", "Caller token from your Camber host context (default $CAMBER_CALLER_TOKEN); proves which conversation is asking. Needed for permission-bypass modes on chat subagent, chat new and chat config set, and for chat send and chat steer to conversations in a permission-bypass mode; on chat new it also records your conversation as the origin")
 	root.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Print structured JSON (NDJSON when following)")
 	root.PersistentFlags().DurationVar(&timeout, "timeout", 10*time.Minute, "Deadline for each desktop request (including workspace setup)")
 	root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
@@ -214,7 +214,74 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 	})
 	configFlags(set)
 	set.Flags().String("value-json", "", "JSON string or boolean value for KEY")
-	spawn := add(chat, "spawn [PARENT]", "Create a child and apply configuration before its initial prompt", "chat.spawn", cobra.MaximumNArgs(1), func(cmd *cobra.Command, args []string) (map[string]any, error) {
+	// creationFlags are the task and configuration flags every creation
+	// command shares.
+	creationFlags := func(cmd *cobra.Command) {
+		configFlags(cmd)
+		cmd.Flags().String("agent", "", "Destination agent ID")
+		cmd.Flags().String("text", "", "Initial prompt, @file, or @- for stdin")
+		cmd.Flags().String("request-id", "", "Caller-supplied request ID")
+		cmd.Flags().String("idempotency-key", "", "Alias for --request-id")
+	}
+	creationTask := func(cmd *cobra.Command) (map[string]any, error) {
+		cfg, err := configuration(cmd, nil)
+		if err != nil {
+			return nil, err
+		}
+		text, err := readText(getString(cmd, "text"), cmd.InOrStdin())
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"agentServer": getString(cmd, "agent"), "config": cfg, "model": getString(cmd, "model"), "effort": getString(cmd, "effort"), "mode": getString(cmd, "mode"), "text": text, "requestId": getString(cmd, "request-id")}, nil
+	}
+	subagent := add(chat, "subagent [PARENT]", "Create a sub-agent that works in the parent's workspace, nested under and archived with the parent", "chat.subagent", cobra.MaximumNArgs(1), func(cmd *cobra.Command, args []string) (map[string]any, error) {
+		for _, name := range []string{"workspace", "worktree", "project", "new-worktree"} {
+			if cmd.Flags().Changed(name) {
+				return nil, fmt.Errorf("chat subagent always runs in the parent's workspace and does not accept --%s; use camber chat new (--workspace PATH, or --project PATH [--new-worktree NAME]) to start a separate conversation elsewhere", name)
+			}
+		}
+		parent := os.Getenv("CAMBER_CONVERSATION_ID")
+		if len(args) > 0 {
+			parent = args[0]
+		}
+		if parent == "" {
+			return nil, errors.New("a parent conversation ID is required (or set CAMBER_CONVERSATION_ID)")
+		}
+		input, err := creationTask(cmd)
+		if err != nil {
+			return nil, err
+		}
+		input["parentId"] = parent
+		return input, nil
+	})
+	creationFlags(subagent)
+	// Defined only to explain the rejection rather than report an unknown flag.
+	for _, name := range []string{"workspace", "worktree", "project", "new-worktree"} {
+		subagent.Flags().String(name, "", "Not supported: use chat new")
+		_ = subagent.Flags().MarkHidden(name)
+	}
+	newChat := add(chat, "new", "Create an independent conversation in a workspace, project, or new worktree", "chat.new", cobra.NoArgs, func(cmd *cobra.Command, args []string) (map[string]any, error) {
+		input, err := creationTask(cmd)
+		if err != nil {
+			return nil, err
+		}
+		worktree := getString(cmd, "new-worktree")
+		project := getPath(cmd, "project")
+		if project == "" && worktree != "" {
+			// A new worktree needs its root project; default to the caller's.
+			project = absPath(os.Getenv("CAMBER_PROJECT_PATH"))
+		}
+		input["workspacePath"] = getPath(cmd, "workspace")
+		input["projectPath"] = project
+		input["worktreeName"] = worktree
+		return input, nil
+	})
+	creationFlags(newChat)
+	newChat.Flags().String("workspace", "", "Existing registered workspace path")
+	newChat.Flags().String("worktree", "", "Alias for --workspace")
+	newChat.Flags().String("project", "", "Registered project path (default $CAMBER_PROJECT_PATH with --new-worktree)")
+	newChat.Flags().String("new-worktree", "", "New worktree name, created from --project")
+	spawn := add(chat, "spawn [PARENT]", "Legacy alias: create a child and apply configuration before its initial prompt (prefer chat subagent or chat new)", "chat.spawn", cobra.MaximumNArgs(1), func(cmd *cobra.Command, args []string) (map[string]any, error) {
 		parent := os.Getenv("CAMBER_CONVERSATION_ID")
 		if len(args) > 0 {
 			parent = args[0]

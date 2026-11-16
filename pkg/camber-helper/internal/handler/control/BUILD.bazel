@@ -30,6 +30,7 @@ go_test(
     name = "control_test",
     srcs = [
         "config_recovery_test.go",
+        "create_test.go",
         "lifecycle_test.go",
         "list_test.go",
         "permission_test.go",

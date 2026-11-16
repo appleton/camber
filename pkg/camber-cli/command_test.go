@@ -273,6 +273,8 @@ func TestPathFlagsAreSentAbsolute(t *testing.T) {
 		{[]string{"chat", "spawn", "--text", "x", "--workspace", "."}, "workspacePath", wd},
 		{[]string{"chat", "spawn", "--text", "x", "--worktree", "sub/../wt"}, "workspacePath", filepath.Join(wd, "wt")},
 		{[]string{"chat", "spawn", "--text", "x", "--project", "../proj"}, "projectPath", filepath.Join(filepath.Dir(wd), "proj")},
+		{[]string{"chat", "new", "--text", "x", "--workspace", "."}, "workspacePath", wd},
+		{[]string{"chat", "new", "--text", "x", "--project", "../proj"}, "projectPath", filepath.Join(filepath.Dir(wd), "proj")},
 		{[]string{"agents", "inspect", "codex", "--workspace", "."}, "workspacePath", wd},
 		{[]string{"worktrees", "list", "--project", "."}, "projectPath", wd},
 		{[]string{"worktrees", "inspect", "wt"}, "workspacePath", filepath.Join(wd, "wt")},
@@ -295,7 +297,7 @@ func TestPathFlagsAreSentAbsolute(t *testing.T) {
 
 func TestHelpNeverPrintsCallerToken(t *testing.T) {
 	t.Setenv("CAMBER_CALLER_TOKEN", "tok-secret-env")
-	for _, args := range [][]string{{"--help"}, {"chat", "send", "--help"}, {"chat", "spawn", "--help"}} {
+	for _, args := range [][]string{{"--help"}, {"chat", "send", "--help"}, {"chat", "spawn", "--help"}, {"chat", "subagent", "--help"}, {"chat", "new", "--help"}} {
 		output, err := execute(t, &fakeCaller{}, args...)
 		require.NoError(t, err, args)
 		assert.Contains(t, output, "--caller-token", args)
@@ -343,4 +345,77 @@ func TestSpawnProjectEnvironmentDefaultDoesNotOverrideParentWorkspace(t *testing
 	assert.Equal(t, "/env/project", spawnProject("parent", "--new-worktree", "wt"))
 	t.Setenv("CAMBER_CONVERSATION_ID", "")
 	assert.Equal(t, "/env/project", spawnProject(), "without a parent the default applies")
+}
+
+func TestSubagentMapsFlagsAndDefaultsParent(t *testing.T) {
+	t.Setenv("CAMBER_CONVERSATION_ID", "origin")
+	t.Setenv("CAMBER_PROJECT_PATH", "/env/project")
+	f := &fakeCaller{}
+	_, err := execute(t, f, "chat", "subagent", "--agent", "codex", "--model", "sol", "--effort", "high", "--mode", "plan", "--input", `{"toggle":true}`, "--text", "sub-task", "--idempotency-key", "req-1", "--caller-token", "tok")
+	require.NoError(t, err)
+	require.Len(t, f.calls, 1)
+	assert.Equal(t, "chat.subagent", f.calls[0].params["command"])
+	assert.Equal(t, "tok", f.calls[0].params["callerToken"])
+	assert.Equal(t, map[string]any{
+		"parentId": "origin", "agentServer": "codex", "model": "sol", "effort": "high", "mode": "plan",
+		"config": map[string]any{"toggle": true}, "text": "sub-task", "requestId": "req-1",
+	}, f.calls[0].params["args"], "no workspace, project or worktree fields, even with CAMBER_PROJECT_PATH set")
+
+	f = &fakeCaller{}
+	_, err = execute(t, f, "chat", "subagent", "explicit-parent", "--text", "x")
+	require.NoError(t, err)
+	require.Len(t, f.calls, 1)
+	assert.Equal(t, "explicit-parent", f.calls[0].params["args"].(map[string]any)["parentId"])
+}
+
+func TestSubagentRejectsWorkspaceFlags(t *testing.T) {
+	for _, flag := range []string{"--workspace", "--worktree", "--project", "--new-worktree"} {
+		f := &fakeCaller{}
+		_, err := execute(t, f, "chat", "subagent", "parent", "--text", "x", flag, "/somewhere")
+		require.Error(t, err, flag)
+		assert.ErrorContains(t, err, "camber chat new", flag)
+		assert.ErrorContains(t, err, flag, flag)
+		assert.Empty(t, f.calls, flag)
+	}
+	t.Setenv("CAMBER_CONVERSATION_ID", "")
+	f := &fakeCaller{}
+	_, err := execute(t, f, "chat", "subagent", "--text", "x")
+	require.ErrorContains(t, err, "parent conversation ID is required")
+	assert.Empty(t, f.calls)
+}
+
+func TestNewMapsFlagsWithoutParent(t *testing.T) {
+	t.Setenv("CAMBER_CONVERSATION_ID", "origin")
+	t.Setenv("CAMBER_PROJECT_PATH", "/env/project")
+	f := &fakeCaller{}
+	_, err := execute(t, f, "chat", "new", "--workspace", "/work/tree", "--agent", "codex", "--model", "sol", "--text", "separate", "--request-id", "req-2")
+	require.NoError(t, err)
+	require.Len(t, f.calls, 1)
+	assert.Equal(t, "chat.new", f.calls[0].params["command"])
+	args := f.calls[0].params["args"].(map[string]any)
+	_, hasParent := args["parentId"]
+	assert.False(t, hasParent, "chat new never sends a parent, even with CAMBER_CONVERSATION_ID set")
+	assert.Equal(t, "/work/tree", args["workspacePath"])
+	assert.Equal(t, "", args["projectPath"], "CAMBER_PROJECT_PATH is not a default without --new-worktree")
+	assert.Equal(t, "codex", args["agentServer"])
+	assert.Equal(t, "sol", args["model"])
+	assert.Equal(t, "separate", args["text"])
+	assert.Equal(t, "req-2", args["requestId"])
+
+	project := func(args ...string) (any, any) {
+		f := &fakeCaller{}
+		_, err := execute(t, f, append([]string{"chat", "new", "--text", "x"}, args...)...)
+		require.NoError(t, err, args)
+		require.Len(t, f.calls, 1)
+		sent := f.calls[0].params["args"].(map[string]any)
+		return sent["projectPath"], sent["worktreeName"]
+	}
+	path, worktree := project("--new-worktree", "task")
+	assert.Equal(t, "/env/project", path, "a new worktree defaults to the caller's project")
+	assert.Equal(t, "task", worktree)
+	path, _ = project("--project", "/explicit", "--new-worktree", "task")
+	assert.Equal(t, "/explicit", path)
+
+	_, err = execute(t, &fakeCaller{}, "chat", "new", "parent", "--text", "x")
+	require.Error(t, err, "chat new takes no parent argument")
 }

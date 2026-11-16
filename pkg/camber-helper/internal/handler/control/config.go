@@ -132,12 +132,13 @@ func (s *Service) configure(ctx context.Context, a Args, set bool, caller string
 		}
 	}
 	// Agent-origin calls may select a bypass mode only when the token-proven
-	// caller (the target or its parent) is live in one; see checkConfigEscalation.
+	// caller (the target, or its parent or origin) is live in one; see
+	// checkConfigEscalation.
 	refs := []View{v}
 	if set {
-		if v.ParentID != "" {
-			if parent, perr := s.view(ctx, v.ParentID, g); perr == nil {
-				refs = append(refs, parent)
+		if authority := authorityID(v); authority != "" {
+			if ref, perr := s.view(ctx, authority, g); perr == nil {
+				refs = append(refs, ref)
 			}
 		}
 		if err = s.checkConfigEscalation(a, caller, false, v, refs); err != nil {
@@ -198,7 +199,7 @@ func (s *Service) configure(ctx context.Context, a Args, set bool, caller string
 			if proven {
 				return nil
 			}
-			return escalationError("selecting "+bypassModeText(value), "the conversation or its parent")
+			return escalationError("selecting "+bypassModeText(value), "the conversation, or its parent or origin")
 		}
 		if err = s.applyConfig(ctx, &v, a, guard, g); err != nil {
 			return nil, err
@@ -458,7 +459,7 @@ func recheckPendingBypass(v View, pending map[string]any, mode string, guard byp
 
 func guardBypass(guard bypassGuard, value string) error {
 	if guard == nil {
-		return escalationError("selecting "+bypassModeText(value), "the conversation or its parent")
+		return escalationError("selecting "+bypassModeText(value), "the conversation, or its parent or origin")
 	}
 	return guard(value)
 }
@@ -966,8 +967,8 @@ func (s *Service) provenDangerousCaller(caller string, refs ...View) bool {
 // checkPromptEscalation gates control prompts (send, steer) and
 // control-origin session restores. A conversation that runs, or would resume
 // from saved selections, in a permission-bypass mode accepts them only from a
-// token-proven caller that is the conversation itself, or its parent while the
-// parent is live in a bypass mode.
+// token-proven caller that is the conversation itself, or its parent or origin
+// (see authorityID) while that conversation is live in a bypass mode.
 func (s *Service) checkPromptEscalation(ctx context.Context, v View, caller, action string, g *glsp.Context) error {
 	if !s.conversationDangerous(v) || s.provenPromptCaller(ctx, caller, v, g) {
 		return nil
@@ -1001,11 +1002,12 @@ func isPermissionEscalation(err error) bool {
 }
 
 func promptEscalationError(v View, action string) error {
-	return &methods.JSONRPCError{Code: methods.CamberErrorCodeEntityInvalid, Message: "PERMISSION_ESCALATION: conversation " + v.ID + " runs, or would resume, in a permission-bypass mode, so " + action + " it is only allowed when the request carries --caller-token proving it comes from that conversation, or from its parent while the parent is running in a permission-bypass mode right now. Pass the callerToken from your Camber host context, or ask the user to act on the conversation in the Camber desktop app."}
+	return &methods.JSONRPCError{Code: methods.CamberErrorCodeEntityInvalid, Message: "PERMISSION_ESCALATION: conversation " + v.ID + " runs, or would resume, in a permission-bypass mode, so " + action + " it is only allowed when the request carries --caller-token proving it comes from that conversation, or from its parent (or, for a conversation started with chat new, the conversation that created it) while that one is running in a permission-bypass mode right now. Pass the callerToken from your Camber host context, or ask the user to act on the conversation in the Camber desktop app."}
 }
 
 // provenPromptCaller reports whether the token-proven caller is the target
-// itself, or the target's control parent live in a permission-bypass mode.
+// itself, or the target's authority (control parent or origin) live in a
+// permission-bypass mode.
 func (s *Service) provenPromptCaller(ctx context.Context, caller string, v View, g *glsp.Context) bool {
 	if caller == "" {
 		return false
@@ -1013,11 +1015,22 @@ func (s *Service) provenPromptCaller(ctx context.Context, caller string, v View,
 	if caller == v.ID {
 		return !v.Archived
 	}
-	if v.ParentID == "" || caller != v.ParentID {
+	authority := authorityID(v)
+	if authority == "" || caller != authority {
 		return false
 	}
-	parent, err := s.view(ctx, v.ParentID, g)
-	return err == nil && s.provenDangerousCaller(caller, parent)
+	ref, err := s.view(ctx, authority, g)
+	return err == nil && s.provenDangerousCaller(caller, ref)
+}
+
+// authorityID names the conversation that may act for v in the
+// permission-bypass rules besides v itself: its control parent for a
+// sub-agent, else the token-proven origin that created it with chat.new.
+func authorityID(v View) string {
+	if v.ParentID != "" {
+		return v.ParentID
+	}
+	return v.OriginID
 }
 
 // configNamesMode reports whether config selects a mode option, judged by the
@@ -1056,7 +1069,8 @@ func (s *Service) checkSpawnEscalation(a Args, caller string, parent View, hasPa
 }
 
 // checkConfigEscalation rejects a bypass value for config.set unless the
-// proven caller is the target or its parent and is live in a bypass mode.
+// proven caller is the target or its parent or origin and is live in a bypass
+// mode.
 // Without a schema it judges raw values, so it can run before agent calls.
 func (s *Service) checkConfigEscalation(a Args, caller string, schema bool, v View, refs []View) error {
 	value := explicitDangerousValue(a)
@@ -1070,5 +1084,5 @@ func (s *Service) checkConfigEscalation(a Args, caller string, schema bool, v Vi
 	if value == "" || s.provenDangerousCaller(caller, refs...) {
 		return nil
 	}
-	return escalationError("selecting "+bypassModeText(value), "the conversation or its parent")
+	return escalationError("selecting "+bypassModeText(value), "the conversation, or its parent or origin")
 }

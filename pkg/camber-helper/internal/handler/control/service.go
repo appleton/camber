@@ -104,20 +104,27 @@ type Record struct {
 // View merges the navigation row with the durable control record. The parent
 // and root links live only on the nav row (promoted as v.ParentID/v.RootID) so
 // the flat JSON has a single parentId/rootId; they are persisted via storedRecord.
+//
+// OriginID names the token-proven conversation that created an independent
+// conversation (chat.new). It is not a parent link: the desktop never nests,
+// archives or silences by it. It only makes the origin an authority for
+// permission-bypass rules, as the parent is for a sub-agent.
 type View struct {
 	methods.ACPNavConversation
 	Record
+	OriginID string `json:"originId,omitempty"`
 }
 
 // storedRecord is the persisted shape of "conversation/<id>" control state,
-// which carries top-level parentId/rootId alongside the Record fields.
+// which carries top-level parentId/rootId/originId alongside the Record fields.
 type storedRecord struct {
 	Record
 	ParentID string `json:"parentId,omitempty"`
 	RootID   string `json:"rootId,omitempty"`
+	OriginID string `json:"originId,omitempty"`
 }
 
-var commands = []string{"actions.list", "actions.describe", "skill.show", "context", "status", "agents.list", "agents.inspect", "agents.config.options", "projects.list", "worktrees.list", "worktrees.inspect", "worktrees.create", "worktrees.remove", "chat.list", "chat.inspect", "chat.children", "chat.spawn", "chat.send", "chat.steer", "chat.stop", "chat.poll", "chat.output", "chat.snapshot", "chat.config.list", "chat.config.set"}
+var commands = []string{"actions.list", "actions.describe", "skill.show", "context", "status", "agents.list", "agents.inspect", "agents.config.options", "projects.list", "worktrees.list", "worktrees.inspect", "worktrees.create", "worktrees.remove", "chat.list", "chat.inspect", "chat.children", "chat.subagent", "chat.new", "chat.spawn", "chat.send", "chat.steer", "chat.stop", "chat.poll", "chat.output", "chat.snapshot", "chat.config.list", "chat.config.set"}
 
 // Dispatch runs one control action. Results and errors alike pass through
 // caller-token redaction: an error can quote agent or nav text too.
@@ -234,8 +241,12 @@ func (s *Service) dispatch(ctx context.Context, params *methods.ControlDispatchP
 		out, err = s.list(ctx, a, params.Command == "chat.children", g)
 	case "chat.inspect":
 		out, err = s.displayView(ctx, a.ConversationID, g)
+	case "chat.subagent":
+		out, err = s.create(ctx, a, caller, createSubagent, g)
+	case "chat.new":
+		out, err = s.create(ctx, a, caller, createIndependent, g)
 	case "chat.spawn":
-		out, err = s.spawn(ctx, a, caller, g)
+		out, err = s.create(ctx, a, caller, createLegacySpawn, g)
 	case "chat.send":
 		out, err = s.send(ctx, a, caller, g)
 	case "chat.steer":
@@ -281,6 +292,7 @@ func (s *Service) viewFrom(ctx context.Context, c methods.ACPNavConversation) (V
 	if v.RootID == "" {
 		v.RootID = stored.RootID
 	}
+	v.OriginID = stored.OriginID
 	if err == nil && v.Status == "preparing" && v.PreparationEpoch != "" && v.PreparationEpoch != s.log.ProcessEpoch() {
 		v.Status = "interrupted"
 		v.Error = "helper restarted during preparation; inspect owned resources before retrying"
@@ -339,7 +351,7 @@ func (s *Service) projects(ctx context.Context, command string, a Args, g *glsp.
 	return map[string]any{"projects": out}, nil
 }
 func (s *Service) save(ctx context.Context, v View) error {
-	return s.nav.WriteControlState(ctx, "conversation/"+v.ID, storedRecord{Record: v.Record, ParentID: v.ParentID, RootID: v.RootID})
+	return s.nav.WriteControlState(ctx, "conversation/"+v.ID, storedRecord{Record: v.Record, ParentID: v.ParentID, RootID: v.RootID, OriginID: v.OriginID})
 }
 func captureConfig(value any) (json.RawMessage, json.RawMessage) {
 	raw, _ := json.Marshal(value)
@@ -373,17 +385,49 @@ func (s *Service) probe(ctx context.Context, a Args, g *glsp.Context) (any, erro
 	return map[string]any{"agentServer": a.AgentServer, "configOptions": options, "modes": modes}, nil
 }
 
-func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Context) (any, error) {
+// createMode selects how create relates a new conversation to the
+// conversation that asked for it.
+type createMode int
+
+const (
+	// createLegacySpawn is chat.spawn: an optional parent link, and any
+	// registered workspace. Kept unchanged for existing callers.
+	createLegacySpawn createMode = iota
+	// createSubagent is chat.subagent: a sub-agent that runs in its parent's
+	// workspace and is nested under, archived with and silenced by the parent.
+	createSubagent
+	// createIndependent is chat.new: a separate conversation in an explicit
+	// workspace with no parent link. Its token-proven creator is its origin.
+	createIndependent
+)
+
+// create prepares a conversation, applies its configuration, then submits
+// its task. chat.subagent, chat.new and the legacy chat.spawn share it; mode
+// decides the workspace, the parent or origin link, and the authority for
+// permission-bypass modes.
+func (s *Service) create(ctx context.Context, a Args, caller string, mode createMode, g *glsp.Context) (any, error) {
 	if strings.TrimSpace(a.Text) == "" {
 		return nil, pkgerrors.Errorf("text is required")
 	}
+	if err := checkCreateArgs(a, mode); err != nil {
+		return nil, err
+	}
+	// Only a token-proven caller becomes an origin; unproven requests have none.
+	origin := ""
+	if mode == createIndependent {
+		origin = caller
+	}
 	raw, _ := json.Marshal(a)
+	if mode != createLegacySpawn {
+		// The action is part of the request, so one requestId cannot be
+		// replayed as a different kind of conversation.
+		raw = append([]byte(mode.action()+"\x00"), raw...)
+	}
 	sum := sha256.Sum256(raw)
 	requestHash := hex.EncodeToString(sum[:])
 	id := uuid.NewString()
 	if a.RequestID != "" {
-		digest := sha256.Sum256([]byte(a.ParentID + "\x00" + a.RequestID))
-		id = "child-" + hex.EncodeToString(digest[:16])
+		id = requestConversationID(a, mode, origin)
 	}
 	release, lockErr := s.lockConversation(ctx, id)
 	if lockErr != nil {
@@ -391,40 +435,8 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 	}
 	defer release()
 	if a.RequestID != "" {
-		var saved Record
-		if e := s.nav.ReadControlState(ctx, "conversation/"+id, &saved); e != nil {
-			return nil, e
-		}
-		if saved.RequestHash != "" && saved.RequestHash != requestHash {
-			return nil, pkgerrors.Errorf("requestId was already used with different arguments")
-		}
-		existing, e := s.view(ctx, id, g)
-		if e != nil && saved.Status != "" {
-			return nil, pkgerrors.Errorf("previous spawn %s did not finish preparation: %s", id, saved.Error)
-		}
-		if e == nil {
-			if existing.RequestHash != requestHash {
-				return nil, pkgerrors.Errorf("requestId was already used with different arguments")
-			}
-			// Spawn retries refer to the initial task even after the child
-			// has received further turns through the desktop or CLI.
-			var initial Record
-			if readErr := s.nav.ReadControlState(ctx, "turn/"+id+"/"+a.RequestID, &initial); readErr != nil {
-				return nil, readErr
-			}
-			if initial.TurnID != "" {
-				if initial.Status == "failed" {
-					return nil, pkgerrors.Errorf("previous spawn %s failed: %s", id, initial.Error)
-				}
-				return map[string]any{"conversation": existing, "turnId": initial.TurnID, "cursor": initial.Cursor, "configOptions": initial.ConfigOptions}, nil
-			}
-			if existing.Status == "failed" {
-				return nil, pkgerrors.Errorf("previous spawn %s failed: %s", id, existing.Error)
-			}
-			if existing.Status == "preparing" || (existing.Status == "interrupted" && existing.TurnID == "") {
-				return nil, pkgerrors.Errorf("spawn preparation was interrupted; inspect conversation %s before retrying", id)
-			}
-			return nil, pkgerrors.Errorf("initial spawn turn for conversation %s is unavailable; inspect the conversation before retrying", id)
+		if out, done, err := s.replayCreate(ctx, id, a, mode, requestHash, g); done {
+			return out, err
 		}
 	}
 	var parent View
@@ -438,11 +450,26 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 			return nil, pkgerrors.Errorf("parent conversation %s is archived; restore it before spawning sub-agents", a.ParentID)
 		}
 	}
+	// The authority for permission-bypass modes: the parent of a sub-agent,
+	// the origin of an independent conversation. An origin is never a source
+	// of inherited settings.
+	var originView View
+	if origin != "" {
+		if loaded, err := s.view(ctx, origin, g); err == nil {
+			originView = loaded
+		}
+	}
 	// A child may run in a permission-bypass mode (explicit or inherited) only
 	// when the token-proven caller is its parent and the parent is live in a
-	// bypass mode. Check before any side effect; the schema-aware check before
-	// the final configuration repeats it with option display names.
-	if err := s.checkSpawnEscalation(a, caller, parent, a.ParentID != ""); err != nil {
+	// bypass mode. An independent conversation may only be given one
+	// explicitly, by its live-bypass origin. Check before any side effect; the
+	// schema-aware check before the final configuration repeats it with option
+	// display names.
+	if mode == createIndependent {
+		if value := explicitDangerousValue(a); value != "" && !s.provenDangerousCaller(caller, originView) {
+			return nil, escalationError("giving a new conversation "+bypassModeText(value), "the conversation creating it")
+		}
+	} else if err := s.checkSpawnEscalation(a, caller, parent, a.ParentID != ""); err != nil {
 		return nil, err
 	}
 	for _, requested := range []string{a.WorkspacePath, a.ProjectPath} {
@@ -450,7 +477,17 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 			return nil, err
 		}
 	}
-	if a.ParentID != "" {
+	cwd := ""
+	switch {
+	case mode == createSubagent:
+		// A sub-agent shares its parent's workspace and working directory, so
+		// it renders in (and is archived with) the parent's sidebar group.
+		a.WorkspacePath = parent.WorkspacePath
+		cwd = parent.Cwd
+		if a.AgentServer == "" {
+			a.AgentServer = parent.AgentServer
+		}
+	case a.ParentID != "":
 		// An explicit project wins over the parent's workspace, exactly as
 		// without a parent: the child runs in that project (or a new worktree
 		// of it) rather than silently in the parent's workspace.
@@ -485,6 +522,9 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 	if a.WorkspacePath == "" {
 		return nil, pkgerrors.Errorf("workspacePath or parentId is required")
 	}
+	if cwd == "" {
+		cwd = a.WorkspacePath
+	}
 	if a.WorktreeName != "" {
 		root, err := s.registeredRootProject(ctx, a.ProjectPath, g)
 		if err != nil {
@@ -492,13 +532,17 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 		}
 		a.ProjectPath = root
 	}
-	v := View{ACPNavConversation: methods.ACPNavConversation{ID: id, WorkspacePath: a.WorkspacePath, Cwd: a.WorkspacePath, AgentServer: a.AgentServer, Title: compactText(a.Text, 256), WorkingDirectories: []string{a.WorkspacePath}}, Record: Record{Task: compactText(a.Text, 4096), RequestHash: requestHash, Status: "preparing", PreparationEpoch: s.log.ProcessEpoch()}}
-	v.ParentID, v.RootID = a.ParentID, parent.RootID
-	if v.RootID == "" {
-		v.RootID = a.ParentID
-	}
-	if v.RootID == "" {
-		v.RootID = id
+	v := View{ACPNavConversation: methods.ACPNavConversation{ID: id, WorkspacePath: a.WorkspacePath, Cwd: cwd, AgentServer: a.AgentServer, Title: compactText(a.Text, 256), WorkingDirectories: []string{cwd}}, Record: Record{Task: compactText(a.Text, 4096), RequestHash: requestHash, Status: "preparing", PreparationEpoch: s.log.ProcessEpoch()}}
+	if mode == createIndependent {
+		v.OriginID = origin
+	} else {
+		v.ParentID, v.RootID = a.ParentID, parent.RootID
+		if v.RootID == "" {
+			v.RootID = a.ParentID
+		}
+		if v.RootID == "" {
+			v.RootID = id
+		}
 	}
 	if err := s.save(ctx, v); err != nil {
 		return nil, err
@@ -552,7 +596,9 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 	if _, err = s.nav.UpsertConversation(ctx, &methods.ACPNavUpsertConversationParams{Conversation: v.ACPNavConversation}, g); err != nil {
 		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
-	if parent.AgentServer == v.AgentServer {
+	// Only a parent passes settings on; an independent conversation has none.
+	inherit := a.ParentID != "" && parent.AgentServer == v.AgentServer
+	if inherit {
 		parentLive := false
 		if source, ok := s.agent.(interface {
 			SessionConfiguration(string, string) (json.RawMessage, json.RawMessage, bool)
@@ -573,13 +619,18 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
 	// A setter's new schema can give a pending selection a bypass meaning;
-	// applyConfig puts it to the spawn rule (see checkSpawnEscalation).
-	parentProven := a.ParentID != "" && s.provenDangerousCaller(caller, parent)
+	// applyConfig puts it to the creation rule (see checkSpawnEscalation).
+	authorityProven := a.ParentID != "" && s.provenDangerousCaller(caller, parent)
+	what, who := "giving a child ", "the parent conversation"
+	if mode == createIndependent {
+		authorityProven = s.provenDangerousCaller(caller, originView)
+		what, who = "giving a new conversation ", "the conversation creating it"
+	}
 	guard := func(value string) error {
-		if parentProven {
+		if authorityProven {
 			return nil
 		}
-		return escalationError("giving a child "+bypassModeText(value), "the parent conversation")
+		return escalationError(what+bypassModeText(value), who)
 	}
 	// The selected model determines which effort and mode selections can be
 	// inherited. Apply it before filtering inherited dependent values.
@@ -593,7 +644,7 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 				}
 				modelValue = explicit
 			}
-			if modelValue == "" && parent.AgentServer == v.AgentServer {
+			if modelValue == "" && inherit {
 				for _, p := range parseOptions(parent.ConfigOptions) {
 					if p.ID == o.ID {
 						if value, ok := p.Current.(string); ok && allowed(o.Options, value) {
@@ -614,7 +665,7 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 			return nil, s.abandonSpawn(ctx, &v, err, false, g)
 		}
 	}
-	if parent.AgentServer == v.AgentServer {
+	if inherit {
 		// Explicit settings win over inheritance, so only inherit the legacy
 		// mode when the caller did not set a mode option through the config map.
 		explicitMode := configSetsCategory(v.ConfigOptions, a.Config, "mode")
@@ -666,6 +717,116 @@ func (s *Service) spawn(ctx context.Context, a Args, caller string, g *glsp.Cont
 		return nil, s.abandonSpawn(ctx, &v, err, false, g)
 	}
 	return map[string]any{"conversation": v, "turnId": v.TurnID, "cursor": v.Cursor, "configOptions": v.ConfigOptions}, nil
+}
+
+// replayCreate answers a retried requestId from the conversation it already
+// created. done is false when the request is new and creation should proceed.
+func (s *Service) replayCreate(ctx context.Context, id string, a Args, mode createMode, requestHash string, g *glsp.Context) (any, bool, error) {
+	label := mode.label()
+	var saved Record
+	if e := s.nav.ReadControlState(ctx, "conversation/"+id, &saved); e != nil {
+		return nil, true, e
+	}
+	if saved.RequestHash != "" && saved.RequestHash != requestHash {
+		return nil, true, pkgerrors.Errorf("requestId was already used with different arguments")
+	}
+	existing, e := s.view(ctx, id, g)
+	if e != nil && saved.Status != "" {
+		return nil, true, pkgerrors.Errorf("previous %s %s did not finish preparation: %s", label, id, saved.Error)
+	}
+	if e != nil {
+		return nil, false, nil
+	}
+	if existing.RequestHash != requestHash {
+		return nil, true, pkgerrors.Errorf("requestId was already used with different arguments")
+	}
+	// Retries refer to the initial task even after the conversation has
+	// received further turns through the desktop or CLI.
+	var initial Record
+	if readErr := s.nav.ReadControlState(ctx, "turn/"+id+"/"+a.RequestID, &initial); readErr != nil {
+		return nil, true, readErr
+	}
+	if initial.TurnID != "" {
+		if initial.Status == "failed" {
+			return nil, true, pkgerrors.Errorf("previous %s %s failed: %s", label, id, initial.Error)
+		}
+		return map[string]any{"conversation": existing, "turnId": initial.TurnID, "cursor": initial.Cursor, "configOptions": initial.ConfigOptions}, true, nil
+	}
+	if existing.Status == "failed" {
+		return nil, true, pkgerrors.Errorf("previous %s %s failed: %s", label, id, existing.Error)
+	}
+	if existing.Status == "preparing" || (existing.Status == "interrupted" && existing.TurnID == "") {
+		return nil, true, pkgerrors.Errorf("%s preparation was interrupted; inspect conversation %s before retrying", label, id)
+	}
+	return nil, true, pkgerrors.Errorf("initial %s turn for conversation %s is unavailable; inspect the conversation before retrying", label, id)
+}
+
+// checkCreateArgs enforces each action's shape before any lookup: a sub-agent
+// always runs in its parent's workspace, and an independent conversation
+// always names its own.
+func checkCreateArgs(a Args, mode createMode) error {
+	switch mode {
+	case createSubagent:
+		if a.ParentID == "" {
+			return pkgerrors.Errorf("parentId is required: chat.subagent creates a sub-agent of an existing conversation (usually your own conversationId)")
+		}
+		if a.WorkspacePath != "" || a.ProjectPath != "" || a.WorktreeName != "" {
+			return pkgerrors.Errorf("chat.subagent always runs in the parent's workspace and does not accept workspacePath, projectPath or worktreeName (CLI --workspace, --project, --new-worktree); use chat.new (camber chat new) to start a separate conversation elsewhere, for example in its own worktree")
+		}
+	case createIndependent:
+		if a.ParentID != "" {
+			return pkgerrors.Errorf("chat.new creates an independent conversation and does not accept parentId; use chat.subagent (camber chat subagent PARENT) for a sub-agent of your own conversation")
+		}
+		if a.WorkspacePath == "" && a.ProjectPath == "" {
+			return pkgerrors.Errorf("workspacePath or projectPath is required: chat.new runs in an explicit workspace (CLI --workspace PATH, or --project PATH with optional --new-worktree NAME)")
+		}
+		if a.WorkspacePath != "" && a.ProjectPath != "" {
+			return pkgerrors.Errorf("pass workspacePath or projectPath, not both (CLI --workspace or --project)")
+		}
+		if a.WorktreeName != "" && a.ProjectPath == "" {
+			return pkgerrors.Errorf("worktreeName needs projectPath, the registered root project to create the worktree in (CLI --project with --new-worktree)")
+		}
+	}
+	return nil
+}
+
+// requestConversationID derives a retried request's conversation id. Legacy
+// spawn keeps its original derivation so existing request ids still replay.
+func requestConversationID(a Args, mode createMode, origin string) string {
+	switch mode {
+	case createSubagent:
+		digest := sha256.Sum256([]byte(mode.action() + "\x00" + a.ParentID + "\x00" + a.RequestID))
+		return "child-" + hex.EncodeToString(digest[:16])
+	case createIndependent:
+		digest := sha256.Sum256([]byte(mode.action() + "\x00" + origin + "\x00" + a.RequestID))
+		return "chat-" + hex.EncodeToString(digest[:16])
+	default:
+		digest := sha256.Sum256([]byte(a.ParentID + "\x00" + a.RequestID))
+		return "child-" + hex.EncodeToString(digest[:16])
+	}
+}
+
+func (m createMode) action() string {
+	switch m {
+	case createSubagent:
+		return "chat.subagent"
+	case createIndependent:
+		return "chat.new"
+	default:
+		return "chat.spawn"
+	}
+}
+
+// label names the request in retry errors.
+func (m createMode) label() string {
+	switch m {
+	case createSubagent:
+		return "sub-agent request"
+	case createIndependent:
+		return "chat.new request"
+	default:
+		return "spawn"
+	}
 }
 
 // abandonSpawn fails a prepared child before its prompt: it records the error,

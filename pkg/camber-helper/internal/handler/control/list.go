@@ -34,6 +34,7 @@ type ConversationSummary struct {
 	AgentServer   string                                `json:"agentServer"`
 	ParentID      string                                `json:"parentId,omitempty"`
 	RootID        string                                `json:"rootId,omitempty"`
+	OriginID      string                                `json:"originId,omitempty"`
 	Status        string                                `json:"status,omitempty"`
 	TurnID        string                                `json:"turnId,omitempty"`
 	Error         string                                `json:"error,omitempty"`
@@ -162,6 +163,7 @@ func summarize(v View) ConversationSummary {
 		AgentServer:   v.AgentServer,
 		ParentID:      v.ParentID,
 		RootID:        v.RootID,
+		OriginID:      v.OriginID,
 		Status:        v.Status,
 		TurnID:        v.TurnID,
 		Error:         capString(v.Error),

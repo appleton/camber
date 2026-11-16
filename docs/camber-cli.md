@@ -79,14 +79,38 @@ The returned option IDs and allowed values are authoritative for that agent and
 workspace. This CLI exposes live discovery through the desktop; it does not ship
 a separate complete catalog of every agent's options.
 
-## Spawn and configure a conversation
+## Create and configure a conversation
 
-Spawn accepts a batch configuration, plus shortcuts for model, reasoning effort,
+An agent creates work in one of two ways, and should choose deliberately:
+
+- `chat subagent PARENT` creates a sub-agent for a sub-task of the parent's own
+  work. It always runs in the parent's workspace and working directory; it
+  rejects `--workspace`, `--worktree`, `--project` and `--new-worktree`. The
+  desktop nests it under the parent, archives it with the parent, and folds its
+  notifications into the parent's. `PARENT` is normally your own
+  `conversationId`; it defaults to `CAMBER_CONVERSATION_ID`.
+- `chat new` creates an independent conversation for a separate piece of work,
+  for example in its own worktree, which the user sees and manages on its own.
+  It needs `--workspace PATH` (or `--worktree PATH`), or `--project PATH`,
+  optionally with `--new-worktree NAME`; with `--new-worktree`, `--project`
+  defaults to `CAMBER_PROJECT_PATH`. It has no parent: it renders as a normal
+  conversation in its workspace, is never archived with another conversation,
+  and notifies normally. When `--caller-token` proves which conversation is
+  asking, that conversation is recorded as its `originId`.
+
+Both accept a batch configuration, plus shortcuts for model, reasoning effort,
 and mode. The desktop validates and applies configuration before submitting the
 initial prompt:
 
 ```sh
-camber chat spawn PARENT \
+camber chat subagent PARENT \
+  --model MODEL \
+  --text @subtask.txt \
+  --request-id review-001 \
+  --caller-token CALLER_TOKEN \
+  --json
+
+camber chat new \
   --project /absolute/project \
   --new-worktree api-task \
   --agent AGENT \
@@ -100,22 +124,26 @@ camber chat spawn PARENT \
   --json
 ```
 
-Use `--workspace PATH` (or `--worktree PATH`) to share an existing workspace
-instead of creating one. A child runs in `--workspace` if given, else in
-`--project` (or the new worktree created from it), else in its parent's
-workspace; `--project` without `--workspace` or `--new-worktree` runs the child
-in that project whether or not there is a parent. With a parent, the
-`CAMBER_PROJECT_PATH` default applies only together with `--new-worktree`, so a
-plain `chat spawn PARENT` stays in the parent's workspace. Pass the parent ID and caller token from your
-per-prompt Camber host context (see [Caller identity](#caller-identity)). The desktop supplies the instance environment, but does not export a
-conversation ID from its shared agent process. An external wrapper may set
+Use `chat new --workspace PATH` to share an existing workspace instead of
+creating a worktree. Pass the parent ID and caller token from your per-prompt
+Camber host context (see [Caller identity](#caller-identity)). The desktop
+supplies the instance environment, but does not export a conversation ID from
+its shared agent process. An external wrapper may set
 `CAMBER_CONVERSATION_ID`, `CAMBER_PROJECT_PATH`, and
 `CAMBER_WORKSPACE_PATH` as optional defaults; `camber context` reports
 those explicit values and never guesses from UI focus. Save the returned
 conversation ID, turn ID, and cursor. A request ID makes retrying an identical
-spawn safe; do not reuse it for a different task. If no model or effort is
-specified, the desktop applies its compatible inherited settings and agent
-defaults.
+request safe; do not reuse it for a different task (for `chat new`, retry with
+the same caller token). If no model or effort is specified, a same-agent
+sub-agent inherits its parent's compatible settings, and otherwise the agent's
+defaults apply; `chat new` never inherits settings.
+
+`chat spawn PARENT` is a legacy alias kept for existing scripts. It always links
+the child to `PARENT` (so it nests and archives with it), but also accepts
+`--workspace`, `--project` and `--new-worktree`: the child runs in `--workspace`
+if given, else in `--project` (or the new worktree created from it), else in its
+parent's workspace. With a parent, the `CAMBER_PROJECT_PATH` default applies
+only together with `--new-worktree`. Prefer `chat subagent` or `chat new`.
 
 Preparation and configuration operations serialize per conversation, so a slow
 setup does not block controls for other conversations. Setup and teardown
@@ -124,7 +152,7 @@ deadline. Once a prompt starts, generation continues independently of the
 request or CLI reader.
 CLI setup uses the helper's terminal runner; its output is not yet mirrored into
 the desktop setup-output panel. A failure is returned by the CLI and recorded
-on a spawned conversation for inspection.
+on the created conversation for inspection.
 
 Inspect current values and update them before a later prompt:
 
@@ -151,14 +179,19 @@ Permission and workspace guardrails apply to every control call:
   value labelled "Full access" counts). Requested values are resolved against
   the session's option schema; a mode value the schema does not offer is
   rejected.
-- `chat spawn` gives a child a bypass mode, whether requested with `--mode` or
-  `--input` or inherited from a same-agent parent, only when the request's
-  `--caller-token` proves it comes from that parent and the parent's session is
-  loaded and running in a bypass mode right now. A parent that only has a saved
-  bypass selection (an idle conversation) does not qualify.
+- `chat subagent` (and legacy `chat spawn`) gives a child a bypass mode, whether
+  requested with `--mode` or `--input` or inherited from a same-agent parent,
+  only when the request's `--caller-token` proves it comes from that parent and
+  the parent's session is loaded and running in a bypass mode right now. A
+  parent that only has a saved bypass selection (an idle conversation) does not
+  qualify.
+- `chat new` inherits nothing, and gives the new conversation a bypass mode only
+  when it is requested explicitly and `--caller-token` proves the request comes
+  from a conversation that is loaded and running in a bypass mode right now.
+  That conversation becomes the new conversation's origin.
 - `chat config set` selects a bypass value only when `--caller-token` proves the
-  request comes from the target or its parent, and that conversation is loaded
-  and running in a bypass mode right now.
+  request comes from the target, or from its parent or origin, and that
+  conversation is loaded and running in a bypass mode right now.
 - Each value is judged again against the schema the agent returns after every
   change. If changing one value (typically the model) makes the agent label a
   value still to be applied, or the resulting mode, as a bypass mode, the same
@@ -173,7 +206,8 @@ Permission and workspace guardrails apply to every control call:
 - `chat send` and `chat steer` to a conversation that runs in a bypass mode, or
   would resume in one from its saved selections, require `--caller-token`
   proving the request comes from that conversation itself, or from its parent
-  while the parent is loaded and running in a bypass mode. Otherwise they fail
+  (or, for a `chat new` conversation, its origin) while that conversation is
+  loaded and running in a bypass mode. Otherwise they fail
   with `PERMISSION_ESCALATION` before anything is restored or sent. `chat stop`
   is never scoped.
 - Control actions restore a conversation whose saved selection is a bypass mode
@@ -194,7 +228,7 @@ Permission and workspace guardrails apply to every control call:
   worktree (symlinks resolved) or a subdirectory of one. The helper requires an
   absolute path with no `..` segments; the CLI resolves relative flag values
   before sending them.
-- `worktrees create` and `chat spawn --new-worktree` require the project path
+- `worktrees create` and `chat new --new-worktree` require the project path
   to be a registered root project itself: not a subdirectory and not a
   worktree.
 - When the CLI creates or removes a worktree, git runs isolated so the
@@ -243,13 +277,13 @@ command that uses it: as `--caller-token`, or as `CAMBER_CALLER_TOKEN` in that
 command's own environment.
 
 The token is checked where it unlocks extra permission: bypass modes on
-`chat spawn` and `chat config set`, and sending to, steering or restoring a
+`chat subagent`, `chat new` and `chat config set`, and sending to, steering or restoring a
 conversation that is (or would resume) in a bypass mode. A missing or unknown
 token makes those requests unproven; it does not otherwise fail them. Any local
 process that can reach the desktop's control socket (the same OS user) can
 still list, inspect, read or stop any conversation, send to or steer any
-conversation not in a bypass mode, and spawn non-bypass children under any
-parent. The token stops
+conversation not in a bypass mode, and create non-bypass sub-agents under any
+parent or non-bypass conversations in any registered workspace. The token stops
 one conversation borrowing another's bypass mode through the CLI; it is not a
 sandbox against a process that can read your files.
 
@@ -355,20 +389,22 @@ The current CLI command surface is:
 - `agents list`, `agents inspect`, `agents config options`
 - `projects list`
 - `worktrees list`, `inspect`, `create`, `remove`
-- `chat list`, `inspect`, `children`, `snapshot`, `spawn`, `config list`,
-  `config set`, `send`, `steer`, `stop`, `poll`, `output`, `watch`
+- `chat list`, `inspect`, `children`, `snapshot`, `subagent`, `new`, `spawn`
+  (legacy), `config list`, `config set`, `send`, `steer`, `stop`, `poll`,
+  `output`, `watch`
 - `skill show`, `skill setup`, `skill status`, `skill remove`
 - `cli install`
 
 `chat list` returns one summary row per conversation (id, title, workspace,
-agent, parent/root, status, turn, archived, updatedAt), most recently updated
+agent, parent/root, origin, status, turn, archived, updatedAt), most recently updated
 first. Archived conversations are left out unless you pass `--archived`.
 Results are paged: up to `--limit` rows per page (default 200, max 500); while
 `hasMore` is true, pass `nextCursor` back with `--cursor`. A page can end early
 if it gets large. Use `chat inspect` for full detail.
 
 `chat children CHAT` returns the same summary rows for that conversation's
-direct children, most recently updated first, and pages the same way with
+direct children (sub-agents linked by `parentId`; conversations it started with
+`chat new` carry its id as `originId` and are not children), most recently updated first, and pages the same way with
 `--limit` and `--cursor`. Archived children are always included (check each
 row's `archived`). A page cursor resumes after the last row returned; if that
 conversation was updated and moved meanwhile, the next page resumes from the
