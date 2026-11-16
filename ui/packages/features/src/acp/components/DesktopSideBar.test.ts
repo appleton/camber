@@ -118,16 +118,29 @@ describe("DesktopSideBar sub-agent nesting", () => {
     expect(present("Title c")).toBe(true);
   });
 
-  it("keeps a child top-level when the parent's CHATS section is collapsed", async () => {
+  it("keeps a child top-level in its own group when the parent lives in another", async () => {
     render(Harness, {
       props: {
         projects: [project("/repo")],
         conversations: [conv("p", ACP_CHAT_WORKSPACE_PATH), child("c", "/repo", "p")],
       },
     });
-    expect(present("Title c")).toBe(false);
+    expect(present("Title c")).toBe(true);
+    expect(screen.queryByRole("button", { name: /1 sub-agent/ })).toBeNull();
     await fireEvent.click(screen.getByRole("button", { name: /Collapse Chats/ }));
-    await waitFor(() => expect(present("Title c")).toBe(true));
+    await waitFor(() => expect(present("Title p")).toBe(false));
+    expect(present("Title c")).toBe(true);
+  });
+
+  it("renders a sub-agent in another worktree under that worktree, not its parent", () => {
+    render(Harness, {
+      props: {
+        projects: [project("/repo"), worktree("/wt", "/repo")],
+        conversations: [conv("p", "/repo"), child("c", "/wt", "p")],
+      },
+    });
+    expect(present("Title c")).toBe(true);
+    expect(screen.queryByRole("button", { name: /1 sub-agent/ })).toBeNull();
   });
 
   it("keeps a parent past the limit when a descendant is working, counting hidden descendants", () => {

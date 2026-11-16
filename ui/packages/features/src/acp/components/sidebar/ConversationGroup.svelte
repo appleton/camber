@@ -35,11 +35,6 @@
     descendantsFor?: (session: ACPConversationSummary) => readonly ACPConversationSummary[];
     isSubAgentsExpanded?: (session: ACPConversationSummary) => boolean;
     onToggleSubAgents?: (session: ACPConversationSummary) => void;
-    // Label for a nested row living outside its parent's worktree.
-    subAgentBadge?: (
-      child: ACPConversationSummary,
-      parent: ACPConversationSummary,
-    ) => string | undefined;
   }
 
   let {
@@ -61,7 +56,6 @@
     descendantsFor,
     isSubAgentsExpanded,
     onToggleSubAgents,
-    subAgentBadge,
   }: Props = $props();
 
   const sidebar = getAcpSidebarController();
@@ -120,7 +114,7 @@
 
 {#snippet sessionRow(
   session: ACPConversationSummary,
-  options: { descendants?: DescendantSummary; collapsed?: boolean; badge?: string },
+  options: { descendants?: DescendantSummary; collapsed?: boolean },
 )}
   {@const row = sidebar.rowState(session)}
   {@const rollup = options.collapsed ? options.descendants : undefined}
@@ -138,7 +132,6 @@
     working={row.working || (rollup?.working ?? 0) > 0}
     {waitingForUser}
     unread={row.unread || rollup?.unread === true}
-    badge={options.badge}
     shortcutHint={sessionShortcutHint?.(session)}
     {desktop}
     isExiting={() => isSessionExiting?.(session) === true}
@@ -156,7 +149,7 @@
     style={`margin-left: ${subAgentConnectorOffset}px`}
   >
     {#each descendants as child (`${sidebar.getSessionAgentServer(child)}:${child.id}`)}
-      {@render sessionRow(child, { badge: subAgentBadge?.(child, parent) })}
+      {@render sessionRow(child, {})}
     {/each}
   </div>
 {/snippet}

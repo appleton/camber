@@ -25,7 +25,6 @@
     waitingForUser?: boolean;
     unread?: boolean;
     shortcutHint?: string;
-    badge?: string;
     desktop?: boolean;
     // Read when the row leaves the list, so the exit animation is reserved for
     // rows the user archived rather than rows a search or collapse filtered out.
@@ -50,7 +49,6 @@
     waitingForUser = false,
     unread = false,
     shortcutHint,
-    badge,
     desktop = false,
     isExiting,
     onOpen,
@@ -157,7 +155,6 @@
     {waitingForUser}
     {unread}
     {shortcutHint}
-    {badge}
     {desktop}
     {onOpen}
     {onArchive}

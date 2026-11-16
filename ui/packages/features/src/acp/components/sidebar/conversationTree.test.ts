@@ -198,3 +198,36 @@ describe("collectDescendantIds", () => {
     expect(collectDescendantIds(cyclic, "s")).toEqual([]);
   });
 });
+
+describe("buildConversationTree canNest", () => {
+  const sameGroup =
+    (groups: Record<string, string>) =>
+    (item: ConversationTreeNode, ancestor: ConversationTreeNode) =>
+      groups[item.id] === groups[ancestor.id];
+
+  it("keeps a child in another group top-level and out of the parent's descendants", () => {
+    const tree = buildConversationTree([node("p"), node("c", "p", "p")], {
+      canNest: sameGroup({ p: "root", c: "worktree" }),
+    });
+    expect(ids(tree.topLevel)).toEqual(["p", "c"]);
+    expect(tree.isNested("c")).toBe(false);
+    expect(tree.descendantsOf("p")).toEqual([]);
+    expect(tree.topAncestorOf("c")).toBeUndefined();
+  });
+
+  it("nests a grandchild under its own-group parent when the grandparent is elsewhere", () => {
+    const tree = buildConversationTree([node("p"), node("c", "p", "p"), node("g", "c", "p")], {
+      canNest: sameGroup({ p: "root", c: "worktree", g: "worktree" }),
+    });
+    expect(ids(tree.topLevel)).toEqual(["p", "c"]);
+    expect(ids(tree.descendantsOf("c"))).toEqual(["g"]);
+    expect(tree.topAncestorOf("g")?.id).toBe("c");
+  });
+
+  it("still nests same-group children", () => {
+    const tree = buildConversationTree([node("p"), node("c", "p", "p")], {
+      canNest: sameGroup({ p: "root", c: "root" }),
+    });
+    expect(ids(tree.descendantsOf("p"))).toEqual(["c"]);
+  });
+});

@@ -63,10 +63,6 @@
     descendantsFor?: (session: ACPConversationSummary) => readonly ACPConversationSummary[];
     isSubAgentsExpanded?: (session: ACPConversationSummary) => boolean;
     onToggleSubAgents?: (session: ACPConversationSummary) => void;
-    subAgentBadge?: (
-      child: ACPConversationSummary,
-      parent: ACPConversationSummary,
-    ) => string | undefined;
     onReorderWorktrees: (parentPath: string, from: number, to: number) => void | Promise<void>;
     onWorktreeDragActiveChange: (active: boolean) => void;
   }
@@ -100,7 +96,6 @@
     descendantsFor,
     isSubAgentsExpanded,
     onToggleSubAgents,
-    subAgentBadge,
     onReorderWorktrees,
     onWorktreeDragActiveChange,
   }: Props = $props();
@@ -356,7 +351,6 @@
                 {descendantsFor}
                 {isSubAgentsExpanded}
                 {onToggleSubAgents}
-                {subAgentBadge}
               />
             </div>
           {/if}
@@ -633,7 +627,6 @@
                         {descendantsFor}
                         {isSubAgentsExpanded}
                         {onToggleSubAgents}
-                        {subAgentBadge}
                       />
                     </div>
                   </div>

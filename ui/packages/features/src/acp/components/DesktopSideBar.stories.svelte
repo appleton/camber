@@ -179,8 +179,8 @@
     rootId: "conv-1",
     ...extra,
   });
-  // conv-1 spawned a same-worktree child (with its own grandchild) and a child
-  // that lives in another worktree.
+  // conv-1 spawned a same-worktree child (with its own grandchild), which nest
+  // under it, and a child in another worktree, which renders in that worktree.
   const subAgentConversations: ACPNavConversation[] = [
     ...conversations,
     subAgent("conv-1-a", assistantPath, "Audit sidebar row states", "conv-1", {

@@ -291,10 +291,15 @@
   let projectsSectionContentVisible = $derived(!projectsSectionCollapsed);
   let searching = $derived(searchQuery.trim() !== "");
   // Spawned conversations nest under their visible parent; search stays flat.
-  // A child only nests under a parent whose row container is on screen;
-  // otherwise it stays a normal row in its own section.
+  // A child only nests under a parent in the same sidebar group (project,
+  // worktree or chats) whose row container is on screen; a sub-agent working
+  // in another worktree stays a normal row in that worktree.
   let conversationTree = $derived(
-    buildConversationTree(navSessions, { flat: searching, canNestUnder: isParentRowRendered }),
+    buildConversationTree(navSessions, {
+      flat: searching,
+      canNestUnder: isParentRowRendered,
+      canNest: sharesSidebarGroup,
+    }),
   );
   let chatSessions = $derived(
     navSessions.filter(
@@ -480,6 +485,18 @@
   // Whether a conversation's own row is rendered right now, i.e. whether its
   // sub-agents can nest beneath it. Reads only section/collapse state, never
   // the tree, so it cannot cycle.
+  // Rows group by working directory (projects and worktrees) or into Chats.
+  function sharesSidebarGroup(
+    child: ACPConversationSummary,
+    ancestor: ACPConversationSummary,
+  ): boolean {
+    const childIsChat = isACPChatConversation(child);
+    if (childIsChat || isACPChatConversation(ancestor)) {
+      return childIsChat && isACPChatConversation(ancestor);
+    }
+    return child.cwd === ancestor.cwd;
+  }
+
   function isParentRowRendered(parent: ACPConversationSummary): boolean {
     if (exitingConversationIds.has(parent.id)) return false;
     if (isACPChatConversation(parent)) return chatsSectionContentVisible;
@@ -1184,15 +1201,6 @@
   }
 
   // A sub-agent living in a different worktree/project than its parent says where.
-  function subAgentBadge(
-    child: ACPConversationSummary,
-    parent: ACPConversationSummary,
-  ): string | undefined {
-    if (child.cwd === parent.cwd) return undefined;
-    const project = navProjects.find((candidate) => candidate.path === child.cwd);
-    return project ? projectDisplayName(project) : undefined;
-  }
-
   function toggleChatsSectionCollapsed() {
     chatsSectionCollapsed = !chatsSectionCollapsed;
   }
@@ -2060,7 +2068,6 @@
                               {descendantsFor}
                               {isSubAgentsExpanded}
                               onToggleSubAgents={toggleSubAgents}
-                              {subAgentBadge}
                             />
                           </div>
                         {/if}
@@ -2266,7 +2273,6 @@
                                         {descendantsFor}
                                         {isSubAgentsExpanded}
                                         onToggleSubAgents={toggleSubAgents}
-                                        {subAgentBadge}
                                         onReorderWorktrees={handleReorderWorktrees}
                                         onWorktreeDragActiveChange={(active) =>
                                           (worktreeDragActive = active)}

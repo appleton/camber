@@ -31,12 +31,19 @@ const NO_DESCENDANTS: readonly never[] = [];
 // not among them falls back to being top-level.
 //
 // `canNestUnder` says whether an ancestor's row container is actually on screen
-// (not exiting, section expanded, ...). A conversation only nests under the
-// highest ancestor that passes; when none does it stays top-level in its own
-// section so it never vanishes. It must not depend on the tree's own output.
+// (not exiting, section expanded, ...). `canNest` says whether a conversation
+// may render under a given ancestor at all (the sidebar requires both to sit
+// in the same project, worktree or chats group). A conversation only nests
+// under the highest ancestor that passes both; when none does it stays
+// top-level in its own section so it never vanishes. Neither may depend on the
+// tree's own output.
 export function buildConversationTree<T extends ConversationTreeNode>(
   items: readonly T[],
-  options: { flat?: boolean; canNestUnder?: (ancestor: T) => boolean } = {},
+  options: {
+    flat?: boolean;
+    canNestUnder?: (ancestor: T) => boolean;
+    canNest?: (item: T, ancestor: T) => boolean;
+  } = {},
 ): ConversationTree<T> {
   const byId = new Map<string, T>();
   for (const item of items) {
@@ -75,7 +82,12 @@ export function buildConversationTree<T extends ConversationTreeNode>(
         break;
       }
       seen.add(parent.id);
-      if (!options.canNestUnder || options.canNestUnder(parent)) top = parent;
+      if (
+        (!options.canNestUnder || options.canNestUnder(parent)) &&
+        (!options.canNest || options.canNest(item, parent))
+      ) {
+        top = parent;
+      }
       current = parent;
     }
     topAncestors.set(item.id, top);
