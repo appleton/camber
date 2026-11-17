@@ -14,11 +14,14 @@ import { get } from "svelte/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ElicitationRepository } from "../../elicitation/ElicitationRepository.svelte";
 import { DEFAULT_AGENT_SERVER } from "../agentServers";
+import { ACPClient } from "../Client";
 import type { ACPConnectionPool } from "../ConnectionPool";
+import { createACPConnection } from "../createACPConnection";
 import { ACP_DEBUG_DUMP_LOADED_EVENT, type ACPDebugDumpLoadedEventDetail } from "../debugDump";
 import { ACPError } from "../errors";
 import { appState } from "../hostAdapter";
 import { ACP_PERMISSION_OVERRIDE_RULES_META_KEY } from "../permissionMeta";
+import { RPCTransport } from "../RPCTransport";
 import { buildSessionInfo } from "../sessionInfo";
 import { ACPConversationStatusRepositoryWriter } from "./ConversationStatusRepository.svelte";
 import {
@@ -3008,6 +3011,55 @@ describe("ACPSessionRepositoryWriter", () => {
     });
     expect(conn.setSessionConfigOption).not.toHaveBeenCalled();
     expect(conn.setSessionMode).not.toHaveBeenCalled();
+  });
+
+  it("keeps a running conversation's initial prompt when its live-attach snapshot arrives in one burst", async () => {
+    // A conversation started elsewhere (camber chat new) is first opened here
+    // while its turn runs: the helper answers session/load with a snapshot
+    // whose first event is the initial prompt, delivered through the real SDK
+    // dispatch rather than straight into the repository.
+    const repo = new ACPSessionRepositoryWriter();
+    const transport = new RPCTransport({
+      jsonrpcCall: vi.fn().mockResolvedValue({}),
+      jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
+    });
+    createACPConnection(() => new ACPClient(repo, DEFAULT_AGENT_SERVER), transport);
+    const notify = (method: string, params: unknown) =>
+      transport.receive({ jsonrpc: "2.0", method, params });
+    const conn = mockConnection({
+      loadSession: vi.fn().mockImplementation(async () => {
+        notify("session/update", sessionNotification("live before snapshot"));
+        notify("camber/acp/session_replay_started", { sessionId: "s-loaded" });
+        notify("session/update", {
+          sessionId: "s-loaded",
+          update: {
+            sessionUpdate: "user_message_chunk",
+            messageId: "m-prompt",
+            content: { type: "text", text: "initial prompt" },
+          },
+        });
+        notify("session/update", sessionNotification("live before snapshot"));
+        notify("session/update", sessionNotification(" and more"));
+        for (let i = 0; i < 10; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+        return { _meta: { "camber/liveAttach": true } };
+      }),
+    });
+    await connectRepo(repo, conn);
+    const session = await repo.loadSessionRecord(
+      "s-loaded",
+      "/repo",
+      [],
+      { conversationId: "conv-loaded" },
+      DEFAULT_AGENT_SERVER,
+    );
+
+    expect(
+      session?.events.map((event) =>
+        "content" in event && Array.isArray(event.content)
+          ? `${event.eventKind}:${event.content.map((block) => ("text" in block ? block.text : "")).join("")}`
+          : event.eventKind,
+      ),
+    ).toEqual(["user_message:initial prompt", "agent_message:live before snapshot and more"]);
   });
 
   it("publishes replay updates that arrive after session/load resolves", async () => {
