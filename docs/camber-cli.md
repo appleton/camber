@@ -277,8 +277,11 @@ command that uses it: as `--caller-token`, or as `CAMBER_CALLER_TOKEN` in that
 command's own environment.
 
 The token is checked where it unlocks extra permission: bypass modes on
-`chat subagent`, `chat new` and `chat config set`, and sending to, steering or restoring a
-conversation that is (or would resume) in a bypass mode. A missing or unknown
+`chat subagent`, `chat new` and `chat config set`; sending to, steering,
+restoring, archiving, renaming, deleting or opening a conversation that is (or
+would resume) in a bypass mode; and the configuration changes listed under
+[Manage conversations, projects and worktrees](#manage-conversations-projects-and-worktrees)
+and [Agents, connectors, skills and models](#agents-connectors-skills-and-models). A missing or unknown
 token makes those requests unproven; it does not otherwise fail them. Any local
 process that can reach the desktop's control socket (the same OS user) can
 still list, inspect, read or stop any conversation, send to or steer any
@@ -365,6 +368,67 @@ Wait for completion and reopen it to load its persisted history. Older clients
 without live-attachment support also receive this error instead of interrupting
 the agent. Closing or resuming an active session is rejected as busy.
 
+## Manage conversations, projects and worktrees
+
+These commands run the same code as the desktop:
+
+- `camber chat archive [CHAT]` archives a conversation as the sidebar does. It
+  cancels a running turn, closes the agent session, and archives the
+  sub-agents shown under it (same project, worktree or Chats group).
+- `camber chat restore CHAT` restores it from the archive; its session reopens
+  on the next prompt.
+- `camber chat rename CHAT NAME` sets its name, and the agent-side title when
+  the agent supports session rename.
+- `camber chat delete CHAT --yes` permanently deletes it and its agent
+  session. It is refused without `--yes` and for agents that cannot delete
+  sessions; sub-agents are not deleted. Prefer `chat archive`.
+- `camber chat open [CHAT]` focuses the desktop window and selects the
+  conversation, to show it to the user. It needs an open window.
+- `camber chat new --chat --text …` creates the conversation in the Chats
+  section instead of a workspace; it rejects `--workspace`, `--project` and
+  `--new-worktree`.
+- `camber projects add PATH` registers a folder as Add Project does.
+  `camber projects remove PATH` removes a root project as the sidebar does: it
+  unregisters the project and its worktrees, drops their conversations from
+  the list and closes its terminals, but leaves files on disk.
+- `camber worktrees rename PATH NAME` changes a worktree's display name only.
+
+Archive, restore, rename, delete and open follow the `chat send` rule for
+conversations in a permission-bypass mode. `projects add` and `projects
+remove` change which folders agents may work in, so they need `--caller-token`
+from a conversation running in a permission-bypass mode right now.
+
+## Agents, connectors, skills and models
+
+These commands run the same helper code as the desktop's settings, and an open
+desktop updates straight away.
+
+- `camber agents install AGENT` installs a registry agent as the settings
+  toggle does; `agents remove AGENT` removes it and archives its
+  conversations. `agents add` and `agents edit` define custom agents (the
+  desktop has no form for these). `agents default AGENT` pins the default
+  agent (`--unpin` clears it); `agents config default AGENT OPTION VALUE` pins
+  a default option. `agents restart AGENT` waits for working conversations
+  unless `--force`. `agents runtimes` checks the agent runtimes.
+- `camber mcp list|add|edit|remove|enable|disable|test|sign-in|sign-out`
+  manages MCP connectors. `mcp add` requires a passing connection test for
+  non-OAuth connectors (`--skip-test` overrides it). `mcp sign-in` opens the
+  browser from the desktop and waits for the user.
+- `camber skills list` lists installed skills (user, workspace, or published
+  by an agent with `--agent`).
+- `camber models list|search|download|delete|default|unload` manages local
+  models; `models download ID --cancel` cancels a download.
+
+Commands that define something the desktop will later run or connect to need
+`--caller-token` from a conversation that is running in a permission-bypass
+mode right now; otherwise they fail with `PERMISSION_ESCALATION`. That covers
+`agents install`, `add`, `edit` and `remove`, `mcp add`, `edit`, `remove` and
+`sign-in`, and `agents config default` with a bypass value. Restart, enable,
+disable, test, sign-out, skills, models and `agents default` are not scoped.
+Environment, header and token values are never printed (shown as `[set]`);
+pass them with `--env-file`, `--header-file` or `--bearer-token-file` (or `-`
+for stdin) to keep them out of the process list.
+
 ## Choose a desktop instance
 
 The CLI uses the inherited `CAMBER_INSTANCE_ID` when available. Otherwise it
@@ -386,12 +450,19 @@ The current CLI command surface is:
 
 - `instances list`, `status`, `context`
 - `actions list`, `actions describe`, `do`
-- `agents list`, `agents inspect`, `agents config options`
-- `projects list`
-- `worktrees list`, `inspect`, `create`, `remove`
-- `chat list`, `inspect`, `children`, `snapshot`, `subagent`, `new`, `spawn`
-  (legacy), `config list`, `config set`, `send`, `steer`, `stop`, `poll`,
-  `output`, `watch`
+- `agents list`, `inspect`, `config options`, `install`, `add`, `edit`,
+  `remove`, `default`, `config default`, `restart`, `runtimes`
+- `mcp list`, `add`, `edit`, `remove`, `enable`, `disable`, `test`,
+  `sign-in`, `sign-out`
+- `skills list` (installed skills; not the `skill` guide group)
+- `models list`, `search`, `download [--cancel]`, `delete`, `default`,
+  `unload`
+- `projects list`, `add`, `remove`
+- `worktrees list`, `inspect`, `create`, `rename`, `remove`
+- `chat list`, `inspect`, `children`, `snapshot`, `subagent`, `new`
+  (`--chat` for the Chats section), `spawn` (legacy), `config list`,
+  `config set`, `send`, `steer`, `stop`, `poll`, `output`, `watch`,
+  `archive`, `restore`, `rename`, `delete`, `open`
 - `skill show`, `skill setup`, `skill status`, `skill remove`
 - `cli install`
 

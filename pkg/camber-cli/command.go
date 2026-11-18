@@ -31,7 +31,7 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 	root.PersistentFlags().StringVar(&instanceID, "instance", os.Getenv("CAMBER_INSTANCE_ID"), "Desktop instance ID (otherwise use inherited context or the unique running instance)")
 	// No flag default: --help must never print the token. CAMBER_CALLER_TOKEN
 	// is read at dispatch time instead.
-	root.PersistentFlags().StringVar(&callerToken, "caller-token", "", "Caller token from your Camber host context (default $CAMBER_CALLER_TOKEN); proves which conversation is asking. Needed for permission-bypass modes on chat subagent, chat new and chat config set, and for chat send and chat steer to conversations in a permission-bypass mode; on chat new it also records your conversation as the origin")
+	root.PersistentFlags().StringVar(&callerToken, "caller-token", "", "Caller token from your Camber host context (default $CAMBER_CALLER_TOKEN); proves which conversation is asking. Needed for permission-bypass modes on chat subagent, chat new and chat config set, for chat send, steer, archive, restore, rename, delete and open on conversations in a permission-bypass mode, and for projects add/remove and agents/mcp changes that define executables or endpoints; on chat new it also records your conversation as the origin")
 	root.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Print structured JSON (NDJSON when following)")
 	root.PersistentFlags().DurationVar(&timeout, "timeout", 10*time.Minute, "Deadline for each desktop request (including workspace setup)")
 	root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
