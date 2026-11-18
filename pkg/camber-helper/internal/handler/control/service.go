@@ -124,7 +124,7 @@ type storedRecord struct {
 	OriginID string `json:"originId,omitempty"`
 }
 
-var commands = []string{"actions.list", "actions.describe", "skill.show", "context", "status", "agents.list", "agents.inspect", "agents.config.options", "projects.list", "worktrees.list", "worktrees.inspect", "worktrees.create", "worktrees.remove", "chat.list", "chat.inspect", "chat.children", "chat.subagent", "chat.new", "chat.spawn", "chat.send", "chat.steer", "chat.stop", "chat.poll", "chat.output", "chat.snapshot", "chat.config.list", "chat.config.set"}
+var coreCommands = []string{"actions.list", "actions.describe", "skill.show", "context", "status", "agents.list", "agents.inspect", "agents.config.options", "projects.list", "worktrees.list", "worktrees.inspect", "worktrees.create", "worktrees.remove", "chat.list", "chat.inspect", "chat.children", "chat.subagent", "chat.new", "chat.spawn", "chat.send", "chat.steer", "chat.stop", "chat.poll", "chat.output", "chat.snapshot", "chat.config.list", "chat.config.set"}
 
 // Dispatch runs one control action. Results and errors alike pass through
 // caller-token redaction: an error can quote agent or nav text too.
@@ -172,6 +172,23 @@ func (s *Service) dispatch(ctx context.Context, params *methods.ControlDispatchP
 	// Bound helper work even when the desktop transport stops awaiting its response.
 	ctx, cancel := context.WithTimeout(ctx, 9*time.Minute)
 	defer cancel()
+	// A resolved token proves the issuing conversation. Absent or unknown
+	// tokens leave the request unproven; most actions do not need proof.
+	caller := ""
+	if s.callers != nil && params.CallerToken != "" {
+		caller, _ = s.callers.ResolveCallerToken(params.CallerToken)
+	}
+	if action, ok := registeredActions[params.Command]; ok {
+		out, err := action.Run(ctx, s, params.Args, caller, g)
+		if err != nil {
+			return nil, err
+		}
+		raw, err := json.Marshal(out)
+		if err == nil && s.callers != nil {
+			raw = s.callers.RedactCallerTokens(raw)
+		}
+		return raw, pkgerrors.WithStack(err)
+	}
 	var a Args
 	if len(params.Args) > 0 {
 		decoder := json.NewDecoder(bytes.NewReader(params.Args))
@@ -195,23 +212,17 @@ func (s *Service) dispatch(ctx context.Context, params *methods.ControlDispatchP
 	if a.ProjectPath, pathErr = cleanControlPath("projectPath", a.ProjectPath); pathErr != nil {
 		return nil, pathErr
 	}
-	// A resolved token proves the issuing conversation. Absent or unknown
-	// tokens leave the request unproven; most actions do not need proof.
-	caller := ""
-	if s.callers != nil && params.CallerToken != "" {
-		caller, _ = s.callers.ResolveCallerToken(params.CallerToken)
-	}
 	var out any
 	var err error
 	switch params.Command {
 	case "actions.list":
 		actions := []any{}
-		for _, name := range commands {
+		for _, name := range allCommands() {
 			if descriptor, e := s.describe(name); e == nil {
 				actions = append(actions, descriptor)
 			}
 		}
-		out = map[string]any{"commands": commands, "actions": actions, "version": 1}
+		out = map[string]any{"commands": allCommands(), "actions": actions, "version": 1}
 	case "actions.describe":
 		out, err = s.describe(a.Name)
 	case "skill.show":

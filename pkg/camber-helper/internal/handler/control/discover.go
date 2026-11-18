@@ -48,6 +48,9 @@ func (s *Service) describe(name string) (any, error) {
 		"chat.config.list":      {"Read current conversation configuration and choices.", []string{"conversationId"}},
 		"chat.config.set":       {"Validate and set agent options before the next prompt. A permission-bypass value needs the target's, its parent's or its origin's callerToken (dispatch parameter, CLI --caller-token).", []string{"conversationId", "config", "model", "effort", "mode"}},
 	}
+	if action, ok := registeredActions[name]; ok {
+		return actionDescription{Name: name, Summary: action.Summary, InputSchema: action.InputSchema}, nil
+	}
 	specification, ok := specs[name]
 	if !ok {
 		return nil, pkgerrors.Errorf("unknown control action %q", name)
