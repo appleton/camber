@@ -81,6 +81,11 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 		return cmd
 	}
 	group := func(name, summary string) *cobra.Command {
+		for _, existing := range root.Commands() {
+			if existing.Name() == name {
+				return existing
+			}
+		}
 		cmd := &cobra.Command{Use: name, Short: summary}
 		root.AddCommand(cmd)
 		return cmd
@@ -445,6 +450,10 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 	}}
 	skill.AddCommand(show)
 	addInstallCommands(root, skill, emit)
+	kit := CommandKit{Root: root, Group: group, Add: add, ChatArgs: chatArgs}
+	for _, extension := range commandExtensions {
+		extension(kit)
+	}
 	return root
 }
 
