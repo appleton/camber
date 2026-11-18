@@ -143,6 +143,8 @@ export {
 export {
   getACPAgentServersContext,
   getACPAgentServersRepo,
+  notifyACPAgentServersDidChange,
+  onACPAgentServersDidChange,
   setACPAgentServersContext,
 } from "./features/AgentServersRepository.svelte";
 export {
@@ -229,6 +231,7 @@ export {
 } from "./features/ProjectRepository.svelte";
 export type { ACPProjectRepository } from "./features/ProjectRepository.svelte";
 export { refreshACPNavState } from "./features/refreshACPNavState";
+export { removeProjectFromApp, type RemoveProjectDeps } from "./features/removeProject";
 export { ACP_SESSION_NEW_EVENT, ACP_SESSION_TITLE_EVENT } from "./features/Session.svelte";
 export type { ACPSession } from "./features/Session.svelte";
 export { enableAcpTranscriptBatching } from "./features/session/transcriptBatching";

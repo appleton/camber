@@ -1623,12 +1623,20 @@ WHERE workspace_path = ?3 AND session_id != ''
 }
 
 func (s *Store) ArchiveConversation(ctx context.Context, workspacePath, conversationID, agentServer, sessionID string) error {
+	_, _, err := s.archiveConversation(ctx, workspacePath, conversationID, agentServer, sessionID)
+	return err
+}
+
+// archiveConversation archives the matching conversations and cascades to
+// the sub-agents rendered under them. It returns the ids it archived directly
+// and the ids the cascade archived.
+func (s *Store) archiveConversation(ctx context.Context, workspacePath, conversationID, agentServer, sessionID string) ([]string, []string, error) {
 	workspacePath = cleanWorkspacePath(workspacePath)
 	conversationID = strings.TrimSpace(conversationID)
 
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("starting tx: %w", err)
+		return nil, nil, fmt.Errorf("starting tx: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
 
@@ -1661,17 +1669,17 @@ func (s *Store) ArchiveConversation(ctx context.Context, workspacePath, conversa
 		}
 	}
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	cascaded, _, err := archiveDescendantsTx(ctx, tx, roots, false)
+	cascaded, cascadedIDs, err := archiveDescendantsTx(ctx, tx, roots, false)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	if err := tx.Commit(); err != nil {
-		return err
+		return nil, nil, err
 	}
 	s.closeArchivedSessions(ctx, cascaded)
-	return nil
+	return roots, cascadedIDs, nil
 }
 
 func (s *Store) RenameConversation(ctx context.Context, conversationID, nickname, title string) error {
@@ -1973,6 +1981,20 @@ func (s *Store) writeControlState(ctx context.Context, id, raw string) error {
 	if l, ok := decodeControlLink(raw); ok {
 		s.parentLinks[convID] = l
 	} else {
+		delete(s.parentLinks, convID)
+	}
+	return nil
+}
+
+// deleteControlState removes a control-state record and drops its entry from
+// the parent-link cache under the same lock writeControlState holds.
+func (s *Store) deleteControlState(ctx context.Context, id string) error {
+	s.linksMu.Lock()
+	defer s.linksMu.Unlock()
+	if _, err := s.db.ExecContext(ctx, `DELETE FROM metadata WHERE key = ?`, "control/"+id); err != nil {
+		return err
+	}
+	if convID, ok := strings.CutPrefix(id, "conversation/"); ok && s.parentLinks != nil {
 		delete(s.parentLinks, convID)
 	}
 	return nil

@@ -55,12 +55,7 @@ func (h *CamberHandler) agentServersForHost(state methods.ACPNavAgentServersStat
 }
 
 func (h *CamberHandler) ACPNavUpsertProject(ctx context.Context, req *methods.ACPNavUpsertProjectParams, gCtx *glsp.Context) (methods.ACPNavProject, error) {
-	project, err := h.acpNavHandler.UpsertProject(ctx, req, gCtx)
-	if err != nil {
-		return methods.ACPNavProject{}, err
-	}
-	h.invalidateFileSearchAfterACPNavChange()
-	return project, nil
+	return h.acpNavHandler.UpsertProject(ctx, req, gCtx)
 }
 
 func (h *CamberHandler) ACPNavPrepareWorktree(ctx context.Context, req *methods.ACPNavPrepareWorktreeParams, gCtx *glsp.Context) (methods.ACPNavProject, error) {
@@ -74,32 +69,19 @@ func (h *CamberHandler) ACPNavReleasePreparedWorktree(ctx context.Context, req *
 }
 
 func (h *CamberHandler) ACPNavCreateWorktree(ctx context.Context, req *methods.ACPNavCreateWorktreeParams, gCtx *glsp.Context) (methods.ACPNavProject, error) {
-	project, err := h.acpNavHandler.CreateWorktree(ctx, req, gCtx)
-	if err != nil {
-		return methods.ACPNavProject{}, err
-	}
-	h.invalidateFileSearchAfterACPNavChange()
-	return project, nil
+	return h.acpNavHandler.CreateWorktree(ctx, req, gCtx)
 }
 
 func (h *CamberHandler) ACPNavRemoveProject(ctx context.Context, req *methods.ACPNavRemoveProjectParams, gCtx *glsp.Context) (methods.ACPNavState, error) {
-	state, err := h.acpNavHandler.RemoveProject(ctx, req, gCtx)
-	if err != nil {
-		return methods.ACPNavState{}, err
-	}
-	h.invalidateFileSearchAfterACPNavChange()
-	return state, nil
+	return h.acpNavHandler.RemoveProject(ctx, req, gCtx)
 }
 
 func (h *CamberHandler) ACPNavRemoveWorktree(ctx context.Context, req *methods.ACPNavRemoveWorktreeParams, gCtx *glsp.Context) (methods.ACPNavState, error) {
-	state, err := h.acpNavHandler.RemoveWorktree(ctx, req, gCtx)
-	if err != nil {
-		return methods.ACPNavState{}, err
-	}
-	h.invalidateFileSearchAfterACPNavChange()
-	return state, nil
+	return h.acpNavHandler.RemoveWorktree(ctx, req, gCtx)
 }
 
+// invalidateFileSearchAfterACPNavChange is acpnav's projects-changed hook, so
+// every project change (desktop, mobile or control action) refreshes search.
 func (h *CamberHandler) invalidateFileSearchAfterACPNavChange() {
 	if h.fileSearchHandler != nil {
 		h.fileSearchHandler.Invalidate()

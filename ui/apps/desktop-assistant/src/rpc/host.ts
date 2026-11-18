@@ -46,6 +46,8 @@ const WEBVIEW_RESPONSE_EVENT = "camber:desktop:webview-response";
 // back promptly, the webview was reloaded or the bridge message was lost; fail
 // before the native 30-second ACK timeout so it can retry the batch safely.
 const HELPER_NOTIFICATION_WEBVIEW_TIMEOUT_MS = 10_000;
+// The helper waits 15s for camber/desktopApp/* answers; fail first with a reason.
+const DESKTOP_APP_REQUEST_TIMEOUT_MS = 10_000;
 export const DESKTOP_SETTINGS_CHANGED_EVENT = "camber:desktop-settings-changed";
 export const DESKTOP_OPEN_SETTINGS_PANEL_EVENT = "camber:desktop-open-settings-panel";
 export const DESKTOP_NEW_CONVERSATION_EVENT = "camber:desktop-new-conversation";
@@ -797,15 +799,33 @@ export class DesktopHost {
     await this.updateHelperConfig();
   }
 
+  private async refreshCachedAgentServers(): Promise<void> {
+    try {
+      const state = (await helperJsonRpc("camber/acpNav/listAgentServers", {})) as {
+        agentServers?: ACPAgentServers;
+      } | null;
+      if (state?.agentServers) {
+        this.initialState.userSettings.acpAgentServers = state.agentServers;
+      }
+    } catch (error) {
+      console.debug("Unable to refresh cached ACP agent servers", error);
+    }
+  }
+
   async openAcpChat(opts?: OpenAcpChatOptions): Promise<void> {
-    const win = getCurrentWindow();
-    await win.unminimize();
-    await win.setFocus();
+    await this.focusWindow();
     // Desktop is a single window, so "open" means selecting the conversation
-    // in place (e.g. a clicked notification), not revealing a per-session panel.
+    // in place (e.g. a clicked notification, or `camber chat open` through
+    // camber/desktopApp/openConversation), not revealing a per-session panel.
     if (opts?.conversationId) {
       void this.callWebview("setCurrentConversation", [opts.conversationId]);
     }
+  }
+
+  private async focusWindow(): Promise<void> {
+    const win = getCurrentWindow();
+    await win.unminimize();
+    await win.setFocus();
   }
 
   async closeAcpChat(): Promise<void> {}
@@ -880,6 +900,24 @@ export class DesktopHost {
         return await this.callWebview("elicitation", [params]);
       case "camber/jsonrpc/request":
         return await this.callWebview("jsonrpcRequest", [params]);
+      // camber CLI control actions that need this window's own state; each
+      // runs the same app function its UI uses.
+      case "camber/desktopApp/openConversation": {
+        // openAcpChat's steps, waiting for the webview to apply the selection.
+        const { conversationId } = desktopAppParams(params, "conversationId");
+        await this.focusWindow();
+        await this.callWebview(
+          "setCurrentConversation",
+          [conversationId],
+          DESKTOP_APP_REQUEST_TIMEOUT_MS,
+        );
+        return {};
+      }
+      case "camber/desktopApp/removeProject": {
+        const { path } = desktopAppParams(params, "path");
+        await this.callWebview("removeProject", [path], DESKTOP_APP_REQUEST_TIMEOUT_MS);
+        return {};
+      }
       default:
         return undefined;
     }
@@ -893,6 +931,12 @@ export class DesktopHost {
       case "camber/mcpOAuthURL":
         this.openExternalURL(helperAuthURL(params));
         return;
+      case "camber/acpNav/agentServersDidChange":
+        // Agent servers now change through helper operations (Settings >
+        // Agents, default pins, the camber CLI) rather than this host's
+        // setACPAgentServers, so keep the cached initial state current here.
+        void this.refreshCachedAgentServers();
+        break;
     }
     const command = webviewCommandForHelperNotification(method);
     if (!command) {
@@ -1366,6 +1410,15 @@ async function invokeOpenFile(path: string, line?: number, column?: number): Pro
 
 async function invokeGetImageFileData(path: string): Promise<ImageFileData | undefined> {
   return (await invoke("get_image_file_data", { path })) ?? undefined;
+}
+
+// Reads one required string field of a camber/desktopApp/* request.
+function desktopAppParams<K extends string>(params: unknown, key: K): Record<K, string> {
+  const value = (params as Record<string, unknown> | null)?.[key];
+  if (typeof value !== "string" || value === "") {
+    throw new Error(`Desktop app request is missing ${key}`);
+  }
+  return { [key]: value } as Record<K, string>;
 }
 
 function projectFolderName(path: string): string {

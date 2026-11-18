@@ -4,6 +4,7 @@
   import { getACPProjectRepo } from "../features/ProjectRepository.svelte";
   import { getACPConversationRepo } from "../features/ConversationRepository.svelte";
   import { getACPWorktreeRepo } from "../features/WorktreeRepository";
+  import { removeProjectFromApp } from "../features/removeProject";
   import type { ACPNavProjectSettings } from "../navTypes";
   import DesktopSettingsPanelFrame from "./settings/DesktopSettingsPanelFrame.svelte";
   import ConfirmationDialog from "./ui/ConfirmationDialog.svelte";
@@ -203,9 +204,7 @@
 
   async function removeProject() {
     cancelPendingSettingsSave();
-    await projects.removeProject(projectPath);
-    await worktrees.closeProject(projectPath);
-    await conversations.refresh();
+    await removeProjectFromApp({ projects, worktrees, conversations }, projectPath);
     removeConfirmOpen = false;
   }
 </script>

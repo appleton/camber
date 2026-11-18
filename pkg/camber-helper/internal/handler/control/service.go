@@ -53,6 +53,8 @@ type Service struct {
 	callers    CallerResolver
 	mu         sync.Mutex
 	operations map[string]chan struct{}
+	// tools backs the agents-and-tools actions (tools.go); guarded by mu.
+	tools Tools
 }
 
 // New builds the control service. callers may be nil, in which case no
@@ -206,8 +208,13 @@ func (s *Service) dispatch(ctx context.Context, params *methods.ControlDispatchP
 	// Validate caller-supplied paths on the raw string, then use only the
 	// cleaned form downstream (registration checks and agent cwd alike).
 	var pathErr error
-	if a.WorkspacePath, pathErr = cleanControlPath("workspacePath", a.WorkspacePath); pathErr != nil {
+	// chat.new's chat workspace names the Chats section, not a path (chat_new.go).
+	chatWorkspace := params.Command == "chat.new" && a.WorkspacePath == chatWorkspacePath
+	if a.WorkspacePath, pathErr = cleanControlPath("workspacePath", a.WorkspacePath); pathErr != nil && !chatWorkspace {
 		return nil, pathErr
+	}
+	if chatWorkspace {
+		a.WorkspacePath = chatWorkspacePath
 	}
 	if a.ProjectPath, pathErr = cleanControlPath("projectPath", a.ProjectPath); pathErr != nil {
 		return nil, pathErr
@@ -484,6 +491,9 @@ func (s *Service) create(ctx context.Context, a Args, caller string, mode create
 		return nil, err
 	}
 	for _, requested := range []string{a.WorkspacePath, a.ProjectPath} {
+		if requested == chatWorkspacePath && mode == createIndependent {
+			continue
+		}
 		if err := s.checkRegisteredWorkspace(ctx, requested, g); err != nil {
 			return nil, err
 		}
@@ -535,6 +545,12 @@ func (s *Service) create(ctx context.Context, a Args, caller string, mode create
 	}
 	if cwd == "" {
 		cwd = a.WorkspacePath
+	}
+	if a.WorkspacePath == chatWorkspacePath && mode == createIndependent {
+		var err error
+		if cwd, err = s.chatDirectory(ctx, id, g); err != nil {
+			return nil, err
+		}
 	}
 	if a.WorktreeName != "" {
 		root, err := s.registeredRootProject(ctx, a.ProjectPath, g)

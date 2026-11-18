@@ -34,6 +34,7 @@
   import { getACPGithubRepo } from "../features/GithubRepository.svelte";
   import { getACPProjectRepo } from "../features/ProjectRepository.svelte";
   import { getACPWorktreeRepo } from "../features/WorktreeRepository";
+  import { removeProjectFromApp } from "../features/removeProject";
   import type { ACPSession } from "../features/Session.svelte";
   import { workspacePathFitsWorkspaceFolders } from "../workspacePaths";
   import { githubPRActionLabel } from "../github/githubStatus";
@@ -828,9 +829,7 @@
   }
 
   async function handleRemoveProject(path: string) {
-    await projects.removeProject(path);
-    await worktrees.closeProject(path);
-    await conversations.refresh();
+    await removeProjectFromApp({ projects, worktrees, conversations }, path);
   }
 
   async function handleRenameProject(path: string, name: string) {

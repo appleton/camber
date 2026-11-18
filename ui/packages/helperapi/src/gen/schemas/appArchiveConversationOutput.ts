@@ -4,8 +4,12 @@
  * camber helper
  * OpenAPI spec version: 0.1.0
  */
+import type { ACPNavState } from "./aCPNavState";
 
-export interface RuntimeFilesParams {
+export interface AppArchiveConversationOutput {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
+  archived: string[];
+  descendants: string[];
+  state: ACPNavState;
 }

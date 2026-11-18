@@ -2305,8 +2305,12 @@ describe("ACPSessionRepositoryWriter", () => {
       },
     };
     const session = repo.createSession("/repo", DEFAULT_AGENT_SERVER, "conv-last-used");
+    // Last-used defaults persist through the helper's shared
+    // camber/app/setAgentDefaultConfigOption operation.
     const agentServersWrites = () =>
-      helperJsonrpcCall.mock.calls.filter(([method]) => String(method).includes("setAgentServers"));
+      helperJsonrpcCall.mock.calls.filter(([method]) =>
+        String(method).includes("setAgentDefaultConfigOption"),
+      );
     const flushPersistQueue = async () => {
       for (let i = 0; i < 10; i += 1) await Promise.resolve();
     };
@@ -2327,12 +2331,10 @@ describe("ACPSessionRepositoryWriter", () => {
     // A model selection persists as the agent's last-used default.
     await session.setConfigOption("model", "opus");
     await vi.waitFor(() => expect(agentServersWrites()).toHaveLength(1));
-    const [, params] = agentServersWrites()[0] as [
-      string,
-      { agentServers: Record<string, { default_config_options?: Record<string, string> }> },
-    ];
-    expect(params.agentServers[DEFAULT_AGENT_SERVER].default_config_options).toEqual({
-      model: "opus",
+    expect(agentServersWrites()[0][1]).toEqual({
+      agentServer: DEFAULT_AGENT_SERVER,
+      optionId: "model",
+      value: "opus",
     });
 
     // An uncategorized "extras" pick (unknown semantics to this client) is
@@ -2349,12 +2351,10 @@ describe("ACPSessionRepositoryWriter", () => {
     // one more agent-servers write, on top of the model write above.
     await session.setConfigOption("temperature", "1.0");
     await vi.waitFor(() => expect(agentServersWrites()).toHaveLength(2));
-    const [, secondParams] = agentServersWrites()[1] as [
-      string,
-      { agentServers: Record<string, { default_config_options?: Record<string, string> }> },
-    ];
-    expect(secondParams.agentServers[DEFAULT_AGENT_SERVER].default_config_options).toEqual({
-      temperature: "1.0",
+    expect(agentServersWrites()[1][1]).toEqual({
+      agentServer: DEFAULT_AGENT_SERVER,
+      optionId: "temperature",
+      value: "1.0",
     });
   });
 
@@ -2487,8 +2487,12 @@ describe("ACPSessionRepositoryWriter", () => {
     helperJsonrpcCall.mockImplementation(async (method: unknown, params: unknown) => {
       const name = String(method);
       if (name.includes("listAgentServers")) return { agentServers: { local: {} } };
-      if (name.includes("setAgentServers")) {
-        return { agentServers: (params as { agentServers: unknown }).agentServers };
+      if (name.includes("setAgentDefaultConfigOption")) {
+        const { optionId, value } = params as { optionId: string; value: string };
+        return {
+          state: { agentServers: { local: { default_config_options: { [optionId]: value } } } },
+          applied: true,
+        };
       }
       return { entry: null };
     });
@@ -2516,8 +2520,12 @@ describe("ACPSessionRepositoryWriter", () => {
         currentValue: "old-model",
       },
     ];
+    // Last-used defaults persist through the helper's shared
+    // camber/app/setAgentDefaultConfigOption operation.
     const agentServersWrites = () =>
-      helperJsonrpcCall.mock.calls.filter(([method]) => String(method).includes("setAgentServers"));
+      helperJsonrpcCall.mock.calls.filter(([method]) =>
+        String(method).includes("setAgentDefaultConfigOption"),
+      );
 
     repo.applyLocalInferenceModelConfigToSessionsForAgent("local", {
       modelsDirectory: "/tmp/models",
@@ -2566,13 +2574,16 @@ describe("ACPSessionRepositoryWriter", () => {
       "custom/Downloaded-From-Search-4bit",
     );
     await vi.waitFor(() => expect(agentServersWrites()).toHaveLength(1));
-    const [, params] = agentServersWrites()[0] as [
-      string,
-      { agentServers: Record<string, { default_config_options?: Record<string, string> }> },
-    ];
-    expect(params.agentServers.local.default_config_options).toEqual({
-      model: "custom/Downloaded-From-Search-4bit",
+    expect(agentServersWrites()[0][1]).toEqual({
+      agentServer: "local",
+      optionId: "model",
+      value: "custom/Downloaded-From-Search-4bit",
     });
+    await vi.waitFor(() =>
+      expect(repo.agents.defaultConfigOptionsFor("local")).toEqual({
+        model: "custom/Downloaded-From-Search-4bit",
+      }),
+    );
   });
 
   it("does not resend the model selection to the agent when the merge does not change it", () => {

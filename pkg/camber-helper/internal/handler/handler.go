@@ -25,6 +25,7 @@ import (
 	file2 "github.com/appleton/camber/pkg/camber-helper/internal/gopls/pkg/file"
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/acpnav"
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/acpproxy"
+	"github.com/appleton/camber/pkg/camber-helper/internal/handler/appcontrol"
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/approvals"
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/control"
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/filesearch"
@@ -94,6 +95,8 @@ type CamberHandler struct {
 
 	// endpoints
 	controlHandler             *control.Service
+	appControlHandler          *appcontrol.Service
+	appAgentServers            *appcontrol.AgentServers
 	acpProxyHandler            *acpproxy.Handler
 	acpNavHandler              *acpnav.Server
 	fileSearchHandler          *filesearch.Server
@@ -532,6 +535,46 @@ func New() *CamberHandler {
 	}, handler.acpNavHandler.DeleteConversation)
 
 	registerExtensionMethod(handler, JSONRPCOperation{
+		Method:      methods.AppArchiveConversationMethod,
+		Description: "archives a conversation as the desktop does: archives it with the sub-agents rendered under it, then closes its agent session, cancelling a running turn",
+	}, handler.appControlHandler.ArchiveConversation)
+
+	registerExtensionMethod(handler, JSONRPCOperation{
+		Method:      methods.AppRenameConversationMethod,
+		Description: "renames a conversation as the desktop does: sets its nickname and, when the agent supports it, its title and agent session title",
+	}, handler.appControlHandler.RenameConversation)
+
+	registerExtensionMethod(handler, JSONRPCOperation{
+		Method:      methods.AppDeleteConversationMethod,
+		Description: "deletes a conversation as the desktop does: removes its navigation row, then deletes its agent session",
+	}, handler.appControlHandler.DeleteConversation)
+
+	registerExtensionMethod(handler, JSONRPCOperation{
+		Method:      methods.AppSetDefaultAgentServerMethod,
+		Description: "pins, unpins or follows the default agent as the desktop does, in one atomic agent server store write",
+	}, handler.appAgentServers.SetDefaultAgentServer)
+
+	registerExtensionMethod(handler, JSONRPCOperation{
+		Method:      methods.AppSetAgentDefaultConfigOptionMethod,
+		Description: "pins, unpins or follows an agent's default value for a configuration option, in one atomic agent server store write",
+	}, handler.appAgentServers.SetAgentDefaultConfigOption)
+
+	registerExtensionMethodNoDeadline(handler, JSONRPCOperation{
+		Method:      methods.AppInstallAgentServerMethod,
+		Description: "installs a registry agent as Settings > Agents does: downloads it, then adds it to the agent servers",
+	}, handler.appAgentServers.InstallAgentServer)
+
+	registerExtensionMethod(handler, JSONRPCOperation{
+		Method:      methods.AppRemoveAgentServerMethod,
+		Description: "removes an agent as Settings > Agents does: drops it from the agent servers, then archives its conversations",
+	}, handler.appAgentServers.RemoveAgentServer)
+
+	publishClientSideTypes(handler, methods.DesktopAppOpenConversationMethod, methods.DesktopAppOpenConversationParams{},
+		"asks the desktop window to focus and select a conversation")
+	publishClientSideTypes(handler, methods.DesktopAppRemoveProjectMethod, methods.DesktopAppRemoveProjectParams{},
+		"asks the desktop window to remove a project as its sidebar does")
+
+	registerExtensionMethod(handler, JSONRPCOperation{
 		Method:      methods.ACPNavListAgentServersMethod,
 		Description: "lists locally enabled ACP agent servers",
 	}, handler.ACPNavListAgentServers)
@@ -756,6 +799,8 @@ func New() *CamberHandler {
 		"notifies every surface that an ACP turn has ended")
 	publishClientSideTypes(handler, methods.MCPServersDidChangeParams{}.MethodName(), methods.MCPServersDidChangeParams{},
 		"notifies every surface that the user's MCP connector set changed")
+	publishClientSideTypes(handler, methods.ACPNavAgentServersDidChangeMethod, methods.ACPNavAgentServersDidChangeParams{},
+		"notifies every surface that the agent server store changed")
 
 	setupRemoteAccess(handler)
 	setupRemoteTerminal(handler)
@@ -839,7 +884,16 @@ func newHandlerBaseState() *CamberHandler {
 	)
 
 	h.sessionLog = remoteaccess.NewSessionLog(h.remoteHub)
+	h.appControlHandler = appcontrol.New(h.acpNavHandler, h.acpProxyHandler)
+	h.appAgentServers = appcontrol.NewAgentServers(appcontrol.AgentServerStore{
+		List:            h.ACPNavListAgentServers,
+		Set:             h.SetACPNavAgentServers,
+		Install:         h.InstallACPNavAgentServer,
+		ResolveRegistry: resolveACPRegistryAgentServerConfig,
+	}, h.appControlHandler)
 	h.controlHandler = control.New(h.acpNavHandler, h.acpProxyHandler, h.sessionLog, h.acpProxyHandler)
+	h.controlHandler.SetTools(h.controlTools())
+	h.acpNavHandler.SetProjectsChangedHook(h.invalidateFileSearchAfterACPNavChange)
 	h.acpNavHandler.SetArchivedSessionCloser(func(ctx context.Context, agentServer, sessionID string) {
 		_, err := h.acpProxyHandler.CloseSession(ctx, &methods.ACPCloseSessionParams{
 			ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: agentServer},

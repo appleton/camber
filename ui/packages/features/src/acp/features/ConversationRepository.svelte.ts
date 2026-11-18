@@ -1,15 +1,15 @@
-import type { AgentCapabilities, SessionId } from "@agentclientprotocol/sdk";
+import type { SessionId } from "@agentclientprotocol/sdk";
 import {
-  camberAcpNavArchiveConversation,
   camberAcpNavDeleteConversation,
   camberAcpNavList,
-  camberAcpNavRenameConversation,
   camberAcpNavRestoreConversation,
   camberAcpNavUpsertConversation,
-  camberAcpRenameSession,
-  camberAcpSessionClose,
   camberAcpSessionDelete,
+  camberAppArchiveConversation,
+  camberAppDeleteConversation,
+  camberAppRenameConversation,
 } from "@camber/helperapi";
+import type { AppRemoveAgentServerOutput } from "@camber/helperapi/schemas";
 import { failure, fromPromise, success, waiting, type AsyncState } from "@camber/lib/async-state";
 import { createContext } from "svelte";
 import { DEFAULT_AGENT_SERVER, normalizeAgentServerName } from "../agentServers";
@@ -36,9 +36,6 @@ type ACPDeletedSession = { sessionId: SessionId; agentServer: string };
 interface ACPRefreshOptions {
   showLoading?: boolean;
 }
-export interface ACPAgentCapabilitiesSource {
-  capabilitiesFor(agentServer: string): AgentCapabilities | null;
-}
 
 export type ACPConversationRepository = NoSetters<ACPConversationRepositoryWriter>;
 
@@ -46,8 +43,6 @@ export class ACPConversationRepositoryWriter {
   private titleOverrides = new Map<string, string>();
   private draftPromptPresence = new Map<string, boolean>();
   private hiddenSessions = new Set<string>();
-
-  constructor(private readonly agents?: ACPAgentCapabilitiesSource) {}
 
   refreshState = $state<AsyncState<ACPConversationSummary[], ACPRequestError>>(waiting);
   deleteState = $state<AsyncState<ACPDeletedSession, ACPRequestError>>(waiting);
@@ -217,59 +212,56 @@ export class ACPConversationRepositoryWriter {
     conversationId?: string,
   ): Promise<void> {
     agentServer = normalizeAgentServerName(agentServer);
-    this.applyNavState(
-      await camberAcpNavArchiveConversation({
-        workspacePath,
-        conversationId,
-        agentServer,
-        ...(sessionId ? { sessionId } : {}),
-      }),
-    );
-    if (sessionId) {
-      // Release the agent-side session resources (helper no-ops for agents
-      // that can't close or couldn't reopen). Restoring goes through the
-      // normal session/resume / session/load path, so archive stays reversible.
-      // Deliberate: closing cancels an in-flight turn, extending the existing
-      // archive-cancels-the-selected-conversation behavior (DesktopSideBar)
-      // to background rows — archiving means the user is done with the work.
-      try {
-        await camberAcpSessionClose({ agentServer, sessionId, cancelInFlight: true });
-      } catch (e) {
-        console.error("Failed to close ACP session on archive", e);
-      }
-    }
+    // The helper archives the row (cascading to the sub-agents rendered under
+    // it) and then closes the agent session with cancelInFlight, logging a
+    // failed close: archiving means the user is done with the work, and
+    // restoring reopens the session through session/resume or session/load.
+    // The camber CLI's chat archive runs the same helper code.
+    const archived = await camberAppArchiveConversation({
+      workspacePath,
+      ...(conversationId ? { conversationId } : {}),
+      agentServer,
+      ...(sessionId ? { sessionId } : {}),
+    });
+    this.applyNavState(archived.state);
     this.emitClosedSession({ agentServer, sessionId, conversationId });
   }
 
-  async archiveAgentServer(agentServer = DEFAULT_AGENT_SERVER): Promise<void> {
+  /**
+   * Apply a disabled agent's archive (Settings > Agents). `remove` runs the
+   * helper's shared camber/app/removeAgentServer operation, which drops the
+   * agent and archives each of its conversations as archiveSession does (the
+   * camber CLI's agents remove runs the same code). The agent's conversations
+   * leave the list immediately; the helper's navigation state and the closed
+   * sessions are applied when it answers.
+   */
+  async archiveAgentServer(
+    agentServer: string,
+    remove: () => Promise<AppRemoveAgentServerOutput>,
+  ): Promise<AppRemoveAgentServerOutput> {
     agentServer = normalizeAgentServerName(agentServer);
-    let sessions = this.sessions.filter((session) => session.agentServer === agentServer);
-    try {
-      const state = await camberAcpNavList({});
-      sessions = this.conversationsFromNavState(state).filter(
-        (session) => session.agentServer === agentServer,
-      );
-    } catch (error) {
-      console.error("Failed to load ACP conversations for disabled agent", error);
-    }
-    if (sessions.length === 0) {
-      return;
-    }
-
     this.setSessions(this.sessions.filter((session) => session.agentServer !== agentServer));
+    let removed: AppRemoveAgentServerOutput;
     try {
-      for (const session of sessions) {
-        await this.archiveSession(
-          session.cwd,
-          session.sessionId,
-          agentServer,
-          session.sessionId ? undefined : session.id,
-        );
-      }
+      removed = await remove();
     } catch (error) {
-      console.error("Failed to archive ACP conversations for disabled agent", error);
+      await this.refresh({ showLoading: false });
+      throw error;
+    }
+    if (removed.navState) this.applyNavState(removed.navState);
+    for (const conversation of removed.archived) {
+      const sessionId = conversation.sessionId || null;
+      this.emitClosedSession({
+        agentServer: normalizeAgentServerName(conversation.agentServer || agentServer),
+        sessionId,
+        conversationId: sessionId ? undefined : conversation.conversationId,
+      });
+    }
+    if (removed.archiveError) {
+      console.error("Failed to archive ACP conversations for disabled agent", removed.archiveError);
       await this.refresh({ showLoading: false });
     }
+    return removed;
   }
 
   async deleteSession(sessionId: SessionId, agentServer = DEFAULT_AGENT_SERVER): Promise<void> {
@@ -310,10 +302,14 @@ export class ACPConversationRepositoryWriter {
     }
 
     try {
-      await camberAcpNavDeleteConversation({ conversationId });
-      if (sessionId) {
-        await camberAcpSessionDelete({ agentServer, sessionId });
-      }
+      // Removes the nav row, then deletes the agent session (the camber CLI's
+      // chat delete runs the same helper code). Passing the agent with no
+      // session deletes only the row.
+      await camberAppDeleteConversation({
+        conversationId,
+        agentServer,
+        ...(sessionId ? { sessionId } : {}),
+      });
     } catch (e) {
       this.deleteState = failure(normalizeACPError(e));
       console.error("Failed to delete ACP conversation", e);
@@ -327,10 +323,6 @@ export class ACPConversationRepositoryWriter {
   ): Promise<ACPConversationSummary | undefined> {
     const trimmed = nickname.trim();
     if (!conversationId || !trimmed) return undefined;
-    const existing = this.sessions.find((session) => session.id === conversationId);
-    const canRenameSession = Boolean(
-      existing?.sessionId && supportsSessionRename(this.agents, existing.agentServer),
-    );
     this.titleOverrides.delete(conversationId);
     this.setSessions(
       this.sessions.map((session) =>
@@ -338,31 +330,16 @@ export class ACPConversationRepositoryWriter {
       ),
     );
     try {
-      this.applyNavState(
-        await camberAcpNavRenameConversation({
-          conversationId,
-          nickname: trimmed,
-          ...(canRenameSession ? { title: trimmed } : {}),
-        }),
-      );
+      // The helper sets the nickname and, when the agent advertises session
+      // rename, the title and the agent-side session title (in the
+      // background). The camber CLI's chat rename runs the same helper code.
+      this.applyNavState(await camberAppRenameConversation({ conversationId, name: trimmed }));
     } catch (error) {
       await this.refresh({ showLoading: false });
       throw error;
     }
 
-    const renamed = this.sessions.find((session) => session.id === conversationId);
-    const sessionForACP = renamed ?? existing;
-    if (sessionForACP?.sessionId && canRenameSession) {
-      void camberAcpRenameSession({
-        agentServer: sessionForACP.agentServer,
-        sessionId: sessionForACP.sessionId,
-        title: trimmed,
-      }).catch((error) => {
-        console.debug("ACP session rename failed", error);
-      });
-    }
-
-    return renamed;
+    return this.sessions.find((session) => session.id === conversationId);
   }
 
   replaceConversations(conversations: ACPNavConversation[]): void {
@@ -472,27 +449,13 @@ export class ACPConversationRepositoryWriter {
   }
 }
 
-function supportsSessionRename(
-  agents: ACPAgentCapabilitiesSource | undefined,
-  agentServer = DEFAULT_AGENT_SERVER,
-): boolean {
-  const capabilities = agents?.capabilitiesFor(agentServer);
-  const sessionCapabilities = (
-    capabilities as { sessionCapabilities?: Record<string, unknown> } | null
-  )?.sessionCapabilities;
-  const meta = (capabilities as { _meta?: Record<string, unknown> } | null)?._meta;
-  return sessionCapabilities?.rename != null || meta?.rename_session === true;
-}
-
 const [getACPConversationContext, setACPConversationRepositoryContext] =
   createContext<ACPConversationRepository>();
 
 export { getACPConversationContext };
 
-export function setACPConversationContext(
-  agents?: ACPAgentCapabilitiesSource,
-): ACPConversationRepositoryWriter {
-  const repo = new ACPConversationRepositoryWriter(agents);
+export function setACPConversationContext(): ACPConversationRepositoryWriter {
+  const repo = new ACPConversationRepositoryWriter();
   setACPConversationRepositoryContext(repo.publicAPI());
   return repo;
 }

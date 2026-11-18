@@ -1,9 +1,6 @@
 <script lang="ts">
   import { isFailure, isLoading } from "@camber/lib/async-state";
-  import {
-    camberAcpNavCheckAgentRuntimes,
-    camberAcpNavInstallAgentServer,
-  } from "@camber/helperapi";
+  import { camberAcpNavCheckAgentRuntimes } from "@camber/helperapi";
   import { type ACPAgentServerConfig, type ACPAgentServers } from "@camber/rpc";
   import { ASSISTANT_CONFIG_DISPLAY_PATH, openAssistantConfigFile } from "../assistantConfig";
   import { appState } from "../hostAdapter";
@@ -186,23 +183,10 @@
     }
   }
 
-  async function updateAgentServers(agentServers: ACPAgentServers): Promise<void> {
-    const disabledNames = disabledAgentServerNames(configuredAgentServers, agentServers);
-    // Registry-derived configs are Svelte $state proxies. In VS Code the host
-    // RPC crosses a postMessage boundary, which cannot structured-clone a proxy
-    // (DataCloneError). Snapshot to a plain object before sending.
-    const requestedAgentServers = $state.snapshot(agentServers) as ACPAgentServers;
-    // The save replaces the whole agent-servers map on disk, so it must not
-    // race the repository's last-used-default writers: route it through the
-    // repository's serialized persist queue, which re-reads each surviving
-    // entry's default_config_options from the store's freshest state before
-    // the host RPC performs the set. The returned map is what actually
-    // landed on disk.
-    const nextAgentServers = await acp.agents.saveAgentServers(requestedAgentServers, (merged) =>
-      rpc.setACPAgentServers(merged),
-    );
+  // Mirrors the map the helper's shared install/remove operation actually
+  // wrote (not the panel's snapshot) into app state.
+  function applySavedAgentServers(nextAgentServers: ACPAgentServers): void {
     savedAgentServers = nextAgentServers;
-    await archiveDisabledAgentServers(disabledNames);
     appState.update((state) => ({
       ...state,
       userSettings: {
@@ -213,19 +197,15 @@
     agentUpdates.refresh();
   }
 
-  function disabledAgentServerNames(
-    previousAgentServers: ACPAgentServers,
-    nextAgentServers: ACPAgentServers,
-  ): string[] {
-    const previousNames = Object.keys(resolveAgentServers(previousAgentServers));
-    const nextNames = new Set(Object.keys(resolveAgentServers(nextAgentServers)));
-    return previousNames.filter((name) => !nextNames.has(name));
-  }
-
-  async function archiveDisabledAgentServers(disabledNames: string[]): Promise<void> {
-    for (const name of disabledNames) {
-      await conversations.archiveAgentServer(name);
-    }
+  // Disabling runs the helper's camber/app/removeAgentServer (the camber
+  // CLI's agents remove runs the same code): it drops the agent under the
+  // helper's agent-server lock, so it cannot race the repository's
+  // last-used-default writers, then archives the agent's conversations.
+  async function removeAgentServer(name: string): Promise<void> {
+    const removed = await conversations.archiveAgentServer(name, () =>
+      acp.agents.removeAgentServer(name),
+    );
+    applySavedAgentServers((removed.state.agentServers ?? {}) as ACPAgentServers);
   }
 
   async function toggleAgent(agent: ACPRegistryAgent): Promise<void> {
@@ -233,10 +213,9 @@
       return;
     }
 
-    const nextAgentServers = { ...configuredAgentServers };
-    // updateAgentServers() below refreshes the store configuredRegistryIds
-    // derives from, so re-reading the set after the save answers "is it
-    // configured now", not "was this an install" — capture that up front.
+    // The save below refreshes the store configuredRegistryIds derives from,
+    // so re-reading the set after it answers "is it configured now", not
+    // "was this an install" — capture that up front.
     const wasConfigured = configuredRegistryIds.has(agent.id);
     busyAgentId = agent.id;
     installStage = null;
@@ -244,17 +223,16 @@
 
     try {
       if (wasConfigured) {
-        delete nextAgentServers[agent.id];
+        await removeAgentServer(agent.id);
       } else {
         const config = agentServerConfigFromRegistryAgent(agent);
         if (!config) {
           throw new Error(`${agent.name} needs manual binary installation before it can be added`);
         }
-        await installAgent(agent, config);
-        nextAgentServers[agent.id] = config;
+        const nextAgentServers = await installAgent(agent, config);
         installStage = "enabling";
+        applySavedAgentServers(nextAgentServers);
       }
-      await updateAgentServers(nextAgentServers);
       if (!wasConfigured) {
         // Pre-warm the just-installed agent in the background: the probe
         // downloads/starts it, caches its config options, and learns whether
@@ -339,17 +317,17 @@
     }
   }
 
+  // Runs the helper's camber/app/installAgentServer (the camber CLI's agents
+  // install runs the same code): download and record the agent, then add it
+  // to the stored map under the helper's agent-server lock. Returns the map
+  // that landed.
   async function installAgent(
     agent: ACPRegistryAgent,
     config: ACPAgentServerConfig,
-  ): Promise<void> {
+  ): Promise<ACPAgentServers> {
     const mode = installMode(agent, config);
-    if (mode === "command") {
-      installStage = "enabling";
-      return;
-    }
-
-    installStage = mode === "binary" ? "downloading" : "installing";
+    installStage =
+      mode === "binary" ? "downloading" : mode === "command" ? "enabling" : "installing";
     const timers: number[] = [];
     if (mode === "binary") {
       timers.push(
@@ -361,15 +339,14 @@
       );
     }
     try {
-      await Promise.all([
-        // Snapshot to strip the Svelte $state proxy so the VS Code postMessage
-        // boundary can structured-clone the binary config.
-        camberAcpNavInstallAgentServer({
-          agentServer: agent.id,
-          config: $state.snapshot(config) as ACPAgentServerConfig,
-        }),
+      const [nextAgentServers] = await Promise.all([
+        // Registry-derived configs are Svelte $state proxies. In VS Code the
+        // RPC crosses a postMessage boundary, which cannot structured-clone a
+        // proxy (DataCloneError). Snapshot to a plain object before sending.
+        acp.agents.installAgentServer(agent.id, $state.snapshot(config) as ACPAgentServerConfig),
         minimumInstallProgressDelay(mode),
       ]);
+      return nextAgentServers;
     } finally {
       timers.forEach((timer) => window.clearTimeout(timer));
     }

@@ -129,6 +129,20 @@ describe("client", () => {
       });
     });
 
+    it("hands agent server store changes to the runtime's subscribers", async () => {
+      const { onACPAgentServersDidChange } = await import("@camber/features/acp");
+      const listener = vi.fn();
+      const stop = onACPAgentServersDidChange(listener);
+      try {
+        await server.route({
+          data: { command: "acpAgentServersDidChange", payload: [], requestId: "agent-servers" },
+        });
+      } finally {
+        stop();
+      }
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
     it("routes terminal metadata updates to the injected terminal repository", async () => {
       const update = {
         terminalId: "terminal-1",
@@ -168,6 +182,43 @@ describe("client", () => {
 
       expect(received).toHaveLength(1);
       expect(received[0].detail).toEqual({ conversationId: "conversation-9" });
+    });
+
+    it("removes a project for the desktop app request and reports missing repositories", async () => {
+      await server.route({
+        data: { command: "removeProject", payload: ["/repo"], requestId: "remove-1" },
+      });
+      expect(send).toHaveBeenCalledWith("removeProject", {
+        requestId: "remove-1",
+        error: expect.objectContaining({ message: "This window cannot remove projects" }),
+      });
+
+      const order: string[] = [];
+      const desktop = new WebviewRPCServer(
+        { addEventListener: vi.fn(), removeEventListener: vi.fn() },
+        () => {},
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        undefined,
+        undefined,
+        { removeProject: async (path: string) => void order.push(`remove:${path}`) } as any,
+        { refresh: async () => void order.push("refresh") } as any,
+        undefined,
+        { closeProject: async (path: string) => void order.push(`close:${path}`) },
+      );
+      const desktopSend = vi.spyOn(desktop, "sendMessage");
+      await desktop.route({
+        data: { command: "removeProject", payload: ["/repo"], requestId: "remove-2" },
+      });
+      expect(order).toEqual(["remove:/repo", "close:/repo", "refresh"]);
+      expect(desktopSend).toHaveBeenCalledWith("removeProject", {
+        requestId: "remove-2",
+        response: undefined,
+      });
     });
 
     it("delivers an ACP notification batch in order through one RPC request", async () => {

@@ -4,10 +4,10 @@
  * camber helper
  * OpenAPI spec version: 0.1.0
  */
-import type { SymbolDefinition } from "./symbolDefinition";
 
-export interface SearchSymbolDefinitionsOutput {
+export interface AppSetDefaultAgentServerParams {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  defs: SymbolDefinition[];
+  agentServer?: string;
+  pinned?: boolean;
 }

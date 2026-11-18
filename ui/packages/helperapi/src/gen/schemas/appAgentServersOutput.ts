@@ -4,10 +4,11 @@
  * camber helper
  * OpenAPI spec version: 0.1.0
  */
-import type { RuntimeFiles } from "./runtimeFiles";
+import type { ACPNavAgentServersState } from "./aCPNavAgentServersState";
 
-export interface RuntimeFilesOutput {
+export interface AppAgentServersOutput {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  files: RuntimeFiles[];
+  applied: boolean;
+  state: ACPNavAgentServersState;
 }

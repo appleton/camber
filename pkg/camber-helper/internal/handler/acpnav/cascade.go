@@ -32,23 +32,23 @@ type archivedSession struct {
 // descendant working in another worktree is left alone, but the walk continues
 // through it so same-group descendants below it still go. Roots themselves are
 // never touched. It returns the sessions of the newly archived descendants and
-// how many rows it archived.
+// the ids of every row it archived, in walk order.
 //
 // With skipRestored, conversations carrying a restore marker (see
 // RestoreConversation) are neither archived nor walked through: the user
 // deliberately revived them while an ancestor stayed archived. Live archive
 // cascades pass false so archiving the parent again re-archives them.
-func archiveDescendantsTx(ctx context.Context, tx *sql.Tx, roots []string, skipRestored bool) ([]archivedSession, int, error) {
+func archiveDescendantsTx(ctx context.Context, tx *sql.Tx, roots []string, skipRestored bool) ([]archivedSession, []string, error) {
 	if len(roots) == 0 {
-		return nil, 0, nil
+		return nil, nil, nil
 	}
 	children, err := controlChildren(ctx, tx)
 	if err != nil {
-		return nil, 0, err
+		return nil, nil, err
 	}
 	now := nowString()
 	var sessions []archivedSession
-	count := 0
+	var archivedIDs []string
 	done := make(map[string]bool, len(roots))
 	for _, root := range roots {
 		if done[root] {
@@ -57,7 +57,7 @@ func archiveDescendantsTx(ctx context.Context, tx *sql.Tx, roots []string, skipR
 		done[root] = true
 		rootGroup, ok, err := sidebarGroupTx(ctx, tx, root)
 		if err != nil {
-			return nil, 0, err
+			return nil, nil, err
 		}
 		if !ok {
 			continue
@@ -79,7 +79,7 @@ func archiveDescendantsTx(ctx context.Context, tx *sql.Tx, roots []string, skipR
 						continue
 					}
 					if err != sql.ErrNoRows {
-						return nil, 0, fmt.Errorf("reading restore marker: %w", err)
+						return nil, nil, fmt.Errorf("reading restore marker: %w", err)
 					}
 				}
 				queue = append(queue, child)
@@ -90,25 +90,25 @@ func archiveDescendantsTx(ctx context.Context, tx *sql.Tx, roots []string, skipR
 					continue
 				}
 				if err != nil {
-					return nil, 0, fmt.Errorf("reading descendant conversation: %w", err)
+					return nil, nil, fmt.Errorf("reading descendant conversation: %w", err)
 				}
 				if sidebarGroup(workspacePath, cwd) != rootGroup {
 					continue
 				}
 				if _, err := tx.ExecContext(ctx, `UPDATE conversations SET active = 0, archived = 1, touched_at = ? WHERE id = ?`, now, child); err != nil {
-					return nil, 0, fmt.Errorf("archiving descendant conversation: %w", err)
+					return nil, nil, fmt.Errorf("archiving descendant conversation: %w", err)
 				}
 				if err := clearRestoredTx(ctx, tx, child); err != nil {
-					return nil, 0, err
+					return nil, nil, err
 				}
-				count++
+				archivedIDs = append(archivedIDs, child)
 				if sessionID != "" {
 					sessions = append(sessions, archivedSession{AgentServer: agentServer, SessionID: sessionID})
 				}
 			}
 		}
 	}
-	return sessions, count, nil
+	return sessions, archivedIDs, nil
 }
 
 // sidebarGroup names the desktop sidebar group a conversation renders in:
@@ -187,13 +187,14 @@ func (s *Store) reconcileArchivedOrphans(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	_, count, err := archiveDescendantsTx(ctx, tx, roots, true)
+	_, archivedIDs, err := archiveDescendantsTx(ctx, tx, roots, true)
 	if err != nil {
 		return 0, err
 	}
 	if err := tx.Commit(); err != nil {
 		return 0, err
 	}
+	count := len(archivedIDs)
 	if count > 0 {
 		slog.InfoContext(ctx, "acpnav: archived orphaned sub-agent conversations", "count", count)
 	}

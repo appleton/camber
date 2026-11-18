@@ -1,0 +1,36 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "appcontrol",
+    srcs = [
+        "agent_servers.go",
+        "service.go",
+    ],
+    importpath = "github.com/appleton/camber/pkg/camber-helper/internal/handler/appcontrol",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/camber-helper/internal/handler/acpnav",
+        "//pkg/camber-helper/internal/handler/acpproxy",
+        "//pkg/camber-helper/methods",
+        "@com_github_coder_acp_go_sdk//:acp-go-sdk",
+        "@com_github_pkg_errors//:errors",
+        "@com_github_tliron_glsp//:glsp",
+    ],
+)
+
+go_test(
+    name = "appcontrol_test",
+    srcs = [
+        "agent_servers_test.go",
+        "service_test.go",
+    ],
+    embed = [":appcontrol"],
+    deps = [
+        "//pkg/camber-helper/internal/handler/acpnav",
+        "//pkg/camber-helper/internal/handler/acpproxy",
+        "//pkg/camber-helper/methods",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+        "@com_github_tliron_glsp//:glsp",
+    ],
+)

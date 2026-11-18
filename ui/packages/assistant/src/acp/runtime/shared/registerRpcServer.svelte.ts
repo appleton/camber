@@ -47,6 +47,7 @@ export function registerRpcServer({
       repositories.acpProjectRepo,
       repositories.acpConversationRepo,
       repositories.localInference,
+      repositories.acpWorktreeRepo,
     );
 
     rpc.ready();

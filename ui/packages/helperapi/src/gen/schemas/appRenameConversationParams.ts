@@ -4,10 +4,11 @@
  * camber helper
  * OpenAPI spec version: 0.1.0
  */
-import type { Diagnostic } from "./diagnostic";
 
-export interface GetDiagnosticsOutput {
+export interface AppRenameConversationParams {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  diagnostics: Diagnostic[];
+  conversationId: string;
+  /** New conversation name; surrounding whitespace is trimmed */
+  name: string;
 }

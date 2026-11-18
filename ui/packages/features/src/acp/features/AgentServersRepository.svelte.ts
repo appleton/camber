@@ -26,7 +26,63 @@ export class ACPAgentServersRepository {
   // first list read so configureSessionRepo never clears a pin it never saw.
   defaultAgentServerPinned = $state<boolean | undefined>(undefined);
 
+  #didChangeListeners = new Set<() => void>();
+  #didChangeInFlight: Promise<void> | null = null;
+  #didChangeQueued = false;
+
   constructor(private readonly options: ACPAgentServersRepositoryOptions) {}
+
+  /** Runs after each store re-read triggered by handleDidChange. */
+  onDidChange(listener: () => void): () => void {
+    this.#didChangeListeners.add(listener);
+    return () => this.#didChangeListeners.delete(listener);
+  }
+
+  /**
+   * Re-read the store after the helper's camber/acpNav/agentServersDidChange
+   * broadcast: a change from another surface, or from a `camber` CLI action
+   * (agents install/add/edit/remove/default). Waits for this window's own
+   * queued writes first (each ends in a broadcast of its own) and coalesces a
+   * burst into one trailing re-read. On the desktop, agents that appear are
+   * pre-warmed, as the settings panel does after its own install.
+   */
+  handleDidChange(): Promise<void> {
+    if (this.#didChangeInFlight) {
+      this.#didChangeQueued = true;
+      return this.#didChangeInFlight;
+    }
+    const run = async () => {
+      do {
+        this.#didChangeQueued = false;
+        await this.options.sessionRepo.agents.agentServersPersistsSettled();
+        const known = isSuccess(this.state) ? new Set(agentServerNames(this.state.value)) : null;
+        await this.refresh({ background: true });
+        const desktop = get(this.options.appState).environment.assistantHost === "desktop";
+        if (known && desktop && isSuccess(this.state)) {
+          for (const name of agentServerNames(this.state.value)) {
+            if (!known.has(name)) {
+              void this.options.sessionRepo.agents
+                .refreshCachedConfig(name, "/", { quiet: true })
+                .catch((error: unknown) => {
+                  console.warn("Failed to pre-warm a newly added ACP agent", error);
+                });
+            }
+          }
+        }
+        for (const listener of this.#didChangeListeners) {
+          try {
+            listener();
+          } catch (error) {
+            console.error("ACP agent servers change listener failed", error);
+          }
+        }
+      } while (this.#didChangeQueued);
+    };
+    this.#didChangeInFlight = run().finally(() => {
+      this.#didChangeInFlight = null;
+    });
+    return this.#didChangeInFlight;
+  }
 
   get agentServers(): ACPAgentServers | undefined {
     return isSuccess(this.state) ? this.state.value : undefined;
@@ -129,6 +185,24 @@ export class ACPAgentServersRepository {
       console.error("Failed to load ACP agent servers", result.error);
     }
   }
+}
+
+const agentServersDidChangeListeners = new Set<() => void>();
+
+/**
+ * Delivers the helper's camber/acpNav/agentServersDidChange broadcast. The
+ * webview RPC server has no handle on the context-scoped repository, so the
+ * runtime that owns it subscribes here (see Repositories).
+ */
+export function notifyACPAgentServersDidChange(): void {
+  for (const listener of agentServersDidChangeListeners) {
+    listener();
+  }
+}
+
+export function onACPAgentServersDidChange(listener: () => void): () => void {
+  agentServersDidChangeListeners.add(listener);
+  return () => agentServersDidChangeListeners.delete(listener);
 }
 
 const [getACPAgentServersContext, setACPAgentServersRepositoryContext] =

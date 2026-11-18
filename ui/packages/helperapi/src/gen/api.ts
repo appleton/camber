@@ -51,6 +51,17 @@ import type {
   ACPNavUpsertProjectParams,
   ACPRenameSessionParams,
   ACPRestartServerOutput,
+  AppAgentServersOutput,
+  AppArchiveConversationOutput,
+  AppArchiveConversationParams,
+  AppDeleteConversationParams,
+  AppInstallAgentServerOutput,
+  AppInstallAgentServerParams,
+  AppRemoveAgentServerOutput,
+  AppRemoveAgentServerParams,
+  AppRenameConversationParams,
+  AppSetAgentDefaultConfigOptionParams,
+  AppSetDefaultAgentServerParams,
   CloseSessionResponse,
   ControlDispatchParams,
   DeleteSecretOutput,
@@ -462,6 +473,83 @@ export const camberAcpNavUpsertProject = async (
   return await runtime.jsonrpcCall(
     toJsonrpcMethod("/camber/acpNav/upsertProject"),
     aCPNavUpsertProjectParams,
+  );
+};
+/**
+ * archives a conversation as the desktop does: archives it with the sub-agents rendered under it, then closes its agent session, cancelling a running turn
+ */
+export const camberAppArchiveConversation = async (
+  appArchiveConversationParams: NonReadonly<AppArchiveConversationParams>,
+): Promise<AppArchiveConversationOutput> => {
+  return await runtime.jsonrpcCall(
+    toJsonrpcMethod("/camber/app/archiveConversation"),
+    appArchiveConversationParams,
+  );
+};
+/**
+ * deletes a conversation as the desktop does: removes its navigation row, then deletes its agent session
+ */
+export const camberAppDeleteConversation = async (
+  appDeleteConversationParams: NonReadonly<AppDeleteConversationParams>,
+): Promise<ACPNavState> => {
+  return await runtime.jsonrpcCall(
+    toJsonrpcMethod("/camber/app/deleteConversation"),
+    appDeleteConversationParams,
+  );
+};
+/**
+ * installs a registry agent as Settings > Agents does: downloads it, then adds it to the agent servers
+ */
+export const camberAppInstallAgentServer = async (
+  appInstallAgentServerParams: NonReadonly<AppInstallAgentServerParams>,
+): Promise<AppInstallAgentServerOutput> => {
+  return await runtime.jsonrpcCall(
+    toJsonrpcMethod("/camber/app/installAgentServer"),
+    appInstallAgentServerParams,
+  );
+};
+/**
+ * removes an agent as Settings > Agents does: drops it from the agent servers, then archives its conversations
+ */
+export const camberAppRemoveAgentServer = async (
+  appRemoveAgentServerParams: NonReadonly<AppRemoveAgentServerParams>,
+): Promise<AppRemoveAgentServerOutput> => {
+  return await runtime.jsonrpcCall(
+    toJsonrpcMethod("/camber/app/removeAgentServer"),
+    appRemoveAgentServerParams,
+  );
+};
+/**
+ * renames a conversation as the desktop does: sets its nickname and, when the agent supports it, its title and agent session title
+ */
+export const camberAppRenameConversation = async (
+  appRenameConversationParams: NonReadonly<AppRenameConversationParams>,
+): Promise<ACPNavState> => {
+  return await runtime.jsonrpcCall(
+    toJsonrpcMethod("/camber/app/renameConversation"),
+    appRenameConversationParams,
+  );
+};
+/**
+ * pins, unpins or follows an agent's default value for a configuration option, in one atomic agent server store write
+ */
+export const camberAppSetAgentDefaultConfigOption = async (
+  appSetAgentDefaultConfigOptionParams: NonReadonly<AppSetAgentDefaultConfigOptionParams>,
+): Promise<AppAgentServersOutput> => {
+  return await runtime.jsonrpcCall(
+    toJsonrpcMethod("/camber/app/setAgentDefaultConfigOption"),
+    appSetAgentDefaultConfigOptionParams,
+  );
+};
+/**
+ * pins, unpins or follows the default agent as the desktop does, in one atomic agent server store write
+ */
+export const camberAppSetDefaultAgentServer = async (
+  appSetDefaultAgentServerParams: NonReadonly<AppSetDefaultAgentServerParams>,
+): Promise<AppAgentServersOutput> => {
+  return await runtime.jsonrpcCall(
+    toJsonrpcMethod("/camber/app/setDefaultAgentServer"),
+    appSetDefaultAgentServerParams,
   );
 };
 /**

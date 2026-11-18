@@ -30,20 +30,28 @@ type ListSkillsOutput struct {
 }
 
 func (h *CamberHandler) listSkillsHandler(_ context.Context, _ *ListSkillsParams, _ *glsp.Context) (*ListSkillsOutput, error) {
+	return &ListSkillsOutput{Skills: installedSkills(h.workspaceFolderPaths())}, nil
+}
+
+// installedSkills is camber/listSkills's discovery over the user skill roots
+// and those of workspacePaths; the skills.list control action shares it.
+func installedSkills(workspacePaths []string) []SkillSummary {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		homeDir = ""
 	}
-	workspacePaths := make([]string, 0, len(h.GetWorkspaceFolders()))
-	for _, folder := range h.GetWorkspaceFolders() {
+	return discoverSkills(skillRoots(homeDir, userconfig.Directory(), workspacePaths))
+}
+
+func (h *CamberHandler) workspaceFolderPaths() []string {
+	folders := h.GetWorkspaceFolders()
+	workspacePaths := make([]string, 0, len(folders))
+	for _, folder := range folders {
 		if workspacePath := protocol.DocumentURI(folder.URI).Path(); workspacePath != "" {
 			workspacePaths = append(workspacePaths, workspacePath)
 		}
 	}
-
-	return &ListSkillsOutput{
-		Skills: discoverSkills(skillRoots(homeDir, userconfig.Directory(), workspacePaths)),
-	}, nil
+	return workspacePaths
 }
 
 // skillRoots lists Claude-compatible roots alongside camber ones because the

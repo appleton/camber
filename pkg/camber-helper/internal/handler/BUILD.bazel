@@ -7,6 +7,7 @@ go_library(
         "acp_nav.go",
         "cancellation.go",
         "config.go",
+        "control_tools.go",
         "did_change_configuration.go",
         "file_utils.go",
         "get_user_config.go",
@@ -48,6 +49,7 @@ go_library(
         "//pkg/camber-helper/internal/gopls/pkg/file",
         "//pkg/camber-helper/internal/handler/acpnav",
         "//pkg/camber-helper/internal/handler/acpproxy",
+        "//pkg/camber-helper/internal/handler/appcontrol",
         "//pkg/camber-helper/internal/handler/approvals",
         "//pkg/camber-helper/internal/handler/control",
         "//pkg/camber-helper/internal/handler/filesearch",
@@ -82,6 +84,7 @@ go_test(
     name = "handler_test",
     srcs = [
         "config_test.go",
+        "control_tools_test.go",
         "file_utils_test.go",
         "git_methods_test.go",
         "handler_test.go",

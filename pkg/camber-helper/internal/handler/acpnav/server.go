@@ -31,6 +31,7 @@ type Server struct {
 	// unread survives one surface closing a conversation another still shows.
 	activeSessions        map[string]map[string]bool
 	archivedSessionCloser ArchivedSessionCloser
+	projectsChanged       func()
 }
 
 type InstalledRegistryAgentServerStore interface {
@@ -62,6 +63,20 @@ func (s *Server) SetStore(store *Store) {
 func (s *Server) SetArchivedSessionCloser(closer ArchivedSessionCloser) {
 	s.archivedSessionCloser = closer
 	s.applyArchivedSessionCloser()
+}
+
+// SetProjectsChangedHook installs a callback run after every change to the
+// registered projects and worktrees (add, remove, create, remove worktree), so
+// caches keyed on the project set (file search) refresh whichever surface or
+// control action made the change.
+func (s *Server) SetProjectsChangedHook(hook func()) {
+	s.projectsChanged = hook
+}
+
+func (s *Server) notifyProjectsChanged() {
+	if s.projectsChanged != nil {
+		s.projectsChanged()
+	}
 }
 
 func (s *Server) applyArchivedSessionCloser() {
@@ -302,6 +317,7 @@ func (s *Server) UpsertProject(ctx context.Context, req *methods.ACPNavUpsertPro
 	if err != nil {
 		return methods.ACPNavProject{}, err
 	}
+	s.notifyProjectsChanged()
 	s.notifyDidChange(ctx, gCtx)
 	return project, nil
 }
@@ -426,6 +442,7 @@ func (s *Server) createWorktree(ctx context.Context, req *methods.ACPNavCreateWo
 	if err != nil {
 		return methods.ACPNavProject{}, err
 	}
+	s.notifyProjectsChanged()
 	if !pathExists(project.Path) {
 		return methods.ACPNavProject{}, fmt.Errorf("created worktree path does not exist: %s", project.Path)
 	}
@@ -440,6 +457,7 @@ func (s *Server) RemoveProject(ctx context.Context, req *methods.ACPNavRemovePro
 	if err := s.store.RemoveProject(ctx, req.Path); err != nil {
 		return methods.ACPNavState{}, err
 	}
+	s.notifyProjectsChanged()
 	state, err := s.listWithLiveStatus(ctx)
 	if err != nil {
 		return methods.ACPNavState{}, err
@@ -455,6 +473,7 @@ func (s *Server) RemoveWorktree(ctx context.Context, req *methods.ACPNavRemoveWo
 	if err := s.store.RemoveWorktree(ctx, req.Path); err != nil {
 		return methods.ACPNavState{}, err
 	}
+	s.notifyProjectsChanged()
 	state, err := s.listWithLiveStatus(ctx)
 	if err != nil {
 		return methods.ACPNavState{}, err
@@ -580,18 +599,37 @@ func (s *Server) RestoreConversation(ctx context.Context, req *methods.ACPNavRes
 }
 
 func (s *Server) ArchiveConversation(ctx context.Context, req *methods.ACPNavArchiveConversationParams, gCtx *glsp.Context) (methods.ACPNavState, error) {
+	state, _, err := s.ArchiveConversationWithDescendants(ctx, req, gCtx)
+	return state, err
+}
+
+// ArchiveConversationWithDescendants is ArchiveConversation that also reports
+// what it archived: the matching conversations, and the sub-agents rendered
+// under them that the cascade archived (and whose sessions it closes in the
+// background).
+func (s *Server) ArchiveConversationWithDescendants(ctx context.Context, req *methods.ACPNavArchiveConversationParams, gCtx *glsp.Context) (methods.ACPNavState, ArchivedConversations, error) {
 	if s.store == nil {
-		return methods.ACPNavState{}, sql.ErrConnDone
+		return methods.ACPNavState{}, ArchivedConversations{}, sql.ErrConnDone
 	}
-	if err := s.store.ArchiveConversation(ctx, req.WorkspacePath, req.ConversationID, req.AgentServer, req.SessionID); err != nil {
-		return methods.ACPNavState{}, err
+	roots, cascaded, err := s.store.archiveConversation(ctx, req.WorkspacePath, req.ConversationID, req.AgentServer, req.SessionID)
+	if err != nil {
+		return methods.ACPNavState{}, ArchivedConversations{}, err
 	}
+	archived := ArchivedConversations{Archived: roots, Descendants: cascaded}
 	state, err := s.listWithLiveStatus(ctx)
 	if err != nil {
-		return methods.ACPNavState{}, err
+		return methods.ACPNavState{}, archived, err
 	}
 	s.notifyState(ctx, gCtx, state)
-	return state, nil
+	return state, archived, nil
+}
+
+// ArchivedConversations lists the conversation ids an archive changed.
+type ArchivedConversations struct {
+	// Archived are the conversations the request named.
+	Archived []string
+	// Descendants are the sub-agents the cascade archived with them.
+	Descendants []string
 }
 
 func (s *Server) RenameConversation(ctx context.Context, req *methods.ACPNavRenameConversationParams, gCtx *glsp.Context) (methods.ACPNavState, error) {
@@ -915,6 +953,12 @@ func liveStatusKey(agentServer, sessionID string) (string, bool) {
 
 func liveStatusIsEmpty(status methods.ACPNavConversationLiveStatus) bool {
 	return !status.Working && !status.WaitingForUser && !status.Unread
+}
+
+// NotifyDidChange pushes the current navigation state to every client, for
+// callers whose change did not already notify (DeleteConversation does not).
+func (s *Server) NotifyDidChange(ctx context.Context, gCtx *glsp.Context) {
+	s.notifyDidChange(ctx, gCtx)
 }
 
 func (s *Server) DeleteConversation(ctx context.Context, req *methods.ACPNavDeleteConversationParams, _ *glsp.Context) (methods.ACPNavState, error) {

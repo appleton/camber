@@ -62,6 +62,15 @@ func (s *Server) WriteControlState(ctx context.Context, id string, value any) er
 	return pkgerrors.WithStack(s.store.writeControlState(ctx, id, string(raw)))
 }
 
+// DeleteControlState removes a durable orchestration record, keeping the
+// parent-link cache coherent. Deleting a missing record is not an error.
+func (s *Server) DeleteControlState(ctx context.Context, id string) error {
+	if s.store == nil {
+		return pkgerrors.WithStack(sql.ErrConnDone)
+	}
+	return pkgerrors.WithStack(s.store.deleteControlState(ctx, id))
+}
+
 // CheckWorktreeClean is Store.CheckWorktreeClean for control automation: an
 // isolated `git status` that fails unless the worktree has no uncommitted or
 // untracked changes.
@@ -80,6 +89,7 @@ func (s *Server) RemoveWorktreeSafely(ctx context.Context, path string, g *glsp.
 	if err := s.store.RemoveWorktreeSafely(ctx, path); err != nil {
 		return methods.ACPNavState{}, err
 	}
+	s.notifyProjectsChanged()
 	state, err := s.listWithLiveStatus(ctx)
 	if err == nil {
 		s.notifyState(ctx, g, state)

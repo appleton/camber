@@ -5,11 +5,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface GetDiagnosticsParams {
+export interface AppSetAgentDefaultConfigOptionParams {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
-  /** @minimum 0 */
-  severity: number;
-  uri: string;
-  waitMs?: number;
+  agentServer: string;
+  clearValue?: boolean;
+  optionId: string;
+  pinned?: boolean;
+  value?: string;
 }
