@@ -145,7 +145,7 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 	}}
 	do.Flags().StringVar(&actionInput, "input", "{}", "JSON argument object, @file, or @- for stdin")
 	root.AddCommand(do)
-	agents := group("agents", "Discover agents and their configuration")
+	agents := group("agents", "Discover, install and configure agents")
 	add(agents, "list", "List available agents", "agents.list", cobra.NoArgs, empty)
 	agentArgs := func(cmd *cobra.Command, args []string) (map[string]any, error) {
 		return map[string]any{"agentServer": args[0], "workspacePath": getPath(cmd, "workspace")}, nil
@@ -156,7 +156,7 @@ func NewCommandWithClient(caller Caller) *cobra.Command {
 	agents.AddCommand(agentConfig)
 	options := add(agentConfig, "options AGENT", "Discover option schemas, allowed values, and defaults", "agents.config.options", cobra.ExactArgs(1), agentArgs)
 	options.Flags().String("workspace", "", "Workspace path used for session-specific options")
-	projects := group("projects", "Discover projects")
+	projects := group("projects", "List, add and remove projects")
 	add(projects, "list", "List projects", "projects.list", cobra.NoArgs, empty)
 	worktrees := group("worktrees", "Inspect and manage project worktrees")
 	listWorktrees := add(worktrees, "list", "List project worktrees", "worktrees.list", cobra.NoArgs, func(cmd *cobra.Command, args []string) (map[string]any, error) {
