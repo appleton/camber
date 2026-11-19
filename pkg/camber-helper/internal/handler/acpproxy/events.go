@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	acpsdk "github.com/coder/acp-go-sdk"
 
@@ -47,14 +48,26 @@ type SessionCursor struct {
 }
 
 const liveAttachMetaKey = "camber/liveAttach"
+
+// historyCaptureOrigin scopes a session/load whose replay is captured as the
+// session's history but delivered to no client (see resumeByCapturingLoad).
+// It never collides with a real origin, which are "primary", "control" or
+// "remote:..." identifiers.
+const historyCaptureOrigin = "\x00history-capture"
 const sessionReplayStartedMethod = "camber/acp/session_replay_started"
+
+// SessionReplayStream delivers a live-attach replay's messages in order,
+// stopping at emit's first error. The transcript can be far larger than
+// memory budgets allow (the sink may read it from disk), so it is streamed
+// rather than returned. It must be called exactly once.
+type SessionReplayStream func(emit func(message map[string]any) error) error
 
 // Optional sink capability: only complete retained history is safe to present
 // as a load response. A missing/evicted snapshot must never cause an active
 // agent session to be reloaded as a fallback.
 type sessionReplaySink interface {
 	MarkSessionHistory(agentServer, sessionID string, complete bool)
-	SessionReplay(agentServer, sessionID, originID string) ([]map[string]any, SessionCursor, bool)
+	SessionReplay(agentServer, sessionID, originID string) (SessionReplayStream, SessionCursor, bool)
 }
 
 // Optional sink capability: drop a throwaway session's retained events so
@@ -68,6 +81,9 @@ type sessionForgetSink interface {
 // on an idle conversation) can still be live-attached with its transcript.
 // See remoteaccess.SessionLog.BeginLoadHistory.
 type sessionHistoryCaptureSink interface {
+	// HasCompleteHistory reports whether a live attach would present the
+	// session's whole transcript.
+	HasCompleteHistory(agentServer, sessionID string) bool
 	BeginLoadHistory(agentServer, sessionID string)
 	RecordLoadHistory(agentServer, sessionID string, message map[string]any)
 	EndLoadHistory(agentServer, sessionID string, loaded bool)
@@ -90,6 +106,13 @@ func (h *Handler) beginLoadHistory(client *acpClient, agentServer, sessionID str
 			sink.EndLoadHistory(serverName, sessionID, loaded)
 		}, "", nil)
 	}
+}
+
+// hasCompleteHistory reports whether the sink retains the session's whole
+// transcript; sinks without history capture never do.
+func (h *Handler) hasCompleteHistory(agentServer, sessionID string) bool {
+	sink, ok := h.events.(sessionHistoryCaptureSink)
+	return ok && sink.HasCompleteHistory(normalizeServerName(agentServer), sessionID)
 }
 
 // recordLoadHistory adds one load-scoped message to the load's capture.
@@ -196,7 +219,7 @@ func (h *Handler) attachLiveSession(ctx context.Context, serverName string, req 
 			done <- err
 			return
 		}
-		messages, cursor, complete := sink.SessionReplay(serverName, string(req.SessionId), origin)
+		stream, cursor, complete := sink.SessionReplay(serverName, string(req.SessionId), origin)
 		if !complete {
 			done <- activeSessionLoadError()
 			return
@@ -205,12 +228,24 @@ func (h *Handler) attachLiveSession(ctx context.Context, serverName string, req 
 			"jsonrpc": "2.0", "method": sessionReplayStartedMethod,
 			"params": map[string]any{"sessionId": req.SessionId},
 		}))
-		for _, message := range messages {
+		if err := stream(func(message map[string]any) error {
 			if err := ctx.Err(); err != nil {
-				done <- err
-				return
+				return err
 			}
 			h.events.NotifyClient(origin, methods.JSONRPCNotifyMethod, bridgeMessage(serverName, message))
+			return nil
+		}); err != nil {
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				done <- ctxErr
+				return
+			}
+			// The retained transcript became unreadable mid-replay (a spill
+			// file write or read failed). Report the turn as unattachable:
+			// the client keeps what it received and silently reloads the
+			// conversation once the turn ends.
+			slog.Warn("acpproxy: live attach replay failed", "server", serverName, "session_id", req.SessionId, "error", err)
+			done <- activeSessionLoadError()
+			return
 		}
 		response.Meta = map[string]any{
 			liveAttachMetaKey: true,

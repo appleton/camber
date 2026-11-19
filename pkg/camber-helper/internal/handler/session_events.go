@@ -51,6 +51,10 @@ func (s *sessionEventSink) MarkSessionHistory(agentServer, sessionID string, com
 	s.log.MarkSessionHistory(agentServer, sessionID, complete)
 }
 
+func (s *sessionEventSink) HasCompleteHistory(agentServer, sessionID string) bool {
+	return s.log.HasCompleteHistory(agentServer, sessionID)
+}
+
 func (s *sessionEventSink) BeginLoadHistory(agentServer, sessionID string) {
 	s.log.BeginLoadHistory(agentServer, sessionID)
 }
@@ -67,9 +71,9 @@ func (s *sessionEventSink) ForgetSession(agentServer, sessionID string) {
 	s.log.ForgetSession(agentServer, sessionID)
 }
 
-func (s *sessionEventSink) SessionReplay(agentServer, sessionID, originID string) ([]map[string]any, acpproxy.SessionCursor, bool) {
-	messages, info, ok := s.log.SessionReplay(agentServer, sessionID, originID)
-	return messages, acpproxy.SessionCursor{Epoch: info.Epoch, Seq: info.Seq, TurnActive: info.TurnActive}, ok
+func (s *sessionEventSink) SessionReplay(agentServer, sessionID, originID string) (acpproxy.SessionReplayStream, acpproxy.SessionCursor, bool) {
+	stream, info, ok := s.log.SessionReplay(agentServer, sessionID, originID)
+	return acpproxy.SessionReplayStream(stream), acpproxy.SessionCursor{Epoch: info.Epoch, Seq: info.Seq, TurnActive: info.TurnActive}, ok
 }
 
 // remoteResume replays buffered live session events after the caller's

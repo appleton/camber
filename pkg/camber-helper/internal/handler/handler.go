@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,6 +21,7 @@ import (
 	protocol "github.com/tliron/glsp/protocol_3_16"
 
 	protocol3 "github.com/appleton/camber/pkg/camber-helper/gopls/pkg/protocol"
+	"github.com/appleton/camber/pkg/camber-helper/internal/filesystem"
 	"github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2"
 	cache2 "github.com/appleton/camber/pkg/camber-helper/internal/gopls/pkg/cache"
 	file2 "github.com/appleton/camber/pkg/camber-helper/internal/gopls/pkg/file"
@@ -884,6 +886,13 @@ func newHandlerBaseState() *CamberHandler {
 	)
 
 	h.sessionLog = remoteaccess.NewSessionLog(h.remoteHub)
+	// Long transcripts retained for live attach spill to disk; each helper
+	// instance owns a subdirectory and sweeps those of exited instances.
+	if cacheDir, err := filesystem.CamberCacheDir(); err == nil {
+		h.sessionLog.UseHistoryDir(filepath.Join(cacheDir, "session-history"))
+	} else {
+		slog.Warn("session history spill dir unavailable; using the temp dir", "error", err)
+	}
 	h.appControlHandler = appcontrol.New(h.acpNavHandler, h.acpProxyHandler)
 	h.appAgentServers = appcontrol.NewAgentServers(appcontrol.AgentServerStore{
 		List:            h.ACPNavListAgentServers,
@@ -936,6 +945,7 @@ func newHandlerBaseState() *CamberHandler {
 	h.cleanupFns = append(h.cleanupFns, h.remoteTerminals.Close)
 
 	h.cleanupFns = append(h.cleanupFns, h.acpProxyHandler.Close)
+	h.cleanupFns = append(h.cleanupFns, h.sessionLog.Close)
 	h.cleanupFns = append(h.cleanupFns, h.acpNavHandler.Close)
 	h.cleanupFns = append(h.cleanupFns, h.localInferenceHandler.Close)
 	h.cleanupFns = append(h.cleanupFns, h.voiceInputHandler.Close)

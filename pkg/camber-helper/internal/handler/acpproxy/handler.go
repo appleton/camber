@@ -764,8 +764,19 @@ func (h *Handler) ResumeSession(ctx context.Context, params *methods.ACPResumeSe
 	defer releaseWorkspace()
 	unavailable := h.injectUserMCPServers(ctx, proc, serverName, req.Meta, &req.McpServers)
 
+	// A resume reattaches the agent session without changing its past, so a
+	// transcript the session log already retains (from session/new or an
+	// earlier load, plus every live event since) stays valid and a later
+	// live attach can still present it. Without one, obtain it now, while the
+	// session is idle: ACP's only way to read history is session/load.
+	if !h.hasCompleteHistory(serverName, string(req.SessionId)) {
+		if resp, ok := h.resumeByCapturingLoad(ctx, gCtx, proc, serverName, req); ok {
+			notifySessionResolved(ctx, gCtx, serverName, string(req.SessionId), req.McpServers, unavailable)
+			return resp, nil
+		}
+	}
+
 	proc.mu.Lock()
-	h.markSessionHistory(serverName, string(req.SessionId), false)
 	resp, err := proc.resumeSessionLocked(ctx, req)
 	proc.mu.Unlock()
 	if err != nil {
@@ -775,6 +786,60 @@ func (h *Handler) ResumeSession(ctx context.Context, params *methods.ACPResumeSe
 
 	notifySessionResolved(ctx, gCtx, serverName, string(req.SessionId), req.McpServers, unavailable)
 	return resp, nil
+}
+
+// resumeByCapturingLoad reattaches an idle session with session/load instead
+// of session/resume, so the session log captures the agent's replay as the
+// session's history (see beginLoadHistory) for a later live attach. The
+// replay reaches no client: the caller asked for a resume, which leaves its
+// transcript untouched. ok is false when the agent cannot load sessions or
+// the load fails; the caller then resumes as asked, and the session's history
+// stays unknown (a live attach of a later turn is refused and the desktop
+// reloads once that turn ends).
+func (h *Handler) resumeByCapturingLoad(ctx context.Context, gCtx *glsp.Context, proc *process, serverName string, req acpsdk.ResumeSessionRequest) (*acpsdk.ResumeSessionResponse, bool) {
+	if !proc.supportsLoadSession() {
+		return nil, false
+	}
+	if _, ok := h.events.(sessionHistoryCaptureSink); !ok {
+		return nil, false
+	}
+	_, client := h.processFor(serverName, gCtx)
+	sessionID := string(req.SessionId)
+	release, err := h.beginSessionLoad(ctx, serverName, sessionID, historyCaptureOrigin)
+	if err != nil {
+		return nil, false
+	}
+	loaded := false
+	endHistory := h.beginLoadHistory(client, serverName, sessionID)
+	defer func() {
+		release()
+		endHistory(loaded)
+	}()
+
+	mcpServers := req.McpServers
+	if mcpServers == nil {
+		mcpServers = []acpsdk.McpServer{}
+	}
+	proc.mu.Lock()
+	resp, err := proc.loadSessionLocked(ctx, acpsdk.LoadSessionRequest{
+		Meta:                  req.Meta,
+		AdditionalDirectories: req.AdditionalDirectories,
+		Cwd:                   req.Cwd,
+		McpServers:            mcpServers,
+		SessionId:             req.SessionId,
+	})
+	proc.mu.Unlock()
+	if err != nil {
+		slog.Info("acpproxy: history-capturing load failed; resuming instead", "server", serverName, "session_id", sessionID, "error", err)
+		return nil, false
+	}
+	if err := client.waitForSessionUpdates(ctx); err != nil {
+		// The agent did load the session; only the capture is incomplete.
+		slog.Warn("acpproxy: history-capturing load flush failed", "server", serverName, "session_id", sessionID, "error", err)
+	} else {
+		loaded = true
+	}
+	return &acpsdk.ResumeSessionResponse{Meta: resp.Meta, ConfigOptions: resp.ConfigOptions, Modes: resp.Modes}, true
 }
 
 func (h *Handler) ListSessions(ctx context.Context, params *methods.ACPListSessionsParams, gCtx *glsp.Context) (*methods.ACPListSessionsOutput, error) {

@@ -76,8 +76,16 @@ func (s *replayEventSink) MarkSessionHistory(_, _ string, complete bool) {
 	s.complete = complete
 }
 
-func (s *replayEventSink) SessionReplay(_, _, _ string) ([]map[string]any, SessionCursor, bool) {
-	return s.messages, SessionCursor{Epoch: "epoch", Seq: 2, TurnActive: true}, s.complete
+func (s *replayEventSink) SessionReplay(_, _, _ string) (SessionReplayStream, SessionCursor, bool) {
+	stream := func(emit func(map[string]any) error) error {
+		for _, message := range s.messages {
+			if err := emit(message); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	return stream, SessionCursor{Epoch: "epoch", Seq: 2, TurnActive: true}, s.complete
 }
 
 func TestLiveSessionAttachDoesNotReloadOrScopeRunningTurn(t *testing.T) {
@@ -503,7 +511,7 @@ func (s *historyEventSink) MarkSessionHistory(_, sessionID string, complete bool
 	s.calls = append(s.calls, fmt.Sprintf("mark:%s:%t", sessionID, complete))
 }
 
-func (s *historyEventSink) SessionReplay(_, _, _ string) ([]map[string]any, SessionCursor, bool) {
+func (s *historyEventSink) SessionReplay(_, _, _ string) (SessionReplayStream, SessionCursor, bool) {
 	return nil, SessionCursor{}, false
 }
 

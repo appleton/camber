@@ -1182,7 +1182,7 @@ describe("ACPSessionRepositoryWriter", () => {
         .map((block) => block.text ?? "")
         .join("");
 
-    it("shows the live updates with a pending-history state and reloads when the turn ends", async () => {
+    it("shows the live updates and silently reloads when the turn ends", async () => {
       const repo = new ACPSessionRepositoryWriter();
       const conn = await connectRepo(repo);
       vi.mocked(conn.loadSession).mockImplementationOnce(async () => {
@@ -1204,7 +1204,7 @@ describe("ACPSessionRepositoryWriter", () => {
       // No other cwd is tried: a running turn refuses every load.
       expect(conn.loadSession).toHaveBeenCalledOnce();
       expect(isSuccess(session!.loadState)).toBe(true);
-      expect(session!.historyAwaitingTurnEnd).toBe(true);
+      expect(session!.historyReloadPending).toBe(true);
       expect(session!.restoredWithoutHistory).toBe(false);
       repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, sessionNotification("after"));
       expect(agentText(session!)).toBe("duringafter");
@@ -1215,7 +1215,7 @@ describe("ACPSessionRepositoryWriter", () => {
         return {};
       });
       repo.handleTurnEnded(DEFAULT_AGENT_SERVER, { sessionId: "s-loaded" });
-      await vi.waitFor(() => expect(session!.historyAwaitingTurnEnd).toBe(false));
+      await vi.waitFor(() => expect(session!.historyReloadPending).toBe(false));
       expect(conn.loadSession).toHaveBeenCalledTimes(2);
       expect(conn.loadSession).toHaveBeenLastCalledWith(
         expect.objectContaining({
@@ -1250,7 +1250,7 @@ describe("ACPSessionRepositoryWriter", () => {
 
       expect(session).not.toBeNull();
       await vi.waitFor(() => expect(conn.loadSession).toHaveBeenCalledTimes(2));
-      await vi.waitFor(() => expect(session!.historyAwaitingTurnEnd).toBe(false));
+      await vi.waitFor(() => expect(session!.historyReloadPending).toBe(false));
       expect(agentText(session!)).toBe("history");
     });
   });

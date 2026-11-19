@@ -707,6 +707,13 @@ func (p *process) supportsSessionClose() bool {
 	return caps.SessionCapabilities.Resume != nil || caps.LoadSession
 }
 
+// supportsLoadSession reports whether the connected agent advertises
+// session/load.
+func (p *process) supportsLoadSession() bool {
+	initResp, err := p.initializeResponse()
+	return err == nil && initResp.AgentCapabilities.LoadSession
+}
+
 // ConfigFn provides dynamic access to handler configuration.
 type ConfigFn func() HandlerConfig
 

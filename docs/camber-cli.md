@@ -361,16 +361,22 @@ starts, while their turn records and output remain retained in the helper.
 
 Opening a running conversation in the desktop attaches to the helper's retained
 conversation stream without reloading the agent session. Running tools and
-the agent's current configuration are preserved. This includes an idle
-conversation that `chat send` restored from disk: the helper keeps the history
-the agent replayed during that restore. If a complete transcript is unavailable
-(for example, it outgrew the helper's per-session buffer, or the session was
-resumed without a replay), the attach is refused with `SESSION_ACTIVE` and the
-agent continues working. The desktop then shows the live updates, notes that
-the earlier history is pending, and reloads the conversation when the turn
-finishes. Older clients without live-attachment support also receive this
-error instead of interrupting the agent. Closing or resuming an active session
-is rejected as busy.
+the agent's current configuration are preserved, and the desktop shows the
+conversation's whole history followed by the running turn. The helper keeps
+that transcript for every conversation it created or loaded (including an idle
+conversation that `chat send` restored from disk) with no length limit, holding
+long transcripts in its cache directory rather than in memory. Resuming a
+conversation keeps its transcript; if the helper has none (for example after a
+helper restart), the resume loads the conversation once to capture it.
+
+The attach is refused with `SESSION_ACTIVE` only when the helper has no
+transcript for the conversation (the agent could not load it, or idle
+transcripts were dropped to stay within the cache's disk budget) or, for
+mobile clients, when the transcript is too long to send in one go. The agent
+keeps working either way: the client shows the live updates and silently
+reloads the conversation when the turn finishes. Older clients without
+live-attachment support also receive this error instead of interrupting the
+agent. Closing or resuming an active session is rejected as busy.
 
 ## Manage conversations, projects and worktrees
 

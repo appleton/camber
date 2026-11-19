@@ -120,10 +120,12 @@ export class ACPSession {
   // of discarding them with the replay. Plain field: loader-owned.
   refusedLoadCapture: SessionNotification[] | null = null;
   // Opening this conversation found a turn running that the helper could not
-  // snapshot (live attach refused with SESSION_ACTIVE). The pane shows the
-  // live updates that arrive, says the history is pending, and reloads when
-  // the turn ends (handleTurnEnded). Rendered, so reactive.
-  historyAwaitingTurnEnd = $state(false);
+  // snapshot (live attach refused with SESSION_ACTIVE; the helper avoids this
+  // on the desktop, so it is a safety net). The pane shows the live updates
+  // that arrive, without any notice, and silently reloads the conversation
+  // when the turn ends (handleTurnEnded). Rendered (it keeps the pane out of
+  // the new-conversation layout), so reactive.
+  historyReloadPending = $state(false);
   // Arguments for that reload. Plain field: loader-owned.
   historyReloadArgs: ACPHistoryReloadArgs | null = null;
   // turnEnded arrived while a load was on the wire, so a refusal may already
@@ -659,12 +661,12 @@ export class ACPSession {
    * load is refused again and waits for that turn's end.
    */
   retryHistoryReload(): void {
-    if (!this.historyAwaitingTurnEnd || this.historyReloadScheduled) return;
+    if (!this.historyReloadPending || this.historyReloadScheduled) return;
     this.historyReloadScheduled = true;
     void this.serialize(async (gen) => {
       this.historyReloadScheduled = false;
       const args = this.historyReloadArgs;
-      if (!this.historyAwaitingTurnEnd || !args) return;
+      if (!this.historyReloadPending || !args) return;
       await this.loader.loadExisting(
         gen,
         args.cwd,

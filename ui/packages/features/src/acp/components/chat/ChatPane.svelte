@@ -35,7 +35,6 @@
   import CompactionBanner from "./CompactionBanner.svelte";
   import AcpEnqueuedInput from "./EnqueuedInput.svelte";
   import AcpPromptError from "./PromptError.svelte";
-  import AcpHistoryPendingNotice from "./HistoryPendingNotice.svelte";
   import AcpHistoryUnavailableNotice from "./HistoryUnavailableNotice.svelte";
   import PermissionRequest from "../events/PermissionRequest.svelte";
   import { isToolCall, type ToolCall } from "../../types";
@@ -507,12 +506,14 @@
   // A conversation whose history the agent could not restore is empty but is
   // not new: it keeps the ordinary conversation layout, with the notice in
   // place of the transcript, rather than the "Start a new conversation" hero.
+  // Neither is a running conversation whose history reloads when its turn
+  // ends (historyReloadPending): it simply shows its live updates.
   let isNewConversation = $derived(
     !isBlockingSessionLoading &&
       chatSession.events.length === 0 &&
       chatSession.pendingPermissionRequests.length === 0 &&
       !chatSession.historyUnavailable &&
-      !chatSession.historyAwaitingTurnEnd,
+      !chatSession.historyReloadPending,
   );
   let centerNewConversationComposer = $state(true);
   let previousComposerDraftKey = $state<string | null>(null);
@@ -1403,9 +1404,6 @@
                 : undefined}
               {@attach transcriptImageContextMenu}
             >
-              {#if chatSession.historyAwaitingTurnEnd}
-                <AcpHistoryPendingNotice />
-              {/if}
               <Boundary name="ACPSessionEvents">
                 {#snippet failed(_error, _reset)}
                   <div
@@ -1506,10 +1504,10 @@
                 <AssistantLiveRegion {isTurnActive} {hasPendingPermissionRequests} />
               {/if}
             </div>
-          {:else if chatSession.historyAwaitingTurnEnd}
-            <div class="flex h-full w-full flex-col items-center justify-center">
-              <AcpHistoryPendingNotice />
-            </div>
+          {:else if chatSession.historyReloadPending}
+            <!-- A running conversation whose history reloads when its turn
+                 ends: its live updates render here as they arrive. -->
+            <div class="h-full w-full" data-testid="history-reload-pending"></div>
           {:else if chatSession.historyUnavailable}
             <div class="flex h-full w-full flex-col items-center justify-center">
               <!-- canPrompt mirrors the composer's disabled conditions below:

@@ -174,7 +174,7 @@ export class ACPSessionLoader {
       // snapshot does not touch the agent session, so a deferred refresh
       // must survive it.
       if (!liveAttach) s.connectorRefreshDeferred = false;
-      s.historyAwaitingTurnEnd = false;
+      s.historyReloadPending = false;
       s.historyReloadArgs = null;
       s.loadState = success(this.buildLoadState());
       s.env.publishLiveStatuses();
@@ -201,19 +201,19 @@ export class ACPSessionLoader {
       }
       if (isSessionActiveError(error)) {
         // Opening the conversation found a turn running that the helper
-        // cannot snapshot (e.g. a long transcript, or a remote surface's
-        // replay cap). Rather than an empty pane, keep whatever transcript
-        // this surface already has, add the live updates that arrived while
-        // the load was on the wire (synchronously, before clearReplay, so
-        // later updates cannot overtake them), and keep the session live so
-        // further updates render. The full history is reloaded once the turn
-        // ends.
+        // cannot snapshot (a remote surface's replay cap, or a session whose
+        // history the helper never saw). Rather than an empty pane, keep
+        // whatever transcript this surface already has, add the live updates
+        // that arrived while the load was on the wire (synchronously, before
+        // clearReplay, so later updates cannot overtake them), and keep the
+        // session live so further updates render. The full history is
+        // reloaded silently once the turn ends.
         for (const update of s.refusedLoadCapture ?? []) {
           s.applySessionUpdate(update);
         }
         s.sessionInfo ??= s.replaySessionInfo;
         s.restoredWithoutHistory = false;
-        s.historyAwaitingTurnEnd = true;
+        s.historyReloadPending = true;
         s.historyReloadArgs = { cwd, mcpServers, seedInfo, fallbackCwds };
         s.loadingCwd = null;
         s.publishTranscript();
@@ -222,7 +222,7 @@ export class ACPSessionLoader {
         if (s.turnEndedDuringLoad) s.retryHistoryReload();
         return;
       }
-      s.historyAwaitingTurnEnd = false;
+      s.historyReloadPending = false;
       s.historyReloadArgs = null;
       s.loadState = failure(error);
       s.loadingCwd = null;
