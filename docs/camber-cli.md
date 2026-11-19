@@ -359,14 +359,18 @@ with `complete: false`; the text is still in `events`).
 UI-started turns can also be read by their original turn ID after a later turn
 starts, while their turn records and output remain retained in the helper.
 
-Opening a running child in the desktop attaches to the helper's retained
+Opening a running conversation in the desktop attaches to the helper's retained
 conversation stream without reloading the agent session. Running tools and
-the agent's current configuration are preserved. If a complete transcript is
-unavailable (for example, its beginning was evicted or the session was restored
-from disk), opening it returns `SESSION_ACTIVE`; the agent continues working.
-Wait for completion and reopen it to load its persisted history. Older clients
-without live-attachment support also receive this error instead of interrupting
-the agent. Closing or resuming an active session is rejected as busy.
+the agent's current configuration are preserved. This includes an idle
+conversation that `chat send` restored from disk: the helper keeps the history
+the agent replayed during that restore. If a complete transcript is unavailable
+(for example, it outgrew the helper's per-session buffer, or the session was
+resumed without a replay), the attach is refused with `SESSION_ACTIVE` and the
+agent continues working. The desktop then shows the live updates, notes that
+the earlier history is pending, and reloads the conversation when the turn
+finishes. Older clients without live-attachment support also receive this
+error instead of interrupting the agent. Closing or resuming an active session
+is rejected as busy.
 
 ## Manage conversations, projects and worktrees
 

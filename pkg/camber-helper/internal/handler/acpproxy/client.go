@@ -293,6 +293,9 @@ func (c *acpClient) routeSessionEvent(
 		"params":  params,
 	}
 	if origin, scoped := c.handler.loadScopeFor(c.agentServer, sessionID); scoped {
+		// The loader is rebuilding the transcript from exactly these messages;
+		// keep the same sequence as the session's history snapshot.
+		c.handler.recordLoadHistory(c.agentServer, sessionID, message)
 		events.NotifyClient(origin, methods.JSONRPCNotifyMethod, bridgeMessage(c.agentServer, message))
 		return
 	}

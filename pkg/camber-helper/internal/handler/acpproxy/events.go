@@ -63,6 +63,42 @@ type sessionForgetSink interface {
 	ForgetSession(agentServer, sessionID string)
 }
 
+// Optional sink capability: capture a session/load's replay as the session's
+// history snapshot, so a turn started after the load (e.g. by the control CLI
+// on an idle conversation) can still be live-attached with its transcript.
+// See remoteaccess.SessionLog.BeginLoadHistory.
+type sessionHistoryCaptureSink interface {
+	BeginLoadHistory(agentServer, sessionID string)
+	RecordLoadHistory(agentServer, sessionID string, message map[string]any)
+	EndLoadHistory(agentServer, sessionID string, loaded bool)
+}
+
+// beginLoadHistory starts capturing a load's replay, or (for sinks without
+// capture) marks the session's history incomplete. The returned end must be
+// called once the load's scope is released; it finishes the capture on the
+// agent's notification queue, behind every replay message the scope routed.
+func (h *Handler) beginLoadHistory(client *acpClient, agentServer, sessionID string) func(loaded bool) {
+	serverName := normalizeServerName(agentServer)
+	sink, ok := h.events.(sessionHistoryCaptureSink)
+	if !ok {
+		h.markSessionHistory(serverName, sessionID, false)
+		return func(bool) {}
+	}
+	sink.BeginLoadHistory(serverName, sessionID)
+	return func(loaded bool) {
+		client.asyncNotifications.enqueue(func(_ context.Context, _ string, _ any) {
+			sink.EndLoadHistory(serverName, sessionID, loaded)
+		}, "", nil)
+	}
+}
+
+// recordLoadHistory adds one load-scoped message to the load's capture.
+func (h *Handler) recordLoadHistory(agentServer, sessionID string, message map[string]any) {
+	if sink, ok := h.events.(sessionHistoryCaptureSink); ok {
+		sink.RecordLoadHistory(normalizeServerName(agentServer), sessionID, message)
+	}
+}
+
 func (h *Handler) markSessionHistory(agentServer, sessionID string, complete bool) {
 	if sink, ok := h.events.(sessionReplaySink); ok {
 		sink.MarkSessionHistory(normalizeServerName(agentServer), sessionID, complete)

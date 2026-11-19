@@ -97,7 +97,8 @@ export class ACPSessionLoader {
 
     s.replayMaterializer = new TurnMaterializer();
     s.replaySessionInfo = mergeSeedSessionInfo(sessionId, cwd || "/", seedInfo);
-    if (!allowLiveAttach) s.connectorRefreshCapture = [];
+    s.refusedLoadCapture = [];
+    s.turnEndedDuringLoad = false;
 
     try {
       if (!s.env.agents.capabilitiesFor(agentServer)?.loadSession) {
@@ -173,6 +174,8 @@ export class ACPSessionLoader {
       // snapshot does not touch the agent session, so a deferred refresh
       // must survive it.
       if (!liveAttach) s.connectorRefreshDeferred = false;
+      s.historyAwaitingTurnEnd = false;
+      s.historyReloadArgs = null;
       s.loadState = success(this.buildLoadState());
       s.env.publishLiveStatuses();
     } catch (e) {
@@ -189,17 +192,42 @@ export class ACPSessionLoader {
         s.loadIntent = priorPane.loadIntent;
         s.loadingCwd = priorPane.loadingCwd;
         s.promptError = priorPane.promptError;
-        for (const update of s.connectorRefreshCapture ?? []) {
+        for (const update of s.refusedLoadCapture ?? []) {
           s.applySessionUpdate(update);
         }
         s.publishTranscript();
         s.connectorRefreshDeferred = true;
         return;
       }
+      if (isSessionActiveError(error)) {
+        // Opening the conversation found a turn running that the helper
+        // cannot snapshot (e.g. a long transcript, or a remote surface's
+        // replay cap). Rather than an empty pane, keep whatever transcript
+        // this surface already has, add the live updates that arrived while
+        // the load was on the wire (synchronously, before clearReplay, so
+        // later updates cannot overtake them), and keep the session live so
+        // further updates render. The full history is reloaded once the turn
+        // ends.
+        for (const update of s.refusedLoadCapture ?? []) {
+          s.applySessionUpdate(update);
+        }
+        s.sessionInfo ??= s.replaySessionInfo;
+        s.restoredWithoutHistory = false;
+        s.historyAwaitingTurnEnd = true;
+        s.historyReloadArgs = { cwd, mcpServers, seedInfo, fallbackCwds };
+        s.loadingCwd = null;
+        s.publishTranscript();
+        s.loadState = success(this.buildLoadState());
+        // The turn may already have ended while the refused load was in flight.
+        if (s.turnEndedDuringLoad) s.retryHistoryReload();
+        return;
+      }
+      s.historyAwaitingTurnEnd = false;
+      s.historyReloadArgs = null;
       s.loadState = failure(error);
       s.loadingCwd = null;
     } finally {
-      s.connectorRefreshCapture = null;
+      s.refusedLoadCapture = null;
       if (gen === s.generation) {
         s.transcript.clearReplay();
       }
@@ -351,6 +379,9 @@ export class ACPSessionLoader {
           _meta: { ..._meta, "camber/liveAttach": allowLiveAttach },
         });
       } catch (error) {
+        // A running turn refuses the load whatever the cwd; another attempt
+        // would only discard the live updates captured so far.
+        if (isSessionActiveError(normalizeACPError(error))) throw error;
         lastError = error;
       }
     }

@@ -51,6 +51,18 @@ func (s *sessionEventSink) MarkSessionHistory(agentServer, sessionID string, com
 	s.log.MarkSessionHistory(agentServer, sessionID, complete)
 }
 
+func (s *sessionEventSink) BeginLoadHistory(agentServer, sessionID string) {
+	s.log.BeginLoadHistory(agentServer, sessionID)
+}
+
+func (s *sessionEventSink) RecordLoadHistory(agentServer, sessionID string, message map[string]any) {
+	s.log.RecordLoadHistory(agentServer, sessionID, message)
+}
+
+func (s *sessionEventSink) EndLoadHistory(agentServer, sessionID string, loaded bool) {
+	s.log.EndLoadHistory(agentServer, sessionID, loaded)
+}
+
 func (s *sessionEventSink) ForgetSession(agentServer, sessionID string) {
 	s.log.ForgetSession(agentServer, sessionID)
 }

@@ -17,10 +17,20 @@ import (
 // overflowing it would DROP the client mid-replay — a reconnect loop for any
 // client far enough behind. Keeping the cap under half the queue leaves room
 // for concurrent live traffic; buffering much beyond it is pointless.
+//
+// A session/load's replayed history is retained as a snapshot so a later live
+// attach can present the whole transcript. It shares the session's buffer cap
+// with the live events published after the load (a snapshot that no longer
+// fits is dropped, and attaches are refused), and sessionLogMaxHistoryEvents
+// bounds the snapshots retained across all sessions: loads of idle
+// conversations now retain data, so without a global budget the worst case
+// would grow from one live buffer per publishing session to one transcript
+// per conversation ever opened.
 const (
-	sessionLogBufferCap   = 2048
-	sessionLogMaxReplay   = notifyQueueSize / 2
-	sessionLogMaxSessions = 128
+	sessionLogBufferCap        = 2048
+	sessionLogMaxReplay        = notifyQueueSize / 2
+	sessionLogMaxSessions      = 128
+	sessionLogMaxHistoryEvents = 8 * sessionLogBufferCap
 )
 
 // SessionCursorInfo describes a session's live-event stream position.
@@ -45,10 +55,20 @@ type loggedEvent struct {
 type sessionLogEntry struct {
 	seq    int64
 	events []loggedEvent
-	// True only for sessions created by this helper whose history has never
-	// been replaced by an agent-side load. A bounded log is not a transcript
-	// snapshot unless it still covers that session from its beginning.
+	// completeHistory reports that history followed by every event after
+	// historySeq is the whole transcript: a session created by this helper
+	// (empty history, historySeq 0) or one whose latest session/load replay
+	// was captured in full (history is that replay, historySeq the stream
+	// position when the load began). A bounded log is only a transcript
+	// snapshot while it still covers every event after historySeq.
 	completeHistory bool
+	historySeq      int64
+	history         []map[string]any
+	// capturing is set while a session/load is in flight; its replay is
+	// collected in pending and becomes history only if the load succeeds.
+	capturing  bool
+	pending    []map[string]any
+	pendingSeq int64
 	// activeTurns counts BeginTurn calls not yet matched by EndTurn. A turn's
 	// EndTurn rides the per-client notification queue behind the turn's final
 	// publishes, so it can land after the next turn's synchronous BeginTurn;
@@ -65,9 +85,10 @@ type sessionLogEntry struct {
 // (Resume) instead of re-loading conversations; the stamps let clients drop
 // duplicates by construction.
 //
-// Only live events pass through here. session/load replay traffic is scoped
-// to the loading client (Hub.NotifyClient) and never stamped or buffered, so
-// the buffer never contains transcript duplicates.
+// Only live events are stamped and buffered here. session/load replay traffic
+// is scoped to the loading client (Hub.NotifyClient) and never stamped, so
+// the resumable buffer never contains transcript duplicates; the replay is
+// kept aside as the session's history snapshot (BeginLoadHistory).
 type SessionLog struct {
 	hub   *Hub
 	epoch string
@@ -75,6 +96,9 @@ type SessionLog struct {
 	mu       sync.Mutex
 	sessions map[sessionLogKey]*sessionLogEntry
 	useTick  int64
+	// historyEvents counts retained history snapshot messages across all
+	// sessions (see sessionLogMaxHistoryEvents).
+	historyEvents int
 }
 
 func NewSessionLog(hub *Hub) *SessionLog {
@@ -168,18 +192,88 @@ func (l *SessionLog) Cursor(agentServer, sessionID string) SessionCursorInfo {
 	}
 }
 
-// MarkSessionHistory records whether live events can reconstruct this session.
-// Loading persisted agent history invalidates this: replay is not in our log.
-// Invalidating an unknown session is a no-op — a missing entry already has no
-// complete history, and a later publish creates one marked incomplete — so
-// loads of idle conversations do not take slots from sessions with history.
+// MarkSessionHistory records whether live events alone reconstruct this
+// session: true for a session this helper just created (its history starts at
+// seq 1), false when agent-side history was attached without a captured
+// replay (session/resume). Invalidating an unknown session is a no-op — a
+// missing entry already has no complete history, and a later publish creates
+// one marked incomplete.
 func (l *SessionLog) MarkSessionHistory(agentServer, sessionID string, complete bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if !complete && l.sessions[sessionLogKey{agentServer: agentServer, sessionID: sessionID}] == nil {
 		return
 	}
-	l.entryLocked(agentServer, sessionID).completeHistory = complete
+	entry := l.entryLocked(agentServer, sessionID)
+	l.setHistoryLocked(entry, nil)
+	entry.historySeq = 0
+	entry.completeHistory = complete
+}
+
+// BeginLoadHistory starts capturing a session/load's replay. ACP session/load
+// replays the session's entire history, so once the load succeeds the replay
+// (RecordLoadHistory) followed by every event published from this point on is
+// the complete transcript. Until EndLoadHistory the session's previous
+// snapshot no longer describes the agent's state and is dropped. The stream
+// seq is not touched: remote cursors stay valid and Resume never replays
+// history.
+func (l *SessionLog) BeginLoadHistory(agentServer, sessionID string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	entry := l.entryLocked(agentServer, sessionID)
+	l.setHistoryLocked(entry, nil)
+	entry.completeHistory = false
+	entry.capturing = true
+	entry.pending = nil
+	entry.pendingSeq = entry.seq
+}
+
+// RecordLoadHistory appends one replayed message to the in-flight load's
+// capture. Callers deliver replay messages in agent order on the session's
+// notification queue. Captures that outgrow the buffer cap are abandoned.
+func (l *SessionLog) RecordLoadHistory(agentServer, sessionID string, message map[string]any) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	entry := l.sessions[sessionLogKey{agentServer: agentServer, sessionID: sessionID}]
+	if entry == nil || !entry.capturing {
+		return
+	}
+	if len(entry.pending) >= sessionLogBufferCap {
+		entry.capturing = false
+		entry.pending = nil
+		return
+	}
+	entry.pending = append(entry.pending, message)
+}
+
+// EndLoadHistory finishes the in-flight load's capture. A successful load's
+// replay becomes the session's history snapshot, replacing any earlier one
+// (an agent replay is a full transcript, so snapshots never accumulate);
+// otherwise the session has no complete history. It must run after every
+// replay message was recorded.
+func (l *SessionLog) EndLoadHistory(agentServer, sessionID string, loaded bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	entry := l.sessions[sessionLogKey{agentServer: agentServer, sessionID: sessionID}]
+	if entry == nil {
+		return
+	}
+	captured, ok := entry.pending, entry.capturing && loaded
+	entry.capturing = false
+	entry.pending = nil
+	if !ok {
+		l.setHistoryLocked(entry, nil)
+		entry.completeHistory = false
+		return
+	}
+	if captured == nil {
+		captured = []map[string]any{}
+	}
+	entry.historySeq = entry.pendingSeq
+	l.setHistoryLocked(entry, captured)
+	entry.completeHistory = true
+	l.fitHistoryLocked(entry)
+	l.trimHistoryBudgetLocked(entry)
 }
 
 // ForgetSession drops a session's slot and buffered events. It is for
@@ -190,25 +284,34 @@ func (l *SessionLog) ForgetSession(agentServer, sessionID string) {
 	defer l.mu.Unlock()
 	key := sessionLogKey{agentServer: agentServer, sessionID: sessionID}
 	if entry := l.sessions[key]; entry != nil && entry.activeTurns == 0 {
+		l.setHistoryLocked(entry, nil)
 		delete(l.sessions, key)
 	}
 }
 
-// SessionReplay returns a complete, ordered snapshot or refuses it. Callers
-// serialize this and its delivery with live publishes on the ACP event queue.
-// Remotes have a bounded delivery queue, so refuse an oversized replay before
-// sending anything rather than disconnecting the reader halfway through.
+// SessionReplay returns a complete, ordered snapshot — the latest load's
+// replayed history followed by every live event published since — or refuses
+// it. Callers serialize this and its delivery with live publishes on the ACP
+// event queue. Remotes have a bounded delivery queue, so refuse an oversized
+// replay before sending anything rather than disconnecting the reader halfway
+// through.
 func (l *SessionLog) SessionReplay(agentServer, sessionID, originID string) ([]map[string]any, SessionCursorInfo, bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	entry := l.sessions[sessionLogKey{agentServer: agentServer, sessionID: sessionID}]
-	if entry == nil || !entry.completeHistory ||
-		(entry.seq > 0 && (len(entry.events) == 0 || entry.events[0].seq != 1)) ||
-		(originID != PrimaryOrigin && len(entry.events) >= sessionLogMaxReplay) {
+	if entry == nil || !entry.completeHistory || !l.coversHistoryLocked(entry) {
 		return nil, SessionCursorInfo{}, false
 	}
-	messages := make([]map[string]any, 0, len(entry.events))
+	total := len(entry.history) + int(entry.seq-entry.historySeq)
+	if originID != PrimaryOrigin && total >= sessionLogMaxReplay {
+		return nil, SessionCursorInfo{}, false
+	}
+	messages := make([]map[string]any, 0, total)
+	messages = append(messages, entry.history...)
 	for _, event := range entry.events {
+		if event.seq <= entry.historySeq {
+			continue
+		}
 		envelope, ok := event.params.(map[string]any)
 		if !ok {
 			return nil, SessionCursorInfo{}, false
@@ -302,20 +405,67 @@ func (l *SessionLog) peekLocked(agentServer, sessionID string) *sessionLogEntry 
 	return &sessionLogEntry{}
 }
 
-// compactLocked drops the oldest buffered events past the buffer cap.
+// compactLocked drops the oldest buffered events past the buffer cap, and a
+// history snapshot that no longer fits beside the events that follow it.
 func (l *SessionLog) compactLocked(entry *sessionLogEntry) {
 	if excess := len(entry.events) - sessionLogBufferCap; excess > 0 {
 		entry.events = append([]loggedEvent(nil), entry.events[excess:]...)
 	}
+	l.fitHistoryLocked(entry)
+}
+
+// coversHistoryLocked reports whether the buffer still holds every event
+// published after historySeq.
+func (l *SessionLog) coversHistoryLocked(entry *sessionLogEntry) bool {
+	if entry.seq <= entry.historySeq {
+		return true
+	}
+	return len(entry.events) > 0 && entry.events[0].seq <= entry.historySeq+1
+}
+
+// fitHistoryLocked drops a history snapshot whose transcript (snapshot plus
+// the live events after it) exceeds the per-session buffer cap.
+func (l *SessionLog) fitHistoryLocked(entry *sessionLogEntry) {
+	if entry.history != nil && len(entry.history)+int(entry.seq-entry.historySeq) > sessionLogBufferCap {
+		l.setHistoryLocked(entry, nil)
+		entry.completeHistory = false
+	}
+}
+
+// trimHistoryBudgetLocked drops the snapshots of the least recently used idle
+// sessions (never keep's) until retained snapshots fit the global budget.
+func (l *SessionLog) trimHistoryBudgetLocked(keep *sessionLogEntry) {
+	for l.historyEvents > sessionLogMaxHistoryEvents {
+		var oldest *sessionLogEntry
+		for _, entry := range l.sessions {
+			if entry == keep || entry.activeTurns > 0 || len(entry.history) == 0 {
+				continue
+			}
+			if oldest == nil || entry.lastUse < oldest.lastUse {
+				oldest = entry
+			}
+		}
+		if oldest == nil {
+			return
+		}
+		l.setHistoryLocked(oldest, nil)
+		oldest.completeHistory = false
+	}
+}
+
+// setHistoryLocked replaces the entry's snapshot, keeping the global count.
+func (l *SessionLog) setHistoryLocked(entry *sessionLogEntry, history []map[string]any) {
+	l.historyEvents += len(history) - len(entry.history)
+	entry.history = history
 }
 
 // evictIdleSessionLocked removes the least recently used session that has no
-// turn in flight; resumes targeting it will fail and fall back to a reload.
+// turn or load in flight; resumes targeting it will fail and fall back to a reload.
 func (l *SessionLog) evictIdleSessionLocked() {
 	var oldestKey sessionLogKey
 	var oldest *sessionLogEntry
 	for key, entry := range l.sessions {
-		if entry.activeTurns > 0 {
+		if entry.activeTurns > 0 || entry.capturing {
 			continue
 		}
 		if oldest == nil || entry.lastUse < oldest.lastUse {
@@ -323,6 +473,7 @@ func (l *SessionLog) evictIdleSessionLocked() {
 		}
 	}
 	if oldest != nil {
+		l.setHistoryLocked(oldest, nil)
 		delete(l.sessions, oldestKey)
 	}
 }

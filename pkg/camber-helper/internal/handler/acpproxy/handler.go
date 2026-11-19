@@ -700,10 +700,19 @@ func (h *Handler) LoadSession(ctx context.Context, params *methods.ACPLoadSessio
 	if scopeErr != nil {
 		return nil, scopeErr
 	}
-	defer release()
+	// The agent replays the session's entire history during the load; capture
+	// it as the session's history snapshot so a later turn (whoever starts
+	// it) can be live-attached with the full transcript. Every scoped message
+	// is captured, and the capture is committed only for a successful load,
+	// after the scope is released.
+	loaded := false
+	endHistory := h.beginLoadHistory(client, serverName, string(req.SessionId))
+	defer func() {
+		release()
+		endHistory(loaded)
+	}()
 
 	proc.mu.Lock()
-	h.markSessionHistory(serverName, string(req.SessionId), false)
 	resp, err := proc.loadSessionLocked(ctx, req)
 	proc.mu.Unlock()
 	if err != nil {
@@ -713,6 +722,7 @@ func (h *Handler) LoadSession(ctx context.Context, params *methods.ACPLoadSessio
 	if flushErr := client.waitForSessionUpdates(ctx); flushErr != nil {
 		return nil, preserveACPError("acpproxy: load session notifications", flushErr)
 	}
+	loaded = true
 
 	// Report the session's live-event cursor as of the completed replay so
 	// the client can seq-gate subsequent live updates (the replay/live

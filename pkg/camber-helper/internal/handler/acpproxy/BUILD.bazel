@@ -51,6 +51,7 @@ go_test(
         "control_context_test.go",
         "events_test.go",
         "handler_test.go",
+        "load_history_test.go",
         "process_signal_unix_test.go",
         "process_test.go",
         "registry_binary_test.go",

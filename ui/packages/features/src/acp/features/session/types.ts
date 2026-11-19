@@ -1,6 +1,7 @@
 import type {
   AvailableCommand,
   ContentBlock,
+  McpServer,
   PermissionOption,
   Plan,
   RequestPermissionRequest,
@@ -136,6 +137,15 @@ export type ACPSessionSendCoreArgs = [
     preserveAgentToolDefaults?: boolean;
   },
 ];
+
+// What a refused live attach needs to reload the conversation once its turn
+// ends (see ACPSession.retryHistoryReload).
+export interface ACPHistoryReloadArgs {
+  cwd: string;
+  mcpServers: McpServer[];
+  seedInfo?: Partial<ACPResolvedSessionInfo>;
+  fallbackCwds: string[];
+}
 
 export interface ACPSessionLoadState {
   sessionId: SessionId;

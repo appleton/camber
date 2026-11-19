@@ -35,6 +35,7 @@
   import CompactionBanner from "./CompactionBanner.svelte";
   import AcpEnqueuedInput from "./EnqueuedInput.svelte";
   import AcpPromptError from "./PromptError.svelte";
+  import AcpHistoryPendingNotice from "./HistoryPendingNotice.svelte";
   import AcpHistoryUnavailableNotice from "./HistoryUnavailableNotice.svelte";
   import PermissionRequest from "../events/PermissionRequest.svelte";
   import { isToolCall, type ToolCall } from "../../types";
@@ -510,7 +511,8 @@
     !isBlockingSessionLoading &&
       chatSession.events.length === 0 &&
       chatSession.pendingPermissionRequests.length === 0 &&
-      !chatSession.historyUnavailable,
+      !chatSession.historyUnavailable &&
+      !chatSession.historyAwaitingTurnEnd,
   );
   let centerNewConversationComposer = $state(true);
   let previousComposerDraftKey = $state<string | null>(null);
@@ -1401,6 +1403,9 @@
                 : undefined}
               {@attach transcriptImageContextMenu}
             >
+              {#if chatSession.historyAwaitingTurnEnd}
+                <AcpHistoryPendingNotice />
+              {/if}
               <Boundary name="ACPSessionEvents">
                 {#snippet failed(_error, _reset)}
                   <div
@@ -1500,6 +1505,10 @@
                 {/each}
                 <AssistantLiveRegion {isTurnActive} {hasPendingPermissionRequests} />
               {/if}
+            </div>
+          {:else if chatSession.historyAwaitingTurnEnd}
+            <div class="flex h-full w-full flex-col items-center justify-center">
+              <AcpHistoryPendingNotice />
             </div>
           {:else if chatSession.historyUnavailable}
             <div class="flex h-full w-full flex-col items-center justify-center">

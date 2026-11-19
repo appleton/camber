@@ -1168,6 +1168,93 @@ describe("ACPSessionRepositoryWriter", () => {
     expect(isSuccess(session.loadState)).toBe(true);
   });
 
+  describe("opening a running conversation whose live attach is refused", () => {
+    const sessionActiveError = () =>
+      new ACPError({
+        code: -32001,
+        message: "This conversation is still running and cannot be reloaded safely",
+        data: { code: "SESSION_ACTIVE" },
+      });
+    const agentText = (session: { events: readonly unknown[] }) =>
+      (session.events as { eventKind: string; content?: { text?: string }[] }[])
+        .filter((event) => event.eventKind === "agent_message")
+        .flatMap((event) => event.content ?? [])
+        .map((block) => block.text ?? "")
+        .join("");
+
+    it("shows the live updates with a pending-history state and reloads when the turn ends", async () => {
+      const repo = new ACPSessionRepositoryWriter();
+      const conn = await connectRepo(repo);
+      vi.mocked(conn.loadSession).mockImplementationOnce(async () => {
+        // The turn streams while the refused attach is on the wire.
+        repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, sessionNotification("during"));
+        throw sessionActiveError();
+      });
+
+      const session = await repo.loadSessionRecord(
+        "s-loaded",
+        "/repo",
+        [],
+        { conversationId: "conv-running" },
+        DEFAULT_AGENT_SERVER,
+        { fallbackCwds: ["/fallback"] },
+      );
+
+      expect(session).not.toBeNull();
+      // No other cwd is tried: a running turn refuses every load.
+      expect(conn.loadSession).toHaveBeenCalledOnce();
+      expect(isSuccess(session!.loadState)).toBe(true);
+      expect(session!.historyAwaitingTurnEnd).toBe(true);
+      expect(session!.restoredWithoutHistory).toBe(false);
+      repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, sessionNotification("after"));
+      expect(agentText(session!)).toBe("duringafter");
+
+      // Once the turn ends the full history replaces the partial live view.
+      vi.mocked(conn.loadSession).mockImplementationOnce(async () => {
+        repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, sessionNotification("full history"));
+        return {};
+      });
+      repo.handleTurnEnded(DEFAULT_AGENT_SERVER, { sessionId: "s-loaded" });
+      await vi.waitFor(() => expect(session!.historyAwaitingTurnEnd).toBe(false));
+      expect(conn.loadSession).toHaveBeenCalledTimes(2);
+      expect(conn.loadSession).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          sessionId: "s-loaded",
+          cwd: "/repo",
+          _meta: expect.objectContaining({ "camber/liveAttach": true }),
+        }),
+      );
+      expect(isSuccess(session!.loadState)).toBe(true);
+      expect(agentText(session!)).toBe("full history");
+    });
+
+    it("retries at once when the turn ended while the refused attach was in flight", async () => {
+      const repo = new ACPSessionRepositoryWriter();
+      const conn = await connectRepo(repo);
+      vi.mocked(conn.loadSession).mockImplementationOnce(async () => {
+        repo.handleTurnEnded(DEFAULT_AGENT_SERVER, { sessionId: "s-loaded" });
+        throw sessionActiveError();
+      });
+      vi.mocked(conn.loadSession).mockImplementationOnce(async () => {
+        repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, sessionNotification("history"));
+        return {};
+      });
+
+      const session = await repo.loadSessionRecord(
+        "s-loaded",
+        "/repo",
+        [],
+        { conversationId: "conv-ended" },
+        DEFAULT_AGENT_SERVER,
+      );
+
+      expect(session).not.toBeNull();
+      await vi.waitFor(() => expect(conn.loadSession).toHaveBeenCalledTimes(2));
+      await vi.waitFor(() => expect(session!.historyAwaitingTurnEnd).toBe(false));
+      expect(agentText(session!)).toBe("history");
+    });
+  });
+
   it("keeps a deferred connector refresh across a live-attach snapshot load", async () => {
     const repo = new ACPSessionRepositoryWriter();
     const conn = await connectRepo(repo);
