@@ -112,6 +112,10 @@ type ACPDeleteSessionParams struct {
 type ACPCloseSessionParams struct {
 	ACPAgentServerParams
 	acpsdk.CloseSessionRequest
+	// CancelInFlight opts in to cancelling a running prompt before closing.
+	// Without it, closing a session with a prompt in flight fails as busy so
+	// idle eviction and suspension sweeps never interrupt work.
+	CancelInFlight bool `json:"cancelInFlight,omitempty"`
 }
 
 type ACPRenameSessionParams struct {
@@ -225,6 +229,13 @@ func (p *ACPDeleteSessionParams) UnmarshalJSON(b []byte) error {
 }
 
 func (p *ACPCloseSessionParams) UnmarshalJSON(b []byte) error {
+	var opts struct {
+		CancelInFlight bool `json:"cancelInFlight"`
+	}
+	if err := json.Unmarshal(b, &opts); err != nil {
+		return err
+	}
+	p.CancelInFlight = opts.CancelInFlight
 	return decodeACPParams(b, &p.AgentServer, &p.CloseSessionRequest)
 }
 

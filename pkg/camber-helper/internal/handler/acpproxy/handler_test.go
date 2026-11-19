@@ -1490,6 +1490,78 @@ func TestCloseSession(t *testing.T) {
 			require.FailNow(t, "session/close was not forwarded to the agent")
 		}
 	})
+
+	t.Run("cancelInFlight cancels a running prompt then closes; default stays busy", func(t *testing.T) {
+		agentInR, agentInW := io.Pipe()
+		agentOutR, agentOutW := io.Pipe()
+		t.Cleanup(func() {
+			agentInW.Close()
+			agentOutW.Close()
+		})
+
+		h := NewHandler(dummyConfig(), nil, nil)
+		gCtx := newGlspContext(nil, nil)
+		proc, client := h.processFor(DefaultAgentServerName, gCtx)
+		proc.state = processState{kind: processStateRunning}
+		proc.conn = acpsdk.NewClientSideConnection(client, agentInW, agentOutR)
+		proc.initResp = &acpsdk.InitializeResponse{
+			ProtocolVersion: acpsdk.ProtocolVersionNumber,
+			AgentCapabilities: acpsdk.AgentCapabilities{
+				LoadSession: true,
+				SessionCapabilities: acpsdk.SessionCapabilities{
+					Close:  &acpsdk.SessionCloseCapabilities{},
+					Resume: &acpsdk.SessionResumeCapabilities{},
+				},
+			},
+		}
+		turn, reserved := h.beginPromptInFlight(DefaultAgentServerName, "busy", "turn")
+		require.True(t, reserved)
+
+		methodsSeen := make(chan string, 4)
+		go func() {
+			scanner := bufio.NewScanner(agentInR)
+			for scanner.Scan() {
+				var req struct {
+					ID     any    `json:"id"`
+					Method string `json:"method"`
+				}
+				if err := json.Unmarshal(scanner.Bytes(), &req); err != nil {
+					continue
+				}
+				methodsSeen <- req.Method
+				if req.Method == "session/cancel" {
+					h.completeTurn(DefaultAgentServerName, "busy", turn, &methods.ACPPromptOutput{StopReason: acpsdk.StopReasonCancelled}, nil)
+				}
+				if req.ID == nil {
+					continue
+				}
+				resp, _ := json.Marshal(map[string]any{"jsonrpc": "2.0", "id": req.ID, "result": map[string]any{}})
+				if _, err := agentOutW.Write(append(resp, '\n')); err != nil {
+					return
+				}
+			}
+		}()
+
+		_, err := h.CloseSession(context.Background(), closeParams("busy"), gCtx)
+		require.ErrorContains(t, err, "busy")
+
+		params := closeParams("busy")
+		params.CancelInFlight = true
+		out, err := h.CloseSession(context.Background(), params, gCtx)
+		require.NoError(t, err)
+		require.NotNil(t, out)
+
+		var seen []string
+		for len(seen) < 2 {
+			select {
+			case m := <-methodsSeen:
+				seen = append(seen, m)
+			case <-time.After(time.Second):
+				require.FailNow(t, "agent did not receive cancel and close", "%v", seen)
+			}
+		}
+		assert.Equal(t, []string{"session/cancel", "session/close"}, seen)
+	})
 }
 
 // dummyConfig returns a ConfigFn that points at a non-existent binary.

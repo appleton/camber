@@ -88,7 +88,7 @@ impl HelperJsonRpcError {
         }
     }
 
-    fn to_jsonrpc_value(&self) -> Value {
+    pub(crate) fn to_jsonrpc_value(&self) -> Value {
         let mut error = json!({ "message": self.message });
         if let Some(code) = self.code {
             error["code"] = json!(code);
@@ -169,6 +169,11 @@ pub struct HelperState {
 }
 
 impl HelperState {
+    pub(crate) async fn control_readiness(&self) -> (bool, bool) {
+        let inner = self.inner.lock().await;
+        (inner.ready, inner.notification_bridge_ready)
+    }
+
     async fn set_starting(&self, helper: Arc<HelperProcess>) {
         let mut inner = self.inner.lock().await;
         helper
@@ -692,8 +697,18 @@ impl HelperCommandSpec {
         if let Some(cwd) = self.cwd {
             command = command.current_dir(cwd);
         }
+        let helper_path = self
+            .env
+            .iter()
+            .rev()
+            .find(|(name, _)| name == "PATH")
+            .map(|(_, value)| std::ffi::OsString::from(value))
+            .or_else(|| std::env::var_os("PATH"));
         if !self.env.is_empty() {
             command = command.envs(self.env);
+        }
+        if let Some(state) = app.try_state::<crate::control::ControlState>() {
+            command = command.envs(state.helper_env(helper_path));
         }
 
         Ok(command)
@@ -1313,11 +1328,14 @@ fn notification_batch_has_capacity(count: usize, bytes: usize, next_bytes: usize
         && (count == 0 || bytes.saturating_add(next_bytes) <= HELPER_NOTIFICATION_BATCH_MAX_BYTES)
 }
 
+// camber/desktopApp/* are helper -> desktop requests (from camber CLI control
+// actions) that the webview answers with the app's own functions, e.g.
+// selecting a conversation or removing a project.
 fn should_forward_helper_request(method: &str) -> bool {
     matches!(
         method,
         "camber/acp/elicitation/create" | "camber/jsonrpc/request"
-    )
+    ) || method.starts_with("camber/desktopApp/")
 }
 
 // Forward every camber/* notification to the TS host (host.ts), which owns
@@ -1666,6 +1684,21 @@ mod tests {
         ));
         assert!(!should_forward_helper_notification("window/logMessage"));
         assert!(!should_forward_helper_notification(""));
+    }
+
+    #[test]
+    fn forwards_desktop_app_requests_to_the_webview() {
+        assert!(should_forward_helper_request(
+            "camber/desktopApp/openConversation"
+        ));
+        assert!(should_forward_helper_request(
+            "camber/desktopApp/removeProject"
+        ));
+        assert!(should_forward_helper_request("camber/jsonrpc/request"));
+        assert!(!should_forward_helper_request(
+            "camber/app/archiveConversation"
+        ));
+        assert!(!should_forward_helper_request("workspace/configuration"));
     }
 
     #[test]

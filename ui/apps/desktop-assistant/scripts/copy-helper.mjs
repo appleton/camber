@@ -12,6 +12,7 @@ import {
 } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildCLI } from "./build-cli.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const appDir = join(scriptDir, "..");
@@ -45,6 +46,7 @@ const downloadRuntimeAsset = runtimeArtifactDir
   : downloadGitHubReleaseAsset;
 
 mkdirSync(binaryDir, { recursive: true });
+buildCLI(targetTriple);
 
 if (cachedHelperVersion) {
   console.log(

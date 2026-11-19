@@ -16,14 +16,19 @@ vi.mock("@camber/helperapi", () => ({
   camberAcpNavSetAgentServers: vi.fn(),
   camberAcpNavUpsertConfigCache: vi.fn(async () => ({ entry: null })),
   camberAcpSessionClose: vi.fn(async () => ({})),
+  camberAppSetDefaultAgentServer: vi.fn(),
+  camberAppSetAgentDefaultConfigOption: vi.fn(),
+  camberAppInstallAgentServer: vi.fn(),
+  camberAppRemoveAgentServer: vi.fn(),
 }));
 
 describe("ACPAgentRepository", () => {
   let previousAppState: AppState;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     previousAppState = get(appState);
     vi.clearAllMocks();
+    await useFakeAgentServerOps();
   });
 
   afterEach(() => {
@@ -241,47 +246,33 @@ describe("ACPAgentRepository", () => {
     expect(store.storedDefault).toBe("claude-acp");
   });
 
-  it("preserves a just-persisted default when a settings save queues behind it", async () => {
+  it("waits for queued default writes with ordered mirrors, each one a single helper operation", async () => {
+    const { camberAppSetAgentDefaultConfigOption, camberAppSetDefaultAgentServer } = await import(
+      "@camber/helperapi"
+    );
     const store = await mockInterleavedStore();
     const repo = new ACPAgentRepository();
     repo.configureAgentServers(["poolside", "claude-acp"], "poolside");
 
-    // A picker selection is persisting model: opus through the
-    // fire-and-forget last-used path...
     repo.recordUserConfigSelection("poolside", "model", "opus");
-    // ...while the settings panel saves from a snapshot taken before that
-    // landed: it removes claude-acp, adds codex-acp, and its stale copy of
-    // camber still carries the old defaults.
-    const hostSet = vi.fn(async (agentServers: ACPAgentServers) => {
-      store.stored = agentServers as InterleaveStore["stored"];
-    });
-    const panelSave = repo.saveAgentServers(
-      {
-        poolside: { default_config_options: { model: "sonnet" } },
-        "codex-acp": { command: "codex" },
-      },
-      hostSet,
-    );
+    const agentPersist = repo.setDefaultAgentServer("claude-acp");
 
-    // The panel save waits in the queue: nothing reaches the host RPC until
-    // the default-persist's set has committed.
+    // The second operation is not even sent until the first has answered.
     await vi.waitFor(() => expect(store.releases).toHaveLength(1));
-    expect(hostSet).not.toHaveBeenCalled();
+    expect(camberAppSetDefaultAgentServer).not.toHaveBeenCalled();
     store.releases[0]();
-    const saved = await panelSave;
+    await vi.waitFor(() => expect(store.releases).toHaveLength(2));
+    store.releases[1]();
+    await agentPersist;
 
-    // The panel's edits landed (claude-acp removed, codex-acp kept as
-    // given), and the freshly persisted default replaced the panel's stale
-    // copy instead of being dropped from disk.
-    const expected = {
-      poolside: { default_config_options: { model: "opus" } },
-      "codex-acp": { command: "codex" },
-    };
-    expect(hostSet).toHaveBeenCalledTimes(1);
-    expect(hostSet).toHaveBeenCalledWith(expected);
-    expect(saved).toEqual(expected);
-    expect(store.stored).toEqual(expected);
-    expect(repo.defaultConfigOptionsFor("poolside")).toEqual({ model: "opus" });
+    // The last-used follows carry no pin param: the helper decides, against
+    // the store's fresh state, whether a pin blocks them.
+    expect(camberAppSetAgentDefaultConfigOption).toHaveBeenCalledWith({
+      agentServer: "poolside",
+      optionId: "model",
+      value: "opus",
+    });
+    expect(camberAppSetDefaultAgentServer).toHaveBeenCalledWith({ agentServer: "claude-acp" });
   });
 
   it("skips the last-used persist when the stored value already matches", async () => {
@@ -564,29 +555,80 @@ describe("ACPAgentRepository", () => {
     expect(store.stored.poolside.pinned_config_options).toEqual(["model"]);
   });
 
-  it("preserves the pinned list from the fresh store when a settings save lands", async () => {
-    const store = await mockPinnedStore({
+  it("sends pin and unpin through the helper's shared config-option operation", async () => {
+    const { camberAppSetAgentDefaultConfigOption } = await import("@camber/helperapi");
+    await mockPinnedStore({ poolside: {} });
+    const repo = new ACPAgentRepository();
+    repo.configureAgentServers(["poolside"], "poolside");
+
+    await repo.setPinnedDefaultConfigOption("default", "model", "opus");
+    await repo.unpinDefaultConfigOption("poolside", "model");
+    await repo.unpinDefaultConfigOption("poolside", "mode", { clearValue: true });
+
+    expect(vi.mocked(camberAppSetAgentDefaultConfigOption).mock.calls.map(([p]) => p)).toEqual([
+      { agentServer: "poolside", optionId: "model", value: "opus", pinned: true },
+      { agentServer: "poolside", optionId: "model", pinned: false },
+      { agentServer: "poolside", optionId: "mode", pinned: false, clearValue: true },
+    ]);
+  });
+
+  it("restores the pin mirrors when the helper skips a write for an agent no longer configured", async () => {
+    const { camberAcpNavSetAgentServers } = await import("@camber/helperapi");
+    await mockPinnedStore({ poolside: {} });
+    const repo = new ACPAgentRepository();
+    repo.configureAgentServers(["poolside", "gone-acp"], "poolside");
+
+    const pending = repo.setPinnedDefaultConfigOption("gone-acp", "model", "opus");
+    expect(repo.isPinnedConfigOption("gone-acp", "model")).toBe(true);
+    await pending;
+
+    expect(camberAcpNavSetAgentServers).not.toHaveBeenCalled();
+    expect(repo.isPinnedConfigOption("gone-acp", "model")).toBe(false);
+    expect(repo.defaultConfigOptionsFor("gone-acp")).toEqual({});
+  });
+
+  it("installs through the helper's shared operation and mirrors the map it wrote", async () => {
+    const { camberAppInstallAgentServer } = await import("@camber/helperapi");
+    // The helper merged the install into the store's freshest state, so the
+    // defaults and pins written there survive, not a stale panel snapshot.
+    const written: ACPAgentServers = {
       poolside: { default_config_options: { model: "opus" }, pinned_config_options: ["model"] },
+      "codex-acp": { type: "registry", command: "codex" },
+    };
+    vi.mocked(camberAppInstallAgentServer).mockResolvedValue({
+      state: { agentServers: written },
+      config: { type: "registry", command: "codex" },
     });
     const repo = new ACPAgentRepository();
     repo.configureAgentServers(["poolside"], "poolside");
-    // The panel's snapshot is stale: no defaults, no pins.
-    const hostSet = vi.fn(async (agentServers: ACPAgentServers) => {
-      store.stored = agentServers as PinnedStore["stored"];
+
+    const saved = await repo.installAgentServer("codex-acp", {
+      type: "registry",
+      command: "codex",
     });
 
-    const saved = await repo.saveAgentServers({ poolside: { command: "custom" } }, hostSet);
-
-    const expected = {
-      poolside: {
-        command: "custom",
-        default_config_options: { model: "opus" },
-        pinned_config_options: ["model"],
-      },
-    };
-    expect(saved).toEqual(expected);
-    expect(store.stored).toEqual(expected);
+    expect(camberAppInstallAgentServer).toHaveBeenCalledWith({
+      agentServer: "codex-acp",
+      config: { type: "registry", command: "codex" },
+    });
+    expect(saved).toEqual(written);
+    expect(repo.defaultConfigOptionsFor("poolside")).toEqual({ model: "opus" });
     expect(repo.isPinnedConfigOption("poolside", "model")).toBe(true);
+  });
+
+  it("removes through the helper's shared operation and returns what it archived", async () => {
+    const { camberAppRemoveAgentServer } = await import("@camber/helperapi");
+    const removed = {
+      state: { agentServers: { poolside: { default_config_options: { model: "opus" } } } },
+      archived: [{ conversationId: "c1", agentServer: "codex-acp", sessionId: "s1" }],
+    };
+    vi.mocked(camberAppRemoveAgentServer).mockResolvedValue(removed);
+    const repo = new ACPAgentRepository();
+    repo.configureAgentServers(["poolside", "codex-acp"], "poolside");
+
+    await expect(repo.removeAgentServer("codex-acp")).resolves.toEqual(removed);
+    expect(camberAppRemoveAgentServer).toHaveBeenCalledWith({ agentServer: "codex-acp" });
+    expect(repo.defaultConfigOptionsFor("poolside")).toEqual({ model: "opus" });
   });
 
   it("pins and unpins the default agent through the queue with the store's pin param", async () => {
@@ -625,6 +667,28 @@ describe("ACPAgentRepository", () => {
     expect(store.storedDefault).toBe("poolside");
     expect(store.storedPinned).toBe(false);
     expect(repo.defaultAgentServer).toBe("poolside");
+  });
+
+  it("reports when queued agent-server writes have settled, failed ones included", async () => {
+    const store = await mockPinnedStore({ poolside: {}, "claude-acp": {} });
+    const repo = new ACPAgentRepository();
+    repo.configureAgentServers(["poolside", "claude-acp"], "poolside");
+
+    const pending = repo.setPinnedDefaultAgentServer("claude-acp");
+    let settled = false;
+    const done = repo.agentServersPersistsSettled().then(() => {
+      settled = true;
+    });
+    expect(settled).toBe(false);
+    await pending;
+    await done;
+    expect(settled).toBe(true);
+    expect(store.storedDefault).toBe("claude-acp");
+
+    const { camberAcpNavSetAgentServers } = await import("@camber/helperapi");
+    vi.mocked(camberAcpNavSetAgentServers).mockRejectedValueOnce(new Error("disk full"));
+    await expect(repo.unpinDefaultAgentServer()).rejects.toThrow("disk full");
+    await expect(repo.agentServersPersistsSettled()).resolves.toBeUndefined();
   });
 
   it("skips a queued last-used agent write when the store's pin was set behind the mirror's back", async () => {
@@ -1780,4 +1844,59 @@ async function flushMicrotasks(): Promise<void> {
   for (let i = 0; i < 10; i += 1) {
     await Promise.resolve();
   }
+}
+
+// Test double for the helper's shared camber/app/* agent-server operations
+// (appcontrol.AgentServers in Go): the same list → modify → set the helper
+// runs atomically, over the mocked store methods, so these tests keep
+// driving the repository's queue against a stateful (and blockable) store.
+async function useFakeAgentServerOps(): Promise<void> {
+  const {
+    camberAcpNavListAgentServers,
+    camberAcpNavSetAgentServers,
+    camberAppSetAgentDefaultConfigOption,
+    camberAppSetDefaultAgentServer,
+  } = await import("@camber/helperapi");
+  vi.mocked(camberAppSetDefaultAgentServer).mockImplementation(async (params) => {
+    const state = await camberAcpNavListAgentServers({});
+    if (params.pinned === undefined && state.default_agent_server_pinned === true) {
+      return { state, applied: false };
+    }
+    const saved = await camberAcpNavSetAgentServers({
+      agentServers: state.agentServers ?? {},
+      ...(params.agentServer === undefined ? {} : { defaultAgentServer: params.agentServer }),
+      ...(params.pinned === undefined ? {} : { default_agent_server_pinned: params.pinned }),
+    });
+    return { state: saved, applied: true };
+  });
+  vi.mocked(camberAppSetAgentDefaultConfigOption).mockImplementation(async (params) => {
+    const state = await camberAcpNavListAgentServers({});
+    const current = (state.agentServers ?? {}) as ACPAgentServers;
+    const name = params.agentServer || "poolside";
+    const base = current[name] ?? (name === "poolside" ? {} : undefined);
+    if (!base) return { state, applied: false };
+    const storedPinned = base.pinned_config_options ?? [];
+    if (params.pinned === undefined && storedPinned.includes(params.optionId)) {
+      return { state, applied: false };
+    }
+    const defaults = { ...base.default_config_options };
+    let pinned = [...storedPinned];
+    if (params.pinned === true) {
+      defaults[params.optionId] = params.value ?? "";
+      if (!pinned.includes(params.optionId)) pinned.push(params.optionId);
+    } else if (params.pinned === false) {
+      pinned = pinned.filter((id) => id !== params.optionId);
+      if (params.clearValue) delete defaults[params.optionId];
+    } else {
+      defaults[params.optionId] = params.value ?? "";
+    }
+    const { default_config_options: _defaults, pinned_config_options: _pinned, ...rest } = base;
+    const next: ACPAgentServers[string] = { ...rest };
+    if (Object.keys(defaults).length > 0) next.default_config_options = defaults;
+    if (pinned.length > 0) next.pinned_config_options = pinned;
+    const saved = await camberAcpNavSetAgentServers({
+      agentServers: { ...current, [name]: next },
+    });
+    return { state: saved, applied: true };
+  });
 }

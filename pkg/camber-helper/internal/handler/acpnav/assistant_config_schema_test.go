@@ -115,6 +115,6 @@ func readRepositoryTestFile(t *testing.T, relativePath string) []byte {
 			return data
 		}
 	}
-	t.Fatalf("repository test file %q was not found in %v", relativePath, candidates)
+	require.FailNowf(t, "repository test file not found", "%q was not found in %v", relativePath, candidates)
 	return nil
 }

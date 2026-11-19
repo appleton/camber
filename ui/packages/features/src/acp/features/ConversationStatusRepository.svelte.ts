@@ -16,6 +16,18 @@ type LiveSessionStatus = Pick<NotificationShowParams, "agentServer"> &
     sessionId: SessionId | null;
   };
 
+import { collectSubAgentDescendants } from "../conversationDescendants";
+
+export interface DescendantCandidate {
+  id: string;
+  parentId?: string | null;
+  workspacePath?: string | null;
+  cwd?: string | null;
+  sessionId: string | null;
+  agentServer: string;
+  liveStatus?: ACPConversationLiveStatus;
+}
+
 const emptyConversationStatus: ACPConversationLiveStatus = {
   working: false,
   waitingForUser: false,
@@ -147,6 +159,28 @@ export class ACPConversationStatusRepositoryWriter {
   clearUnread(sessionId: SessionId, agentServer: string): void {
     this.patchSessionStatus(sessionId, agentServer, { unread: false });
     this.notifications?.dismiss(sessionId, agentServer);
+  }
+
+  /**
+   * Clears the turn-completed unread state (and its notification) of every
+   * descendant of `conversationId` that renders as its sub-agent (same sidebar
+   * group; see collectSubAgentDescendants), found by walking `parentId` over
+   * `conversations`. Descendants in another project, worktree or Chats keep
+   * their unread, as do ones waiting for the user. One-shot:
+   * call it when the parent becomes viewed; later completions mark unread as usual.
+   */
+  clearDescendantUnread(
+    conversationId: string,
+    conversations: readonly DescendantCandidate[],
+  ): void {
+    for (const child of collectSubAgentDescendants(conversations, conversationId)) {
+      if (!child.sessionId) continue;
+      const agentServer = normalizeAgentServerName(child.agentServer);
+      const status = this.getConversationStatus(child.sessionId as SessionId, agentServer);
+      if (status.unread && !status.waitingForUser && !child.liveStatus?.waitingForUser) {
+        this.clearUnread(child.sessionId as SessionId, agentServer);
+      }
+    }
   }
 
   markWaitingForUser(params: NotificationShowParams): void {

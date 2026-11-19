@@ -3,6 +3,7 @@ projects:
   - name: desktop
     tag: desktop
     dirs:
+      - cmd/camber
       - cmd/camber-helper
       - cmd/camber-mlx-sidecar
       - pkg

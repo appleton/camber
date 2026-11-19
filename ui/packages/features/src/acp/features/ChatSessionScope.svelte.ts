@@ -276,6 +276,12 @@ export class ACPChatSessionScopeWriter {
     if (!session?.restoredWithoutHistory) return false;
     return this.events.length === 0 && !this.isPrompting && !this.isSending;
   }
+  // Opening this conversation found a turn running whose history the helper
+  // could not snapshot. The pane shows the live updates that arrive and
+  // silently reloads the full history when the turn ends.
+  get historyReloadPending() {
+    return this.session?.historyReloadPending ?? false;
+  }
   get error() {
     const loadState = this.session?.loadState;
     return loadState?.status === "failure"

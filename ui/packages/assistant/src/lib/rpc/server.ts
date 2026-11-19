@@ -2,12 +2,15 @@ import type { AnyMessage } from "@agentclientprotocol/sdk";
 import type { ColorTheme, FileIconTheme, ThemeRepository } from "@camber/components/providers";
 import {
   getUserMCPServersRepo,
+  notifyACPAgentServersDidChange,
+  removeProjectFromApp,
   setACPActiveAgentServer,
   type ACPConversationRepository,
   type ACPProjectRepository,
   type ACPSession,
   type ACPSessionRepository,
   type ACPTransport,
+  type ACPWorktreeRepository,
   type LocalInferenceRepository,
 } from "@camber/features/acp";
 import type { ContextRepository } from "@camber/features/context";
@@ -74,6 +77,7 @@ export class WebviewRPCServer implements Assistant {
     readonly acpProjectRepo?: ACPProjectRepository,
     readonly acpConversationRepo?: ACPConversationRepository,
     readonly localInferenceRepo?: LocalInferenceRepository,
+    readonly acpWorktreeRepo?: Pick<ACPWorktreeRepository, "closeProject">,
   ) {
     const handler = this.route.bind(this);
     win.addEventListener("message", handler);
@@ -138,6 +142,22 @@ export class WebviewRPCServer implements Assistant {
     );
   };
 
+  // Answers the helper's camber/desktopApp/removeProject (from `camber projects
+  // remove`) with the same function the sidebar and project settings use.
+  removeProject = async (path: string): Promise<void> => {
+    if (!this.acpProjectRepo || !this.acpConversationRepo || !this.acpWorktreeRepo) {
+      throw new Error("This window cannot remove projects");
+    }
+    await removeProjectFromApp(
+      {
+        projects: this.acpProjectRepo,
+        worktrees: this.acpWorktreeRepo,
+        conversations: this.acpConversationRepo,
+      },
+      path,
+    );
+  };
+
   elicitation = async (params: ACPElicitationParams): Promise<ACPElicitationOutput> => {
     const output = await this.elicitationRepo.register(params);
     return {
@@ -159,6 +179,12 @@ export class WebviewRPCServer implements Assistant {
   mcpServersDidChange(): void {
     void getUserMCPServersRepo().load();
     void this.acpRepo?.refreshMCPServersForAllSessions();
+  }
+
+  // The agent server store changed — on another surface, or through a
+  // `camber` CLI action. The runtime's agent servers repository re-reads it.
+  acpAgentServersDidChange(): void {
+    notifyACPAgentServersDidChange();
   }
 
   // App state handlers

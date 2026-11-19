@@ -142,7 +142,7 @@ architecture:
 ```sh
 /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
   "$APP/Contents/Info.plist"
-file "$APP/Contents/MacOS/Camber"
+file "$APP/Contents/MacOS/camber-desktop"
 ```
 
 ## 6. Ad-hoc sign and validate the local app
@@ -198,7 +198,7 @@ DELIVERED='/Users/andy/Desktop/Camber.app'
 codesign --verify --deep --strict --verbose=2 "$DELIVERED"
 /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
   "$DELIVERED/Contents/Info.plist"
-file "$DELIVERED/Contents/MacOS/Camber"
+file "$DELIVERED/Contents/MacOS/camber-desktop"
 du -sh "$DELIVERED"
 git status --short
 ```

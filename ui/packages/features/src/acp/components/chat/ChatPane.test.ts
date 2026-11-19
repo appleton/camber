@@ -573,6 +573,32 @@ describe("AcpChatPane", () => {
     expect(sessionRepo.retryAfterError).not.toHaveBeenCalled();
   });
 
+  // A refused live attach (the helper could not snapshot a running turn)
+  // reloads silently when the turn ends: no banner, and not the new
+  // conversation layout while no live update has arrived yet.
+  it("shows no notice while a running conversation's history reload is pending", () => {
+    const sessionRepo = makeSessionRepo({
+      conversationId: "conversation-running",
+      isPrompting: true,
+      events: [],
+      historyReloadPending: true,
+    });
+
+    render(Harness, {
+      props: {
+        sessionRepo,
+        conversationRepo: makeConversationRepo(),
+        activeConversationId: "conversation-running",
+      },
+    });
+
+    expect(screen.getByTestId("history-reload-pending")).toBeEmptyDOMElement();
+    expect(screen.queryByRole("status", { name: /history/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/earlier history/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Start a new conversation")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("history-unavailable-notice")).not.toBeInTheDocument();
+  });
+
   // The "keep prompting here" promise must not sit above an editor that
   // cannot be typed into (agent needs authentication → composer is inert).
   it("does not promise prompting over an inert composer", async () => {
@@ -2271,6 +2297,7 @@ function makeSessionRepo(overrides: Record<string, any> = {}): any {
     ),
     getConversationStatus: vi.fn(() => ({ working: false, waitingForUser: false, unread: false })),
     clearUnread: vi.fn(),
+    clearDescendantUnread: vi.fn(),
     claimVisibleConversation: vi.fn(() => () => {}),
     retryLastPrompt: vi.fn().mockResolvedValue(undefined),
     retryAfterError: vi.fn().mockResolvedValue(undefined),
@@ -2337,6 +2364,9 @@ function makeSessionRepo(overrides: Record<string, any> = {}): any {
     },
     get restoredWithoutHistory() {
       return repo.restoredWithoutHistory ?? false;
+    },
+    get historyReloadPending() {
+      return repo.historyReloadPending ?? false;
     },
     get handoffTargetAgentServer() {
       return repo.handoffTargetAgentServer;

@@ -302,6 +302,7 @@ func (h *CamberHandler) SetACPNavAgentServers(ctx context.Context, req *methods.
 	if err := h.acpProxyHandler.StopChangedAgentServers(before, after); err != nil {
 		slog.Warn("failed to stop changed ACP agent subprocesses after agent server update", "err", err)
 	}
+	h.notifyAgentServersChanged()
 	return state, nil
 }
 

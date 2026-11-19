@@ -230,4 +230,113 @@ describe("ACPConversationStatusRepositoryWriter", () => {
       unread: false,
     });
   });
+
+  describe("clearDescendantUnread", () => {
+    function setup() {
+      const notificationRepo = notifications();
+      const repo = new ACPConversationStatusRepositoryWriter(notificationRepo);
+      const ids = ["parent", "child", "grandchild", "waiting", "other"];
+      repo.syncLiveSessions(
+        ids.map((id) => ({
+          conversationId: id,
+          sessionId: sessionId(`s-${id}`),
+          agentServer: "agent-a",
+          working: false,
+          waitingForUser: id === "waiting",
+        })),
+      );
+      const summaries = [
+        { id: "parent", sessionId: "s-parent", agentServer: "agent-a" },
+        { id: "child", parentId: "parent", sessionId: "s-child", agentServer: "agent-a" },
+        { id: "grandchild", parentId: "child", sessionId: "s-grandchild", agentServer: "agent-a" },
+        { id: "waiting", parentId: "parent", sessionId: "s-waiting", agentServer: "agent-a" },
+        { id: "other", sessionId: "s-other", agentServer: "agent-a" },
+      ];
+      const unread = (id: string) =>
+        repo.getConversationStatus(sessionId(`s-${id}`), "agent-a").unread;
+      return { repo, notificationRepo, summaries, unread };
+    }
+
+    it("clears descendants but not waiting or unrelated conversations", () => {
+      const { repo, notificationRepo, summaries, unread } = setup();
+      for (const id of ["child", "grandchild", "waiting", "other"]) {
+        repo.markUnread(sessionId(`s-${id}`), "agent-a");
+      }
+      vi.mocked(notificationRepo.dismiss).mockClear();
+
+      repo.clearDescendantUnread("parent", summaries);
+
+      expect(unread("child")).toBe(false);
+      expect(unread("grandchild")).toBe(false);
+      expect(unread("waiting")).toBe(true);
+      expect(unread("other")).toBe(true);
+      expect(notificationRepo.dismiss).toHaveBeenCalledWith(sessionId("s-child"), "agent-a");
+      expect(notificationRepo.dismiss).toHaveBeenCalledWith(sessionId("s-grandchild"), "agent-a");
+      expect(notificationRepo.dismiss).not.toHaveBeenCalledWith(sessionId("s-waiting"), "agent-a");
+      expect(notificationRepo.dismiss).not.toHaveBeenCalledWith(sessionId("s-other"), "agent-a");
+    });
+
+    it("leaves other-worktree descendants but clears same-group ones below them", () => {
+      const notificationRepo = notifications();
+      const repo = new ACPConversationStatusRepositoryWriter(notificationRepo);
+      const ids = ["parent", "elsewhere", "back-home"];
+      repo.syncLiveSessions(
+        ids.map((id) => ({
+          conversationId: id,
+          sessionId: sessionId(`s-${id}`),
+          agentServer: "agent-a",
+          working: false,
+          waitingForUser: false,
+        })),
+      );
+      for (const id of ["elsewhere", "back-home"]) {
+        repo.markUnread(sessionId(`s-${id}`), "agent-a");
+      }
+      vi.mocked(notificationRepo.dismiss).mockClear();
+      const summary = (id: string, cwd: string, parentId?: string) => ({
+        id,
+        parentId,
+        workspacePath: "/ws",
+        cwd,
+        sessionId: `s-${id}`,
+        agentServer: "agent-a",
+      });
+
+      repo.clearDescendantUnread("parent", [
+        summary("parent", "/ws"),
+        summary("elsewhere", "/wt", "parent"),
+        summary("back-home", "/ws", "elsewhere"),
+      ]);
+
+      const unread = (id: string) =>
+        repo.getConversationStatus(sessionId(`s-${id}`), "agent-a").unread;
+      expect(unread("elsewhere")).toBe(true);
+      expect(unread("back-home")).toBe(false);
+      expect(notificationRepo.dismiss).not.toHaveBeenCalledWith(
+        sessionId("s-elsewhere"),
+        "agent-a",
+      );
+    });
+
+    it("survives parent cycles", () => {
+      const { repo, summaries, unread } = setup();
+      repo.markUnread(sessionId("s-child"), "agent-a");
+      const cyclic = summaries.map((s) =>
+        s.id === "parent" ? { ...s, parentId: "grandchild" } : s,
+      );
+
+      repo.clearDescendantUnread("parent", cyclic);
+
+      expect(unread("child")).toBe(false);
+    });
+
+    it("does not clear a child completion that happens after the parent was viewed", () => {
+      const { repo, summaries, unread } = setup();
+      repo.clearDescendantUnread("parent", summaries);
+
+      repo.markUnread(sessionId("s-child"), "agent-a");
+
+      expect(unread("child")).toBe(true);
+    });
+  });
 });

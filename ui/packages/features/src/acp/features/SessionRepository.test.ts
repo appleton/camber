@@ -14,11 +14,14 @@ import { get } from "svelte/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ElicitationRepository } from "../../elicitation/ElicitationRepository.svelte";
 import { DEFAULT_AGENT_SERVER } from "../agentServers";
+import { ACPClient } from "../Client";
 import type { ACPConnectionPool } from "../ConnectionPool";
+import { createACPConnection } from "../createACPConnection";
 import { ACP_DEBUG_DUMP_LOADED_EVENT, type ACPDebugDumpLoadedEventDetail } from "../debugDump";
 import { ACPError } from "../errors";
 import { appState } from "../hostAdapter";
 import { ACP_PERMISSION_OVERRIDE_RULES_META_KEY } from "../permissionMeta";
+import { RPCTransport } from "../RPCTransport";
 import { buildSessionInfo } from "../sessionInfo";
 import { ACPConversationStatusRepositoryWriter } from "./ConversationStatusRepository.svelte";
 import {
@@ -924,6 +927,7 @@ describe("ACPSessionRepositoryWriter", () => {
       sessionId: session.sessionId,
       cwd: "/repo",
       mcpServers: [],
+      _meta: { "camber/liveAttach": false },
     });
   });
 
@@ -1037,12 +1041,237 @@ describe("ACPSessionRepositoryWriter", () => {
       sessionId: first.sessionId,
       cwd: "/repo",
       mcpServers: [],
+      _meta: { "camber/liveAttach": false },
     });
     expect(conn.loadSession).toHaveBeenCalledWith({
       sessionId: second.sessionId,
       cwd: "/repo",
       mcpServers: [],
+      _meta: { "camber/liveAttach": false },
     });
+  });
+
+  it("does not report a connector refresh as applied when the helper refuses an active reload", async () => {
+    const repo = new ACPSessionRepositoryWriter();
+    const conn = await connectRepo(repo);
+    const session = await loadNamedSession(repo, "busy-child");
+    vi.mocked(conn.loadSession).mockRejectedValue(new Error("SESSION_ACTIVE"));
+    let refreshed = true;
+    await session.serialize(async (gen) => {
+      refreshed = await session.loader.refreshMCPServers(gen);
+    });
+    expect(refreshed).toBe(false);
+    expect(conn.loadSession).toHaveBeenLastCalledWith(
+      expect.objectContaining({ _meta: { "camber/liveAttach": false } }),
+    );
+  });
+
+  it("defers a connector refresh while the local prompt is active and retries after turnEnded", async () => {
+    const repo = new ACPSessionRepositoryWriter();
+    const conn = await connectRepo(repo);
+    const session = await loadNamedSession(repo, "busy-local");
+    repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, sessionNotification("live", session.sessionId!));
+    const eventsBefore = session.events;
+    const loadStateBefore = session.loadState;
+    vi.mocked(conn.loadSession).mockClear();
+    session.isPrompting = true;
+
+    await repo.refreshMCPServersForAllSessions();
+
+    expect(conn.loadSession).not.toHaveBeenCalled();
+    expect(session.connectorRefreshDeferred).toBe(true);
+    expect(session.loadState).toBe(loadStateBefore);
+    expect(session.events).toEqual(eventsBefore);
+
+    session.isPrompting = false;
+    repo.handleTurnEnded(DEFAULT_AGENT_SERVER, { sessionId: session.sessionId! });
+    await vi.waitFor(() => expect(conn.loadSession).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(session.connectorRefreshDeferred).toBe(false));
+    expect(conn.loadSession).toHaveBeenLastCalledWith(
+      expect.objectContaining({ _meta: { "camber/liveAttach": false } }),
+    );
+    expect(isSuccess(session.loadState)).toBe(true);
+  });
+
+  it("defers a connector refresh for a turn the helper reports working on another surface", async () => {
+    const status = new ACPConversationStatusRepositoryWriter();
+    const repo = new ACPSessionRepositoryWriter(status.publicAPI());
+    const conn = await connectRepo(repo);
+    const session = await loadNamedSession(repo, "busy-remote");
+    vi.mocked(conn.loadSession).mockClear();
+    status.syncRemoteStatuses([
+      {
+        sessionId: session.sessionId,
+        agentServer: DEFAULT_AGENT_SERVER,
+        liveStatus: { working: true, waitingForUser: false, unread: false },
+      },
+    ]);
+
+    await repo.refreshMCPServersForAllSessions();
+    expect(conn.loadSession).not.toHaveBeenCalled();
+    expect(session.connectorRefreshDeferred).toBe(true);
+    expect(isSuccess(session.loadState)).toBe(true);
+
+    // The pushed status can lag turnEnded; the retry lets the helper decide.
+    repo.handleTurnEnded(DEFAULT_AGENT_SERVER, { sessionId: session.sessionId! });
+    await vi.waitFor(() => expect(conn.loadSession).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(session.connectorRefreshDeferred).toBe(false));
+  });
+
+  it("preserves the live pane when the helper refuses an active reload and retries once idle", async () => {
+    const repo = new ACPSessionRepositoryWriter();
+    const conn = await connectRepo(repo);
+    const session = await loadNamedSession(repo, "busy-helper");
+    repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, sessionNotification("live", session.sessionId!));
+    const eventsBefore = session.events;
+    const loadStateBefore = session.loadState;
+    const loadIntentBefore = session.loadIntent;
+    vi.mocked(conn.loadSession).mockClear();
+    vi.mocked(conn.loadSession).mockImplementationOnce(async () => {
+      // The running turn keeps streaming while the refused reload is on the
+      // wire; those chunks are routed to the temporary replay materializer.
+      repo.handleSessionUpdate(
+        DEFAULT_AGENT_SERVER,
+        sessionNotification("during", session.sessionId!),
+      );
+      throw new ACPError({
+        code: -32001,
+        message: "This conversation is still running and cannot be reloaded safely",
+        data: { code: "SESSION_ACTIVE" },
+      });
+    });
+
+    await repo.refreshMCPServersForAllSessions();
+
+    expect(conn.loadSession).toHaveBeenCalledOnce();
+    expect(session.loadState).toBe(loadStateBefore);
+    expect(session.loadIntent).toBe(loadIntentBefore);
+    expect(session.loadingCwd).toBeNull();
+    expect(session.connectorRefreshDeferred).toBe(true);
+    // Nothing lost, nothing duplicated, in arrival order (consecutive text
+    // chunks coalesce into one agent message).
+    repo.handleSessionUpdate(
+      DEFAULT_AGENT_SERVER,
+      sessionNotification("after", session.sessionId!),
+    );
+    const agentText = session.events
+      .filter((event) => event.eventKind === "agent_message")
+      .flatMap((event) => (event as { content: { text?: string }[] }).content)
+      .map((block) => block.text ?? "")
+      .join("");
+    expect(agentText).toBe("liveduringafter");
+    expect(eventsBefore.length).toBeGreaterThan(0);
+
+    repo.handleTurnEnded(DEFAULT_AGENT_SERVER, { sessionId: session.sessionId! });
+    await vi.waitFor(() => expect(conn.loadSession).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(session.connectorRefreshDeferred).toBe(false));
+    expect(isSuccess(session.loadState)).toBe(true);
+  });
+
+  describe("opening a running conversation whose live attach is refused", () => {
+    const sessionActiveError = () =>
+      new ACPError({
+        code: -32001,
+        message: "This conversation is still running and cannot be reloaded safely",
+        data: { code: "SESSION_ACTIVE" },
+      });
+    const agentText = (session: { events: readonly unknown[] }) =>
+      (session.events as { eventKind: string; content?: { text?: string }[] }[])
+        .filter((event) => event.eventKind === "agent_message")
+        .flatMap((event) => event.content ?? [])
+        .map((block) => block.text ?? "")
+        .join("");
+
+    it("shows the live updates and silently reloads when the turn ends", async () => {
+      const repo = new ACPSessionRepositoryWriter();
+      const conn = await connectRepo(repo);
+      vi.mocked(conn.loadSession).mockImplementationOnce(async () => {
+        // The turn streams while the refused attach is on the wire.
+        repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, sessionNotification("during"));
+        throw sessionActiveError();
+      });
+
+      const session = await repo.loadSessionRecord(
+        "s-loaded",
+        "/repo",
+        [],
+        { conversationId: "conv-running" },
+        DEFAULT_AGENT_SERVER,
+        { fallbackCwds: ["/fallback"] },
+      );
+
+      expect(session).not.toBeNull();
+      // No other cwd is tried: a running turn refuses every load.
+      expect(conn.loadSession).toHaveBeenCalledOnce();
+      expect(isSuccess(session!.loadState)).toBe(true);
+      expect(session!.historyReloadPending).toBe(true);
+      expect(session!.restoredWithoutHistory).toBe(false);
+      repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, sessionNotification("after"));
+      expect(agentText(session!)).toBe("duringafter");
+
+      // Once the turn ends the full history replaces the partial live view.
+      vi.mocked(conn.loadSession).mockImplementationOnce(async () => {
+        repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, sessionNotification("full history"));
+        return {};
+      });
+      repo.handleTurnEnded(DEFAULT_AGENT_SERVER, { sessionId: "s-loaded" });
+      await vi.waitFor(() => expect(session!.historyReloadPending).toBe(false));
+      expect(conn.loadSession).toHaveBeenCalledTimes(2);
+      expect(conn.loadSession).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          sessionId: "s-loaded",
+          cwd: "/repo",
+          _meta: expect.objectContaining({ "camber/liveAttach": true }),
+        }),
+      );
+      expect(isSuccess(session!.loadState)).toBe(true);
+      expect(agentText(session!)).toBe("full history");
+    });
+
+    it("retries at once when the turn ended while the refused attach was in flight", async () => {
+      const repo = new ACPSessionRepositoryWriter();
+      const conn = await connectRepo(repo);
+      vi.mocked(conn.loadSession).mockImplementationOnce(async () => {
+        repo.handleTurnEnded(DEFAULT_AGENT_SERVER, { sessionId: "s-loaded" });
+        throw sessionActiveError();
+      });
+      vi.mocked(conn.loadSession).mockImplementationOnce(async () => {
+        repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, sessionNotification("history"));
+        return {};
+      });
+
+      const session = await repo.loadSessionRecord(
+        "s-loaded",
+        "/repo",
+        [],
+        { conversationId: "conv-ended" },
+        DEFAULT_AGENT_SERVER,
+      );
+
+      expect(session).not.toBeNull();
+      await vi.waitFor(() => expect(conn.loadSession).toHaveBeenCalledTimes(2));
+      await vi.waitFor(() => expect(session!.historyReloadPending).toBe(false));
+      expect(agentText(session!)).toBe("history");
+    });
+  });
+
+  it("keeps a deferred connector refresh across a live-attach snapshot load", async () => {
+    const repo = new ACPSessionRepositoryWriter();
+    const conn = await connectRepo(repo);
+    const session = await loadNamedSession(repo, "deferred-attach");
+    session.connectorRefreshDeferred = true;
+
+    // A snapshot attachment never reaches the agent session: connectors stay stale.
+    vi.mocked(conn.loadSession).mockResolvedValueOnce({ _meta: { "camber/liveAttach": true } });
+    await session.serialize((gen) => session.loadExisting(gen, "/repo", []));
+    expect(isSuccess(session.loadState)).toBe(true);
+    expect(session.connectorRefreshDeferred).toBe(true);
+
+    // A real reload does deliver them.
+    vi.mocked(conn.loadSession).mockResolvedValueOnce({});
+    await session.serialize((gen) => session.loadExisting(gen, "/repo", []));
+    expect(isSuccess(session.loadState)).toBe(true);
+    expect(session.connectorRefreshDeferred).toBe(false);
   });
 
   it("coalesces bursts of MCP server refreshes into one sweep", async () => {
@@ -2163,8 +2392,12 @@ describe("ACPSessionRepositoryWriter", () => {
       },
     };
     const session = repo.createSession("/repo", DEFAULT_AGENT_SERVER, "conv-last-used");
+    // Last-used defaults persist through the helper's shared
+    // camber/app/setAgentDefaultConfigOption operation.
     const agentServersWrites = () =>
-      helperJsonrpcCall.mock.calls.filter(([method]) => String(method).includes("setAgentServers"));
+      helperJsonrpcCall.mock.calls.filter(([method]) =>
+        String(method).includes("setAgentDefaultConfigOption"),
+      );
     const flushPersistQueue = async () => {
       for (let i = 0; i < 10; i += 1) await Promise.resolve();
     };
@@ -2185,12 +2418,10 @@ describe("ACPSessionRepositoryWriter", () => {
     // A model selection persists as the agent's last-used default.
     await session.setConfigOption("model", "opus");
     await vi.waitFor(() => expect(agentServersWrites()).toHaveLength(1));
-    const [, params] = agentServersWrites()[0] as [
-      string,
-      { agentServers: Record<string, { default_config_options?: Record<string, string> }> },
-    ];
-    expect(params.agentServers[DEFAULT_AGENT_SERVER].default_config_options).toEqual({
-      model: "opus",
+    expect(agentServersWrites()[0][1]).toEqual({
+      agentServer: DEFAULT_AGENT_SERVER,
+      optionId: "model",
+      value: "opus",
     });
 
     // An uncategorized "extras" pick (unknown semantics to this client) is
@@ -2207,12 +2438,10 @@ describe("ACPSessionRepositoryWriter", () => {
     // one more agent-servers write, on top of the model write above.
     await session.setConfigOption("temperature", "1.0");
     await vi.waitFor(() => expect(agentServersWrites()).toHaveLength(2));
-    const [, secondParams] = agentServersWrites()[1] as [
-      string,
-      { agentServers: Record<string, { default_config_options?: Record<string, string> }> },
-    ];
-    expect(secondParams.agentServers[DEFAULT_AGENT_SERVER].default_config_options).toEqual({
-      temperature: "1.0",
+    expect(agentServersWrites()[1][1]).toEqual({
+      agentServer: DEFAULT_AGENT_SERVER,
+      optionId: "temperature",
+      value: "1.0",
     });
   });
 
@@ -2345,8 +2574,12 @@ describe("ACPSessionRepositoryWriter", () => {
     helperJsonrpcCall.mockImplementation(async (method: unknown, params: unknown) => {
       const name = String(method);
       if (name.includes("listAgentServers")) return { agentServers: { local: {} } };
-      if (name.includes("setAgentServers")) {
-        return { agentServers: (params as { agentServers: unknown }).agentServers };
+      if (name.includes("setAgentDefaultConfigOption")) {
+        const { optionId, value } = params as { optionId: string; value: string };
+        return {
+          state: { agentServers: { local: { default_config_options: { [optionId]: value } } } },
+          applied: true,
+        };
       }
       return { entry: null };
     });
@@ -2374,8 +2607,12 @@ describe("ACPSessionRepositoryWriter", () => {
         currentValue: "old-model",
       },
     ];
+    // Last-used defaults persist through the helper's shared
+    // camber/app/setAgentDefaultConfigOption operation.
     const agentServersWrites = () =>
-      helperJsonrpcCall.mock.calls.filter(([method]) => String(method).includes("setAgentServers"));
+      helperJsonrpcCall.mock.calls.filter(([method]) =>
+        String(method).includes("setAgentDefaultConfigOption"),
+      );
 
     repo.applyLocalInferenceModelConfigToSessionsForAgent("local", {
       modelsDirectory: "/tmp/models",
@@ -2424,13 +2661,16 @@ describe("ACPSessionRepositoryWriter", () => {
       "custom/Downloaded-From-Search-4bit",
     );
     await vi.waitFor(() => expect(agentServersWrites()).toHaveLength(1));
-    const [, params] = agentServersWrites()[0] as [
-      string,
-      { agentServers: Record<string, { default_config_options?: Record<string, string> }> },
-    ];
-    expect(params.agentServers.local.default_config_options).toEqual({
-      model: "custom/Downloaded-From-Search-4bit",
+    expect(agentServersWrites()[0][1]).toEqual({
+      agentServer: "local",
+      optionId: "model",
+      value: "custom/Downloaded-From-Search-4bit",
     });
+    await vi.waitFor(() =>
+      expect(repo.agents.defaultConfigOptionsFor("local")).toEqual({
+        model: "custom/Downloaded-From-Search-4bit",
+      }),
+    );
   });
 
   it("does not resend the model selection to the agent when the merge does not change it", () => {
@@ -2789,6 +3029,135 @@ describe("ACPSessionRepositoryWriter", () => {
       expect.stringContaining("getConversationHistory"),
       { conversationId: "conv-handed-off" },
     );
+  });
+
+  it("attaches to a running child without duplicating live output or completing its tools", async () => {
+    const repo = new ACPSessionRepositoryWriter();
+    helperJsonrpcCall.mockImplementation(async (method: unknown) => {
+      if (String(method).includes("acpNav/list")) {
+        return {
+          projects: [],
+          conversations: [
+            {
+              id: "conv-loaded",
+              workspacePath: "/repo",
+              agentServer: DEFAULT_AGENT_SERVER,
+              sessionId: "s-loaded",
+              cwd: "/repo",
+              active: true,
+              archived: false,
+              workingDirectories: ["/repo"],
+              metadata: {
+                processes: [],
+                explored: [],
+                edited: [],
+                sessionConfig: { selections: { model: "model-b" } },
+              },
+            },
+          ],
+        };
+      }
+      return {};
+    });
+    const conn = mockConnection({
+      loadSession: vi.fn().mockImplementation(async () => {
+        // An event can arrive live while the snapshot request is queued.
+        repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, sessionNotification("before"));
+        repo.handleSessionReplayStarted(DEFAULT_AGENT_SERVER, "s-loaded");
+        repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, sessionNotification("before"));
+        repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, {
+          sessionId: "s-loaded",
+          update: {
+            sessionUpdate: "tool_call",
+            toolCallId: "running-tool",
+            title: "Working",
+            status: "in_progress",
+          },
+        });
+        return {
+          _meta: { "camber/liveAttach": true },
+          configOptions: [
+            {
+              id: "model",
+              type: "select",
+              name: "Model",
+              currentValue: "model-a",
+              options: [
+                { value: "model-a", name: "A" },
+                { value: "model-b", name: "B" },
+              ],
+            },
+          ],
+        };
+      }),
+    });
+    await connectRepo(repo, conn);
+    const session = await repo.loadSessionRecord(
+      "s-loaded",
+      "/repo",
+      [],
+      { conversationId: "conv-loaded" },
+      DEFAULT_AGENT_SERVER,
+    );
+    repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, sessionNotification("after"));
+    expect(session?.events.filter((event) => event.eventKind === "agent_message")).toEqual([
+      expect.objectContaining({ content: [{ type: "text", text: "before" }] }),
+      expect.objectContaining({ content: [{ type: "text", text: "after" }] }),
+    ]);
+    expect(session?.events.find((event) => event.eventKind === "tool_call")).toMatchObject({
+      status: "in_progress",
+    });
+    expect(conn.setSessionConfigOption).not.toHaveBeenCalled();
+    expect(conn.setSessionMode).not.toHaveBeenCalled();
+  });
+
+  it("keeps a running conversation's initial prompt when its live-attach snapshot arrives in one burst", async () => {
+    // A conversation started elsewhere (camber chat new) is first opened here
+    // while its turn runs: the helper answers session/load with a snapshot
+    // whose first event is the initial prompt, delivered through the real SDK
+    // dispatch rather than straight into the repository.
+    const repo = new ACPSessionRepositoryWriter();
+    const transport = new RPCTransport({
+      jsonrpcCall: vi.fn().mockResolvedValue({}),
+      jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
+    });
+    createACPConnection(() => new ACPClient(repo, DEFAULT_AGENT_SERVER), transport);
+    const notify = (method: string, params: unknown) =>
+      transport.receive({ jsonrpc: "2.0", method, params });
+    const conn = mockConnection({
+      loadSession: vi.fn().mockImplementation(async () => {
+        notify("session/update", sessionNotification("live before snapshot"));
+        notify("camber/acp/session_replay_started", { sessionId: "s-loaded" });
+        notify("session/update", {
+          sessionId: "s-loaded",
+          update: {
+            sessionUpdate: "user_message_chunk",
+            messageId: "m-prompt",
+            content: { type: "text", text: "initial prompt" },
+          },
+        });
+        notify("session/update", sessionNotification("live before snapshot"));
+        notify("session/update", sessionNotification(" and more"));
+        for (let i = 0; i < 10; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+        return { _meta: { "camber/liveAttach": true } };
+      }),
+    });
+    await connectRepo(repo, conn);
+    const session = await repo.loadSessionRecord(
+      "s-loaded",
+      "/repo",
+      [],
+      { conversationId: "conv-loaded" },
+      DEFAULT_AGENT_SERVER,
+    );
+
+    expect(
+      session?.events.map((event) =>
+        "content" in event && Array.isArray(event.content)
+          ? `${event.eventKind}:${event.content.map((block) => ("text" in block ? block.text : "")).join("")}`
+          : event.eventKind,
+      ),
+    ).toEqual(["user_message:initial prompt", "agent_message:live before snapshot and more"]);
   });
 
   it("publishes replay updates that arrive after session/load resolves", async () => {
@@ -3417,6 +3786,7 @@ describe("ACPSessionRepositoryWriter", () => {
       cwd: "/repo",
       mcpServers: [],
       _meta: {
+        "camber/liveAttach": true,
         claudeCode: {
           options: { promptSuggestions: true },
           emitRawSDKMessages: [{ type: "prompt_suggestion" }, { type: "active_goal" }],
@@ -3447,6 +3817,7 @@ describe("ACPSessionRepositoryWriter", () => {
       cwd: "/repo",
       mcpServers: [],
       _meta: {
+        "camber/liveAttach": true,
         claudeCode: {
           options: { promptSuggestions: true },
           emitRawSDKMessages: [{ type: "prompt_suggestion" }, { type: "active_goal" }],
@@ -5224,11 +5595,13 @@ describe("ACPSessionRepositoryWriter", () => {
       sessionId: "s-loaded",
       cwd: "/gone-worktree",
       mcpServers: [],
+      _meta: { "camber/liveAttach": true },
     });
     expect(loadSession).toHaveBeenNthCalledWith(2, {
       sessionId: "s-loaded",
       cwd: "/repo",
       mcpServers: [],
+      _meta: { "camber/liveAttach": true },
     });
     // The read-only seed survives the load so the pane disables prompting.
     expect(session!.sessionInfo?.readOnly).toBe(true);

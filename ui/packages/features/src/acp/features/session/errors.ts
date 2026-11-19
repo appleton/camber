@@ -38,6 +38,18 @@ export function isUnresumableSessionError(err: ACPRequestError): boolean {
   return detail.includes("duplicate key") && detail.includes("agent session");
 }
 
+// The helper refuses to resume or reload a conversation whose turn is still
+// running (acpproxy SESSION_ACTIVE / CONVERSATION_BUSY) without interrupting
+// the agent. Nothing is wrong with the session; the caller retries when idle.
+export function isSessionActiveError(err: ACPRequestError): boolean {
+  const detail = `${err.message} ${err instanceof ACPError ? stringifyData(err.data) : ""}`;
+  return (
+    detail.includes("SESSION_ACTIVE") ||
+    detail.includes("CONVERSATION_BUSY") ||
+    detail.toLowerCase().includes("still running and cannot be reloaded")
+  );
+}
+
 function stringifyData(data: unknown): string {
   if (typeof data === "string") return data;
   try {

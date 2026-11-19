@@ -45,6 +45,8 @@ function createRepo(appStore: AppStore) {
         changed: true,
         removedAgentServers: new Set<string>(),
       })),
+      agentServersPersistsSettled: vi.fn(async () => {}),
+      refreshCachedConfig: vi.fn(async () => {}),
       setDefaultAgentServer: vi.fn(async function (
         this: { defaultAgentServer: string },
         agentServer,
@@ -343,5 +345,63 @@ describe("ACPAgentServersRepository", () => {
       undefined,
       false,
     );
+  });
+
+  it("re-reads the store on a change broadcast after its own writes settle, pre-warming new agents", async () => {
+    const appStore = createAppStore({ environment: { assistantHost: "desktop" } });
+    const { repo, sessionRepo } = createRepo(appStore);
+    const { camberAcpNavListAgentServers } = await import("@camber/helperapi");
+    vi.mocked(camberAcpNavListAgentServers).mockResolvedValueOnce({
+      agentServers: { "codex-acp": { command: "npx" } },
+    });
+    await repo.refresh();
+
+    let settle!: () => void;
+    vi.mocked(sessionRepo.agents.agentServersPersistsSettled).mockImplementationOnce(
+      () => new Promise<void>((resolve) => (settle = resolve)),
+    );
+    const installed = { "codex-acp": { command: "npx" }, gemini: { type: "registry" } };
+    vi.mocked(camberAcpNavListAgentServers).mockResolvedValueOnce({ agentServers: installed });
+    const listener = vi.fn();
+    repo.onDidChange(listener);
+
+    const handled = repo.handleDidChange();
+    await flushPromises();
+    expect(camberAcpNavListAgentServers).toHaveBeenCalledTimes(1);
+    settle();
+    await handled;
+
+    expect(camberAcpNavListAgentServers).toHaveBeenCalledTimes(2);
+    expect(get(appStore).userSettings.acpAgentServers).toEqual(installed);
+    expect(sessionRepo.agents.refreshCachedConfig).toHaveBeenCalledTimes(1);
+    expect(sessionRepo.agents.refreshCachedConfig).toHaveBeenCalledWith("gemini", "/", {
+      quiet: true,
+    });
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("coalesces a burst of change broadcasts into one trailing re-read", async () => {
+    const appStore = createAppStore({ environment: { assistantHost: "vscode" } });
+    const { repo, sessionRepo } = createRepo(appStore);
+    const { camberAcpNavListAgentServers } = await import("@camber/helperapi");
+    vi.mocked(camberAcpNavListAgentServers).mockResolvedValue({
+      agentServers: { "codex-acp": { command: "npx" } },
+    });
+    await repo.refresh();
+    vi.mocked(camberAcpNavListAgentServers).mockClear();
+    vi.mocked(camberAcpNavListAgentServers).mockResolvedValue({
+      agentServers: { "codex-acp": { command: "npx" }, gemini: { type: "registry" } },
+    });
+
+    const first = repo.handleDidChange();
+    const second = repo.handleDidChange();
+    const third = repo.handleDidChange();
+    expect(second).toBe(first);
+    expect(third).toBe(first);
+    await first;
+
+    expect(camberAcpNavListAgentServers).toHaveBeenCalledTimes(2);
+    // Pre-warming is the desktop's job; other hosts only re-read.
+    expect(sessionRepo.agents.refreshCachedConfig).not.toHaveBeenCalled();
   });
 });

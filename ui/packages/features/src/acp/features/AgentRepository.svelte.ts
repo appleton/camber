@@ -12,14 +12,20 @@ import type {
 } from "@agentclientprotocol/sdk";
 import {
   camberAcpNavGetConfigCache,
-  camberAcpNavListAgentServers,
-  camberAcpNavSetAgentServers,
   camberAcpNavUpsertConfigCache,
   camberAcpSessionClose,
+  camberAppInstallAgentServer,
+  camberAppRemoveAgentServer,
+  camberAppSetAgentDefaultConfigOption,
+  camberAppSetDefaultAgentServer,
   initializeStatefulModule as initializeHelperApi,
 } from "@camber/helperapi";
-import type { LocalInferenceState } from "@camber/helperapi/schemas";
-import type { ACPAgentServers } from "@camber/rpc";
+import type {
+  AppRemoveAgentServerOutput,
+  AppSetAgentDefaultConfigOptionParams,
+  LocalInferenceState,
+} from "@camber/helperapi/schemas";
+import type { ACPAgentServerConfig, ACPAgentServers } from "@camber/rpc";
 import { get } from "svelte/store";
 import {
   DEFAULT_AGENT_SERVER,
@@ -698,35 +704,28 @@ export class ACPAgentRepository {
     if (pinned !== undefined) this.defaultAgentServerPinned = pinned;
     return this.#enqueueAgentServersPersist(async () => {
       try {
-        const state = await camberAcpNavListAgentServers({});
-        const agentServers = (state.agentServers ?? {}) as ACPAgentServers;
-        // An absent pin param marks the last-used follow (setDefaultAgentServer):
-        // its callers gate on an in-memory pin mirror that can be stale — a
-        // window that never saw another window's pin would MOVE the pinned
-        // default, leaving the pin fixing the wrong agent. So re-check the
-        // store's fresh flag at dequeue, mirroring #isPinnedInStore for
-        // config options, and heal the mirrors from the store instead of
-        // writing. Explicit pin/unpin writes (pinned defined) proceed
-        // regardless — they are the deliberate acts the pin protects.
-        if (pinned === undefined && state.default_agent_server_pinned === true) {
-          const names = agentServerNames(agentServers);
-          this.defaultAgentServer = preferredAgentServer(names, state.defaultAgentServer);
-          this.defaultAgentServerPinned = true;
-          return { agentServers, defaultAgentServer: state.defaultAgentServer };
-        }
-        const res = await camberAcpNavSetAgentServers({
-          agentServers,
-          defaultAgentServer: normalized,
-          default_agent_server_pinned: pinned,
+        // The helper's shared operation (the camber CLI's agents default runs
+        // it too) does the read-modify-write atomically under its own lock.
+        // An absent pin param marks the last-used follow
+        // (setDefaultAgentServer): its callers gate on an in-memory pin
+        // mirror that can be stale — a window that never saw another
+        // window's pin would MOVE the pinned default — so the helper re-checks
+        // the store's fresh flag and skips the write while it is pinned. The
+        // mirrors then heal from the store state it returns. Explicit
+        // pin/unpin writes (pinned defined) proceed regardless — they are the
+        // deliberate acts the pin protects.
+        const res = await camberAppSetDefaultAgentServer({
+          ...(normalized === undefined ? {} : { agentServer: normalized }),
+          ...(pinned === undefined ? {} : { pinned }),
         });
-        const resAgentServers = (res.agentServers ?? {}) as ACPAgentServers;
+        const resAgentServers = (res.state.agentServers ?? {}) as ACPAgentServers;
         const names = agentServerNames(resAgentServers);
-        this.defaultAgentServer = preferredAgentServer(names, res.defaultAgentServer);
+        this.defaultAgentServer = preferredAgentServer(names, res.state.defaultAgentServer);
         // Absent on the wire means unpinned (the store omits a false flag).
-        this.defaultAgentServerPinned = res.default_agent_server_pinned === true;
+        this.defaultAgentServerPinned = res.state.default_agent_server_pinned === true;
         return {
           agentServers: resAgentServers,
-          defaultAgentServer: res.defaultAgentServer,
+          defaultAgentServer: res.state.defaultAgentServer,
         };
       } catch (error) {
         // Mirror the config-pin path's rollback: a failed persist must not
@@ -737,56 +736,6 @@ export class ACPAgentRepository {
         throw error;
       }
     });
-  }
-
-  // Runs inside the persist queue: re-lists the store's freshest state,
-  // merges only this call's change into it, and writes the whole map back.
-  // It writes the default value WITHOUT consulting `pinned_config_options`,
-  // so its only caller (#persistLastUsedConfigOption) performs the
-  // dequeue-time pin check first; any new caller must do the same — or pin
-  // deliberately through setPinnedDefaultConfigOption — or it would silently
-  // overwrite a pinned default.
-  async #persistDefaultConfigOption(
-    agentServer: string,
-    configId: string,
-    value: string,
-    previousDefaults: Record<string, Record<string, string>>,
-  ): Promise<void> {
-    try {
-      const state = await camberAcpNavListAgentServers({});
-      const current = (state.agentServers ?? {}) as ACPAgentServers;
-      const resolved = resolveAgentServers(current);
-      const base = resolved[agentServer];
-      if (!base) {
-        this.defaultConfigOptionsByAgentServer = previousDefaults;
-        return;
-      }
-      const next: ACPAgentServers = {
-        ...current,
-        [agentServer]: {
-          ...base,
-          default_config_options: {
-            ...(base.default_config_options ?? {}),
-            [configId]: value,
-          },
-        },
-      };
-      const res = await camberAcpNavSetAgentServers({
-        agentServers: next,
-      });
-      const savedAgentServers = (res.agentServers ?? {}) as ACPAgentServers;
-      this.syncDefaultConfigOptions(savedAgentServers);
-      appState.update((state) => ({
-        ...state,
-        userSettings: {
-          ...state.userSettings,
-          acpAgentServers: savedAgentServers,
-        },
-      }));
-    } catch (error) {
-      this.defaultConfigOptionsByAgentServer = previousDefaults;
-      throw error;
-    }
   }
 
   /**
@@ -822,10 +771,8 @@ export class ACPAgentRepository {
         : [...optimisticPinned, configId],
     };
     return this.#enqueueAgentServersPersist(() =>
-      this.#persistPinnedConfigOption(
-        agentServer,
-        configId,
-        { value },
+      this.#persistConfigOption(
+        { agentServer, optionId: configId, value, pinned: true },
         previousDefaults,
         previousPinned,
       ),
@@ -865,77 +812,39 @@ export class ACPAgentRepository {
       };
     }
     return this.#enqueueAgentServersPersist(() =>
-      this.#persistPinnedConfigOption(
-        agentServer,
-        configId,
-        null,
+      this.#persistConfigOption(
+        { agentServer, optionId: configId, pinned: false, ...(clearValue ? { clearValue } : {}) },
         previousDefaults,
         previousPinned,
-        clearValue,
       ),
     );
   }
 
-  // Runs inside the persist queue: re-lists the store's freshest state,
-  // merges only this call's pin change — and, when pinning, the default
-  // value — into the agent's entry, and writes the whole map back. `pin`
-  // null means unpin; `clearValue` (unpin only) removes the stored default
-  // value in the same write, for options the last-used auto-follow would
-  // never overwrite (see unpinDefaultConfigOption).
-  async #persistPinnedConfigOption(
-    agentServer: string,
-    configId: string,
-    pin: { value: string } | null,
+  // Runs inside the persist queue: one call to the helper's shared
+  // camber/app/setAgentDefaultConfigOption operation (the camber CLI's agents
+  // config default runs it too), which merges only this change into the
+  // agent's stored entry atomically under the helper's lock. `pinned` true
+  // pins the value, false unpins (`clearValue` also drops the stored value,
+  // for options the last-used auto-follow would never overwrite — see
+  // unpinDefaultConfigOption), and absent is the last-used follow, which the
+  // helper skips when the store's fresh state has the key pinned. A skipped
+  // write (that, or an agent no longer configured) restores the mirrors.
+  async #persistConfigOption(
+    params: AppSetAgentDefaultConfigOptionParams,
     previousDefaults: Record<string, Record<string, string>>,
     previousPinned: Record<string, string[]>,
-    clearValue = false,
   ): Promise<void> {
     const restore = () => {
       this.defaultConfigOptionsByAgentServer = previousDefaults;
       this.pinnedConfigOptionsByAgentServer = previousPinned;
     };
     try {
-      const state = await camberAcpNavListAgentServers({});
-      const current = (state.agentServers ?? {}) as ACPAgentServers;
-      const resolved = resolveAgentServers(current);
-      const base = resolved[agentServer];
-      if (!base) {
+      const res = await camberAppSetAgentDefaultConfigOption(params);
+      if (!res.applied) {
         restore();
         return;
       }
-      const storedPinned = base.pinned_config_options ?? [];
-      const nextPinned = pin
-        ? storedPinned.includes(configId)
-          ? storedPinned
-          : [...storedPinned, configId]
-        : storedPinned.filter((id) => id !== configId);
-      const { pinned_config_options: _stored, ...baseConfig } = base;
-      const nextConfig: ACPAgentServers[string] = pin
-        ? {
-            ...baseConfig,
-            default_config_options: {
-              ...(base.default_config_options ?? {}),
-              [configId]: pin.value,
-            },
-          }
-        : baseConfig;
-      if (!pin && clearValue) {
-        const { [configId]: _clearedValue, ...remainingDefaults } =
-          nextConfig.default_config_options ?? {};
-        // An emptied defaults map is dropped entirely rather than persisted
-        // as {} (like the pin list below).
-        if (Object.keys(remainingDefaults).length > 0) {
-          nextConfig.default_config_options = remainingDefaults;
-        } else {
-          delete nextConfig.default_config_options;
-        }
-      }
-      // An empty pin list is dropped entirely rather than persisted as [].
-      if (nextPinned.length > 0) nextConfig.pinned_config_options = nextPinned;
-      const res = await camberAcpNavSetAgentServers({
-        agentServers: { ...current, [agentServer]: nextConfig },
-      });
-      const savedAgentServers = (res.agentServers ?? {}) as ACPAgentServers;
+      const savedAgentServers = (res.state.agentServers ?? {}) as ACPAgentServers;
       this.syncDefaultConfigOptions(savedAgentServers);
       appState.update((state) => ({
         ...state,
@@ -1152,12 +1061,14 @@ export class ACPAgentRepository {
     this.#persistLastUsedConfigOption(agentServer, configId, String(value));
   }
 
-  // Every write to the agent-servers store (a last-used config option, a
-  // remembered default agent) round-trips list → merge own change → set over
-  // the WHOLE map, so two in-flight persists would each read a state missing
-  // the other's change and the later set would drop the earlier one on disk.
-  // All such persists therefore serialize through this one queue; in-memory
-  // optimistic updates stay immediate, outside the queue.
+  // Every default write to the agent-servers store (a last-used config
+  // option, a remembered default agent, a pin) is one helper call that does
+  // its read-modify-write atomically under the helper's lock. They still run
+  // one at a time through this queue so each optimistic mirror update is
+  // reconciled by its own write's result in order (an earlier write's late
+  // response can never overwrite a later one's), and so a store re-read can
+  // wait for them (agentServersPersistsSettled). In-memory optimistic updates
+  // stay immediate, outside the queue.
   #agentServersPersistQueue: Promise<unknown> = Promise.resolve();
 
   #enqueueAgentServersPersist<T>(job: () => Promise<T>): Promise<T> {
@@ -1166,16 +1077,25 @@ export class ACPAgentRepository {
     return result;
   }
 
+  /**
+   * Resolves once every agent-servers persist queued so far has settled. Each
+   * persist ends in a store write the helper broadcasts, so a store re-read
+   * that waits for this cannot roll back an optimistic mirror mid-write.
+   */
+  agentServersPersistsSettled(): Promise<void> {
+    return this.#agentServersPersistQueue.then(
+      () => undefined,
+      () => undefined,
+    );
+  }
+
   #persistLastUsedConfigOption(agentServer: string, configId: string, value: string): void {
     void this.#enqueueAgentServersPersist(async () => {
       // Checked at run time (not enqueue time) so a queued duplicate of a
       // value an earlier write just landed is skipped too.
       if (this.defaultConfigOptionsFor(agentServer)[configId] === value) return;
-      // Pinned keys are deliberate defaults: the last-used auto-follow skips
-      // them. Read from the store's fresh state at dequeue (not the mirror at
-      // enqueue) so a pin that landed while this write sat queued still wins.
-      if (await this.#isPinnedInStore(agentServer, configId)) return;
       const previousDefaults = this.defaultConfigOptionsByAgentServer;
+      const previousPinned = this.pinnedConfigOptionsByAgentServer;
       this.defaultConfigOptionsByAgentServer = {
         ...previousDefaults,
         [agentServer]: {
@@ -1183,85 +1103,57 @@ export class ACPAgentRepository {
           [configId]: value,
         },
       };
-      // Failures log and move on — persistence must never break the
-      // selection itself.
-      await this.#persistDefaultConfigOption(agentServer, configId, value, previousDefaults).catch(
-        (error: unknown) => {
-          console.error("Failed to persist last-used ACP config option", error);
-        },
-      );
+      // No pin param: pinned keys are deliberate defaults, so the helper
+      // skips the write when the store's fresh state (not this window's
+      // mirror) has the key pinned, and the mirror is restored. Failures log
+      // and move on — persistence must never break the selection itself.
+      await this.#persistConfigOption(
+        { agentServer, optionId: configId, value },
+        previousDefaults,
+        previousPinned,
+      ).catch((error: unknown) => {
+        console.error("Failed to persist last-used ACP config option", error);
+      });
     });
   }
 
-  // Whether the store's freshest state marks `configId` pinned for this
-  // agent. An unreadable store proves no pin; the persist that follows
-  // surfaces its own failure.
-  async #isPinnedInStore(agentServer: string, configId: string): Promise<boolean> {
-    try {
-      const state = await camberAcpNavListAgentServers({});
-      const resolved = resolveAgentServers((state.agentServers ?? {}) as ACPAgentServers);
-      return resolved[agentServer]?.pinned_config_options?.includes(configId) ?? false;
-    } catch {
-      return false;
-    }
-  }
-
   /**
-   * Persist a full agent-server map edit (the settings panel adding,
-   * removing, or reconfiguring agents) through the same serialized queue as
-   * the default writers above. A plain whole-map set from a component
-   * snapshot could land in the middle of a default-persist's list → set round
-   * trip — or carry a snapshot taken before one committed — and silently drop
-   * a freshly written `default_config_options` key from disk. The panel edits
-   * server entries themselves and never touches `default_config_options` or
-   * `pinned_config_options`, so inside the queue both fields are re-read from
-   * the store's freshest state for every entry that survives the edit;
-   * entries the panel added or removed keep the panel's shape.
-   *
-   * The set runs through the caller-supplied transport (the host RPC's
-   * setACPAgentServers) rather than the helperapi call the default writers
-   * use. Both land on the helper's same `camber/acpNav/setAgentServers`
-   * store method — which is why one queue serializes them — but the host RPC
-   * also performs host-side effects the panel save must keep: the desktop
-   * host re-caches its initial webview state and both the desktop and VS Code
-   * hosts re-notify the helper's runtime configuration.
+   * Settings > Agents' install: the helper's shared
+   * camber/app/installAgentServer operation (the camber CLI's agents install
+   * runs it too) downloads and records the agent, then adds `config` to the
+   * stored map under the helper's agent-server lock, every other entry — and
+   * its default and pinned options — exactly as stored. The download can take
+   * a while, so this does not wait in the persist queue: the helper's lock
+   * already serializes the write itself against every other writer.
    *
    * Returns the map that was written, so the caller can mirror it into app
    * state instead of its stale snapshot.
    */
-  async saveAgentServers(
-    agentServers: ACPAgentServers,
-    set: (agentServers: ACPAgentServers) => Promise<void>,
+  async installAgentServer(
+    agentServer: string,
+    config: ACPAgentServerConfig,
   ): Promise<ACPAgentServers> {
-    return this.#enqueueAgentServersPersist(async () => {
-      const state = await camberAcpNavListAgentServers({});
-      const current = (state.agentServers ?? {}) as ACPAgentServers;
-      const next: ACPAgentServers = Object.fromEntries(
-        Object.entries(agentServers).map(([name, config]) => {
-          const fresh = current[name];
-          // An entry the panel just added has no stored counterpart; keep it.
-          if (!fresh) return [name, config];
-          // The store's defaults and pins win wholesale — including their
-          // absence, in case a concurrent writer removed them.
-          const {
-            default_config_options: _stale,
-            pinned_config_options: _stalePinned,
-            ...panelConfig
-          } = config;
-          const merged: ACPAgentServers[string] = { ...panelConfig };
-          if (fresh.default_config_options) {
-            merged.default_config_options = fresh.default_config_options;
-          }
-          if (fresh.pinned_config_options) {
-            merged.pinned_config_options = fresh.pinned_config_options;
-          }
-          return [name, merged];
-        }),
-      );
-      await set(next);
-      this.syncDefaultConfigOptions(next);
-      return next;
+    const res = await camberAppInstallAgentServer({ agentServer, config });
+    const saved = (res.state.agentServers ?? {}) as ACPAgentServers;
+    this.syncDefaultConfigOptions(saved);
+    return saved;
+  }
+
+  /**
+   * Settings > Agents' disable: the helper's shared
+   * camber/app/removeAgentServer operation (the camber CLI's agents remove
+   * runs it too) drops the agent from the stored map under the helper's
+   * lock, then archives each of its conversations as the sidebar does. The
+   * result lists what was archived and the navigation state after it, for
+   * the conversation repository to apply (see
+   * ACPConversationRepository.archiveAgentServer).
+   */
+  async removeAgentServer(agentServer: string): Promise<AppRemoveAgentServerOutput> {
+    const res = await camberAppRemoveAgentServer({
+      agentServer: normalizeAgentServerName(agentServer),
     });
+    this.syncDefaultConfigOptions((res.state.agentServers ?? {}) as ACPAgentServers);
+    return res;
   }
 
   recordUserModeSelection(agentServer: string, modeId: string): void {

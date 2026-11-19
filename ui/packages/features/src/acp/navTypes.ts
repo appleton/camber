@@ -1,4 +1,5 @@
 import { DEFAULT_AGENT_SERVER, normalizeAgentServerName } from "./agentServers";
+import { isRenderedSubAgent } from "./conversationDescendants";
 import {
   normalizeACPSessionMetadata,
   type ACPSessionMetadataSnapshot,
@@ -28,6 +29,10 @@ export type ACPConversationSummary = Omit<ACPResolvedSessionInfo, "sessionId"> &
   // session was not in it (the agent deleted or lost it). Undefined when
   // unknown (server unreachable, list unsupported, or list truncated).
   sessionAvailable?: boolean;
+  // Conversation that spawned this one (camber chat spawn), and the top-most
+  // ancestor. A conversation without a parent may carry rootId === id.
+  parentId?: string;
+  rootId?: string;
 };
 
 export function isACPChatConversation(
@@ -149,6 +154,8 @@ export interface ACPNavConversation {
   workingDirectories: string[];
   metadata?: unknown;
   liveStatus?: ACPConversationLiveStatus;
+  parentId?: string;
+  rootId?: string;
 }
 
 export interface ACPNavState {
@@ -170,8 +177,18 @@ export interface ACPClosedSession {
   agentServer: string;
 }
 
+// Rendered sub-agents (nested under a same-group ancestor; see
+// isRenderedSubAgent) count only while they wait for the user: their completed
+// turns surface on the parent row, not as separate app-badge attention. A
+// spawned conversation rendering as its own row (another project, worktree or
+// Chats, or its parent gone) counts like any other.
 export function countAttentionConversations<
   TConversation extends {
+    id: string;
+    parentId?: string | null;
+    rootId?: string | null;
+    workspacePath?: string | null;
+    cwd?: string | null;
     active?: boolean;
     archived?: boolean;
     liveStatus?: ACPConversationLiveStatus;
@@ -180,11 +197,20 @@ export function countAttentionConversations<
   conversations: readonly TConversation[],
   getLiveStatus?: (conversation: TConversation) => ACPConversationLiveStatus | undefined,
 ): number {
+  // Archived ancestors have no row to nest under.
+  const byId = new Map<string, TConversation>();
+  for (const conversation of conversations) {
+    if (!conversation.archived && !byId.has(conversation.id)) {
+      byId.set(conversation.id, conversation);
+    }
+  }
   let count = 0;
   for (const conversation of conversations) {
     if (conversation.active === false || conversation.archived) continue;
     const liveStatus = getLiveStatus?.(conversation) ?? conversation.liveStatus;
-    if (liveStatus?.waitingForUser || liveStatus?.unread) {
+    if (liveStatus?.waitingForUser) {
+      count += 1;
+    } else if (liveStatus?.unread && !isRenderedSubAgent(conversation, byId)) {
       count += 1;
     }
   }
@@ -247,6 +273,8 @@ export function conversationToNav(
     archived: false,
     workingDirectories: cloneWorkingDirectories(session.workingDirectories, cwd),
     metadata: normalizeACPSessionMetadata(session.metadata),
+    ...(session.parentId ? { parentId: session.parentId } : {}),
+    ...(session.rootId ? { rootId: session.rootId } : {}),
   };
 }
 
@@ -270,6 +298,8 @@ export function navToConversationSummary(conversation: ACPNavConversation): ACPC
     conversationKind: null,
     agentId: null,
     liveStatus: conversation.liveStatus,
+    ...(conversation.parentId ? { parentId: conversation.parentId } : {}),
+    ...(conversation.rootId ? { rootId: conversation.rootId } : {}),
     _meta: {},
   };
 }
