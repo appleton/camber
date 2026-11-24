@@ -561,7 +561,7 @@ func assertWorktreeDiscarded(t *testing.T, store *Store, repo, name string) {
 	t.Helper()
 	path := filepath.Join(worktreeStorageDir(repo), name)
 	assert.NoDirExists(t, path)
-	assert.False(t, localBranchExists(context.Background(), repo, worktreeBranch(name)), "branch should be deleted")
+	assert.False(t, localBranchExists(context.Background(), repo, worktreeBranch(defaultWorktreeBranchPrefix, name)), "branch should be deleted")
 	exists, err := store.projectExists(context.Background(), path)
 	require.NoError(t, err)
 	assert.False(t, exists)

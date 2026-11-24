@@ -40,6 +40,8 @@ const (
 	ACPNavSetKeybindingsMethod             = acpNavMethodPrefix + "setKeybindings"
 	ACPNavGetGithubColorModeMethod         = acpNavMethodPrefix + "getGithubColorMode"
 	ACPNavSetGithubColorModeMethod         = acpNavMethodPrefix + "setGithubColorMode"
+	ACPNavGetWorktreeBranchPrefixMethod    = acpNavMethodPrefix + "getWorktreeBranchPrefix"
+	ACPNavSetWorktreeBranchPrefixMethod    = acpNavMethodPrefix + "setWorktreeBranchPrefix"
 	ACPNavDidChangeMethod                  = acpNavMethodPrefix + "didChange"
 )
 
@@ -371,6 +373,19 @@ type ACPNavSetGithubColorModeParams struct {
 // made and the client should fall back to its default.
 type ACPNavGithubColorModeState struct {
 	ColorMode string `json:"colorMode"`
+}
+
+type ACPNavGetWorktreeBranchPrefixParams struct{}
+
+type ACPNavSetWorktreeBranchPrefixParams struct {
+	Prefix string `json:"prefix"`
+}
+
+// ACPNavWorktreeBranchPrefixState carries the prefix for branches created for
+// new worktrees (and followed when a worktree is renamed). It defaults to
+// "camber/"; an empty Prefix means the user chose no prefix.
+type ACPNavWorktreeBranchPrefixState struct {
+	Prefix string `json:"prefix"`
 }
 
 type ACPNavGetKeybindingsParams struct{}

@@ -1536,7 +1536,7 @@ func TestUniqueWorktreeNameAddsNumericalSuffix(t *testing.T) {
 }
 
 func TestWorktreeBranchUsesGeneratedName(t *testing.T) {
-	require.Equal(t, "camber/bubbly-buoy-3", worktreeBranch("bubbly-buoy-3"))
+	require.Equal(t, "camber/bubbly-buoy-3", worktreeBranch(defaultWorktreeBranchPrefix, "bubbly-buoy-3"))
 }
 
 func TestProjectStorageNameIncludesProjectBaseAndStableHash(t *testing.T) {

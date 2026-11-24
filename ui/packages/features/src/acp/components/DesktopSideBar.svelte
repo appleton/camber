@@ -833,7 +833,16 @@
   }
 
   async function handleRenameProject(path: string, name: string) {
-    await projects.renameProject(path, name);
+    try {
+      await projects.renameProject(path, name);
+    } catch (error) {
+      // Renaming a worktree also renames its git branch, which can fail; the
+      // inline rename otherwise only logs, so tell the user the name was kept.
+      rpc.showInfoMessage(
+        formatError(error, { prefix: "Failed to rename" }),
+        InfoMessageType.error,
+      );
+    }
   }
 
   function handleProjectSettings(path: string) {
