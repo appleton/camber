@@ -37,6 +37,11 @@ export class ACPProjectRepositoryWriter {
   private pendingWorktrees = new Map<string, ACPNavProject>();
   private busyWorktrees = new Map<string, WorktreeBusyKind>();
   private deleteRequested = new Set<string>();
+  // Names the user chose for a worktree before its server row existed (or
+  // while creation was still running). createWorktree upserts the row with the
+  // generated name, so the rename is applied after creation to make the
+  // user's name win.
+  private pendingRenames = new Map<string, string>();
 
   refreshState = $state<AsyncState<ACPNavProject[], ACPRequestError>>(waiting);
   emitter = new EventTarget();
@@ -102,6 +107,11 @@ export class ACPProjectRepositoryWriter {
   async renameProject(path: string, name: string): Promise<void> {
     const trimmed = name.trim();
     if (!path || !trimmed) return;
+    if (this.pendingWorktrees.has(path)) {
+      this.pendingRenames.set(path, trimmed);
+      this.reapplyOverlays();
+      return;
+    }
     this.applyProjects((await camberAcpNavRenameProject({ path, name: trimmed })).projects ?? []);
   }
 
@@ -192,7 +202,20 @@ export class ACPProjectRepositoryWriter {
     this.busyWorktrees.delete(path);
     this.pendingWorktrees.delete(path);
     this.deleteRequested.delete(path);
+    const rename = this.pendingRenames.get(path);
+    this.pendingRenames.delete(path);
     this.reapplyOverlays();
+    if (rename !== undefined) void this.flushPendingRename(path, rename);
+  }
+
+  private async flushPendingRename(path: string, name: string): Promise<void> {
+    const row = this.serverProjects.find((project) => project.path === path);
+    if (!row || row.name === name) return;
+    try {
+      await this.renameProject(path, name);
+    } catch (error) {
+      console.error("Failed to apply worktree rename after creation", error);
+    }
   }
 
   private reapplyOverlays(): void {
@@ -228,6 +251,8 @@ export class ACPProjectRepositoryWriter {
     const merged: ACPNavProject[] = [];
     for (const project of byPath.values()) {
       const { busy: _dropBusy, deleteRequested: _dropDeleteRequested, ...baseProject } = project;
+      const renamed = this.pendingRenames.get(project.path);
+      if (renamed !== undefined) baseProject.name = renamed;
       const busy = this.busyWorktrees.get(project.path);
       const requestedDelete = this.deleteRequested.has(project.path);
       if (busy || requestedDelete) {

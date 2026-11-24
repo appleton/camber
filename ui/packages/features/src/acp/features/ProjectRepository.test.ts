@@ -5,6 +5,7 @@ vi.mock("@camber/helperapi", () => ({
   camberAcpNavGetProjectSettings: vi.fn(),
   camberAcpNavList: vi.fn(),
   camberAcpNavRemoveProject: vi.fn(),
+  camberAcpNavRenameProject: vi.fn(),
   camberAcpNavReorderProjects: vi.fn(),
   camberAcpNavReorderWorktrees: vi.fn(),
   camberAcpNavSetProjectCollapsed: vi.fn(),
@@ -250,5 +251,39 @@ describe("ACPProjectRepositoryWriter", () => {
       busy: "creating",
       deleteRequested: true,
     });
+  });
+  it("keeps a rename made while a worktree is pending and applies it after creation", async () => {
+    const { camberAcpNavList, camberAcpNavRenameProject } = await import("@camber/helperapi");
+    const base = {
+      path: "/repo/worktrees/feature",
+      isWorktree: true,
+      parentPath: "/repo",
+      collapsed: false,
+      displayOrder: 0,
+      createdAt: "2026-05-20T10:00:00Z",
+      updatedAt: "2026-05-20T10:00:00Z",
+    };
+    vi.mocked(camberAcpNavList).mockResolvedValue({
+      conversations: [],
+      projects: [{ ...base, name: "generated" }],
+    });
+    vi.mocked(camberAcpNavRenameProject).mockResolvedValue({
+      projects: [{ ...base, name: "mine" }],
+    } as never);
+    const repo = new ACPProjectRepositoryWriter();
+    const path = repo.addPendingWorktree({ ...base, name: "generated" });
+
+    await repo.renameProject(path, "  mine  ");
+    expect(camberAcpNavRenameProject).not.toHaveBeenCalled();
+    expect(repo.projects[0]).toMatchObject({ name: "mine", busy: "creating" });
+
+    // Creation upserts the row with the generated name; the user's name still wins.
+    await repo.refresh();
+    expect(repo.projects[0]).toMatchObject({ name: "mine" });
+
+    repo.clearWorktreeBusy(path);
+    await vi.waitFor(() =>
+      expect(camberAcpNavRenameProject).toHaveBeenCalledWith({ path, name: "mine" }),
+    );
   });
 });

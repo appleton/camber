@@ -1666,6 +1666,8 @@
       {
         name: "Copy Worktree Path",
         icon: "copy",
+        // The directory does not exist yet while the worktree is being created.
+        disabled: worktree.busy === "creating",
         callback: () => rpc.writeToClipboard(worktree.path),
       },
       {
@@ -1685,6 +1687,12 @@
       {
         name: sidebarInlineRenameLabel("Worktree"),
         icon: "pencil",
+        // Stays available while the worktree is still being created; the
+        // repository applies the name once the server row exists.
+        disabled:
+          worktree.deleteRequested === true ||
+          worktree.busy === "tearing_down" ||
+          worktree.busy === "deleting",
         callback: () => {
           sidebar.beginRename({ kind: "worktree", path: worktree.path }, (name) =>
             handleRenameProject(worktree.path, name),
