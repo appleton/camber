@@ -1565,7 +1565,7 @@
 
     if (github.supportedFor(project.path)) {
       openActions.push({
-        name: "Open GitHub Repository",
+        name: "View GitHub Repository",
         icon: "github",
         callback: () => handleOpenGithubRepository(project.path),
       });

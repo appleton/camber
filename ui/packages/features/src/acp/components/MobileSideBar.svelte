@@ -144,7 +144,7 @@
       },
       { kind: "separator" },
       {
-        name: "Open GitHub Repository",
+        name: "View GitHub Repository",
         icon: "github",
         callback: () => openGithubUrl(project.path, (links) => links.repoUrl),
       },

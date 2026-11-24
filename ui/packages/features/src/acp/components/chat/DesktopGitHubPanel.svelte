@@ -222,7 +222,7 @@
       <div class="github-panel-actions">
         <button type="button" class="github-panel-button" onclick={openCurrentOrNewPR}>
           <Icon name="git-branch" size={12} />
-          Open New PR
+          Open New Pull Request
         </button>
         <button
           type="button"

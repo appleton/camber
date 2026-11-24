@@ -72,7 +72,7 @@
     openExternal(resolved?.prUrl);
   }
 
-  const prLabel = $derived(links?.prExists ? "Open Current PR" : "Open New PR");
+  const prLabel = $derived(links?.prExists ? "View Current Pull Request" : "Open New Pull Request");
 
   // Single source of truth for the menu's actions: the DOM menu renders these
   // as rows below, the native menu maps them to spec items. Both dispatch
@@ -87,9 +87,9 @@
 
   const githubMenuActions = $derived<GithubMenuAction[]>([
     { id: "openPr", label: prLabel, icon: "git-branch" },
-    { id: "openPulls", label: "Open All Pull Requests", icon: "review" },
-    { id: "openIssues", label: "Open Issues", icon: "alert" },
-    { id: "openRepo", label: "Open Repository", icon: "github" },
+    { id: "openPulls", label: "View All Pull Requests", icon: "review" },
+    { id: "openIssues", label: "View Issues", icon: "alert" },
+    { id: "openRepo", label: "View Repository", icon: "github" },
   ]);
 
   function runGithubMenuAction(id: string) {
