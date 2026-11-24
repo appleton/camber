@@ -72,6 +72,10 @@ type ACPNavConversation struct {
 	WorkingDirectories []string                      `json:"workingDirectories"`
 	Metadata           json.RawMessage               `json:"metadata,omitempty"`
 	LiveStatus         *ACPNavConversationLiveStatus `json:"liveStatus,omitempty"`
+	// ParentID and RootID are set for conversations spawned as children through
+	// the control CLI. They are read from control state, not stored by clients.
+	ParentID string `json:"parentId,omitempty"`
+	RootID   string `json:"rootId,omitempty"`
 }
 
 type ACPNavState struct {

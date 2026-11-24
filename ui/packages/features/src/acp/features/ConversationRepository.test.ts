@@ -1,4 +1,5 @@
 import { initializeStatefulModule as initializeHelperApi } from "@camber/helperapi";
+import type { AppRemoveAgentServerOutput } from "@camber/helperapi/schemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_AGENT_SERVER } from "../agentServers";
 import { ACP_DESKTOP_CONVERSATIONS_EVENT, ACP_SESSION_CLOSE_EVENT } from "../navTypes";
@@ -6,7 +7,7 @@ import { ACPConversationRepositoryWriter } from "./ConversationRepository.svelte
 
 beforeEach(() => {
   initializeHelperApi({
-    jsonrpcCall: vi.fn().mockResolvedValue({ projects: [], conversations: [] }),
+    jsonrpcCall: vi.fn().mockImplementation(emptyHelperResponse),
     jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
   });
 });
@@ -134,10 +135,10 @@ describe("ACPConversationRepositoryWriter", () => {
 
   it("keeps a user nickname ahead of a generated title override", async () => {
     const jsonrpcCall = vi.fn().mockImplementation((method: string, params: unknown) => {
-      if (method === "camber/acpNav/renameConversation") {
-        const { conversationId, nickname } = params as {
+      if (method === "camber/app/renameConversation") {
+        const { conversationId, name } = params as {
           conversationId: string;
-          nickname: string;
+          name: string;
         };
         return Promise.resolve({
           projects: [],
@@ -145,7 +146,7 @@ describe("ACPConversationRepositoryWriter", () => {
             {
               ...navConversation(conversationId, DEFAULT_AGENT_SERVER),
               title: "hello",
-              nickname,
+              nickname: name,
             },
           ],
         });
@@ -171,21 +172,19 @@ describe("ACPConversationRepositoryWriter", () => {
     expect(repo.sessions[0]?.nickname).toBe("Renamed by user");
   });
 
-  it("renames session-backed conversations when session rename is supported", async () => {
+  it("renames through the helper's shared app rename", async () => {
     const jsonrpcCall = vi.fn().mockImplementation((method: string, params: unknown) => {
-      if (method === "camber/acpNav/renameConversation") {
-        const { conversationId, nickname, title } = params as {
-          conversationId: string;
-          nickname: string;
-          title?: string;
-        };
+      if (method === "camber/app/renameConversation") {
+        const { conversationId, name } = params as { conversationId: string; name: string };
+        // The helper decides whether the agent supports session rename and,
+        // if so, also sets the title and renames the agent session.
         return Promise.resolve({
           projects: [],
           conversations: [
             {
               ...navConversation(conversationId, DEFAULT_AGENT_SERVER, "s-new"),
-              title: title ?? "generated title",
-              nickname,
+              title: name,
+              nickname: name,
             },
           ],
         });
@@ -196,12 +195,7 @@ describe("ACPConversationRepositoryWriter", () => {
       jsonrpcCall,
       jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
     });
-    const repo = new ACPConversationRepositoryWriter({
-      capabilitiesFor: () =>
-        ({
-          sessionCapabilities: { rename: {} },
-        }) as any,
-    });
+    const repo = new ACPConversationRepositoryWriter();
     repo.replaceConversations([
       {
         ...navConversation("s-new", DEFAULT_AGENT_SERVER, "s-new"),
@@ -209,31 +203,20 @@ describe("ACPConversationRepositoryWriter", () => {
       },
     ]);
 
-    await repo.renameConversation("s-new", "Renamed session");
+    await repo.renameConversation("s-new", "  Renamed session ");
 
-    expect(jsonrpcCall).toHaveBeenCalledWith(
-      "camber/acpNav/renameConversation",
-      expect.objectContaining({
-        conversationId: "s-new",
-        nickname: "Renamed session",
-        title: "Renamed session",
-      }),
-    );
-    expect(jsonrpcCall).toHaveBeenCalledWith(
-      "camber/acp/_poolside/rename_session",
-      expect.objectContaining({
-        agentServer: DEFAULT_AGENT_SERVER,
-        sessionId: "s-new",
-        title: "Renamed session",
-      }),
-    );
+    expect(jsonrpcCall).toHaveBeenCalledTimes(1);
+    expect(jsonrpcCall).toHaveBeenCalledWith("camber/app/renameConversation", {
+      conversationId: "s-new",
+      name: "Renamed session",
+    });
     expect(repo.sessions[0]?.title).toBe("Renamed session");
     expect(repo.sessions[0]?.nickname).toBe("Renamed session");
   });
 
   it("refreshes conversations when rename persistence fails", async () => {
     const jsonrpcCall = vi.fn().mockImplementation((method: string) => {
-      if (method === "camber/acpNav/renameConversation") {
+      if (method === "camber/app/renameConversation") {
         return Promise.reject(new Error("rename failed"));
       }
       if (method === "camber/acpNav/list") {
@@ -268,25 +251,12 @@ describe("ACPConversationRepositoryWriter", () => {
     expect(repo.sessions[0]?.nickname).toBeNull();
   });
 
-  it("archives all active conversations for an agent server", async () => {
-    const listState = {
-      projects: [],
-      conversations: [
-        navConversation("camber-conv", "poolside", "s-camber"),
-        navConversation("echo-conv", "echo", "s-echo"),
-        navConversation("echo-pending", "echo"),
-      ],
-    };
+  it("applies a disabled agent's archive from the helper's shared remove operation", async () => {
     const archivedState = {
       projects: [],
       conversations: [navConversation("camber-conv", "poolside", "s-camber")],
     };
-    const jsonrpcCall = vi.fn().mockImplementation((method: string) => {
-      if (method === "camber/acpNav/list") {
-        return Promise.resolve(listState);
-      }
-      return Promise.resolve(archivedState);
-    });
+    const jsonrpcCall = vi.fn().mockImplementation(emptyHelperResponse);
     initializeHelperApi({
       jsonrpcCall,
       jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
@@ -297,33 +267,82 @@ describe("ACPConversationRepositoryWriter", () => {
       navConversation("echo-conv", "echo", "s-echo"),
       navConversation("echo-pending", "echo"),
     ]);
+    const closed = vi.fn();
+    repo.emitter.addEventListener(ACP_SESSION_CLOSE_EVENT, closed);
+    let finishRemove: (value: AppRemoveAgentServerOutput) => void = () => {};
+    const remove = vi.fn(
+      () =>
+        new Promise<AppRemoveAgentServerOutput>((resolve) => {
+          finishRemove = resolve;
+        }),
+    );
 
-    await repo.archiveAgentServer("echo");
+    const pending = repo.archiveAgentServer("echo", remove);
 
+    // The agent's conversations leave the list before the helper answers.
     expect(repo.sessions.map((session) => session.agentServer)).toEqual(["poolside"]);
-    // list + 2 archives + session/close for the one conversation with a session
-    expect(jsonrpcCall).toHaveBeenCalledTimes(4);
-    expect(jsonrpcCall).toHaveBeenCalledWith("camber/acpNav/list", {});
-    expect(jsonrpcCall).toHaveBeenCalledWith("camber/acp/session/close", {
-      agentServer: "echo",
-      sessionId: "s-echo",
+    finishRemove({
+      state: { agentServers: { poolside: {} } },
+      archived: [
+        { conversationId: "echo-conv", agentServer: "echo", sessionId: "s-echo" },
+        { conversationId: "echo-pending", agentServer: "echo" },
+      ],
+      navState: archivedState,
     });
-    expect(jsonrpcCall).toHaveBeenCalledWith(
-      "camber/acpNav/archiveConversation",
-      expect.objectContaining({
-        agentServer: "echo",
-        sessionId: "s-echo",
-        workspacePath: "/repo",
-      }),
-    );
-    expect(jsonrpcCall).toHaveBeenCalledWith(
-      "camber/acpNav/archiveConversation",
-      expect.objectContaining({
-        agentServer: "echo",
-        conversationId: "echo-pending",
-        workspacePath: "/repo",
-      }),
-    );
+    const removed = await pending;
+
+    expect(remove).toHaveBeenCalledOnce();
+    expect(removed.archived).toHaveLength(2);
+    expect(repo.sessions.map((session) => session.id)).toEqual(["camber-conv"]);
+    // The archive happened helper-side; the repository makes no calls of its own.
+    expect(jsonrpcCall).not.toHaveBeenCalled();
+    expect(closed).toHaveBeenCalledTimes(2);
+    expect(closed.mock.calls.map(([event]) => (event as CustomEvent).detail)).toEqual([
+      { agentServer: "echo", sessionId: "s-echo", conversationId: undefined },
+      { agentServer: "echo", sessionId: null, conversationId: "echo-pending" },
+    ]);
+  });
+
+  it("re-reads conversations when a disabled agent's archive fails", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const listState = {
+        projects: [],
+        conversations: [
+          navConversation("camber-conv", "poolside", "s-camber"),
+          navConversation("echo-conv", "echo", "s-echo"),
+        ],
+      };
+      const jsonrpcCall = vi.fn().mockResolvedValue(listState);
+      initializeHelperApi({
+        jsonrpcCall,
+        jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
+      });
+      const repo = new ACPConversationRepositoryWriter();
+      repo.replaceConversations(listState.conversations);
+
+      // The removal stood but an archive failed: log it and re-read the list.
+      await repo.archiveAgentServer("echo", async () => ({
+        state: { agentServers: { poolside: {} } },
+        archived: [],
+        archiveError: "archive failed",
+      }));
+      expect(consoleError).toHaveBeenCalled();
+      expect(jsonrpcCall).toHaveBeenCalledWith("camber/acpNav/list", {});
+
+      // The removal itself failed: re-read and rethrow.
+      jsonrpcCall.mockClear();
+      await expect(
+        repo.archiveAgentServer("echo", () => Promise.reject(new Error("remove failed"))),
+      ).rejects.toThrow("remove failed");
+      expect(jsonrpcCall).toHaveBeenCalledWith("camber/acpNav/list", {});
+      expect(repo.sessions.map((session) => session.id).sort()).toEqual([
+        "camber-conv",
+        "echo-conv",
+      ]);
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 
   it("emits a close event when a session is archived", async () => {
@@ -344,8 +363,8 @@ describe("ACPConversationRepositoryWriter", () => {
     );
   });
 
-  it("closes the agent session when archiving", async () => {
-    const jsonrpcCall = vi.fn().mockResolvedValue({ projects: [], conversations: [] });
+  it("archives through the helper's shared app archive, which closes the session", async () => {
+    const jsonrpcCall = vi.fn().mockImplementation(emptyHelperResponse);
     initializeHelperApi({
       jsonrpcCall,
       jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
@@ -354,14 +373,17 @@ describe("ACPConversationRepositoryWriter", () => {
 
     await repo.archiveSession("/repo", "s-echo", "echo", "echo-conv");
 
-    expect(jsonrpcCall).toHaveBeenCalledWith("camber/acp/session/close", {
+    expect(jsonrpcCall).toHaveBeenCalledTimes(1);
+    expect(jsonrpcCall).toHaveBeenCalledWith("camber/app/archiveConversation", {
+      workspacePath: "/repo",
+      conversationId: "echo-conv",
       agentServer: "echo",
       sessionId: "s-echo",
     });
   });
 
-  it("does not call session/close when archiving a pending conversation", async () => {
-    const jsonrpcCall = vi.fn().mockResolvedValue({ projects: [], conversations: [] });
+  it("archives a pending conversation without a session", async () => {
+    const jsonrpcCall = vi.fn().mockImplementation(emptyHelperResponse);
     initializeHelperApi({
       jsonrpcCall,
       jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
@@ -370,27 +392,39 @@ describe("ACPConversationRepositoryWriter", () => {
 
     await repo.archiveSession("/repo", null, "echo", "echo-pending");
 
-    expect(jsonrpcCall).not.toHaveBeenCalledWith("camber/acp/session/close", expect.anything());
+    expect(jsonrpcCall).toHaveBeenCalledWith("camber/app/archiveConversation", {
+      workspacePath: "/repo",
+      conversationId: "echo-pending",
+      agentServer: "echo",
+    });
   });
 
-  it("still archives and emits the close event when session/close fails", async () => {
-    const jsonrpcCall = vi.fn().mockImplementation((method: string) => {
-      if (method === "camber/acp/session/close") {
-        return Promise.reject(new Error("close failed"));
-      }
-      return Promise.resolve({ projects: [], conversations: [] });
-    });
+  it("deletes through the helper's shared app delete", async () => {
+    const jsonrpcCall = vi.fn().mockImplementation(emptyHelperResponse);
     initializeHelperApi({
       jsonrpcCall,
       jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
     });
     const repo = new ACPConversationRepositoryWriter();
-    const closed = vi.fn();
-    repo.emitter.addEventListener(ACP_SESSION_CLOSE_EVENT, closed);
+    repo.replaceConversations([
+      navConversation("echo-conv", "echo", "s-echo"),
+      navConversation("echo-pending", "echo"),
+    ]);
 
-    await repo.archiveSession("/repo", "s-echo", "echo", "echo-conv");
+    await repo.deleteConversation("echo-conv", "s-echo", "echo");
+    await repo.deleteConversation("echo-pending", null, "echo");
 
-    expect(closed).toHaveBeenCalled();
+    expect(jsonrpcCall).toHaveBeenCalledTimes(2);
+    expect(jsonrpcCall).toHaveBeenNthCalledWith(1, "camber/app/deleteConversation", {
+      conversationId: "echo-conv",
+      agentServer: "echo",
+      sessionId: "s-echo",
+    });
+    expect(jsonrpcCall).toHaveBeenNthCalledWith(2, "camber/app/deleteConversation", {
+      conversationId: "echo-pending",
+      agentServer: "echo",
+    });
+    expect(repo.sessions).toEqual([]);
   });
 
   it("emits a close event when a pending conversation is archived", async () => {
@@ -551,6 +585,16 @@ function deferredPromise<T>() {
     reject = rej;
   });
   return { promise, resolve, reject };
+}
+
+// The helper's empty answer: app archive wraps the nav state, everything else
+// returns it directly.
+function emptyHelperResponse(method: string) {
+  const state = { projects: [], conversations: [] };
+  if (method === "camber/app/archiveConversation") {
+    return Promise.resolve({ state, archived: [], descendants: [] });
+  }
+  return Promise.resolve(state);
 }
 
 function navState(title: string) {

@@ -15,6 +15,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "build:cli": "node scripts/build-cli.mjs",
     "build:frontend": "node --max-old-space-size=8192 ./node_modules/vite/bin/vite.js build",
     "build:isolation": "node scripts/build-isolation.mjs",
     "build:web": "pnpm build:frontend && pnpm build:isolation",

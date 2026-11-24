@@ -35,6 +35,7 @@ import { isAcpTranscriptBatchingEnabled } from "./transcriptBatching";
 import type {
   ACPCollaborationModeSurface,
   ACPGoalAction,
+  ACPHistoryReloadArgs,
   ACPPendingConfigOption,
   ACPPendingHandoff,
   ACPPendingPermissionRequest,
@@ -107,6 +108,31 @@ export class ACPSession {
   // session, which used to swallow the user's very first prompt. Plain field:
   // consumed only by the loader.
   restoreRequired = false;
+  // A connector refresh found this conversation mid-turn (locally or on
+  // another surface) and was skipped or refused by the helper. The live pane
+  // is left untouched and the refresh re-runs when the helper reports the
+  // turn ended. Plain field: consumed only by lifecycle code.
+  connectorRefreshDeferred = false;
+  private deferredConnectorRefresh: Promise<void> | null = null;
+  // While a session/load is on the wire, live updates are routed to the
+  // replay materializer like any replay. If the helper then refuses the load
+  // (turn running), the loader puts these back on the live transcript instead
+  // of discarding them with the replay. Plain field: loader-owned.
+  refusedLoadCapture: SessionNotification[] | null = null;
+  // Opening this conversation found a turn running that the helper could not
+  // snapshot (live attach refused with SESSION_ACTIVE; the helper avoids this
+  // on the desktop, so it is a safety net). The pane shows the live updates
+  // that arrive, without any notice, and silently reloads the conversation
+  // when the turn ends (handleTurnEnded). Rendered (it keeps the pane out of
+  // the new-conversation layout), so reactive.
+  historyReloadPending = $state(false);
+  // Arguments for that reload. Plain field: loader-owned.
+  historyReloadArgs: ACPHistoryReloadArgs | null = null;
+  // turnEnded arrived while a load was on the wire, so a refusal may already
+  // be stale: retry immediately instead of waiting for the next turn end.
+  // Plain field: loader-owned.
+  turnEndedDuringLoad = false;
+  private historyReloadScheduled = false;
   // session/load restored this conversation and the agent replayed nothing at
   // all: its history is gone agent-side even though the sidebar still lists the
   // conversation. Surfaces read it so they stop presenting the conversation as
@@ -446,7 +472,10 @@ export class ACPSession {
     return this.loader.loadExisting(gen, cwd, mcpServers, seedInfo, fallbackCwds);
   }
 
-  async refreshMCPServers(gen: number): Promise<boolean> {
+  async refreshMCPServers(
+    gen: number,
+    options: { trustRemoteStatus?: boolean } = {},
+  ): Promise<boolean> {
     // Every resume path must let an in-flight suspending close settle first,
     // or the resume can be answered and then torn down by the late close.
     if (this.pendingClose) {
@@ -459,7 +488,7 @@ export class ACPSession {
     // from starting while a resume is on the wire.
     this.refreshInFlight = true;
     try {
-      const ok = await this.loader.refreshMCPServers(gen);
+      const ok = await this.loader.refreshMCPServers(gen, options);
       // A successful resume/reload means the agent side is attached again, no
       // matter which flow triggered it (reattach, MCP-server refresh sweep).
       // Leaving `suspended` set here would make future idle sweeps and evicts
@@ -570,6 +599,7 @@ export class ACPSession {
   }
 
   applyReplayUpdate(params: SessionNotification): void {
+    this.refusedLoadCapture?.push(params);
     this.transcript.applyReplayUpdate(params);
   }
 
@@ -619,6 +649,52 @@ export class ACPSession {
 
   handleTurnEnded(): void {
     this.extensions.camber?.endTurn();
+    if (this.loadState.status === "loading") this.turnEndedDuringLoad = true;
+    this.retryDeferredConnectorRefresh();
+    this.retryHistoryReload();
+  }
+
+  /**
+   * Reload a conversation whose live attach was refused, now that its turn
+   * has ended. Serialized behind any in-flight work; at most one is queued.
+   * The helper remains the authority: if another turn started meanwhile the
+   * load is refused again and waits for that turn's end.
+   */
+  retryHistoryReload(): void {
+    if (!this.historyReloadPending || this.historyReloadScheduled) return;
+    this.historyReloadScheduled = true;
+    void this.serialize(async (gen) => {
+      this.historyReloadScheduled = false;
+      const args = this.historyReloadArgs;
+      if (!this.historyReloadPending || !args) return;
+      await this.loader.loadExisting(
+        gen,
+        args.cwd,
+        args.mcpServers,
+        this.sessionInfo ?? args.seedInfo,
+        args.fallbackCwds,
+      );
+    }).catch((error: unknown) => {
+      console.warn("acp: failed to reload conversation history after its turn ended", error);
+    });
+  }
+
+  /**
+   * Re-run a connector refresh deferred while this conversation was mid-turn.
+   * Serialized so it queues behind a prompt whose turnEnded arrived before its
+   * own completion; single-flight. The helper remains the authority: a turn
+   * that started again meanwhile is refused and defers the refresh once more.
+   */
+  retryDeferredConnectorRefresh(): void {
+    if (!this.connectorRefreshDeferred || this.suspended || this.deferredConnectorRefresh) {
+      return;
+    }
+    this.deferredConnectorRefresh = this.serialize(async (gen) => {
+      if (!this.connectorRefreshDeferred || this.suspended) return;
+      await this.refreshMCPServers(gen, { trustRemoteStatus: false });
+    }).finally(() => {
+      this.deferredConnectorRefresh = null;
+    });
   }
 
   sendCore(...args: ACPSessionSendCoreArgs): Promise<string | null> {

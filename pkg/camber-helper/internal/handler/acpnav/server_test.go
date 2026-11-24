@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/appleton/camber/pkg/camber-helper/methods"
@@ -133,6 +134,53 @@ func TestServerLiveStatusOverlayAndViewState(t *testing.T) {
 	}, nil)
 	require.NoError(t, err)
 	require.Nil(t, state.Conversations[0].LiveStatus)
+}
+
+func TestViewStateClearsDescendantUnread(t *testing.T) {
+	ctx := context.Background()
+	server := newTestServer(t, ctx)
+	for _, id := range []string{"parent", "child", "grandchild", "waiting", "other"} {
+		upsertTestConversation(t, ctx, server, "poolside", id)
+	}
+	for id, parent := range map[string]string{"child": "parent", "grandchild": "child", "waiting": "parent"} {
+		require.NoError(t, server.WriteControlState(ctx, "conversation/conversation:"+id, map[string]string{"parentId": "conversation:" + parent}))
+	}
+	// A cycle back to the parent must not hang the walk.
+	require.NoError(t, server.WriteControlState(ctx, "conversation/conversation:parent", map[string]string{"parentId": "conversation:grandchild"}))
+	for _, id := range []string{"child", "grandchild", "waiting", "other"} {
+		require.NoError(t, server.SetConversationLiveStatus(ctx, nil, "poolside", id, ConversationLiveStatusPatch{Unread: Bool(true)}))
+	}
+	require.NoError(t, server.SetConversationLiveStatus(ctx, nil, "poolside", "waiting", ConversationLiveStatusPatch{WaitingForUser: Bool(true)}))
+
+	_, err := server.SetConversationViewState(ctx, &methods.ACPNavSetConversationViewStateParams{
+		AgentServer: "poolside", SessionID: "parent", Active: true,
+	}, nil)
+	require.NoError(t, err)
+
+	state, err := server.List(ctx, &methods.ACPNavListParams{}, nil)
+	require.NoError(t, err)
+	byID := map[string]methods.ACPNavConversation{}
+	for _, c := range state.Conversations {
+		byID[c.SessionID] = c
+	}
+	assert.Nil(t, byID["child"].LiveStatus)
+	assert.Nil(t, byID["grandchild"].LiveStatus)
+	require.NotNil(t, byID["waiting"].LiveStatus)
+	assert.True(t, byID["waiting"].LiveStatus.Unread)
+	assert.True(t, byID["waiting"].LiveStatus.WaitingForUser)
+	require.NotNil(t, byID["other"].LiveStatus)
+	assert.True(t, byID["other"].LiveStatus.Unread)
+
+	// A child completing while the parent stays open still goes unread.
+	require.NoError(t, server.CompletePrompt(ctx, nil, "poolside", "child"))
+	state, err = server.List(ctx, &methods.ACPNavListParams{}, nil)
+	require.NoError(t, err)
+	for _, c := range state.Conversations {
+		if c.SessionID == "child" {
+			require.NotNil(t, c.LiveStatus)
+			assert.True(t, c.LiveStatus.Unread)
+		}
+	}
 }
 
 func TestServerLiveStatusIsNotPersisted(t *testing.T) {

@@ -4,6 +4,9 @@ go_library(
     name = "acpnav",
     srcs = [
         "assistant_config.go",
+        "cascade.go",
+        "control.go",
+        "isolated_git.go",
         "names.go",
         "server.go",
         "store.go",
@@ -65,9 +68,12 @@ go_test(
         "assistant_config_schema_test.go",
         "assistant_config_test.go",
         "bind_conversation_session_test.go",
+        "cascade_test.go",
+        "control_test.go",
         "conversation_handoff_test.go",
         "server_test.go",
         "store_test.go",
+        "worktree_isolation_test.go",
     ],
     data = [
         "//docs:acp-agent-configuration.md",

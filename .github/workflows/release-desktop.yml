@@ -556,6 +556,11 @@ jobs:
           pnpm -s -F @camber/release-helper find-version render-changelog desktop \
             --head "${RELEASE_SHA}" --version "${VERSION}"
 
+      - name: Setup Go for the bundled CLI
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: go.mod
+
       - name: Download bundled binaries
         env:
           CAMBER_RUNTIME_ARTIFACT_DIR: ${{ runner.temp }}/release-runtime

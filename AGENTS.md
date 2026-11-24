@@ -28,6 +28,8 @@ extension methods are defined in `pkg/acp/README.md`.
 | Helper implementation and JSON-RPC handlers | `pkg/camber-helper/README.md` |
 | ACP types and extensions | `pkg/acp/README.md` |
 | Helper ACP proxy | `pkg/camber-helper/internal/handler/acpproxy/` |
+| `camber` control CLI | `docs/camber-cli.md`, `cmd/camber/`, `pkg/camber-cli/` |
+| Helper control dispatcher (CLI actions) | `pkg/camber-helper/internal/handler/control/` |
 | UI workspace | `ui/README.md`, `ui/AGENTS.md` |
 | Desktop assistant | `ui/apps/desktop-assistant/README.md` |
 | Shared assistant webview | `ui/packages/assistant/README.md` |

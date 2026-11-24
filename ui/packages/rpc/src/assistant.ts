@@ -33,10 +33,20 @@ export interface Assistant {
    * re-injects connectors into its live agent sessions.
    */
   mcpServersDidChange(): void;
+  /**
+   * The agent server store changed (a settings panel, a default pin, another
+   * surface, or a `camber` CLI action). The webview re-lists the store.
+   */
+  acpAgentServersDidChange(): void;
   focusInput(): void;
   setConfiguration(configuration: Configuration): void;
   setContext(context: ActiveFileContext): void;
   setCurrentConversation(id: string): void;
+  /**
+   * Remove a project as the desktop sidebar does (`camber projects remove`,
+   * through the helper's camber/desktopApp/removeProject request).
+   */
+  removeProject(path: string): Promise<void>;
   setKeybindings(keybindings: Keybindings): void;
   setTheme(theme: object): void;
   setFileIconTheme(theme: FileIconTheme): void;
@@ -114,6 +124,9 @@ export const HELPER_NOTIFICATION_WEBVIEW_COMMANDS = {
   // The user MCP connector store changed (any surface or app instance sharing
   // it) — the webview re-lists it and re-injects its live agent sessions.
   "camber/mcpServers/didChange": "mcpServersDidChange",
+  // The agent server store changed (any surface, or a CLI action) — the
+  // webview re-lists it so agent pickers and settings stay current.
+  "camber/acpNav/agentServersDidChange": "acpAgentServersDidChange",
   "camber/localInference/didChange": "localInferenceDidChange",
 } as const satisfies Record<string, keyof Assistant>;
 

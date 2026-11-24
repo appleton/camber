@@ -6,6 +6,7 @@ import {
   createAssistantTerminalCommandRunner,
   isClaudeAgent,
   LocalInferenceAgentSync,
+  onACPAgentServersDidChange,
   readStoredWorktreeSetupSurface,
   setACPAgentRegistryContext,
   setACPAgentServersContext,
@@ -71,11 +72,12 @@ export class Repositories {
   readonly localInference = setLocalInferenceContext();
   readonly localInferenceAgentSync: LocalInferenceAgentSync | undefined;
   readonly secrets: ReturnType<typeof setSecretsContext>;
+  readonly acpWorktreeRepo: ReturnType<typeof setACPWorktreeContext>;
 
   constructor({ notifier, onACPConnectionPoolReady }: RepositoriesOptions) {
     initializeHelperApi(this.helperApiClient);
     this.secrets = setSecretsContext({ rpc });
-    setACPWorktreeContext(
+    this.acpWorktreeRepo = setACPWorktreeContext(
       createACPWorktreeRepository(
         createAssistantTerminalCommandRunner(this.assistantTerminals, this.setupScriptOutputs, {
           setupInVisibleTerminal: get(appState).environment.assistantHost === "desktop",
@@ -103,7 +105,7 @@ export class Repositories {
       this.elicitation,
       (agentServer) => isClaudeAgent(this.acpRegistry, agentServer),
     );
-    this.acpConversationRepo = setACPConversationContext(this.acpRepo.agents);
+    this.acpConversationRepo = setACPConversationContext();
     // Feed the helper-pushed per-conversation liveStatus into the status
     // repository: it is the only signal for turns driven on another surface,
     // and the session repository's eviction / idle-close protection consults
@@ -128,6 +130,15 @@ export class Repositories {
       registryRepo: this.acpRegistry,
       sessionRepo: this.acpRepo,
     });
+    // The helper broadcasts every agent server store change, including ones
+    // made by another surface or a `camber` CLI action: re-read the store and
+    // the update badges derived from it.
+    this.acpAgentServers.onDidChange(() => this.acpAgentUpdates.refresh());
+    onDestroy(
+      onACPAgentServersDidChange(() => {
+        void this.acpAgentServers.handleDidChange();
+      }),
+    );
     if (get(appState).environment.assistantHost === "desktop") {
       this.localInferenceAgentSync = new LocalInferenceAgentSync(this.localInference, this.acpRepo);
     }

@@ -41,7 +41,7 @@ if (!/^[A-Za-z0-9._-]+$/.test(label) || label === "." || label === "..") {
   console.error(`invalid --label ${JSON.stringify(label)}: use letters, digits, ., _, -`);
   process.exit(1);
 }
-const binary = opt("binary", path.join(appDir, "src-tauri/target/release/Camber"));
+const binary = opt("binary", path.join(appDir, "src-tauri/target/release/camber-desktop"));
 const revealTimeoutMs = 90_000;
 
 const perfRoot = "/tmp/camber-perf";

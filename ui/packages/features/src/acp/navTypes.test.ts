@@ -120,6 +120,58 @@ describe("navTypes", () => {
     expect(countAttentionConversations(conversations)).toBe(2);
   });
 
+  it("ignores unread sub-agents but still counts ones waiting for the user", () => {
+    const conversations = [
+      navConversation({
+        id: "conversation:parent",
+        liveStatus: { working: false, waitingForUser: false, unread: false },
+      }),
+      navConversation({
+        id: "conversation:done-child",
+        parentId: "conversation:parent",
+        liveStatus: { working: false, waitingForUser: false, unread: true },
+      }),
+      navConversation({
+        id: "conversation:blocked-child",
+        parentId: "conversation:parent",
+        liveStatus: { working: true, waitingForUser: true, unread: true },
+      }),
+      navConversation({
+        id: "conversation:self-root",
+        parentId: "conversation:self-root",
+        liveStatus: { working: false, waitingForUser: false, unread: true },
+      }),
+    ];
+
+    expect(countAttentionConversations(conversations)).toBe(2);
+  });
+
+  it("counts unread sub-agents that render as their own row", () => {
+    const unread = { working: false, waitingForUser: false, unread: true };
+    const conversations = [
+      navConversation({ id: "conversation:parent" }),
+      navConversation({
+        id: "conversation:same-group",
+        parentId: "conversation:parent",
+        liveStatus: unread,
+      }),
+      navConversation({
+        id: "conversation:other-worktree",
+        parentId: "conversation:parent",
+        cwd: "/repo-worktree",
+        liveStatus: unread,
+      }),
+      navConversation({
+        id: "conversation:orphan",
+        parentId: "conversation:archived-parent",
+        liveStatus: unread,
+      }),
+      navConversation({ id: "conversation:archived-parent", archived: true }),
+    ];
+
+    expect(countAttentionConversations(conversations)).toBe(2);
+  });
+
   it("counts attention conversations with live status resolved externally", () => {
     const sessions = [
       conversationSummary({ id: "conversation:approval", sessionId: "session:approval" }),

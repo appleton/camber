@@ -29,7 +29,9 @@ type Server struct {
 	// then by live-status key. A conversation counts as watched — so a
 	// completing turn does not mark it unread — while ANY origin views it, and
 	// unread survives one surface closing a conversation another still shows.
-	activeSessions map[string]map[string]bool
+	activeSessions        map[string]map[string]bool
+	archivedSessionCloser ArchivedSessionCloser
+	projectsChanged       func()
 }
 
 type InstalledRegistryAgentServerStore interface {
@@ -48,9 +50,45 @@ func (s *Server) SetStore(store *Store) {
 		_ = s.store.Close()
 	}
 	s.store = store
+	s.applyArchivedSessionCloser()
 	if s.agentServerStore == nil {
 		s.agentServerStore = store
 	}
+}
+
+// SetArchivedSessionCloser installs the hook that cancels and closes the
+// sessions of sub-agent conversations archived by an ancestor's archive. It
+// runs best-effort in the background and never for the directly archived
+// conversation, whose close remains the client's responsibility.
+func (s *Server) SetArchivedSessionCloser(closer ArchivedSessionCloser) {
+	s.archivedSessionCloser = closer
+	s.applyArchivedSessionCloser()
+}
+
+// SetProjectsChangedHook installs a callback run after every change to the
+// registered projects and worktrees (add, remove, create, remove worktree), so
+// caches keyed on the project set (file search) refresh whichever surface or
+// control action made the change.
+func (s *Server) SetProjectsChangedHook(hook func()) {
+	s.projectsChanged = hook
+}
+
+func (s *Server) notifyProjectsChanged() {
+	if s.projectsChanged != nil {
+		s.projectsChanged()
+	}
+}
+
+func (s *Server) applyArchivedSessionCloser() {
+	if s.store == nil {
+		return
+	}
+	if s.archivedSessionCloser == nil {
+		s.store.archivedSessionCloser.Store(nil)
+		return
+	}
+	closer := s.archivedSessionCloser
+	s.store.archivedSessionCloser.Store(&closer)
 }
 
 func (s *Server) CreateChat(_ context.Context, req *methods.ACPNavCreateChatParams, _ *glsp.Context) (methods.ACPNavCreateChatOutput, error) {
@@ -279,6 +317,7 @@ func (s *Server) UpsertProject(ctx context.Context, req *methods.ACPNavUpsertPro
 	if err != nil {
 		return methods.ACPNavProject{}, err
 	}
+	s.notifyProjectsChanged()
 	s.notifyDidChange(ctx, gCtx)
 	return project, nil
 }
@@ -382,13 +421,28 @@ func (s *Server) ReleasePreparedWorktree(_ context.Context, req *methods.ACPNavR
 }
 
 func (s *Server) CreateWorktree(ctx context.Context, req *methods.ACPNavCreateWorktreeParams, gCtx *glsp.Context) (methods.ACPNavProject, error) {
+	return s.createWorktree(ctx, req, gCtx, false)
+}
+
+// CreateWorktreeIsolated is CreateWorktree for control automation: git runs
+// without repo hooks or fsmonitor. The desktop UI keeps CreateWorktree.
+func (s *Server) CreateWorktreeIsolated(ctx context.Context, req *methods.ACPNavCreateWorktreeParams, gCtx *glsp.Context) (methods.ACPNavProject, error) {
+	return s.createWorktree(ctx, req, gCtx, true)
+}
+
+func (s *Server) createWorktree(ctx context.Context, req *methods.ACPNavCreateWorktreeParams, gCtx *glsp.Context, isolated bool) (methods.ACPNavProject, error) {
 	if s.store == nil {
 		return methods.ACPNavProject{}, sql.ErrConnDone
 	}
-	project, err := s.store.CreateWorktree(ctx, req.ProjectPath, req.WorktreeName)
+	create := s.store.CreateWorktree
+	if isolated {
+		create = s.store.CreateWorktreeIsolated
+	}
+	project, err := create(ctx, req.ProjectPath, req.WorktreeName)
 	if err != nil {
 		return methods.ACPNavProject{}, err
 	}
+	s.notifyProjectsChanged()
 	if !pathExists(project.Path) {
 		return methods.ACPNavProject{}, fmt.Errorf("created worktree path does not exist: %s", project.Path)
 	}
@@ -403,6 +457,7 @@ func (s *Server) RemoveProject(ctx context.Context, req *methods.ACPNavRemovePro
 	if err := s.store.RemoveProject(ctx, req.Path); err != nil {
 		return methods.ACPNavState{}, err
 	}
+	s.notifyProjectsChanged()
 	state, err := s.listWithLiveStatus(ctx)
 	if err != nil {
 		return methods.ACPNavState{}, err
@@ -418,6 +473,7 @@ func (s *Server) RemoveWorktree(ctx context.Context, req *methods.ACPNavRemoveWo
 	if err := s.store.RemoveWorktree(ctx, req.Path); err != nil {
 		return methods.ACPNavState{}, err
 	}
+	s.notifyProjectsChanged()
 	state, err := s.listWithLiveStatus(ctx)
 	if err != nil {
 		return methods.ACPNavState{}, err
@@ -543,18 +599,37 @@ func (s *Server) RestoreConversation(ctx context.Context, req *methods.ACPNavRes
 }
 
 func (s *Server) ArchiveConversation(ctx context.Context, req *methods.ACPNavArchiveConversationParams, gCtx *glsp.Context) (methods.ACPNavState, error) {
+	state, _, err := s.ArchiveConversationWithDescendants(ctx, req, gCtx)
+	return state, err
+}
+
+// ArchiveConversationWithDescendants is ArchiveConversation that also reports
+// what it archived: the matching conversations, and the sub-agents rendered
+// under them that the cascade archived (and whose sessions it closes in the
+// background).
+func (s *Server) ArchiveConversationWithDescendants(ctx context.Context, req *methods.ACPNavArchiveConversationParams, gCtx *glsp.Context) (methods.ACPNavState, ArchivedConversations, error) {
 	if s.store == nil {
-		return methods.ACPNavState{}, sql.ErrConnDone
+		return methods.ACPNavState{}, ArchivedConversations{}, sql.ErrConnDone
 	}
-	if err := s.store.ArchiveConversation(ctx, req.WorkspacePath, req.ConversationID, req.AgentServer, req.SessionID); err != nil {
-		return methods.ACPNavState{}, err
+	roots, cascaded, err := s.store.archiveConversation(ctx, req.WorkspacePath, req.ConversationID, req.AgentServer, req.SessionID)
+	if err != nil {
+		return methods.ACPNavState{}, ArchivedConversations{}, err
 	}
+	archived := ArchivedConversations{Archived: roots, Descendants: cascaded}
 	state, err := s.listWithLiveStatus(ctx)
 	if err != nil {
-		return methods.ACPNavState{}, err
+		return methods.ACPNavState{}, archived, err
 	}
 	s.notifyState(ctx, gCtx, state)
-	return state, nil
+	return state, archived, nil
+}
+
+// ArchivedConversations lists the conversation ids an archive changed.
+type ArchivedConversations struct {
+	// Archived are the conversations the request named.
+	Archived []string
+	// Descendants are the sub-agents the cascade archived with them.
+	Descendants []string
 }
 
 func (s *Server) RenameConversation(ctx context.Context, req *methods.ACPNavRenameConversationParams, gCtx *glsp.Context) (methods.ACPNavState, error) {
@@ -582,6 +657,16 @@ func (s *Server) SetConversationViewState(ctx context.Context, req *methods.ACPN
 		return s.listWithLiveStatus(ctx)
 	}
 
+	// Resolved before taking s.mu: it reads the database. Best-effort: a
+	// failed lookup must not stop the conversation itself being marked viewed.
+	var descendantKeys []string
+	if hasKey && req.Active {
+		var err error
+		if descendantKeys, err = s.descendantLiveStatusKeys(ctx, key); err != nil {
+			slog.WarnContext(ctx, "acpnav: resolving descendant conversations failed", "error", err)
+		}
+	}
+
 	statusChanged := false
 	s.mu.Lock()
 	if req.Reset {
@@ -598,6 +683,17 @@ func (s *Server) SetConversationViewState(ctx context.Context, req *methods.ACPN
 				status.Unread = false
 				statusChanged = true
 				s.setLiveStatusLocked(key, status)
+			}
+			// Viewing a parent also reads its spawned descendants' completed
+			// turns. Ones still needing input keep their state.
+			for _, descendantKey := range descendantKeys {
+				status, ok := s.liveStatuses[descendantKey]
+				if !ok || !status.Unread || status.WaitingForUser {
+					continue
+				}
+				status.Unread = false
+				statusChanged = true
+				s.setLiveStatusLocked(descendantKey, status)
 			}
 		} else {
 			delete(s.activeSessions[origin], key)
@@ -616,6 +712,55 @@ func (s *Server) SetConversationViewState(ctx context.Context, req *methods.ACPN
 		s.notifyState(ctx, gCtx, state)
 	}
 	return state, nil
+}
+
+// descendantLiveStatusKeys returns the live status keys of every conversation
+// that renders as a sub-agent of the conversation bound to key: descended via
+// control-state ParentID links and in the same sidebar group (see
+// sidebarGroup). The walk continues through descendants in other groups, so
+// same-group conversations below them still count, matching the archive
+// cascade. Cycle-safe.
+func (s *Server) descendantLiveStatusKeys(ctx context.Context, key string) ([]string, error) {
+	state, err := s.store.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+	children := map[string][]methods.ACPNavConversation{}
+	var roots []methods.ACPNavConversation
+	for _, conversation := range state.Conversations {
+		if conversationKey, ok := liveStatusKey(conversation.AgentServer, conversation.SessionID); ok && conversationKey == key {
+			roots = append(roots, conversation)
+		}
+		if conversation.ParentID != "" && conversation.ParentID != conversation.ID {
+			children[conversation.ParentID] = append(children[conversation.ParentID], conversation)
+		}
+	}
+	var keys []string
+	added := map[string]bool{key: true}
+	for _, root := range roots {
+		rootGroup := sidebarGroup(root.WorkspacePath, root.Cwd)
+		seen := map[string]bool{root.ID: true}
+		queue := []string{root.ID}
+		for len(queue) > 0 {
+			id := queue[0]
+			queue = queue[1:]
+			for _, child := range children[id] {
+				if seen[child.ID] {
+					continue
+				}
+				seen[child.ID] = true
+				queue = append(queue, child.ID)
+				if sidebarGroup(child.WorkspacePath, child.Cwd) != rootGroup {
+					continue
+				}
+				if childKey, ok := liveStatusKey(child.AgentServer, child.SessionID); ok && !added[childKey] {
+					added[childKey] = true
+					keys = append(keys, childKey)
+				}
+			}
+		}
+	}
+	return keys, nil
 }
 
 type ConversationLiveStatusPatch struct {
@@ -808,6 +953,12 @@ func liveStatusKey(agentServer, sessionID string) (string, bool) {
 
 func liveStatusIsEmpty(status methods.ACPNavConversationLiveStatus) bool {
 	return !status.Working && !status.WaitingForUser && !status.Unread
+}
+
+// NotifyDidChange pushes the current navigation state to every client, for
+// callers whose change did not already notify (DeleteConversation does not).
+func (s *Server) NotifyDidChange(ctx context.Context, gCtx *glsp.Context) {
+	s.notifyDidChange(ctx, gCtx)
 }
 
 func (s *Server) DeleteConversation(ctx context.Context, req *methods.ACPNavDeleteConversationParams, _ *glsp.Context) (methods.ACPNavState, error) {

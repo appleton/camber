@@ -15,6 +15,46 @@ func testMessage(i int) map[string]any {
 	return map[string]any{"jsonrpc": "2.0", "method": "session/update", "params": i}
 }
 
+func TestSessionReplayRequiresCompleteHistory(t *testing.T) {
+	log := newTestSessionLog(t)
+	log.Publish("claude", "child", "", false, testMessage(1))
+	_, _, ok := log.SessionReplay("claude", "child", PrimaryOrigin)
+	assert.False(t, ok, "unknown or previously loaded sessions are not complete transcripts")
+	log.MarkSessionHistory("claude", "child", true)
+	log.BeginTurn("claude", "child")
+	messages, cursor, ok := replayAll(t, log, "child", PrimaryOrigin)
+	require.True(t, ok)
+	assert.Equal(t, []map[string]any{testMessage(1)}, messages)
+	assert.True(t, cursor.TurnActive)
+	assert.Equal(t, int64(1), cursor.Seq)
+	log.MarkSessionHistory("claude", "child", false)
+	_, _, ok = log.SessionReplay("claude", "child", PrimaryOrigin)
+	assert.False(t, ok, "agent-side replay invalidates our full-history claim")
+}
+
+func TestSessionReplayKeepsEventsBeyondBufferAndRefusesRemoteOverflow(t *testing.T) {
+	log := newTestSessionLog(t)
+	log.MarkSessionHistory("claude", "child", true)
+	for i := 0; i < sessionLogMaxReplay; i++ {
+		log.Publish("claude", "child", "", false, testMessage(i))
+	}
+	_, _, ok := log.SessionReplay("claude", "child", "remote:device/a")
+	assert.False(t, ok, "remotes keep the bounded replay burst")
+	_, _, ok = log.SessionReplay("claude", "child", PrimaryOrigin)
+	assert.True(t, ok)
+	total := 2*sessionLogBufferCap + 7
+	for i := sessionLogMaxReplay; i < total; i++ {
+		log.Publish("claude", "child", "", false, testMessage(i))
+	}
+	messages, cursor, ok := replayAll(t, log, "child", PrimaryOrigin)
+	require.True(t, ok, "events compacted out of the buffer stay in the transcript")
+	require.Len(t, messages, total)
+	for i, message := range messages {
+		assert.EqualValues(t, i, message["params"], "message %d in order", i)
+	}
+	assert.Equal(t, int64(total), cursor.Seq)
+}
+
 func eventSeq(t *testing.T, msg notifyMsg) int64 {
 	t.Helper()
 	params, ok := msg.params.(map[string]any)
@@ -49,7 +89,7 @@ func TestPublishStampsAndFansOut(t *testing.T) {
 }
 
 func TestPublishSeqIsPerSession(t *testing.T) {
-	log := NewSessionLog(NewHub())
+	log := newTestSessionLog(t)
 	assert.Equal(t, int64(1), log.Publish("poolside", "s1", "", false, testMessage(1)))
 	assert.Equal(t, int64(1), log.Publish("poolside", "s2", "", false, testMessage(1)))
 	assert.Equal(t, int64(2), log.Publish("poolside", "s1", "", false, testMessage(2)))
@@ -267,7 +307,7 @@ func TestResumeAndConcurrentPublishesStayOrdered(t *testing.T) {
 }
 
 func TestIdleSessionEviction(t *testing.T) {
-	log := NewSessionLog(NewHub())
+	log := newTestSessionLog(t)
 	log.BeginTurn("poolside", "busy")
 	log.Publish("poolside", "busy", "", false, testMessage(0))
 	for i := 0; i < sessionLogMaxSessions+10; i++ {
@@ -285,7 +325,7 @@ func TestIdleSessionEviction(t *testing.T) {
 // after the next turn's BeginTurn. The late EndTurn must close its own turn,
 // not the one now in flight.
 func TestOverlappingTurnBoundariesKeepSessionActive(t *testing.T) {
-	log := NewSessionLog(NewHub())
+	log := newTestSessionLog(t)
 	log.BeginTurn("poolside", "s1")
 	log.BeginTurn("poolside", "s1")
 	log.EndTurn("poolside", "s1")
@@ -307,4 +347,99 @@ func TestOverlappingTurnBoundariesKeepSessionActive(t *testing.T) {
 	log.EndTurn("poolside", "s1")
 	log.BeginTurn("poolside", "s1")
 	assert.True(t, log.Cursor("poolside", "s1").TurnActive)
+}
+
+// Reads across many conversations (control polls, cursors, load invalidation
+// of idle sessions) must not take slots from, or reorder eviction against, a
+// session whose retained history is still needed.
+func TestReadsOfUnknownSessionsDoNotEvictHistory(t *testing.T) {
+	log := newTestSessionLog(t)
+	log.MarkSessionHistory("claude", "child", true)
+	for i := 0; i < 3; i++ {
+		log.Publish("claude", "child", "", false, testMessage(i))
+	}
+	for i := 0; i < 2*sessionLogMaxSessions; i++ {
+		session := fmt.Sprintf("unknown-%d", i)
+		page, err := log.Poll("claude", session, "")
+		require.NoError(t, err)
+		assert.Empty(t, page.Events)
+		_, err = log.PollBetween("claude", session, log.ControlCursor("claude", session), log.TurnCursor("claude", session))
+		require.NoError(t, err)
+		assert.Equal(t, int64(0), log.Cursor("claude", session).Seq)
+		log.MarkSessionHistory("claude", session, false)
+	}
+
+	log.mu.Lock()
+	assert.Len(t, log.sessions, 1, "reads must not create session entries")
+	log.mu.Unlock()
+	messages, cursor, ok := replayAll(t, log, "child", PrimaryOrigin)
+	require.True(t, ok, "retained history survives reads of other conversations")
+	assert.Len(t, messages, 3)
+	assert.Equal(t, int64(3), cursor.Seq)
+	page, err := log.Poll("claude", "child", "")
+	require.NoError(t, err)
+	assert.False(t, page.ResetRequired)
+	assert.Len(t, page.Events, 3)
+}
+
+// Reads must not bump recency: under slot pressure the least recently
+// *written* idle session is the one evicted, however often others are read.
+func TestReadsDoNotBumpEvictionRecency(t *testing.T) {
+	log := newTestSessionLog(t)
+	log.Publish("claude", "old", "", false, testMessage(0))
+	log.Publish("claude", "kept", "", false, testMessage(0))
+	for i := 0; i < sessionLogMaxSessions-2; i++ {
+		log.Publish("claude", fmt.Sprintf("s%d", i), "", false, testMessage(i))
+	}
+	_, err := log.Poll("claude", "old", "")
+	require.NoError(t, err)
+	log.ControlCursor("claude", "old")
+	log.Cursor("claude", "old")
+	log.Publish("claude", "new", "", false, testMessage(0))
+
+	log.mu.Lock()
+	defer log.mu.Unlock()
+	_, oldKept := log.sessions[sessionLogKey{agentServer: "claude", sessionID: "old"}]
+	_, keptKept := log.sessions[sessionLogKey{agentServer: "claude", sessionID: "kept"}]
+	assert.False(t, oldKept, "reads must not refresh a session's eviction order")
+	assert.True(t, keptKept)
+}
+
+// A cursor taken before a session has any entry must replay everything the
+// session publishes afterwards.
+func TestPollBeforeFirstEventReplaysLaterEvents(t *testing.T) {
+	log := newTestSessionLog(t)
+	start := log.ControlCursor("claude", "fresh")
+	page, err := log.Poll("claude", "fresh", "")
+	require.NoError(t, err)
+	assert.Empty(t, page.Events)
+	assert.False(t, page.ResetRequired)
+	for i := 0; i < 3; i++ {
+		log.Publish("claude", "fresh", "", false, testMessage(i))
+	}
+	for _, cursor := range []string{start, page.NextCursor} {
+		next, err := log.Poll("claude", "fresh", cursor)
+		require.NoError(t, err)
+		assert.False(t, next.ResetRequired)
+		require.Len(t, next.Events, 3)
+		assert.Equal(t, int64(1), next.Events[0].Seq)
+		assert.Equal(t, int64(3), next.Events[2].Seq)
+	}
+}
+
+func TestForgetSessionDropsIdleEntryOnly(t *testing.T) {
+	log := newTestSessionLog(t)
+	log.Publish("claude", "probe", "", false, testMessage(0))
+	log.BeginTurn("claude", "busy")
+	log.ForgetSession("claude", "probe")
+	log.ForgetSession("claude", "busy")
+	log.ForgetSession("claude", "unknown")
+
+	log.mu.Lock()
+	defer log.mu.Unlock()
+	_, probeKept := log.sessions[sessionLogKey{agentServer: "claude", sessionID: "probe"}]
+	_, busyKept := log.sessions[sessionLogKey{agentServer: "claude", sessionID: "busy"}]
+	assert.False(t, probeKept)
+	assert.True(t, busyKept, "a session with a turn in flight keeps its stream")
+	assert.Len(t, log.sessions, 1)
 }

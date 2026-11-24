@@ -343,6 +343,7 @@ export class AcpSidebarController {
     this.options.setActiveConversationId?.(session.id);
     if (this.shouldMarkRead()) {
       this.repo.clearUnread(session.sessionId, agentServer);
+      this.clearDescendantUnread(session.id);
     }
     const loadedSession = await load;
     // Native navigation (for example Cmd+N) can select another draft without
@@ -354,6 +355,7 @@ export class AcpSidebarController {
       this.options.setActiveConversationId?.(loadedSession.conversationId);
       if (loadedSession.sessionId && this.shouldMarkRead()) {
         this.repo.clearUnread(loadedSession.sessionId, loadedSession.agentServer);
+        this.clearDescendantUnread(loadedSession.conversationId);
       }
     }
   }
@@ -476,6 +478,10 @@ export class AcpSidebarController {
 
   private isSplitACPHost(): boolean {
     return isSplitACPHost(currentACPHostState().environment.assistantHost);
+  }
+
+  private clearDescendantUnread(conversationId: string): void {
+    this.repo.clearDescendantUnread(conversationId, this.conversations.sessions);
   }
 
   private shouldMarkRead(): boolean {

@@ -506,11 +506,14 @@
   // A conversation whose history the agent could not restore is empty but is
   // not new: it keeps the ordinary conversation layout, with the notice in
   // place of the transcript, rather than the "Start a new conversation" hero.
+  // Neither is a running conversation whose history reloads when its turn
+  // ends (historyReloadPending): it simply shows its live updates.
   let isNewConversation = $derived(
     !isBlockingSessionLoading &&
       chatSession.events.length === 0 &&
       chatSession.pendingPermissionRequests.length === 0 &&
-      !chatSession.historyUnavailable,
+      !chatSession.historyUnavailable &&
+      !chatSession.historyReloadPending,
   );
   let centerNewConversationComposer = $state(true);
   let previousComposerDraftKey = $state<string | null>(null);
@@ -684,13 +687,31 @@
     }
   });
 
+  // Primitive so unrelated appState churn does not re-run effects reading it.
+  let editorFocusedForViewState = $derived($appState.isEditorFocused === true);
+
+  // Viewing a parent also clears its spawned descendants' unread state. A
+  // separate effect that reads descendants untracked: it re-runs only when this
+  // conversation is activated or focused, never on a child's later status
+  // change or on the parent's own unread flipping.
+  $effect(() => {
+    const sessionId = chatSession.sessionId;
+    const agentServer = chatSession.sessionAgentServer;
+    if (!sessionId || !agentServer) return;
+    if (!markReadWhenVisible) return;
+    if (!editorFocusedForViewState) return;
+    untrack(() => {
+      const summary = conversations.getSession(sessionId, agentServer);
+      if (summary) acp.clearDescendantUnread(summary.id, conversations.sessions);
+    });
+  });
+
   // Tell the helper this surface is watching the conversation: completing
   // turns skip the unread mark while any surface watches, and activating a
   // conversation clears its unread flag on every surface. Losing focus or
   // switching away reports the conversation inactive via the effect cleanup.
   // The focus flag goes through a primitive $derived so unrelated appState
   // churn does not re-run the effect and emit redundant inactive/active pairs.
-  let editorFocusedForViewState = $derived($appState.isEditorFocused === true);
   $effect(() => {
     const sessionId = chatSession.sessionId;
     const agentServer = chatSession.sessionAgentServer;
@@ -1483,6 +1504,10 @@
                 <AssistantLiveRegion {isTurnActive} {hasPendingPermissionRequests} />
               {/if}
             </div>
+          {:else if chatSession.historyReloadPending}
+            <!-- A running conversation whose history reloads when its turn
+                 ends: its live updates render here as they arrive. -->
+            <div class="h-full w-full" data-testid="history-reload-pending"></div>
           {:else if chatSession.historyUnavailable}
             <div class="flex h-full w-full flex-col items-center justify-center">
               <!-- canPrompt mirrors the composer's disabled conditions below:
