@@ -30,14 +30,26 @@
   import SkillCommandItems from "./SkillCommandItems.svelte";
   import type { Snippet } from "svelte";
   import { slashCommandIcon } from "../../goalPresentation";
+  import { getConversationActions } from "../../../../conversationActions.svelte";
 
   interface Props {
     onCommand?: (command: AcpSlashCommand) => void;
     promptCommandItems?: Snippet;
     fallbackSkills?: AvailableCommand[];
+    /**
+     * The prompt holds nothing but the slash command being typed. The menu
+     * also opens after a space mid-sentence, where Enter must not archive the
+     * conversation or start deleting its worktree.
+     */
+    commandOnlyPrompt?: boolean;
   }
 
-  let { onCommand, promptCommandItems, fallbackSkills = [] }: Props = $props();
+  let {
+    onCommand,
+    promptCommandItems,
+    fallbackSkills = [],
+    commandOnlyPrompt = false,
+  }: Props = $props();
 
   const registry = getACPAgentRegistryRepo();
   const chatSession = getACPChatSessionScope();
@@ -72,12 +84,14 @@
     selectOptions.filter(
       (option) =>
         !isAgentPickerOptionId(option.id) &&
-        !(planIsLocal && promptConfigKind(option) === "collaboration"),
+        !(planIsLocal && promptConfigKind(option) === "collaboration") &&
+        !conversationCommandNames.has(option.id),
     ),
   );
   const booleanOptions = $derived(
     chatSession.configOptions.filter(
-      (option): option is BooleanSessionConfigOption => option.type === "boolean",
+      (option): option is BooleanSessionConfigOption =>
+        option.type === "boolean" && !conversationCommandNames.has(option.id),
     ),
   );
 
@@ -103,9 +117,35 @@
       $search,
     ),
   );
+  // Archive and worktree deletion belong to the host's conversation list, so
+  // they are only offered where a host registered them and the conversation
+  // can take them right now.
+  const conversationActions = $derived(getConversationActions());
+  const canArchive = $derived(
+    commandOnlyPrompt &&
+      !!conversationActions &&
+      !!chatSession.conversationId &&
+      conversationActions.canArchive(chatSession.conversationId),
+  );
+  const conversationWorktree = $derived(
+    commandOnlyPrompt && conversationActions && chatSession.conversationId
+      ? conversationActions.worktreeFor(chatSession.conversationId)
+      : null,
+  );
+  // Camber's /archive and /delete-worktree where they apply. They own the name:
+  // a same-named agent command or config option would submit as the same text.
+  const conversationCommandNames = $derived(
+    new Set<string>([
+      ...(canArchive ? [LocalCommand.archive] : []),
+      ...(conversationWorktree ? [LocalCommand.deleteWorktree] : []),
+    ]),
+  );
+  const shadowedCommandNames = $derived(
+    new Set<string>([...(planIsLocal ? [LocalCommand.plan] : []), ...conversationCommandNames]),
+  );
   const otherCommands = $derived(
     chatSession.availableCommands.filter(
-      (command) => !isSkillCommand(command) && !(planIsLocal && command.name === "plan"),
+      (command) => !isSkillCommand(command) && !shadowedCommandNames.has(command.name),
     ),
   );
   const visibleCommandEntries = $derived(visibleServerCommandEntries(otherCommands, $search));
@@ -170,6 +210,28 @@
       >
         <Prompt.Actions.Action onAction={() => onCommand?.(LocalCommand.load)} />
       </Prompt.Menu.Popup.Item>
+
+      {#if canArchive}
+        <Prompt.Menu.Popup.Item
+          title={LocalCommand.archive}
+          subtitle="Archive this conversation"
+          icon="archive"
+          keywords={["close", "done"]}
+        >
+          <Prompt.Actions.Action onAction={() => onCommand?.(LocalCommand.archive)} />
+        </Prompt.Menu.Popup.Item>
+      {/if}
+
+      {#if conversationWorktree}
+        <Prompt.Menu.Popup.Item
+          title={LocalCommand.deleteWorktree}
+          subtitle={`Delete the ${conversationWorktree.name} worktree`}
+          icon="trash"
+          keywords={["remove", "worktree"]}
+        >
+          <Prompt.Actions.Action onAction={() => onCommand?.(LocalCommand.deleteWorktree)} />
+        </Prompt.Menu.Popup.Item>
+      {/if}
     </Prompt.Menu.Popup.Section>
 
     <Prompt.Menu.Popup.Separator />

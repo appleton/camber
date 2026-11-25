@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import type { ComponentProps } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { getConversationActions } from "../conversationActions.svelte";
 import { initializeStatefulModule } from "../hostRpc";
 import type { ACPNavConversation, ACPNavProject } from "../navTypes";
 import { ACP_CHAT_WORKSPACE_PATH } from "../workspaceScope";
@@ -286,5 +287,61 @@ describe("DesktopSideBar sub-agent nesting", () => {
         expect(screen.getByRole("button", { name: "Expand 1 sub-agent" })).toBeInTheDocument(),
       );
     });
+  });
+});
+
+describe("DesktopSideBar composer conversation actions", () => {
+  const registered = () => {
+    const actions = getConversationActions();
+    if (!actions) throw new Error("sidebar did not register conversation actions");
+    return actions;
+  };
+
+  it("offers archive only for conversations the sidebar knows", () => {
+    render(Harness, {
+      props: { projects: [project("/repo")], conversations: [conv("a", "/repo")] },
+    });
+    expect(registered().canArchive("a")).toBe(true);
+    expect(registered().canArchive("missing")).toBe(false);
+    expect(registered().archiveConversation("missing")).toBe(false);
+  });
+
+  it("resolves the worktree a conversation runs in, only when removal would clean it up", () => {
+    render(Harness, {
+      props: {
+        projects: [project("/repo"), worktree("/wt", "/repo", { nickname: "Feature" })],
+        conversations: [
+          conv("root", "/repo"),
+          conv("top", "/wt", { age: 1 }),
+          conv("sub", "/wt/packages/ui", { age: 2 }),
+          conv("ide", "/wt", { age: 3, workspacePath: "IDE" }),
+        ],
+      },
+    });
+    expect(registered().worktreeFor("root")).toBeNull();
+    expect(registered().worktreeFor("top")).toEqual({ path: "/wt", name: "Feature" });
+    // Worktree removal only cleans up conversations in the worktree itself.
+    expect(registered().worktreeFor("sub")).toBeNull();
+    // Its stored workspace isn't the worktree, so removal would leave it behind.
+    expect(registered().worktreeFor("ide")).toBeNull();
+  });
+
+  it("opens a collapsed sidebar so the archive undo toast is visible", async () => {
+    const onCollapsedChange = vi.fn();
+    const archiveSession = vi.fn(async () => {});
+    render(Harness, {
+      props: {
+        projects: [project("/repo")],
+        conversations: [conv("a", "/repo")],
+        collapsed: true,
+        onCollapsedChange,
+        archiveSession,
+      },
+    });
+    expect(registered().archiveConversation("a")).toBe(true);
+    expect(onCollapsedChange).toHaveBeenCalledWith(false);
+    // The countdown runs first, so nothing is archived yet and it can be undone.
+    expect(archiveSession).not.toHaveBeenCalled();
+    expect(await screen.findByText("Archiving conversation...")).toBeInTheDocument();
   });
 });

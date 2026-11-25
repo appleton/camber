@@ -34,6 +34,10 @@
   import { getACPGithubRepo } from "../features/GithubRepository.svelte";
   import { getACPProjectRepo } from "../features/ProjectRepository.svelte";
   import { getACPWorktreeRepo } from "../features/WorktreeRepository";
+  import {
+    isWorktreeConversation,
+    registerConversationActions,
+  } from "../conversationActions.svelte";
   import { removeProjectFromApp } from "../features/removeProject";
   import type { ACPSession } from "../features/Session.svelte";
   import { workspacePathFitsWorkspaceFolders } from "../workspacePaths";
@@ -1417,9 +1421,9 @@
     }
   }
 
-  function handleArchiveSession(session: ACPConversationSummary, event: MouseEvent) {
-    event.preventDefault();
-    event.stopPropagation();
+  function handleArchiveSession(session: ACPConversationSummary, event?: MouseEvent) {
+    event?.preventDefault();
+    event?.stopPropagation();
     const agentServer = getSessionAgentServer(session);
     const sessionToCancel = shouldInterruptSelectedSession(session.sessionId, agentServer)
       ? activeSession
@@ -1640,15 +1644,62 @@
     openContextMenu(event, projectMenuActions(project));
   }
 
+  function canDeleteWorktree(worktree: ACPNavProject): boolean {
+    return (
+      worktree.deleteRequested !== true &&
+      (worktree.busy === undefined ||
+        worktree.busy === "creating" ||
+        worktree.busy === "running_setup")
+    );
+  }
+
+  function requestDeleteWorktree(worktree: ACPNavProject) {
+    deleteWorktreeTarget = { path: worktree.path, name: projectDisplayName(worktree) };
+  }
+
+  function archivableSession(conversationId: string): ACPConversationSummary | undefined {
+    if (exitingConversationIds.has(conversationId)) return undefined;
+    return navSessions.find((candidate) => candidate.id === conversationId);
+  }
+
+  // The chat composer's /archive and /delete-worktree run these same flows.
+  // The progress toasts (including the archive's undo) live in the sidebar, so
+  // it opens first if it was collapsed.
+  onMount(() =>
+    registerConversationActions({
+      canArchive: (conversationId) => archivableSession(conversationId) !== undefined,
+      archiveConversation: (conversationId) => {
+        const session = archivableSession(conversationId);
+        if (!session) return false;
+        if (collapsed) onCollapsedChange(false);
+        handleArchiveSession(session);
+        return true;
+      },
+      worktreeFor: (conversationId) => {
+        const session = navSessions.find((candidate) => candidate.id === conversationId);
+        if (!session) return null;
+        if (!isWorktreeConversation(session)) return null;
+        const worktree = navProjects.find(
+          (project) => project.isWorktree && project.path === session.cwd,
+        );
+        if (!worktree || exitingWorktreePaths.has(worktree.path)) return null;
+        if (!canDeleteWorktree(worktree)) return null;
+        return { path: worktree.path, name: projectDisplayName(worktree) };
+      },
+      deleteWorktree: (path) => {
+        const worktree = navProjects.find((project) => project.isWorktree && project.path === path);
+        if (!worktree || exitingWorktreePaths.has(path) || !canDeleteWorktree(worktree)) return;
+        if (collapsed) onCollapsedChange(false);
+        requestDeleteWorktree(worktree);
+      },
+    }),
+  );
+
   function openWorktreeContextMenu(worktree: ACPNavProject, event: MouseEvent) {
     const blocked =
       worktree.deleteRequested === true ||
       (worktree.busy !== undefined && worktreeBlocksUI(worktree.busy));
-    const canDelete =
-      worktree.deleteRequested !== true &&
-      (worktree.busy === undefined ||
-        worktree.busy === "creating" ||
-        worktree.busy === "running_setup");
+    const canDelete = canDeleteWorktree(worktree);
     const actions: ContextMenuItem[] = [
       {
         name: "New Conversation",
@@ -1714,7 +1765,7 @@
         icon: "trash",
         disabled: !canDelete,
         callback: () => {
-          deleteWorktreeTarget = { path: worktree.path, name: projectDisplayName(worktree) };
+          requestDeleteWorktree(worktree);
         },
       },
     );

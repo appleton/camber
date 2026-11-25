@@ -25,7 +25,11 @@
   import PlanModeIndicator from "./PlanModeIndicator.svelte";
   import GoalIndicator from "./GoalIndicator.svelte";
   import PromptModeControl from "./menus/config/PromptModeControl.svelte";
-  import { AcpSlashCommand } from "./menus/command/commands";
+  import {
+    AcpSlashCommand,
+    bareSlashCommand,
+    isSlashCommandOnlyPrompt,
+  } from "./menus/command/commands";
   import {
     AGENT_CONFIG_OPTION_ID,
     AGENT_CONFIG_OPTION_LABEL,
@@ -58,6 +62,8 @@
   } from "./promptSubmitContextMenu";
   import { getKeybindingService, withShortcut } from "../../../keybindings";
   import ActivePromptSubmit from "./ActivePromptSubmit.svelte";
+  import { getConversationActions } from "../../conversationActions.svelte";
+  import { isSkillCommand } from "./menus/command/serverCommands";
 
   interface Props extends ComponentProps<typeof Prompt.Root> {
     onConfigureAgents?: () => void;
@@ -341,11 +347,49 @@
         void chatSession.togglePlanMode();
         break;
       }
+
+      case AcpSlashCommand.archive: {
+        archiveConversation();
+        break;
+      }
+
+      case AcpSlashCommand.deleteWorktree: {
+        deleteConversationWorktree();
+        break;
+      }
     }
+  }
+
+  // Archive and worktree deletion switch away from this conversation, so they
+  // run after the composer has cleared the command text; otherwise the clear
+  // lands on the next conversation's draft and "/archive" lingers here.
+  function archiveConversation(): boolean {
+    const actions = getConversationActions();
+    const conversationId = chatSession.conversationId;
+    if (!actions || !conversationId || !actions.canArchive(conversationId)) return false;
+    setTimeout(() => {
+      if (!actions.archiveConversation(conversationId)) {
+        rpc.showInfoMessage("This conversation can't be archived right now", InfoMessageType.error);
+      }
+    }, 0);
+    return true;
+  }
+
+  function deleteConversationWorktree(): boolean {
+    const actions = getConversationActions();
+    const conversationId = chatSession.conversationId;
+    const worktree = actions && conversationId ? actions.worktreeFor(conversationId) : null;
+    if (!actions || !worktree) return false;
+    setTimeout(() => actions.deleteWorktree(worktree.path), 0);
+    return true;
   }
 
   function handleTypedLocalCommand(value: string): boolean {
     const command = slashCommandName(value);
+    // Camber's conversation commands win over a same-named config option.
+    if (command === AcpSlashCommand.archive || command === AcpSlashCommand.deleteWorktree) {
+      if (bareSlashCommand(value) === command && handleConversationCommand(command)) return true;
+    }
     if (command === AGENT_CONFIG_OPTION_LABEL) {
       return openAgentConfigMenu();
     }
@@ -383,6 +427,31 @@
       default:
         return false;
     }
+  }
+
+  // Where it doesn't apply, a bare /archive or /delete-worktree is still kept
+  // from the agent unless the agent publishes that command itself: an agent
+  // with shell access could act on "/delete-worktree" without Camber's
+  // confirmation or conversation cleanup.
+  function handleConversationCommand(command: string): boolean {
+    const ran =
+      command === AcpSlashCommand.archive ? archiveConversation() : deleteConversationWorktree();
+    if (ran) return true;
+    // A host without these actions (e.g. the chat-only panel) keeps sending
+    // the text to the agent, as before the commands existed.
+    if (!getConversationActions()) return false;
+    // A same-named config option keeps its typed shortcut.
+    if (chatSession.configOptions.some((option) => option.id === command)) return false;
+    // Skills of the same name are invoked as $name, so they don't own it.
+    if (
+      chatSession.availableCommands.some(
+        (agentCommand) => agentCommand.name === command && !isSkillCommand(agentCommand),
+      )
+    ) {
+      return false;
+    }
+    rpc.showInfoMessage(`/${command} isn't available in this conversation`, InfoMessageType.info);
+    return true;
   }
 
   function slashCommandName(value: string): string | null {
@@ -606,6 +675,7 @@
   <Prompt.Menu.Root {...acpMenus.command}>
     <CommandMenu
       onCommand={handleCommand}
+      commandOnlyPrompt={isSlashCommandOnlyPrompt(promptValue)}
       {promptCommandItems}
       fallbackSkills={installedSkills.commands}
     />
