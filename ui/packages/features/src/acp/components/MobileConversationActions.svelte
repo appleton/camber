@@ -95,19 +95,33 @@
     if (live.isPrompting || live.isSending || session.liveStatus?.working) await live.cancel();
   }
 
-  // Stop the open conversation's turn if it runs in the worktree. Its summary
-  // can be missing (a failed refresh empties the list); then whether a turn
-  // started elsewhere is running is unknown, so cancel anyway: the
-  // conversation is about to be removed with the worktree.
-  async function cancelTurnInWorktree(origin: string | null, inWorktree: Set<string>) {
+  // Stop the open conversation's turn if it runs in the worktree, returning
+  // the session it cancelled. Its summary can be missing (a failed refresh
+  // empties the list); then whether a turn started elsewhere is running is
+  // unknown, so cancel anyway, best effort: the conversation is about to be
+  // removed with the worktree.
+  async function cancelTurnInWorktree(
+    origin: string | null,
+    inWorktree: Set<string>,
+  ): Promise<string | null> {
     const current = activeConversationId;
     const live = activeSession;
-    if (!current || !live || (current !== origin && !inWorktree.has(current))) return;
+    if (!current || !live || (current !== origin && !inWorktree.has(current))) return null;
     const listed = summary(current);
-    if (listed && live.sessionId !== listed.sessionId) return;
-    if (live.isPrompting || live.isSending || !listed || listed.liveStatus?.working) {
+    if (listed && live.sessionId !== listed.sessionId) return null;
+    if (live.isPrompting || live.isSending || listed?.liveStatus?.working) {
       await live.cancel();
+      return live.sessionId;
     }
+    if (!listed) {
+      try {
+        await live.cancel();
+      } catch (error) {
+        console.error("Failed to cancel before deleting worktree", error);
+      }
+      return live.sessionId;
+    }
+    return null;
   }
 
   // Errors propagate so the confirmation dialog stays open with the message.
@@ -125,7 +139,19 @@
     const inWorktree = new Set(
       sessions.filter((session) => session.cwd === path).map((session) => session.id),
     );
-    await cancelTurnInWorktree(origin, inWorktree);
+    const cancelled = await cancelTurnInWorktree(origin, inWorktree);
+    // A turn this phone couldn't stop (another conversation in the worktree,
+    // or one whose session this phone doesn't hold yet) would keep running in
+    // a deleted directory: refuse, and keep the dialog open to retry.
+    const stillWorking = dedupeConversationSummaries(conversations.sessions).some(
+      (session) =>
+        session.cwd === path &&
+        session.liveStatus?.working === true &&
+        (cancelled === null || session.sessionId !== cancelled),
+    );
+    if (stillWorking) {
+      throw new Error("A conversation is still working in this worktree. Stop it, then try again.");
+    }
     try {
       projects.setWorktreeBusy(path, "tearing_down");
       await worktrees.removeWorktree(path, (kind) => projects.setWorktreeBusy(path, kind));

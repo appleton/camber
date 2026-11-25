@@ -252,4 +252,55 @@ describe("MobileConversationActions", () => {
     await fireEvent.click(confirm);
     await waitFor(() => expect(order).toEqual(["cancel", "remove", "leave"]));
   });
+
+  it("cancels an idle chat best-effort when the list emptied, without blocking deletion", async () => {
+    const order: string[] = [];
+    const onLeaveConversation = vi.fn(() => order.push("leave"));
+    const { component } = render(Harness, {
+      props: {
+        projects,
+        sessions: [conversation("w", "/wt")],
+        activeConversationId: "w",
+        activeSession: {
+          sessionId: "session-w",
+          isPrompting: false,
+          isSending: false,
+          cancel: async () => {
+            order.push("cancel");
+            throw new Error("agent not connected");
+          },
+        } as unknown as ACPSession,
+        removeWorktree: async () => {
+          order.push("remove");
+        },
+        onLeaveConversation,
+      },
+    });
+    registered().deleteWorktree("/wt");
+    const confirm = await screen.findByRole("button", { name: "Delete Worktree" });
+    component.failConversationList();
+    await fireEvent.click(confirm);
+    await waitFor(() => expect(order).toEqual(["cancel", "remove", "leave"]));
+  });
+
+  it("refuses to delete while another conversation is working in the worktree", async () => {
+    const removeWorktree = vi.fn(async () => {});
+    const busy = {
+      ...conversation("other", "/wt"),
+      liveStatus: { working: true, waitingForUser: false, unread: false },
+    } as ACPConversationSummary;
+    render(Harness, {
+      props: {
+        projects,
+        sessions: [conversation("w", "/wt"), busy],
+        activeConversationId: "w",
+        removeWorktree,
+        onLeaveConversation: () => {},
+      },
+    });
+    registered().deleteWorktree("/wt");
+    await fireEvent.click(await screen.findByRole("button", { name: "Delete Worktree" }));
+    expect(await screen.findByText(/still working in this worktree/)).toBeInTheDocument();
+    expect(removeWorktree).not.toHaveBeenCalled();
+  });
 });
