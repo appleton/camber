@@ -4,6 +4,7 @@
     AcpChatPane,
     AssistantTerminalView,
     getAssistantTerminalRepo,
+    MobileConversationActions,
     MobileSideBar,
     type ACPConversationSummary,
   } from "@camber/features/acp";
@@ -250,6 +251,13 @@
     showList();
   }
 
+  // /archive or /delete-worktree removed the open conversation: return to the
+  // list, as the list's own archive does, rather than leave a dead chat open.
+  function leaveConversation() {
+    if (view === "chat") goBack();
+    core.activeConversationId = null;
+  }
+
   // Open the file viewer page. Paths from tool events and chips may be
   // relative to the conversation's worktree; resolve them so the helper can
   // serve the file.
@@ -357,6 +365,12 @@
   // wholesale-replaces their transcript.
   registerResync?.((staleSessions) => resyncAfterReconnect(core, staleSessions));
 </script>
+
+<MobileConversationActions
+  activeConversationId={core.activeConversationId}
+  {activeSession}
+  onLeaveConversation={leaveConversation}
+/>
 
 <div class="mobile-app">
   <MobilePageStack page={view} depth={VIEW_DEPTH[view]}>

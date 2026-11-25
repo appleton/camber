@@ -9,6 +9,8 @@
     projects: ACPNavProject[];
     conversations: ACPNavConversation[];
     activeConversationId?: string | null;
+    collapsed?: boolean;
+    onCollapsedChange?: (collapsed: boolean) => void;
     expandedSubAgents?: string[];
     archiveSession?: (...args: unknown[]) => Promise<unknown>;
     onConversationRepo?: (repo: ReturnType<typeof getACPConversationRepo>) => void;
@@ -18,6 +20,8 @@
     projects,
     conversations,
     activeConversationId = null,
+    collapsed = false,
+    onCollapsedChange,
     expandedSubAgents = [],
     archiveSession,
     onConversationRepo,
@@ -35,11 +39,11 @@
     {onConversationRepo}
   >
     <DesktopSideBar
-      collapsed={false}
+      {collapsed}
       currentView="chat"
       currentWorkspaceFolders={[]}
       {activeConversationId}
-      onCollapsedChange={noop}
+      onCollapsedChange={onCollapsedChange ?? noop}
       onNewConversation={noop}
       onShowSettings={noop}
       onShowProjectSettings={noop}

@@ -358,7 +358,7 @@
   function archiveConversation(): boolean {
     const actions = getConversationActions();
     const conversationId = chatSession.conversationId;
-    if (!actions || !conversationId) return false;
+    if (!actions || !conversationId || !actions.canArchive(conversationId)) return false;
     if (!actions.archiveConversation(conversationId)) {
       rpc.showInfoMessage("This conversation can't be archived right now", InfoMessageType.error);
     }
@@ -410,15 +410,20 @@
       case AcpSlashCommand.secrets:
         setTimeout(() => handleCommand(AcpSlashCommand.secrets), 0);
         return true;
-      // Typed without the menu: only claim the command where it applies, so an
-      // agent's own command of the same name still goes through elsewhere.
+      // Typed without the menu: claim only the bare command, and only where it
+      // applies, so "/archive the old logs" or an agent's own command of the
+      // same name still reaches the agent.
       case AcpSlashCommand.archive:
-        return archiveConversation();
+        return isBareCommand(value) && archiveConversation();
       case AcpSlashCommand.deleteWorktree:
-        return deleteConversationWorktree();
+        return isBareCommand(value) && deleteConversationWorktree();
       default:
         return false;
     }
+  }
+
+  function isBareCommand(value: string): boolean {
+    return !/\s/.test(value.trim());
   }
 
   function slashCommandName(value: string): string | null {

@@ -104,21 +104,35 @@
       $search,
     ),
   );
-  const otherCommands = $derived(
-    chatSession.availableCommands.filter(
-      (command) => !isSkillCommand(command) && !(planIsLocal && command.name === "plan"),
-    ),
-  );
-  const visibleCommandEntries = $derived(visibleServerCommandEntries(otherCommands, $search));
-  // Archive and worktree deletion are sidebar flows, so they are only offered
-  // where a sidebar registered them (the desktop) and for a saved conversation.
+  // Archive and worktree deletion belong to the host's conversation list, so
+  // they are only offered where a host registered them and the conversation
+  // can take them right now.
   const conversationActions = $derived(getConversationActions());
-  const canArchive = $derived(!!conversationActions && !!chatSession.conversationId);
+  const canArchive = $derived(
+    !!conversationActions &&
+      !!chatSession.conversationId &&
+      conversationActions.canArchive(chatSession.conversationId),
+  );
   const conversationWorktree = $derived(
     conversationActions && chatSession.conversationId
       ? conversationActions.worktreeFor(chatSession.conversationId)
       : null,
   );
+  // Where Camber offers /archive or /delete-worktree, it owns that name: an
+  // agent command of the same name would submit as the same text.
+  const shadowedCommandNames = $derived(
+    new Set<string>([
+      ...(planIsLocal ? [LocalCommand.plan] : []),
+      ...(canArchive ? [LocalCommand.archive] : []),
+      ...(conversationWorktree ? [LocalCommand.deleteWorktree] : []),
+    ]),
+  );
+  const otherCommands = $derived(
+    chatSession.availableCommands.filter(
+      (command) => !isSkillCommand(command) && !shadowedCommandNames.has(command.name),
+    ),
+  );
+  const visibleCommandEntries = $derived(visibleServerCommandEntries(otherCommands, $search));
   const isCamberServer = $derived(selectedAgentServer(chatSession) === DEFAULT_AGENT_SERVER);
 
   // When the agent publishes its own "plan" command it shows up in the

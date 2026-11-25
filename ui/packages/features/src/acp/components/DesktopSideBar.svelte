@@ -34,7 +34,7 @@
   import { getACPGithubRepo } from "../features/GithubRepository.svelte";
   import { getACPProjectRepo } from "../features/ProjectRepository.svelte";
   import { getACPWorktreeRepo } from "../features/WorktreeRepository";
-  import { registerConversationActions } from "../conversationActions.svelte";
+  import { containingWorktree, registerConversationActions } from "../conversationActions.svelte";
   import { removeProjectFromApp } from "../features/removeProject";
   import type { ACPSession } from "../features/Session.svelte";
   import { workspacePathFitsWorkspaceFolders } from "../workspacePaths";
@@ -1645,28 +1645,37 @@
     deleteWorktreeTarget = { path: worktree.path, name: projectDisplayName(worktree) };
   }
 
+  function archivableSession(conversationId: string): ACPConversationSummary | undefined {
+    if (exitingConversationIds.has(conversationId)) return undefined;
+    return navSessions.find((candidate) => candidate.id === conversationId);
+  }
+
   // The chat composer's /archive and /delete-worktree run these same flows.
+  // The progress toasts (including the archive's undo) live in the sidebar, so
+  // it opens first if it was collapsed.
   onMount(() =>
     registerConversationActions({
+      canArchive: (conversationId) => archivableSession(conversationId) !== undefined,
       archiveConversation: (conversationId) => {
-        if (exitingConversationIds.has(conversationId)) return false;
-        const session = navSessions.find((candidate) => candidate.id === conversationId);
+        const session = archivableSession(conversationId);
         if (!session) return false;
+        if (collapsed) onCollapsedChange(false);
         handleArchiveSession(session);
         return true;
       },
       worktreeFor: (conversationId) => {
         const session = navSessions.find((candidate) => candidate.id === conversationId);
-        if (!session || exitingWorktreePaths.has(session.cwd)) return null;
-        const worktree = navProjects.find(
-          (project) => project.isWorktree && project.path === session.cwd,
-        );
-        if (!worktree || !canDeleteWorktree(worktree)) return null;
+        if (!session) return null;
+        const worktree = containingWorktree(navProjects, session.cwd);
+        if (!worktree || exitingWorktreePaths.has(worktree.path)) return null;
+        if (!canDeleteWorktree(worktree)) return null;
         return { path: worktree.path, name: projectDisplayName(worktree) };
       },
       deleteWorktree: (path) => {
         const worktree = navProjects.find((project) => project.isWorktree && project.path === path);
-        if (worktree && canDeleteWorktree(worktree)) requestDeleteWorktree(worktree);
+        if (!worktree || exitingWorktreePaths.has(path) || !canDeleteWorktree(worktree)) return;
+        if (collapsed) onCollapsedChange(false);
+        requestDeleteWorktree(worktree);
       },
     }),
   );

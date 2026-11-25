@@ -94,6 +94,7 @@ export { default as DesktopSettingsView } from "./components/DesktopSettingsView
 export { default as DesktopSideBar } from "./components/DesktopSideBar.svelte";
 export { default as AcpHandoffConfirmationProvider } from "./components/HandoffConfirmationProvider.svelte";
 export { default as IDESideBar } from "./components/IDESideBar.svelte";
+export { default as MobileConversationActions } from "./components/MobileConversationActions.svelte";
 export { default as MobileSideBar } from "./components/MobileSideBar.svelte";
 export { default as ProjectSettingsView } from "./components/ProjectSettingsView.svelte";
 export { default as SessionEventsRenderer } from "./components/SessionEventsRenderer.svelte";
