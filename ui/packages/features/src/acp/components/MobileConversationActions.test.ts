@@ -224,13 +224,25 @@ describe("MobileConversationActions", () => {
     expect(onLeaveConversation).not.toHaveBeenCalled();
   });
 
-  it("leaves the chat that asked even if the list emptied while the dialog was open", async () => {
-    const onLeaveConversation = vi.fn();
+  it("stops and leaves the chat that asked even if the list emptied while the dialog was open", async () => {
+    const order: string[] = [];
+    const onLeaveConversation = vi.fn(() => order.push("leave"));
     const { component } = render(Harness, {
       props: {
         projects,
         sessions: [conversation("w", "/wt")],
         activeConversationId: "w",
+        activeSession: {
+          sessionId: "session-w",
+          isPrompting: true,
+          isSending: false,
+          cancel: async () => {
+            order.push("cancel");
+          },
+        } as unknown as ACPSession,
+        removeWorktree: async () => {
+          order.push("remove");
+        },
         onLeaveConversation,
       },
     });
@@ -238,6 +250,6 @@ describe("MobileConversationActions", () => {
     const confirm = await screen.findByRole("button", { name: "Delete Worktree" });
     component.failConversationList();
     await fireEvent.click(confirm);
-    await waitFor(() => expect(onLeaveConversation).toHaveBeenCalled());
+    await waitFor(() => expect(order).toEqual(["cancel", "remove", "leave"]));
   });
 });

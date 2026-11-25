@@ -52,7 +52,6 @@
     clearWorktreeBusy: () => {},
   };
   _setACPProjectContextForTests(projectRepo as unknown as ACPProjectRepository);
-  // `listFailsAfterOpen` empties the list as a failed background refresh does.
   const conversationRepo = {
     sessions,
     refreshState: { status: "success", value: sessions } as unknown,
@@ -61,6 +60,7 @@
   };
   _setACPConversationContextForTests(conversationRepo as unknown as ACPConversationRepository);
 
+  // Empties the list as a failed background refresh does.
   export function failConversationList() {
     conversationRepo.sessions = [];
     conversationRepo.refreshState = { status: "failure", error: new Error("offline") };

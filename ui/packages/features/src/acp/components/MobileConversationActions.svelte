@@ -95,6 +95,21 @@
     if (live.isPrompting || live.isSending || session.liveStatus?.working) await live.cancel();
   }
 
+  // Stop the open conversation's turn if it runs in the worktree. Its summary
+  // can be missing (a failed refresh empties the list); then whether a turn
+  // started elsewhere is running is unknown, so cancel anyway: the
+  // conversation is about to be removed with the worktree.
+  async function cancelTurnInWorktree(origin: string | null, inWorktree: Set<string>) {
+    const current = activeConversationId;
+    const live = activeSession;
+    if (!current || !live || (current !== origin && !inWorktree.has(current))) return;
+    const listed = summary(current);
+    if (listed && live.sessionId !== listed.sessionId) return;
+    if (live.isPrompting || live.isSending || !listed || listed.liveStatus?.working) {
+      await live.cancel();
+    }
+  }
+
   // Errors propagate so the confirmation dialog stays open with the message.
   async function removeWorktree(path: string, origin: string | null) {
     const sessions = dedupeConversationSummaries(conversations.sessions);
@@ -110,10 +125,7 @@
     const inWorktree = new Set(
       sessions.filter((session) => session.cwd === path).map((session) => session.id),
     );
-    const running = sessions.find(
-      (session) => session.id === activeConversationId && session.cwd === path,
-    );
-    if (running) await cancelRunningTurn(running);
+    await cancelTurnInWorktree(origin, inWorktree);
     try {
       projects.setWorktreeBusy(path, "tearing_down");
       await worktrees.removeWorktree(path, (kind) => projects.setWorktreeBusy(path, kind));
