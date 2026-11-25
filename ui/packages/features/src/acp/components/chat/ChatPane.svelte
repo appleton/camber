@@ -49,18 +49,7 @@
     acpWorkspaceProjectFolders,
     acpWorkspaceFolders,
   } from "../../workspaceScope";
-  import {
-    DEFAULT_AGENT_SERVER,
-    LOCAL_AGENT_SERVER,
-    resolveAgentServers,
-  } from "../../agentServers";
-  import { getLocalInferenceRepo } from "../../features/LocalInferenceRepository.svelte";
-  import { currentModelConfigValue } from "../../localInferenceModelOptions";
-  import {
-    isExternalLocalInferenceRuntime,
-    localRuntimeResidency,
-    turnHasAgentOutput,
-  } from "../../localInferenceRuntime";
+  import { DEFAULT_AGENT_SERVER, resolveAgentServers } from "../../agentServers";
   import Icon from "@camber/components/icon";
   import { InfoMessageType } from "@camber/rpc";
   import type { ACPAuthMethodTerminal } from "../../authMethods";
@@ -94,7 +83,6 @@
     onNewConversation: (cwd?: string) => string | null | void | Promise<string | null | void>;
     onAddProject: () => Promise<void> | void;
     onShowAgentSettings: () => void;
-    onShowModelSettings?: () => void;
     editorSurface?: boolean;
     promptBanners?: Snippet;
     promptCommandItems?: Snippet;
@@ -212,62 +200,6 @@
     const server = chatSession.sessionAgentServer ?? chatSession.activeAgentServer;
     return server ? agentBrandTint(registry, server) : undefined;
   });
-  // While a local-agent turn is running but the sidecar does not yet have the
-  // session's model resident in memory, the wait is the model load (sidecar
-  // spawn included) — label the indicator accordingly instead of the generic
-  // "Working...". The context is provided app-wide; the fallback keeps hosts
-  // without it on the default label rather than crashing.
-  function optionalLocalInferenceRepo(): ReturnType<typeof getLocalInferenceRepo> | null {
-    try {
-      return getLocalInferenceRepo();
-    } catch {
-      return null;
-    }
-  }
-  const localInference = optionalLocalInferenceRepo();
-  // Residency (via localInference didChange pushes) starts the label but must
-  // not end it: the push lands when the weights are resident, yet nothing is
-  // on screen until prefill finishes seconds later, and a missed or
-  // mismatched push would pin the label for the whole turn. So a mismatch
-  // latches the label and only the first agent output releases it — the label
-  // changes exactly when something visible changes. A warm model never
-  // mismatches, so warm turns still go straight to "Working...".
-  let modelLoadLatched = $state(false);
-  let isModelLoadObserved = $derived.by(() => {
-    if (!localInference || !isTurnActive) return false;
-    if ((chatSession.sessionAgentServer ?? chatSession.activeAgentServer) !== LOCAL_AGENT_SERVER) {
-      return false;
-    }
-    if (turnHasAgentOutput(chatSession.events)) return false;
-    // The helper cannot observe model residency for an externally managed
-    // runtime, so it cannot distinguish loading from generation there.
-    if (isExternalLocalInferenceRuntime(localInference.state)) return false;
-    const residency = localRuntimeResidency(localInference.state);
-    return !(
-      residency &&
-      localModelIdsMatch(residency.modelId, currentModelConfigValue(chatSession.configOptions))
-    );
-  });
-  $effect(() => {
-    if (!isTurnActive || turnHasAgentOutput(chatSession.events)) {
-      modelLoadLatched = false;
-    } else if (isModelLoadObserved) {
-      modelLoadLatched = true;
-    }
-  });
-  let streamingIndicatorLabel = $derived(
-    isModelLoadObserved || modelLoadLatched ? "Loading model..." : undefined,
-  );
-  // The selected value and loadedModelId come from the same catalog and are
-  // normally identical; the last-segment fallback tolerates owner/name vs
-  // bare-name mismatches. An unknown selection counts as matched — better to
-  // show "Working..." than to claim a load that may not be happening.
-  function localModelIdsMatch(loaded: string, selected: string | null): boolean {
-    if (!selected) return true;
-    if (loaded === selected) return true;
-    return loaded.split("/").at(-1) === selected.split("/").at(-1);
-  }
-
   // Drop the detached-scroll flag when the conversation changes: it belongs to
   // the previous transcript, and the new one renders (and is scrolled to its
   // bottom) before any scroll event would clear it — without this the
@@ -469,12 +401,10 @@
   let claudeSetupIconUrl = $derived(agentIconUrl(registry, "claude-acp"));
   let codexSetupIconUrl = $derived(agentIconUrl(registry, "codex-acp"));
   // Stop nudging users who have already set agents up: hide the "set up another agent"
-  // action once more than one agent beyond the built-in Camber and Camber local
-  // agents is configured.
+  // action once more than one agent beyond the built-in Camber agent is
+  // configured.
   let configuredExtraAgentCount = $derived(
-    acp.agents.agentServerNames.filter(
-      (name) => name !== DEFAULT_AGENT_SERVER && name !== LOCAL_AGENT_SERVER,
-    ).length,
+    acp.agents.agentServerNames.filter((name) => name !== DEFAULT_AGENT_SERVER).length,
   );
   let showSetupAgentAction = $derived(configuredExtraAgentCount <= 1);
   // A pending conversation submits through its selected agent. Until that agent
@@ -1483,7 +1413,6 @@
                     <StreamingIndicator
                       iconUrl={streamingIndicatorIconUrl}
                       tint={streamingIndicatorTint}
-                      label={streamingIndicatorLabel}
                     />
                   </div>
                 {/if}

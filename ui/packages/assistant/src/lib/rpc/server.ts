@@ -11,7 +11,6 @@ import {
   type ACPSessionRepository,
   type ACPTransport,
   type ACPWorktreeRepository,
-  type LocalInferenceRepository,
 } from "@camber/features/acp";
 import type { ContextRepository } from "@camber/features/context";
 import type { ElicitationRepository } from "@camber/features/elicitation";
@@ -22,7 +21,6 @@ import {
   type ACPNavDidChangeParams,
   type JSONRPCErrorCode,
   type JSONRPCErrorData,
-  type LocalInferenceDidChangeParams,
 } from "@camber/helperapi/schemas";
 import type {
   ActiveFileContext,
@@ -76,7 +74,6 @@ export class WebviewRPCServer implements Assistant {
     readonly theme?: ThemeRepository,
     readonly acpProjectRepo?: ACPProjectRepository,
     readonly acpConversationRepo?: ACPConversationRepository,
-    readonly localInferenceRepo?: LocalInferenceRepository,
     readonly acpWorktreeRepo?: Pick<ACPWorktreeRepository, "closeProject">,
   ) {
     const handler = this.route.bind(this);
@@ -118,10 +115,6 @@ export class WebviewRPCServer implements Assistant {
   acpNavDidChange(params: ACPNavDidChangeParams): void {
     this.acpProjectRepo?.replaceProjects(params.state.projects ?? []);
     this.acpConversationRepo?.replaceConversations(params.state.conversations ?? []);
-  }
-
-  localInferenceDidChange(params: LocalInferenceDidChangeParams): void {
-    this.localInferenceRepo?.applyDidChange(params);
   }
 
   acpActiveAgentDidChange(params: {

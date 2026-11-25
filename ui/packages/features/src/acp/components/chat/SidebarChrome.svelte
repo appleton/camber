@@ -28,7 +28,6 @@
         section="agents"
         availableSections={SETTINGS_SECTIONS}
         sectionNav={false}
-        onShowConnectors={() => (view = "connectors")}
         onDone={() => (view = "conversations")}
       />
     </div>

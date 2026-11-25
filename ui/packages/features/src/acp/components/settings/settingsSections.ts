@@ -3,7 +3,6 @@ import type { IconName } from "@camber/components/icon";
 export type DesktopSettingsSection =
   | "preferences"
   | "shortcuts"
-  | "models"
   | "voice"
   | "connectors"
   | "github"
@@ -18,7 +17,6 @@ export type SettingsSection = "all" | DesktopSettingsSection;
 export const DESKTOP_SETTINGS_SECTIONS = [
   "preferences",
   "agents",
-  "models",
   "voice",
   "shortcuts",
   "github",
@@ -30,7 +28,6 @@ export const DESKTOP_SETTINGS_NAV_SECTIONS = [
   "preferences",
   "project-settings",
   "agents",
-  "models",
   "voice",
   "shortcuts",
   "github",
@@ -46,15 +43,10 @@ export const IDE_SETTINGS_SECTIONS = [
 export const SETTINGS_HEADINGS: Record<SettingsSection, { title: string; subtitle: string }> = {
   all: {
     title: "Settings",
-    subtitle:
-      "Configure preferences, local models, voice recognition, MCP connections, and ACP agents.",
+    subtitle: "Configure preferences, voice recognition, MCP connections, and ACP agents.",
   },
   preferences: { title: "General", subtitle: "Appearance and API settings." },
   shortcuts: { title: "Keyboard Shortcuts", subtitle: "Keyboard shortcuts for the app." },
-  models: {
-    title: "On-Device Models",
-    subtitle: "Install and choose local MLX models.",
-  },
   voice: {
     title: "Voice Recognition",
     subtitle: "Install and choose local Whisper models for dictation.",
@@ -79,7 +71,6 @@ export const SETTINGS_NAV_ITEMS: Record<
   preferences: { label: "General", icon: "gear" },
   "project-settings": { label: "Projects", icon: "folder" },
   shortcuts: { label: "Keyboard Shortcuts", icon: "keyboard" },
-  models: { label: "On-Device Models", icon: "on-device" },
   voice: { label: "Voice Recognition", icon: "microphone" },
   connectors: { label: "Connectors", icon: "mcp" },
   github: { label: "GitHub", icon: "github" },

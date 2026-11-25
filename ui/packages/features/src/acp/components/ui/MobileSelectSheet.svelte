@@ -12,8 +12,6 @@
     agentIcon?: {
       iconUrl?: string;
       class?: string;
-      overlayIconUrl?: string;
-      overlayClass?: string;
     };
     /** Indent one level (e.g. a worktree under its project). */
     indent?: boolean;
@@ -157,8 +155,6 @@
                   iconUrl={option.agentIcon.iconUrl}
                   size={18}
                   class={option.agentIcon.class ?? ""}
-                  overlayIconUrl={option.agentIcon.overlayIconUrl}
-                  overlayClass={option.agentIcon.overlayClass}
                 />
               {:else if option.icon}
                 <Icon

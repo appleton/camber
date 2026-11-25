@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_AGENT_SERVER,
   LEGACY_DEFAULT_AGENT_SERVER,
-  LOCAL_AGENT_SERVER,
   agentServerNames,
   normalizeAgentServerName,
   resolveAgentServers,
@@ -22,7 +21,6 @@ describe("resolveAgentServers", () => {
       command: "",
       args: undefined,
     });
-    expect(servers).not.toHaveProperty(LOCAL_AGENT_SERVER);
     expect(servers.echo).toEqual({
       command: "node",
       args: ["echo-acp.mjs"],
@@ -80,17 +78,5 @@ describe("resolveAgentServers", () => {
     expect(agentServerNames({ [LEGACY_DEFAULT_AGENT_SERVER]: { command: "pool" } })).toEqual([
       DEFAULT_AGENT_SERVER,
     ]);
-  });
-
-  it("preserves the Desktop-managed local agent when the helper advertises it", () => {
-    const servers = resolveAgentServers({
-      [LOCAL_AGENT_SERVER]: { type: "local" },
-    });
-
-    expect(servers[LOCAL_AGENT_SERVER]).toEqual({
-      type: "local",
-      command: "",
-      args: undefined,
-    });
   });
 });

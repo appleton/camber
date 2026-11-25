@@ -52,13 +52,6 @@ type RemoteTerminalAttachResult = {
 
 export type { WsRpcStatus as ConnectionStatus, StaleSession };
 
-// Helper notifications whose surfaces the mobile shell deliberately does not
-// render. They still fan out to this client (the hub broadcasts everything),
-// but forwarding them would only feed webview stores nothing reads. Remove an
-// entry when mobile grows that surface; notifications NOT listed here forward
-// by default via the shared table.
-const UNRENDERED_ON_MOBILE = new Set(["camber/localInference/didChange"]);
-
 export interface RemoteHostCallbacks {
   onStatusChange?: (status: WsRpcStatus) => void;
   // A file open requested by the shared UI (file chips, tool cards, markdown
@@ -593,8 +586,7 @@ export class RemoteHost {
     // Mobile-specific handling first (the live-session seq gate and terminal
     // output dedup); everything else routes through the shared helper
     // notification table so a notification added there reaches this surface
-    // without touching this file, unless its surface is deliberately not
-    // rendered on mobile (see UNRENDERED_ON_MOBILE).
+    // without touching this file.
     switch (method) {
       case "camber/jsonrpc/notify": {
         const admitted = this.#gate.admit(params);
@@ -630,7 +622,6 @@ export class RemoteHost {
         return;
       }
     }
-    if (UNRENDERED_ON_MOBILE.has(method)) return;
     const command = webviewCommandForHelperNotification(method);
     if (!command) {
       console.debug("remoteHost: unhandled helper notification", method);

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ACPConversationSummary } from "../../navTypes";
-  import { DEFAULT_AGENT_SERVER, LOCAL_AGENT_SERVER } from "../../agentServers";
+  import { DEFAULT_AGENT_SERVER } from "../../agentServers";
   import Icon from "@camber/components/icon";
   import {
     hasAttentionDescendant,
@@ -108,7 +108,7 @@
   }
 
   function desktopAgentIconSize(agentServer: string): number {
-    return agentServer === DEFAULT_AGENT_SERVER || agentServer === LOCAL_AGENT_SERVER ? 14 : 13;
+    return agentServer === DEFAULT_AGENT_SERVER ? 14 : 13;
   }
 </script>
 

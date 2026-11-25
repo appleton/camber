@@ -4,7 +4,6 @@ export type DesktopView =
   | "agents"
   | "settings"
   | "shortcuts"
-  | "models"
   | "voice"
   | "connectors"
   | "github"
@@ -17,7 +16,6 @@ const SETTINGS_VIEWS: readonly SettingsView[] = [
   "agents",
   "settings",
   "shortcuts",
-  "models",
   "voice",
   "connectors",
   "github",
@@ -63,10 +61,6 @@ export class DesktopViewState {
   showShortcuts = () => {
     this.#sidebarCollapsed = false;
     this.#view = "shortcuts";
-  };
-  showModels = () => {
-    this.#sidebarCollapsed = false;
-    this.#view = "models";
   };
   showVoice = () => {
     this.#sidebarCollapsed = false;
@@ -122,7 +116,6 @@ export class DesktopViewState {
     return (
       this.#view === "settings" ||
       this.#view === "shortcuts" ||
-      this.#view === "models" ||
       this.#view === "voice" ||
       this.#view === "github" ||
       this.#view === "agents" ||

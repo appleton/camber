@@ -494,67 +494,6 @@ describe("PromptConfigControls native menu", () => {
     ]);
   });
 
-  it("carries local-model warmth as tooltips on model rows", async () => {
-    const { repo } = makeRepo({
-      agentServer: "local",
-      agentServerNames: ["local"],
-      configOptions: [
-        {
-          id: "model",
-          name: "Model",
-          type: "select",
-          currentValue: "org/model-a",
-          options: [
-            { value: "org/model-a", name: "Model A" },
-            { value: "org/model-b", name: "Model B" },
-          ],
-        } as SessionConfigOption,
-      ],
-    });
-    const localInference = {
-      state: {
-        runtime: {
-          status: "running",
-          loadedModelId: "org/model-a",
-          loadedMemoryBytes: 20 * 1024 ** 3,
-          lastActivityUnixMs: Date.now() - 30_000,
-          idleUnloadSeconds: 0,
-        },
-        catalog: [{ id: "org/model-a", name: "Model A", downloaded: true }],
-      },
-      refreshIfStale: vi.fn().mockResolvedValue(undefined),
-    };
-    render(Harness, { props: { repo, localInference } });
-
-    await fireEvent.click(trigger());
-
-    expect(lastSpec()).toEqual([
-      { kind: "separator", label: "Camber Local models" },
-      {
-        kind: "action",
-        id: "model:org/model-a",
-        label: "Model A",
-        sublabel: undefined,
-        icon: undefined,
-        checked: true,
-        toolTip: "Loaded in memory (20 GB) · last prompt just now",
-        star: { starred: false },
-        starGroup: "opt:model",
-      },
-      {
-        kind: "action",
-        id: "model:org/model-b",
-        label: "Model B",
-        sublabel: undefined,
-        icon: undefined,
-        checked: false,
-        toolTip: "Not loaded — first prompt loads the model",
-        star: { starred: false },
-        starGroup: "opt:model",
-      },
-    ]);
-  });
-
   it("dispatches a model selection to setConfigOption", async () => {
     const { repo, session } = makeRepo({
       configOptions: [modelOption(), fastOption(), effortOption()],

@@ -2,7 +2,6 @@ import type {
   ACPElicitationOutput,
   ACPElicitationParams,
   ACPNavDidChangeParams,
-  LocalInferenceDidChangeParams,
 } from "@camber/helperapi/schemas";
 import type { Client, Error, Messages, Responses } from "./generics";
 import type {
@@ -55,7 +54,6 @@ export interface Assistant {
   togglePlanMode(): void;
   acpAgentServerDidExit(params: { agentServer: string; error?: string }): void;
   acpNavDidChange(params: ACPNavDidChangeParams): void;
-  localInferenceDidChange(params: LocalInferenceDidChangeParams): void;
   /** The agent of the most-recently-active ACP chat (so the sidebar can reflect it). */
   acpActiveAgentDidChange(params: {
     agentServer: string | null;
@@ -127,7 +125,6 @@ export const HELPER_NOTIFICATION_WEBVIEW_COMMANDS = {
   // The agent server store changed (any surface, or a CLI action) — the
   // webview re-lists it so agent pickers and settings stay current.
   "camber/acpNav/agentServersDidChange": "acpAgentServersDidChange",
-  "camber/localInference/didChange": "localInferenceDidChange",
 } as const satisfies Record<string, keyof Assistant>;
 
 export function webviewCommandForHelperNotification(method: string): keyof Assistant | undefined {

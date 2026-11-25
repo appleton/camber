@@ -9,7 +9,6 @@ import { failure, isSuccess, loading, success, waiting } from "@camber/lib/async
 import { withClaudeSessionFeatures } from "../../claudePromptSuggestions";
 import { normalizeACPError } from "../../errors";
 import { appState, appStateUpdates } from "../../hostAdapter";
-import { mergeLocalInferenceModelConfigOptionDefinitionsForAgent } from "../../localInferenceModelOptions";
 import {
   buildSessionInfo,
   mergeSeedSessionInfo,
@@ -105,7 +104,6 @@ export class ACPSessionLoader {
         throw new Error(`Agent server "${agentServer}" does not support loading sessions`);
       }
 
-      const localModelDefinitions = this.localModelDefinitions();
       const res = await this.loadSessionWithFallbacks(
         gen,
         conn,
@@ -122,11 +120,7 @@ export class ACPSessionLoader {
       s.sessionInfo = s.replaySessionInfo;
       s.publishTranscript();
       const reportedConfigOptions = res.configOptions ?? [];
-      s.configOptions = mergeLocalInferenceModelConfigOptionDefinitionsForAgent(
-        agentServer,
-        reportedConfigOptions,
-        localModelDefinitions,
-      );
+      s.configOptions = reportedConfigOptions;
       s.availableCommands = s.env.agents.cachedAvailableCommands(agentServer);
       s.modes = res.modes ?? null;
       s.pendingConfigOptions = {};
@@ -291,17 +285,12 @@ export class ACPSessionLoader {
         // below. Capturing after resume settles (rather than before the call)
         // keeps a user config change that landed mid-resume as the winner.
         const { configSelections, modeSelection } = this.captureConfigSelections();
-        const localModelDefinitions = this.localModelDefinitions();
 
         let configChanged = false;
         let reportedConfigOptions: SessionConfigOption[] | undefined;
         if (res.configOptions !== undefined) {
           reportedConfigOptions = res.configOptions ?? [];
-          s.configOptions = mergeLocalInferenceModelConfigOptionDefinitionsForAgent(
-            agentServer,
-            reportedConfigOptions,
-            localModelDefinitions,
-          );
+          s.configOptions = reportedConfigOptions;
           s.pendingConfigOptions = {};
           configChanged = true;
         }
@@ -410,12 +399,6 @@ export class ACPSessionLoader {
         reportedConfigOptions,
         selections,
         isCurrent: () => gen === s.generation && s.sessionId !== null,
-        reconcileConfigOptions: (reported, fallback) =>
-          mergeLocalInferenceModelConfigOptionDefinitionsForAgent(
-            s.agentServer,
-            reported,
-            fallback,
-          ),
         onApplied: (configOptions) => {
           s.configOptions = configOptions;
           s.modes = syncModeFromConfigOptions(s.modes, s.configOptions);
@@ -478,13 +461,8 @@ export class ACPSessionLoader {
       });
       if (gen !== s.generation) return false;
       const { configSelections, modeSelection } = this.captureConfigSelections();
-      const localModelDefinitions = this.localModelDefinitions();
       const reportedConfigOptions = res.configOptions ?? [];
-      s.configOptions = mergeLocalInferenceModelConfigOptionDefinitionsForAgent(
-        agentServer,
-        reportedConfigOptions,
-        localModelDefinitions,
-      );
+      s.configOptions = reportedConfigOptions;
       s.availableCommands = s.env.agents.cachedAvailableCommands(agentServer);
       s.modes = res.modes ?? null;
       await this.restoreSessionConfigSelections(
@@ -537,16 +515,6 @@ export class ACPSessionLoader {
     return { configSelections, modeSelection: modeConfig ? null : s.modes?.currentModeId };
   }
 
-  private localModelDefinitions(): SessionConfigOption[] {
-    const s = this.session;
-    const cached = s.env.agents.cachedConfigFor(s.agentServer)?.configOptions ?? [];
-    return mergeLocalInferenceModelConfigOptionDefinitionsForAgent(
-      s.agentServer,
-      s.configOptions,
-      cached,
-    );
-  }
-
   private async restoreSessionConfigSelections(
     gen: number,
     conn: ClientSideConnection,
@@ -572,8 +540,6 @@ export class ACPSessionLoader {
       reportedConfigOptions,
       selections: configSelections,
       isCurrent: () => gen === s.generation && s.sessionId !== null,
-      reconcileConfigOptions: (reported, fallback) =>
-        mergeLocalInferenceModelConfigOptionDefinitionsForAgent(s.agentServer, reported, fallback),
       onApplied: (configOptions) => {
         s.configOptions = mergeConfigSelections(configOptions, configSelections);
         s.modes = syncModeFromConfigOptions(s.modes, s.configOptions);

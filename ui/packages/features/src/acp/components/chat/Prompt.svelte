@@ -13,10 +13,8 @@
   import { getACPConversationRepo } from "../../features/ConversationRepository.svelte";
   import { getACPAgentRegistryRepo } from "../../features/AgentRegistryRepository.svelte";
   import { appState, resolveSessionCwd } from "../../hostAdapter";
-  import { DEFAULT_AGENT_SERVER, LOCAL_AGENT_SERVER } from "../../agentServers";
+  import { DEFAULT_AGENT_SERVER } from "../../agentServers";
   import { enableClaudeSessionFeatures } from "../../claudePromptSuggestions";
-  import { getLocalInferenceRepo } from "../../features/LocalInferenceRepository.svelte";
-  import { localInferenceModelMissing } from "../../localInferenceModelOptions";
   import { agentName as getAgentName, isClaudeAgent } from "./menus/config/agentConfig";
   import CommandMenu from "./menus/command/CommandMenu.svelte";
   import SkillsMenu from "./menus/command/SkillsMenu.svelte";
@@ -124,30 +122,9 @@
     chatSession.sessionAgentServer ?? chatSession.activeAgentServer ?? DEFAULT_AGENT_SERVER,
   );
   const currentAgentName = $derived(getAgentName(registry, currentAgentServer));
-  // The local agent with no downloaded model has nothing to serve a prompt
-  // with, so the composer locks rather than letting a send fail opaquely. The
-  // config controls in the footer stay interactive — the user can still switch
-  // agents or pick a model once one lands (the menu says "No model
-  // available"), and the composer unlocks reactively when either happens. The
-  // context is app-wide but optional; hosts without it never lock.
-  function optionalLocalInferenceRepo(): ReturnType<typeof getLocalInferenceRepo> | null {
-    try {
-      return getLocalInferenceRepo();
-    } catch {
-      return null;
-    }
-  }
-  const localInference = optionalLocalInferenceRepo();
-  const localModelMissing = $derived(
-    currentAgentServer === LOCAL_AGENT_SERVER &&
-      !!localInference &&
-      localInferenceModelMissing(localInference.state),
-  );
-  const resolvedDisabled = $derived(disabled || localModelMissing);
   const resolvedSubmitDisabled = $derived(
     Boolean(
       submitDisabled ||
-        localModelMissing ||
         chatSession.isSessionSetupPending ||
         (chatSession.isPrompting && !chatSession.canEnqueuePrompt) ||
         // A turn started on another surface is running: sending would be
@@ -657,13 +634,13 @@
 <Prompt.Root
   onInterrupt={isTurnActive ? onInterrupt : undefined}
   value={draftPrompt}
-  suggestion={isTurnActive || resolvedDisabled ? null : chatSession.promptSuggestion?.text}
+  suggestion={isTurnActive || disabled ? null : chatSession.promptSuggestion?.text}
   onSuggestionAccepted={() => chatSession.clearPromptSuggestion()}
   onValueChange={handleDraftPromptChange}
   onSubmit={submit}
   onSubmitNow={submitNow}
   submitDisabled={resolvedSubmitDisabled}
-  disabled={resolvedDisabled}
+  {disabled}
   bind:this={prompt}
   {...rest}
 >
@@ -745,11 +722,7 @@
         <Prompt.Form.Field.Editor.Root id="prompt-editor">
           <Prompt.Form.Field.Editor.Suggestion />
           <Prompt.Form.Field.Editor.Placeholder>
-            {#if localModelMissing}
-              No model available
-            {:else}
-              Ask {currentAgentName} something...
-            {/if}
+            Ask {currentAgentName} something...
           </Prompt.Form.Field.Editor.Placeholder>
         </Prompt.Form.Field.Editor.Root>
       </Prompt.Form.Field.Root>
@@ -798,7 +771,7 @@
             </div>
           {/if}
           <div class="ml-1 flex shrink-0 items-center gap-1">
-            <SpeechButton disabled={resolvedDisabled} />
+            <SpeechButton {disabled} />
             {#if isTurnActive}
               {#if chatSession.canEnqueuePrompt && hasPromptContent}
                 <ActivePromptSubmit

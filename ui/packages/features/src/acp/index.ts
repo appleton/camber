@@ -1,4 +1,4 @@
-export { DEFAULT_AGENT_SERVER, LOCAL_AGENT_SERVER, normalizeAgentServerName } from "./agentServers";
+export { DEFAULT_AGENT_SERVER, normalizeAgentServerName } from "./agentServers";
 export {
   ASSISTANT_CONFIG_DISPLAY_PATH,
   canOpenAssistantConfigFile,
@@ -196,16 +196,6 @@ export {
   setACPLocalHistoryContext,
 } from "./features/LocalHistoryRepository.svelte";
 export type { ACPLocalHistoryRepository } from "./features/LocalHistoryRepository.svelte";
-export {
-  LocalInferenceAgentSync,
-  type LocalInferenceAgentSyncSessions,
-} from "./features/LocalInferenceAgentSync";
-export {
-  LocalInferenceRepository,
-  getLocalInferenceContext,
-  getLocalInferenceRepo,
-  setLocalInferenceContext,
-} from "./features/LocalInferenceRepository.svelte";
 export {
   getACPMCPSettingsRepo,
   setACPMCPSettingsContext,

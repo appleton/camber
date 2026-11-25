@@ -7,7 +7,6 @@ import {
   agentName,
   agentPickerIconProps,
   agentPickerIconUrl,
-  agentPickerOverlayIconUrl,
   agentServerOptions,
   isClaudeAgent,
   selectedAgentServer,
@@ -53,7 +52,6 @@ describe("agent config menu helpers", () => {
     const agents = registry({ codex: "Codex CLI" });
 
     expect(agentName(agents, "poolside")).toBe("Camber");
-    expect(agentName(agents, "local")).toBe("Camber Local");
     expect(agentName(agents, "codex")).toBe("Codex CLI");
     expect(agentName(agents, "unknown")).toBe("unknown");
   });
@@ -65,29 +63,12 @@ describe("agent config menu helpers", () => {
     });
 
     expect(agentPickerIconProps(agents, "poolside")).toEqual({ class: "text-psx-vibrant" });
-    expect(agentPickerIconProps(agents, "local")).toMatchObject({
-      class: "text-psx-vibrant",
-      overlayClass: "text-psx-foreground-tertiary",
-    });
     expect(agentPickerIconProps(agents, "claude-acp")).toEqual({ class: "text-[#d97757]" });
     expect(agentPickerIconProps(agents, "aliasedClaude")).toEqual({
       class: "text-[#d97757]",
     });
     expect(agentPickerIconProps(agents, "codex")).toEqual({ class: "" });
-    expect(agentPickerIconUrl(agents, "local")).not.toBe(agentIconUrl(agents, "local"));
-  });
-
-  it("exposes the local agent's badge overlay for native menu rasterization", () => {
-    const agents = registry({ codex: { id: "codex-acp", name: "Codex" } });
-
-    // The same overlay the DOM picker stacks over the roundel, so the native
-    // menu composites an identical icon.
-    expect(agentPickerOverlayIconUrl("local")).toBe(
-      agentPickerIconProps(agents, "local").overlayIconUrl,
-    );
-    expect(agentPickerOverlayIconUrl("local")).toMatch(/^data:image\/svg\+xml,/);
-    expect(agentPickerOverlayIconUrl("poolside")).toBeUndefined();
-    expect(agentPickerOverlayIconUrl("codex")).toBeUndefined();
+    expect(agentPickerIconUrl(agents, "codex")).toBe(agentIconUrl(agents, "codex"));
   });
 
   it("identifies Claude by server key or registry agent id", () => {

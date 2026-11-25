@@ -1,12 +1,8 @@
-import { DEFAULT_AGENT_SERVER, LOCAL_AGENT_SERVER } from "../../../../agentServers";
+import { DEFAULT_AGENT_SERVER } from "../../../../agentServers";
 import type { AcpAgentRegistryRepository } from "../../../../features/AgentRegistryRepository.svelte";
 import type { ACPChatSessionScope } from "../../../../features/ChatSessionScope.svelte";
 import type { ACPSessionRepository } from "../../../../features/SessionRepository.svelte";
-import {
-  agentServerIconUrl,
-  LOCAL_AGENT_ROUNDEL_ICON_URL,
-  LOCAL_AGENT_SYSTEM_ICON_URL,
-} from "../../../../localAgentIcon";
+import { agentServerIconUrl } from "../../../../localAgentIcon";
 
 export function agentServerOptions(repo: ACPSessionRepository): string[] {
   return repo.agents.agentServerNames.length > 0
@@ -21,9 +17,6 @@ export function selectedAgentServer(scope: ACPChatSessionScope): string {
 export function agentName(registry: AcpAgentRegistryRepository, agentServer: string): string {
   if (agentServer === DEFAULT_AGENT_SERVER) {
     return "Camber";
-  }
-  if (agentServer === LOCAL_AGENT_SERVER) {
-    return "Camber Local";
   }
   return registry.getAgent(agentServer)?.name ?? agentServer;
 }
@@ -41,17 +34,7 @@ export function agentPickerIconUrl(
   registry: AcpAgentRegistryRepository,
   agentServer: string,
 ): string | undefined {
-  return agentServer === LOCAL_AGENT_SERVER
-    ? LOCAL_AGENT_ROUNDEL_ICON_URL
-    : agentIconUrl(registry, agentServer);
-}
-
-// The local agent's picker icon stacks a second mask — the "system" badge in
-// the roundel's notch — over agentPickerIconUrl. Native menus rasterize both
-// silhouettes together, so the overlay travels beside the base URL; mirrors
-// agentPickerIconProps' overlayIconUrl.
-export function agentPickerOverlayIconUrl(agentServer: string): string | undefined {
-  return agentServer === LOCAL_AGENT_SERVER ? LOCAL_AGENT_SYSTEM_ICON_URL : undefined;
+  return agentIconUrl(registry, agentServer);
 }
 
 // Matched by both the agent-server key and the registry agent id, so aliased
@@ -63,14 +46,7 @@ export function isClaudeAgent(registry: AcpAgentRegistryRepository, agentServer:
 export function agentPickerIconProps(
   registry: AcpAgentRegistryRepository,
   agentServer: string,
-): { class: string; overlayIconUrl?: string; overlayClass?: string } {
-  if (agentServer === LOCAL_AGENT_SERVER) {
-    return {
-      class: "text-psx-vibrant",
-      overlayIconUrl: LOCAL_AGENT_SYSTEM_ICON_URL,
-      overlayClass: "text-psx-foreground-tertiary",
-    };
-  }
+): { class: string } {
   if (agentServer === DEFAULT_AGENT_SERVER) {
     return { class: "text-psx-vibrant" };
   }
@@ -89,7 +65,7 @@ export function agentBrandTint(
   registry: AcpAgentRegistryRepository,
   agentServer: string,
 ): string | undefined {
-  if (agentServer === LOCAL_AGENT_SERVER || agentServer === DEFAULT_AGENT_SERVER) {
+  if (agentServer === DEFAULT_AGENT_SERVER) {
     return "var(--psx-vibrant)";
   }
   if (isClaudeAgent(registry, agentServer)) {

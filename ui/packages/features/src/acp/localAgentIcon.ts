@@ -1,9 +1,8 @@
 import { registryIconUrl, type ACPRegistryAgent } from "./agentRegistry";
-import { DEFAULT_AGENT_SERVER, LOCAL_AGENT_SERVER } from "./agentServers";
+import { DEFAULT_AGENT_SERVER } from "./agentServers";
 
 // The filled Camber brand mark, copied verbatim from the app icon
-// self-contained SVG so the first-party Camber agent (and its local, badged
-// variant) get an icon URL the same way registry agents do, and every surface
+// self-contained SVG so the first-party Camber agent gets an icon URL the same way registry agents do, and every surface
 // that masks an agent iconUrl renders it without special-casing. Consumed as a
 // CSS mask, so only the alpha matters, not the fill.
 const CAMBER_BRAND_PATH =
@@ -27,10 +26,9 @@ const CAMBER_ROUNDEL_TRANSFORM = `translate(8 8) scale(${CAMBER_ROUNDEL_SCALE}) 
 // thin same-colour stroke and shrunk via the shared transform. When maskId is
 // given the roundel is wrapped in an untransformed group carrying the mask, so
 // the badge knockout stays fixed at the corner while only the roundel scales.
-function brandRoundel(maskId?: string): string {
-  const maskAttr = maskId ? ` mask="url(#${maskId})"` : "";
+function brandRoundel(): string {
   return (
-    `<g${maskAttr}><g transform="${CAMBER_ROUNDEL_TRANSFORM}">` +
+    `<g><g transform="${CAMBER_ROUNDEL_TRANSFORM}">` +
     `<path d="${CAMBER_BRAND_PATH}" fill="#000" fill-rule="evenodd" clip-rule="evenodd" stroke="#000" stroke-width="${CAMBER_ROUNDEL_STROKE_WIDTH}" stroke-linejoin="round" stroke-linecap="round"/>` +
     "</g></g>"
   );
@@ -44,54 +42,10 @@ const CAMBER_ROUNDEL_ICON_SVG = [
 
 export const CAMBER_ROUNDEL_ICON_URL = `data:image/svg+xml,${encodeURIComponent(CAMBER_ROUNDEL_ICON_SVG)}`;
 
-const SYSTEM_PATH =
-  "M14 14H12.5H12V15H4V14H3.50001H2.00001V12.5V4.90001L2.00001 4.85217C1.99996 4.47359 1.99992 4.10491 2.02543 3.79267C2.05345 3.44978 2.11955 3.04518 2.32699 2.63804C2.61461 2.07356 3.07356 1.61461 3.63804 1.32699C4.04518 1.11955 4.44978 1.05345 4.79267 1.02543C5.10491 0.99992 5.47359 0.999964 5.85217 1.00001L5.90001 1.00001H10.1L10.1479 1.00001C10.5264 0.999964 10.8951 0.99992 11.2074 1.02543C11.5502 1.05345 11.9548 1.11955 12.362 1.32699C12.9265 1.61461 13.3854 2.07356 13.673 2.63804C13.8805 3.04518 13.9466 3.44978 13.9746 3.79267C14.0001 4.1049 14.0001 4.47359 14 4.85216V4.85217V4.85218L14 4.90001V12.5V14ZM3.6635 3.31903C3.50001 3.63989 3.50001 4.05993 3.50001 4.90001V11V12.5H5.00001H11H12.5V11V4.90001C12.5 4.05993 12.5 3.63989 12.3365 3.31903C12.1927 3.03678 11.9632 2.80731 11.681 2.6635C11.3601 2.50001 10.9401 2.50001 10.1 2.50001H5.90001C5.05993 2.50001 4.63989 2.50001 4.31903 2.6635C4.03678 2.80731 3.80731 3.03678 3.6635 3.31903ZM5.00001 5.60001C5.00001 5.03996 5.00001 4.75993 5.10901 4.54602C5.20488 4.35786 5.35786 4.20488 5.54602 4.10901C5.75993 4.00001 6.03996 4.00001 6.60001 4.00001H9.40001C9.96007 4.00001 10.2401 4.00001 10.454 4.10901C10.6422 4.20488 10.7951 4.35786 10.891 4.54602C11 4.75993 11 5.03996 11 5.60001V8.00001H5.00001V5.60001ZM8.00001 10.25C8.00001 9.8358 8.3358 9.50001 8.75001 9.50001H10.25C10.6642 9.50001 11 9.8358 11 10.25C11 10.6642 10.6642 11 10.25 11H8.75001C8.3358 11 8.00001 10.6642 8.00001 10.25Z";
-
-const BADGE_HOLE_MASK =
-  '<mask id="badge-hole"><rect width="16" height="16" fill="#fff"/><circle cx="11" cy="11" r="6" fill="#000"/></mask>';
-// Same brand roundel as the plain Camber icon, with the badge hole knocked
-// out of its bottom-right corner.
-const LOCAL_ROUNDEL_MARKUP = brandRoundel("badge-hole");
-const LOCAL_SYSTEM_PATH = `<path d="${SYSTEM_PATH}" fill="#000" fill-rule="evenodd" clip-rule="evenodd" transform="translate(6 6) scale(0.625)"/>`;
-
-const LOCAL_AGENT_ROUNDEL_ICON_SVG = [
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">',
-  BADGE_HOLE_MASK,
-  LOCAL_ROUNDEL_MARKUP,
-  "</svg>",
-].join("");
-
-export const LOCAL_AGENT_ROUNDEL_ICON_URL = `data:image/svg+xml,${encodeURIComponent(LOCAL_AGENT_ROUNDEL_ICON_SVG)}`;
-
-const LOCAL_AGENT_SYSTEM_ICON_SVG = [
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">',
-  LOCAL_SYSTEM_PATH,
-  "</svg>",
-].join("");
-
-export const LOCAL_AGENT_SYSTEM_ICON_URL = `data:image/svg+xml,${encodeURIComponent(LOCAL_AGENT_SYSTEM_ICON_SVG)}`;
-
-// The "system" badge is drawn at 62.5% in the bottom-right corner, and a
-// circular hole is knocked out of the roundel underneath so the badge stays
-// legible on any background. The icon is consumed as a CSS mask, so only the
-// alpha channel matters, not the paint colors.
-const LOCAL_AGENT_ICON_SVG = [
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">',
-  BADGE_HOLE_MASK,
-  LOCAL_ROUNDEL_MARKUP,
-  LOCAL_SYSTEM_PATH,
-  "</svg>",
-].join("");
-
-export const LOCAL_AGENT_ICON_URL = `data:image/svg+xml,${encodeURIComponent(LOCAL_AGENT_ICON_SVG)}`;
-
 export function agentServerIconUrl(
   agentServer: string,
   agent: Pick<ACPRegistryAgent, "icon"> | null | undefined,
 ): string | undefined {
-  if (agentServer === LOCAL_AGENT_SERVER) {
-    return LOCAL_AGENT_ICON_URL;
-  }
   // Draw the first-party Camber agent from our own roundel rather than the
   // registry's remote SVG, so its stroke weight stays under our control and
   // reads consistently beside the other agent icons instead of looking thin.

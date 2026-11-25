@@ -139,68 +139,19 @@ describe("wireIconFor", () => {
     }
   });
 
-  it("composites a base and overlay mask into one flat-colored silhouette", async () => {
-    const context = stubRasterization();
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockImplementation(async () => new Response(new Blob(["png-bytes"], { type: "image/png" })));
-    const urlStatics = URL as typeof URL & {
-      createObjectURL?: (blob: Blob) => string;
-      revokeObjectURL?: (url: string) => void;
-    };
-    const previousCreate = urlStatics.createObjectURL;
-    const previousRevoke = urlStatics.revokeObjectURL;
-    urlStatics.createObjectURL = vi.fn(() => "blob:mock");
-    urlStatics.revokeObjectURL = vi.fn();
-
-    try {
-      await expect(
-        wireIconFor(
-          {
-            url: "https://example.com/roundel.png",
-            overlayUrl: "https://example.com/badge.png",
-          },
-          { iconColor: "#654321" },
-        ),
-      ).resolves.toEqual({ pngBase64: "RASTERIZED" });
-
-      // Both masks draw onto the surface, then a single flat fill recolors
-      // them together, so base and overlay end up in the same color.
-      expect(fetchSpy).toHaveBeenCalledTimes(2);
-      expect(context.drawImage).toHaveBeenCalledTimes(2);
-      expect(context.fillRect).toHaveBeenCalledTimes(1);
-      expect(context.fillStyle).toBe("#654321");
-
-      // The overlay keys the cache: the plain base mask is its own entry.
-      await wireIconFor({ url: "https://example.com/roundel.png" }, { iconColor: "#654321" });
-      expect(context.drawImage).toHaveBeenCalledTimes(3);
-      await wireIconFor(
-        { url: "https://example.com/roundel.png", overlayUrl: "https://example.com/badge.png" },
-        { iconColor: "#654321" },
-      );
-      expect(context.drawImage).toHaveBeenCalledTimes(3);
-    } finally {
-      urlStatics.createObjectURL = previousCreate;
-      urlStatics.revokeObjectURL = previousRevoke;
-    }
-  });
-
   it("loads data: URI masks through <img> without fetching", async () => {
     const context = stubRasterization();
     const fetchSpy = vi.spyOn(globalThis, "fetch");
 
     await expect(
       wireIconFor(
-        {
-          url: 'data:image/svg+xml,<svg data-test="mask-base"/>',
-          overlayUrl: 'data:image/svg+xml,<svg data-test="mask-overlay"/>',
-        },
+        { url: 'data:image/svg+xml,<svg data-test="mask-base"/>' },
         { iconColor: "#abcdef" },
       ),
     ).resolves.toEqual({ pngBase64: "RASTERIZED" });
 
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(context.drawImage).toHaveBeenCalledTimes(2);
+    expect(context.drawImage).toHaveBeenCalledTimes(1);
     expect(context.fillRect).toHaveBeenCalledTimes(1);
     expect(context.fillStyle).toBe("#abcdef");
   });

@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon, { type IconName } from "@camber/components/icon";
-  import { DEFAULT_AGENT_SERVER, LOCAL_AGENT_SERVER } from "../../agentServers";
+  import { DEFAULT_AGENT_SERVER } from "../../agentServers";
   import { agentServerIconUrl } from "../../localAgentIcon";
   import { getACPAgentRegistryRepo } from "../../features/AgentRegistryRepository.svelte";
   import { getACPChatSessionScope } from "../../features/ChatSessionScope.svelte";
@@ -56,11 +56,7 @@
   );
   const agent = $derived(registry.getAgent(agentServer) ?? null);
   const activeAgentName = $derived(
-    agentServer === DEFAULT_AGENT_SERVER
-      ? "Camber"
-      : agentServer === LOCAL_AGENT_SERVER
-        ? "Camber Local"
-        : (agent?.name ?? agentServer),
+    agentServer === DEFAULT_AGENT_SERVER ? "Camber" : (agent?.name ?? agentServer),
   );
   const iconUrl = $derived(agentServerIconUrl(agentServer, agent));
   const desktopInstance = $derived($appState.environment.desktopInstance);

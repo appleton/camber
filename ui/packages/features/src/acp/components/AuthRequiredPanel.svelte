@@ -3,7 +3,7 @@
   import type { ACPAuthMethod } from "../authMethods";
   import type { ACPRegistryAgent } from "../agentRegistry";
   import { agentServerIconUrl } from "../localAgentIcon";
-  import { DEFAULT_AGENT_SERVER, LOCAL_AGENT_SERVER } from "../agentServers";
+  import { DEFAULT_AGENT_SERVER } from "../agentServers";
   import RegistryAgentIcon from "./RegistryAgentIcon.svelte";
 
   interface Props {
@@ -44,12 +44,7 @@
   }: Props = $props();
 
   let agentName = $derived(
-    agent?.name ??
-      (agentServer === DEFAULT_AGENT_SERVER
-        ? "Camber"
-        : agentServer === LOCAL_AGENT_SERVER
-          ? "Camber Local"
-          : agentServer),
+    agent?.name ?? (agentServer === DEFAULT_AGENT_SERVER ? "Camber" : agentServer),
   );
   let iconUrl = $derived(agentServerIconUrl(agentServer, agent));
 </script>

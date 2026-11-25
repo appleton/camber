@@ -23,7 +23,6 @@ import {
 import type {
   AppRemoveAgentServerOutput,
   AppSetAgentDefaultConfigOptionParams,
-  LocalInferenceState,
 } from "@camber/helperapi/schemas";
 import type { ACPAgentServerConfig, ACPAgentServers } from "@camber/rpc";
 import { get } from "svelte/store";
@@ -43,10 +42,6 @@ import {
 } from "../errors";
 import { appState } from "../hostAdapter";
 import type { HelperAPIClient } from "../hostRpc";
-import {
-  mergeLocalInferenceModelConfigOptions,
-  preserveLocalInferenceModelConfigOptionForAgent,
-} from "../localInferenceModelOptions";
 import {
   findModeConfigOption,
   isAuthRequiredError,
@@ -472,22 +467,6 @@ export class ACPAgentRepository {
 
   isConfigCacheRefreshInFlightFor(agentServer: string): boolean {
     return this.configCacheRefreshes.has(normalizeAgentServerName(agentServer));
-  }
-
-  upsertLocalInferenceModelConfigOptions(
-    agentServer: string,
-    state: LocalInferenceState,
-  ): Promise<ACPConfigCacheEntry | null> {
-    agentServer = normalizeAgentServerName(agentServer);
-    const cached = this.configCacheByAgentServer[agentServer];
-    const configOptions = mergeLocalInferenceModelConfigOptions(cached?.configOptions ?? [], state);
-    if (!cached && configOptions.length === 0) return Promise.resolve(null);
-    return this.upsertCachedConfig(agentServer, {
-      configOptions,
-      availableCommands: cached?.availableCommands ?? [],
-      modes: cached?.modes ?? null,
-      promptCapabilities: cached?.promptCapabilities,
-    });
   }
 
   authRequiredForAgent(agentServer: string): boolean {
@@ -1263,14 +1242,9 @@ export class ACPAgentRepository {
       if (previousProbeSessionId && previousProbeSessionId !== res.sessionId) {
         this.#closeSupersededProbe(agentServer, previousProbeSessionId);
       }
-      const cached = this.configCacheByAgentServer[agentServer];
       const availableCommands = this.cachedAvailableCommands(agentServer);
       const configOptions = preserveCachedSelections(
-        preserveLocalInferenceModelConfigOptionForAgent(
-          agentServer,
-          res.configOptions ?? [],
-          cached?.configOptions ?? [],
-        ),
+        res.configOptions ?? [],
         this.userConfigSelectionsFor(agentServer),
       );
       this.markAgentConfigFresh(agentServer);
@@ -1495,11 +1469,7 @@ export class ACPAgentRepository {
     switch (params.update.sessionUpdate) {
       case "config_option_update":
         next.configOptions = preserveCachedSelections(
-          preserveLocalInferenceModelConfigOptionForAgent(
-            agentServer,
-            params.update.configOptions,
-            cached.configOptions,
-          ),
+          params.update.configOptions,
           this.userConfigSelectionsFor(agentServer),
         );
         next.modes = syncModeFromConfigOptions(next.modes, next.configOptions);

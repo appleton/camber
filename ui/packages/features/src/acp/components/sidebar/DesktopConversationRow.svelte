@@ -37,8 +37,6 @@
 {#snippet rowContents()}
   <RegistryAgentIcon
     iconUrl={agentIcon.iconUrl}
-    overlayIconUrl={agentIcon.overlayIconUrl}
-    overlayClass={agentIcon.overlayClass}
     size={16}
     class={["desktop-conversation-row-agent-icon", agentIcon.class || rowState.iconClass]
       .filter(Boolean)

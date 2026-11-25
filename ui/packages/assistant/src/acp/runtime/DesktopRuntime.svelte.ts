@@ -172,7 +172,6 @@ export class DesktopRuntime {
   toggleSidebarCollapsed = this.#viewState.toggleSidebarCollapsed;
   showSettings = () => this.#showView(this.#viewState.showSettings);
   showShortcuts = () => this.#showView(this.#viewState.showShortcuts);
-  showModels = () => this.#showView(this.#viewState.showModels);
   showVoice = () => this.#showView(this.#viewState.showVoice);
   showConnectors = () => this.#showView(this.#viewState.showConnectors);
   showGithub = () => this.#showView(this.#viewState.showGithub);
