@@ -162,10 +162,10 @@ export const CONNECTOR_CATALOG: ConnectorCatalogEntry[] = [
   remoteConnector({
     id: "huggingface",
     label: "Hugging Face",
-    blurb: "Models, datasets, Spaces, and gated model access",
+    blurb: "Models, datasets, Spaces, and papers",
     category: "development",
     url: "https://huggingface.co/mcp",
-    oauthScopes: "openid profile read-mcp read-repos",
+    oauthScopes: "openid profile read-mcp",
   }),
   remoteConnector({
     id: "sentry",
