@@ -411,6 +411,8 @@
         await conversations.renameConversation(target.id, value);
       } else {
         await projects.renameProject(target.path, value);
+        // Renaming a worktree also renames its git branch; drop the cached one.
+        void github.refresh(undefined, { force: true });
       }
     } catch (error) {
       console.error("Failed to rename ACP sidebar item", error);

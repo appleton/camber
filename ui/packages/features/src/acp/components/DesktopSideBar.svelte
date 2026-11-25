@@ -835,6 +835,10 @@
   async function handleRenameProject(path: string, name: string) {
     try {
       await projects.renameProject(path, name);
+      // Renaming a worktree also renames its git branch (for a rename queued
+      // during creation, the await settles once that deferred rename does), so
+      // drop the cached branch instead of serving it until the next poll.
+      void github.refresh(undefined, { force: true });
     } catch (error) {
       // Renaming a worktree also renames its git branch, which can fail; the
       // inline rename otherwise only logs, so tell the user the name was kept.
