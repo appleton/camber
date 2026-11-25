@@ -992,7 +992,10 @@ func (r *worktreeBranchRename) undo(ctx context.Context, s *Store, env []string)
 // renameWorktreeBranch renames the branch checked out in the worktree at
 // worktreePath to follow newName: the configured prefix plus branchSlug of
 // newName, uniquified with a numeric suffix if another local branch has that
-// name or any branch lives under it (git cannot hold both "a" and "a/b").
+// name, any branch lives under it (git cannot hold both "a" and "a/b"), or a
+// remote-tracking ref of that name exists (the PR lookup by branch name would
+// otherwise adopt an unrelated old PR). If the availability check fails, the
+// context ends or no free suffix is found, the rename fails with an error.
 //
 // The branch is left alone, with a nil result and no error, when it is not
 // one the helper created (see ownedWorktreeBranch), when HEAD is detached,
@@ -1000,7 +1003,9 @@ func (r *worktreeBranchRename) undo(ctx context.Context, s *Store, env []string)
 // characters, or when the branch has been published: it has an upstream
 // configured or a remote-tracking ref of the same name exists. Renaming a
 // published branch breaks git push under push.default=simple and the PR
-// lookup by local branch name. Only the local branch is ever renamed.
+// lookup by local branch name. An upstream remote of "." (set by
+// branch.autoSetupMerge=always) does not count as published. Only the local
+// branch is ever renamed.
 //
 // Every git command runs isolated (see isolatedWorktreeEnv), so repository
 // hooks and other repo-controlled commands never execute, whether the rename
@@ -1040,9 +1045,12 @@ func (s *Store) renameWorktreeBranch(ctx context.Context, worktreePath, currentN
 	if slug == "" {
 		return nil, nil, nil
 	}
-	branch := uniqueWorktreeName(worktreeBranch(prefix, slug), func(candidate string) bool {
-		return candidate != current && s.branchNameTaken(ctx, env, worktreePath, candidate)
+	branch, err := pickWorktreeBranchName(ctx, worktreeBranch(prefix, slug), current, func(candidate string) (bool, error) {
+		return s.branchNameTaken(ctx, env, worktreePath, candidate)
 	})
+	if err != nil {
+		return nil, nil, err
+	}
 	if branch == current {
 		return nil, nil, nil
 	}
@@ -1055,33 +1063,85 @@ func (s *Store) renameWorktreeBranch(ctx context.Context, worktreePath, currentN
 	return &worktreeBranchRename{worktreePath: worktreePath, from: current, to: branch}, env, nil
 }
 
-// branchPublished reports whether branch has an upstream configured or a
-// remote-tracking ref named after it. Failures to query count as published,
-// so the branch is left alone.
+// maxWorktreeBranchSuffix bounds the numeric suffixes tried when uniquifying a
+// renamed worktree branch.
+const maxWorktreeBranchSuffix = 1000
+
+// pickWorktreeBranchName returns base, or base-N for the first N >= 2, that is
+// not taken. current is the branch being renamed and is never taken. It stops
+// with an error if taken fails, ctx ends, or no name is free within
+// maxWorktreeBranchSuffix suffixes.
+func pickWorktreeBranchName(ctx context.Context, base, current string, taken func(string) (bool, error)) (string, error) {
+	for suffix := 1; suffix <= maxWorktreeBranchSuffix; suffix++ {
+		if err := ctx.Err(); err != nil {
+			return "", fmt.Errorf("checking worktree branch name: %w", err)
+		}
+		candidate := base
+		if suffix > 1 {
+			candidate = fmt.Sprintf("%s-%d", base, suffix)
+		}
+		if candidate == current {
+			return candidate, nil
+		}
+		isTaken, err := taken(candidate)
+		if err != nil {
+			return "", fmt.Errorf("checking worktree branch name: %w", err)
+		}
+		if !isTaken {
+			return candidate, nil
+		}
+	}
+	return "", fmt.Errorf("checking worktree branch name: no free name for %s after %d attempts", base, maxWorktreeBranchSuffix)
+}
+
+// branchPublished reports whether branch has an upstream remote configured
+// (other than "." for a local upstream) or a remote-tracking ref named after
+// it. Failures to query count as published, so the branch is left alone.
 func (s *Store) branchPublished(ctx context.Context, env []string, dir, branch string) bool {
-	if out, err := s.runGit(ctx, env, "-C", dir, "config", "--get", "branch."+branch+".remote"); err == nil && strings.TrimSpace(string(out)) != "" {
-		return true
-	}
-	out, err := s.runGit(ctx, env, "-C", dir, "for-each-ref", "--format=%(refname)", "refs/remotes/")
-	if err != nil {
-		return true
-	}
-	for _, ref := range strings.Split(string(out), "\n") {
-		if rest, ok := strings.CutPrefix(strings.TrimSpace(ref), "refs/remotes/"); ok && strings.HasSuffix(rest, "/"+branch) {
+	if out, err := s.runGit(ctx, env, "-C", dir, "config", "--get", "branch."+branch+".remote"); err == nil {
+		if remote := strings.TrimSpace(string(out)); remote != "" && remote != "." {
 			return true
 		}
 	}
-	return false
+	exists, err := s.remoteBranchExists(ctx, env, dir, branch)
+	return err != nil || exists
+}
+
+// remoteBranchExists reports whether any remote-tracking ref refs/remotes/<remote>/<name>
+// exists, ignoring refs/remotes/*/HEAD.
+func (s *Store) remoteBranchExists(ctx context.Context, env []string, dir, name string) (bool, error) {
+	out, err := s.runGit(ctx, env, "-C", dir, "for-each-ref", "--format=%(refname)", "refs/remotes/")
+	if err != nil {
+		return false, err
+	}
+	for _, ref := range strings.Split(string(out), "\n") {
+		rest, ok := strings.CutPrefix(strings.TrimSpace(ref), "refs/remotes/")
+		if ok && !strings.HasSuffix(rest, "/HEAD") && strings.HasSuffix(rest, "/"+name) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // branchNameTaken reports whether a local branch cannot be created or renamed
-// to candidate: it exists, or branches exist under candidate/.
-func (s *Store) branchNameTaken(ctx context.Context, env []string, dir, candidate string) bool {
+// to candidate: it exists, branches exist under candidate/, or a
+// remote-tracking ref of that name exists.
+func (s *Store) branchNameTaken(ctx context.Context, env []string, dir, candidate string) (bool, error) {
 	if _, err := s.runGit(ctx, env, "-C", dir, "show-ref", "--verify", "--quiet", "refs/heads/"+candidate); err == nil {
-		return true
+		return true, nil
+	} else if ctx.Err() != nil {
+		return false, err
+	} else if exitErr := (*exec.ExitError)(nil); !stderrors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
+		return false, err
 	}
 	out, err := s.runGit(ctx, env, "-C", dir, "for-each-ref", "--count=1", "--format=%(refname)", "refs/heads/"+candidate+"/")
-	return err != nil || strings.TrimSpace(string(out)) != ""
+	if err != nil {
+		return false, err
+	}
+	if strings.TrimSpace(string(out)) != "" {
+		return true, nil
+	}
+	return s.remoteBranchExists(ctx, env, dir, candidate)
 }
 
 // ownedWorktreeBranch reports whether branch is one the helper created for a

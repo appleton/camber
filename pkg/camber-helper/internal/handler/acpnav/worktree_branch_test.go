@@ -2,6 +2,7 @@ package acpnav
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -131,6 +132,100 @@ func TestRenameWorktreeLeavesBranchWithRemoteTrackingRefAlone(t *testing.T) {
 
 	assert.Equal(t, "camber/bubbly-buoy", currentBranch(t, wt.Path))
 	assert.Equal(t, "Pushed work", projectByPath(t, store, wt.Path).Nickname)
+}
+
+func TestPickWorktreeBranchName(t *testing.T) {
+	ctx := context.Background()
+	takenSet := func(names ...string) func(string) (bool, error) {
+		return func(c string) (bool, error) {
+			for _, n := range names {
+				if n == c {
+					return true, nil
+				}
+			}
+			return false, nil
+		}
+	}
+
+	got, err := pickWorktreeBranchName(ctx, "camber/a", "camber/old", takenSet("camber/a", "camber/a-2"))
+	require.NoError(t, err)
+	assert.Equal(t, "camber/a-3", got)
+
+	got, err = pickWorktreeBranchName(ctx, "camber/a", "camber/a", takenSet("camber/a"))
+	require.NoError(t, err)
+	assert.Equal(t, "camber/a", got, "the current branch is never taken")
+}
+
+func TestPickWorktreeBranchNameStopsOnCheckError(t *testing.T) {
+	boom := errors.New("git exploded")
+	calls := 0
+	_, err := pickWorktreeBranchName(context.Background(), "camber/a", "camber/old", func(string) (bool, error) {
+		calls++
+		return false, boom
+	})
+	require.ErrorIs(t, err, boom)
+	assert.Contains(t, err.Error(), "checking worktree branch name")
+	assert.Equal(t, 1, calls)
+}
+
+func TestPickWorktreeBranchNameStopsOnCancelledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	calls := 0
+	_, err := pickWorktreeBranchName(ctx, "camber/a", "camber/old", func(string) (bool, error) {
+		calls++
+		cancel()
+		return true, nil
+	})
+	require.ErrorIs(t, err, context.Canceled)
+	assert.Equal(t, 1, calls)
+}
+
+func TestPickWorktreeBranchNameIsBounded(t *testing.T) {
+	calls := 0
+	_, err := pickWorktreeBranchName(context.Background(), "camber/a", "camber/old", func(string) (bool, error) {
+		calls++
+		return true, nil
+	})
+	require.Error(t, err)
+	assert.Equal(t, maxWorktreeBranchSuffix, calls)
+}
+
+func TestRenameWorktreeRenamesBranchWithLocalAutoSetupMergeUpstream(t *testing.T) {
+	isolationEnv(t)
+	ctx := context.Background()
+	repo, git := gitRepo(t, nil)
+	git(repo, "config", "branch.autoSetupMerge", "always")
+	store := isolationStore(t, repo)
+
+	wt, err := store.CreateWorktree(ctx, repo, "bubbly-buoy")
+	require.NoError(t, err)
+	require.Equal(t, ".", strings.TrimSpace(gitOutput(t, wt.Path, "config", "--get", "branch.camber/bubbly-buoy.remote")))
+
+	require.NoError(t, store.RenameProject(ctx, wt.Path, "Local upstream"))
+
+	assert.Equal(t, "camber/local-upstream", currentBranch(t, wt.Path))
+}
+
+func TestRenameWorktreeAvoidsBranchNameOfRemoteTrackingRef(t *testing.T) {
+	isolationEnv(t)
+	ctx := context.Background()
+	repo, git := gitRepo(t, nil)
+	remote := t.TempDir()
+	git(remote, "init", "-q", "--bare")
+	git(repo, "remote", "add", "origin", remote)
+	// An old PR branch lives on origin; no local branch of that name remains.
+	git(repo, "branch", "old-pr")
+	git(repo, "push", "-q", "origin", "old-pr:camber/fix-login")
+	git(repo, "fetch", "-q", "origin")
+	require.NotEmpty(t, gitOutput(t, repo, "for-each-ref", "refs/remotes/origin/camber/fix-login"))
+	store := isolationStore(t, repo)
+
+	wt, err := store.CreateWorktree(ctx, repo, "bubbly-buoy")
+	require.NoError(t, err)
+
+	require.NoError(t, store.RenameProject(ctx, wt.Path, "Fix login"))
+
+	assert.Equal(t, "camber/fix-login-2", currentBranch(t, wt.Path))
 }
 
 func TestRenameWorktreeAvoidsDirectoryRefConflict(t *testing.T) {
