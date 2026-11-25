@@ -14,7 +14,6 @@ go_library(
         "tools.go",
         "tools_agents.go",
         "tools_mcp.go",
-        "tools_models.go",
         "tools_skills.go",
         "worktree.go",
     ],

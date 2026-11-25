@@ -10,14 +10,13 @@ import (
 	"github.com/appleton/camber/pkg/camber-helper/methods"
 )
 
-// Tools is the helper surface behind the agents, MCP, skills and models
+// Tools is the helper surface behind the agents, MCP, and skills
 // actions. Each field is the handler the desktop's own JSON-RPC method runs
 // (wired in handler.controlTools), so a CLI change takes exactly the path an
 // app change takes, including its change notifications.
 type Tools struct {
-	AgentServers   AgentServerTools
-	MCPServers     MCPServerTools
-	LocalInference LocalInferenceTools
+	AgentServers AgentServerTools
+	MCPServers   MCPServerTools
 	// ListSkills runs camber/listSkills's discovery. Nil workspacePaths means
 	// the desktop's own workspace folders, as the app's skill listing uses.
 	ListSkills func(workspacePaths []string) []InstalledSkill
@@ -45,18 +44,6 @@ type MCPServerTools interface {
 	SignOut(context.Context, *methods.MCPServersSignOutParams, *glsp.Context) (*methods.MCPServersSignOutOutput, error)
 	TestConnection(context.Context, *methods.MCPServersTestConnectionParams, *glsp.Context) (*methods.MCPServersTestConnectionOutput, error)
 	TestConfig(context.Context, *methods.MCPServersTestConfigParams, *glsp.Context) (*methods.MCPServersTestConfigOutput, error)
-}
-
-// LocalInferenceTools is the camber/localInference/* handler set
-// (localinference.Server).
-type LocalInferenceTools interface {
-	GetState(context.Context, *methods.LocalInferenceGetStateParams, *glsp.Context) (methods.LocalInferenceState, error)
-	SearchModels(context.Context, *methods.LocalInferenceSearchModelsParams, *glsp.Context) (methods.LocalInferenceSearchModelsState, error)
-	DownloadModel(context.Context, *methods.LocalInferenceDownloadModelParams, *glsp.Context) (methods.LocalInferenceState, error)
-	CancelDownload(context.Context, *methods.LocalInferenceCancelDownloadParams, *glsp.Context) (methods.LocalInferenceState, error)
-	DeleteModel(context.Context, *methods.LocalInferenceDeleteModelParams, *glsp.Context) (methods.LocalInferenceState, error)
-	SetDefaultModel(context.Context, *methods.LocalInferenceSetDefaultModelParams, *glsp.Context) (methods.LocalInferenceState, error)
-	UnloadModel(context.Context, *methods.LocalInferenceUnloadModelParams, *glsp.Context) (methods.LocalInferenceState, error)
 }
 
 // InstalledSkill is one skill found by camber/listSkills's discovery.

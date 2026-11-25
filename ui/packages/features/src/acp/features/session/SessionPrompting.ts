@@ -18,7 +18,6 @@ import {
 import { normalizeACPError } from "../../errors";
 import { parseClaudeGoalCommand, type ACPGoalState } from "../../goals";
 import { appState, appStateUpdates } from "../../hostAdapter";
-import { mergeLocalInferenceModelConfigOptionDefinitionsForAgent } from "../../localInferenceModelOptions";
 import { buildSessionInfo } from "../../sessionInfo";
 import {
   ACP_IDE_WORKSPACE_PATH,
@@ -779,12 +778,6 @@ export class ACPSessionPrompting {
     s.env.agents.clearNonSessionError(agentServer);
     s.setupStatus = "Starting ACP agent...";
 
-    // The helper catalog is the source of truth for local models. Capture the
-    // draft's catalog-backed option before session/new: the local agent may
-    // return only the model it bootstrapped with, which is not enough to
-    // validate and apply another downloaded model selected in the draft.
-    const draftConfigOptions = s.configOptions;
-
     const conn = await s.env.agents.useAgentServer(agentServer);
     if (gen !== s.generation) return null;
     if (!conn) {
@@ -803,16 +796,9 @@ export class ACPSessionPrompting {
       appState.update(appStateUpdates.ensureWorkspaceForCwd(s.sessionInfo.cwd));
       // The response carries the agent's defaults; show the draft's selections
       // immediately so the picker never flashes those defaults while sendCore
-      // re-applies the selections over the wire. For the local agent, retain
-      // the catalog's full model definitions while preserving the response's
-      // actual current value. That enriched response is returned for
-      // reconciliation.
+      // re-applies the selections over the wire.
       const reportedConfigOptions = res.configOptions ?? [];
-      const agentConfigOptions = mergeLocalInferenceModelConfigOptionDefinitionsForAgent(
-        agentServer,
-        reportedConfigOptions,
-        draftConfigOptions,
-      );
+      const agentConfigOptions = reportedConfigOptions;
       s.configOptions = mergeConfigSelections(agentConfigOptions, pendingSelections);
       s.availableCommands = s.env.agents.cachedAvailableCommands(agentServer);
       s.modes = res.modes ?? null;
@@ -918,12 +904,6 @@ export class ACPSessionPrompting {
           reportedConfigOptions,
           selections: pendingConfigOptions,
           isCurrent: () => gen === s.generation && s.sessionId !== null,
-          reconcileConfigOptions: (reported, fallback) =>
-            mergeLocalInferenceModelConfigOptionDefinitionsForAgent(
-              s.agentServer,
-              reported,
-              fallback,
-            ),
           onApplied: (options) => {
             applied = options;
             s.configOptions = mergeConfigSelections(applied, pendingConfigOptions);

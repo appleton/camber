@@ -1,6 +1,5 @@
 <script module lang="ts">
   import { defineMeta } from "@storybook/addon-svelte-csf";
-  import type { LocalInferenceState } from "@camber/helperapi/schemas";
   import type { WorkspaceFolder } from "@camber/rpc";
   import DesktopSideBar from "./DesktopSideBar.svelte";
   import SidebarStoryHarness from "./SidebarStoryHarness.svelte";
@@ -199,34 +198,6 @@
     addFolderToWorkspace: true,
   };
 
-  // A resident local model, as the sidecar reports it: powers the ambient
-  // runtime pill at the sidebar bottom (memory figure, last prompt, idle
-  // unload countdown, and the reclaim-memory action).
-  const GIB = 1024 ** 3;
-  const localModelLoaded: LocalInferenceState = {
-    modelsDirectory: "/Users/poolie/.config/camber/models",
-    catalog: [
-      {
-        id: "poolside/Laguna-XS-2.1-NVFP4-mlx",
-        repoId: "poolside/Laguna-XS-2.1-NVFP4-mlx",
-        name: "Laguna XS 2.1 NVFP4",
-        provider: "poolside",
-        downloaded: true,
-        default: true,
-      },
-    ],
-    runtime: {
-      supported: true,
-      status: "running",
-      agentServer: "local",
-      defaultModelId: "poolside/Laguna-XS-2.1-NVFP4-mlx",
-      loadedModelId: "poolside/Laguna-XS-2.1-NVFP4-mlx",
-      loadedMemoryBytes: 20.1 * GIB,
-      lastActivityUnixMs: Date.now() - 4 * 60 * 1000,
-      idleUnloadSeconds: 15 * 60,
-    },
-  };
-
   const handlers = {
     onCollapsedChange: () => {},
     onNewConversation: () => {},
@@ -291,26 +262,6 @@
         expandedSubAgents={["conv-1"]}
         conversations={subAgentConversations}
         capabilities={desktopCapabilities}
-      >
-        <DesktopSideBar
-          collapsed={false}
-          currentView="chat"
-          {currentWorkspaceFolders}
-          {...handlers}
-        />
-      </SidebarStoryHarness>
-    </div>
-  {/snippet}
-</Story>
-
-<Story name="Local Model Loaded">
-  {#snippet template()}
-    <div class="bg-psx-editor-background flex h-screen">
-      <SidebarStoryHarness
-        {projects}
-        {conversations}
-        capabilities={desktopCapabilities}
-        localInference={localModelLoaded}
       >
         <DesktopSideBar
           collapsed={false}

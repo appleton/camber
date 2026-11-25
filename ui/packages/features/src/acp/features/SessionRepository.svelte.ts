@@ -17,7 +17,6 @@ import {
 import type {
   ACPCompactionNotification,
   ACPTurnEndedNotification,
-  LocalInferenceState,
 } from "@camber/helperapi/schemas";
 import { isLoading, isSuccess, loading, success } from "@camber/lib/async-state";
 import { createContext, untrack } from "svelte";
@@ -34,10 +33,6 @@ import {
 } from "../debugDump";
 import { ACPError } from "../errors";
 import type { ACPClaudeGoalUpdate } from "../goals";
-import {
-  currentModelConfigValue,
-  mergeLocalInferenceModelConfigOptions,
-} from "../localInferenceModelOptions";
 import { newConversationID, type ACPClosedSession } from "../navTypes";
 import { buildSessionInfo, type ACPResolvedSessionInfo } from "../sessionInfo";
 import { TurnMaterializer } from "../TurnMaterializer";
@@ -248,69 +243,6 @@ export class ACPSessionRepositoryWriter {
         });
       });
     }
-  }
-
-  /**
-   * Merge the model config option derived from local inference state into
-   * agent-created sessions, so a freshly downloaded model appears in the
-   * picker of open conversations. Only touches the model option — the rest
-   * of the config is agent-owned and left alone. Local-only sessions
-   * (sessionId === null) mirror the config cache instead; see
-   * applyCachedConfigToLocalSessionsForAgent.
-   *
-   * The merge is a local-only mutation of session.configOptions, so if it
-   * changes the model's currentValue (e.g. the previously selected model was
-   * deleted, or the first downloaded model just became the selection), the
-   * agent is told about the new value via setConfigOption. Otherwise the
-   * picker would show a model the agent never actually switched to.
-   */
-  applyLocalInferenceModelConfigToSessionsForAgent(
-    agentServer: string,
-    state: LocalInferenceState,
-  ): void {
-    agentServer = normalizeAgentServerName(agentServer);
-    for (const session of this.liveSessions.values()) {
-      if (session.sessionId === null || session.agentServer !== agentServer) {
-        continue;
-      }
-      const previousValue = currentModelConfigValue(session.configOptions);
-      session.configOptions = mergeLocalInferenceModelConfigOptions(session.configOptions, state);
-      const nextValue = currentModelConfigValue(session.configOptions);
-      if (nextValue !== null && nextValue !== previousValue) {
-        const conversationId = session.conversationId;
-        // Machine state changed the effective model (the selection was
-        // deleted, or the first download became selectable) — not a user
-        // pick. recordSelection: false keeps the wire call and local apply
-        // while recording nothing as user-touched and persisting no
-        // last-used default.
-        void session
-          .setConfigOption("model", nextValue, { recordSelection: false })
-          .catch((error: unknown) => {
-            console.error(
-              `Failed to sync local inference model selection to agent for conversation ${conversationId}`,
-              error,
-            );
-          });
-      }
-    }
-  }
-
-  /**
-   * Live sessions for an agent that are mid-turn on any connected surface,
-   * e.g. to warn before unloading the local model out from under an active
-   * response.
-   */
-  promptingSessionsForAgent(agentServer: string): ACPSession[] {
-    agentServer = normalizeAgentServerName(agentServer);
-    const sessions: ACPSession[] = [];
-    for (const session of this.liveSessions.values()) {
-      if (session.agentServer !== agentServer) continue;
-      const remotelyWorking =
-        session.sessionId !== null &&
-        this.conversationStatus.getConversationStatus(session.sessionId, agentServer).working;
-      if (session.isPromptActive || session.isSending || remotelyWorking) sessions.push(session);
-    }
-    return sessions;
   }
 
   /** Includes conversations on other surfaces, even if never opened in this window. */

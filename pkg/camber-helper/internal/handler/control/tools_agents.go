@@ -504,7 +504,7 @@ func (s *Service) agentOptionValueName(ctx context.Context, agentServer, optionI
 }
 
 // editableAgentServerName validates an agent id an action may install, define
-// or remove. The Poolside and local agents are managed by the app.
+// or remove. The Poolside agent is managed by the app.
 func editableAgentServerName(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -513,7 +513,7 @@ func editableAgentServerName(name string) (string, error) {
 	if !agentServerNamePattern.MatchString(name) {
 		return "", pkgerrors.Errorf("agent id %q may only contain letters, digits, '.', '_' and '-'", name)
 	}
-	if normalized := normalizeAgentServerID(name); normalized == defaultAgentServerName || normalized == methods.LocalAgentServerName {
+	if normalized := normalizeAgentServerID(name); normalized == defaultAgentServerName {
 		return "", pkgerrors.Errorf("agent %q is managed by the app; update it from Settings > Agents", normalized)
 	}
 	return name, nil

@@ -14,7 +14,6 @@ import {
   setACPMCPSettingsContext,
   setACPSetupScriptOutputContext,
   setAssistantTerminalContext,
-  setLocalInferenceContext,
   setNotificationContext,
   type ACPConversationSummary,
   type ACPNavProject,
@@ -339,8 +338,8 @@ describe("DesktopPanel integration", () => {
 
   it("hides the set-up-agent action once more than one extra agent is configured", async () => {
     const repositories = new TestRepositories();
-    // Two agents beyond the built-in Camber and Camber local agents.
-    repositories.acpRepo.agents.agentServerNames = ["poolside", "local", "claude-acp", "codex-acp"];
+    // Two agents beyond the built-in Camber agent.
+    repositories.acpRepo.agents.agentServerNames = ["poolside", "claude-acp", "codex-acp"];
 
     await renderDesktopPanel({
       repositories,
@@ -3679,7 +3678,6 @@ class TestRepositories {
   readonly acpLocalHistoryRepo: any;
   readonly acpWorktreeRepo: any;
   acpContextRepo!: ReturnType<typeof setContextRepoContext>;
-  localInference!: ReturnType<typeof setLocalInferenceContext>;
   notificationRepo!: ReturnType<typeof setNotificationContext>;
   acpConversationStatusRepo!: ReturnType<typeof setACPConversationStatusContext>;
   elicitation!: ReturnType<typeof setElicitationContext>;
@@ -3760,10 +3758,6 @@ class TestRepositories {
     _setACPWorktreeContextForTests(this.acpWorktreeRepo);
     _setACPAgentServersContextForTests(this.acpAgentServers);
     _setACPAgentUpdateContextForTests(this.acpAgentUpdates);
-    // The sidebars read local-inference state for the download pill; the
-    // helper is unavailable in tests, so the repository's refresh rejects
-    // (callers swallow it) and the pill simply never renders.
-    this.localInference = setLocalInferenceContext();
     setThemeContext();
     setACPHostStateStore(appState);
     setACPHostActions({ trackClick: vi.fn() });

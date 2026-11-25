@@ -55,7 +55,6 @@ go_library(
         "//pkg/camber-helper/internal/handler/filesearch",
         "//pkg/camber-helper/internal/handler/git",
         "//pkg/camber-helper/internal/handler/github",
-        "//pkg/camber-helper/internal/handler/localinference",
         "//pkg/camber-helper/internal/handler/mcpservers",
         "//pkg/camber-helper/internal/handler/remoteaccess",
         "//pkg/camber-helper/internal/handler/remoteterminal",

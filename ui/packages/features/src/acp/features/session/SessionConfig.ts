@@ -1,6 +1,5 @@
 import type { SessionConfigOption } from "@agentclientprotocol/sdk";
 import { normalizeACPError, type ACPRequestError } from "../../errors";
-import { mergeLocalInferenceModelConfigOptionDefinitionsForAgent } from "../../localInferenceModelOptions";
 import {
   applyDefaultConfigOptions,
   collaborationModeSurface,
@@ -22,18 +21,6 @@ import { isStaleSessionError } from "./errors";
 import type { ACPSession } from "./Session.svelte";
 import type { ACPCollaborationModeSurface, ACPPendingConfigOption } from "./types";
 import { ACP_PLAN_MODE_ID } from "./types";
-
-export interface ACPSetConfigOptionOptions {
-  /**
-   * Whether this change is an explicit user choice (the default). Programmatic
-   * reconciliation — e.g. the local-inference model sync switching the
-   * session's model because the previous selection was deleted from disk —
-   * passes false: the wire call and the local apply are identical, but nothing
-   * is marked user-touched and nothing is recorded or persisted as a last-used
-   * default, so machine-driven state changes cannot masquerade as user picks.
-   */
-  recordSelection?: boolean;
-}
 
 export class ACPSessionConfig {
   constructor(private readonly session: ACPSession) {}
@@ -150,14 +137,10 @@ export class ACPSessionConfig {
     });
   }
 
-  async setOption(
-    configId: string,
-    value: string,
-    options: ACPSetConfigOptionOptions = {},
-  ): Promise<void> {
+  async setOption(configId: string, value: string): Promise<void> {
     const s = this.session;
     const agentServer = s.agentServer;
-    if (options.recordSelection !== false) this.#recordUserSelection(configId, value);
+    this.#recordUserSelection(configId, value);
     if (s.sessionId === null) {
       return s.serialize(async (gen) => {
         if (gen !== s.generation) return;
@@ -204,14 +187,10 @@ export class ACPSessionConfig {
       });
   }
 
-  async setBooleanOption(
-    configId: string,
-    value: boolean,
-    options: ACPSetConfigOptionOptions = {},
-  ): Promise<void> {
+  async setBooleanOption(configId: string, value: boolean): Promise<void> {
     const s = this.session;
     const agentServer = s.agentServer;
-    if (options.recordSelection !== false) this.#recordUserSelection(configId, value);
+    this.#recordUserSelection(configId, value);
     if (s.sessionId === null) {
       return s.serialize(async (gen) => {
         if (gen !== s.generation) return;
@@ -362,11 +341,7 @@ export class ACPSessionConfig {
 
   applyOptions(configOptions: SessionConfigOption[], requestId?: number, requestConfigId?: string) {
     const s = this.session;
-    s.configOptions = mergeLocalInferenceModelConfigOptionDefinitionsForAgent(
-      s.agentServer,
-      configOptions,
-      s.configOptions,
-    );
+    s.configOptions = configOptions;
     s.modes = syncModeFromConfigOptions(s.modes, s.configOptions);
     if (requestConfigId) {
       const current = s.pendingConfigOptions[requestConfigId];

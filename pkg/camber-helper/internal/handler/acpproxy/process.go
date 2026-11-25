@@ -30,7 +30,6 @@ import (
 
 const (
 	DefaultAgentServerName       = "poolside"
-	LocalAgentServerName         = methods.LocalAgentServerName
 	LegacyDefaultAgentServerName = "default"
 	npmConfigCacheEnvKey         = "npm_config_cache"
 	npmConfigCacheEnvKeyUpper    = "NPM_CONFIG_CACHE"
@@ -219,17 +218,9 @@ type AgentServerBinaryDistribution struct {
 // means no injection.
 type MCPServerInjector func(ctx context.Context, agentServer string, caps acpsdk.McpCapabilities) (servers []acpsdk.McpServer, unavailable []methods.MCPServerStatus)
 
-// AgentServerReadinessProvider is called before session boundaries for agent
-// servers with helper-owned runtime dependencies. Returning false tells the
-// proxy to restart the ACP subprocess so fresh runtime environment can be
-// injected before session/new or session/load.
-type AgentServerReadinessProvider func(context.Context, string) (bool, error)
-
 type HandlerConfig struct {
-	WorkingDir             string
-	AgentServers           map[string]AgentServerConfig
-	AgentServerEnvProvider func(context.Context, string) (map[string]string, error)
-	AgentServerReady       AgentServerReadinessProvider
+	WorkingDir   string
+	AgentServers map[string]AgentServerConfig
 	// MCPServerInjector is optional. When set, it is called for every session/new,
 	// session/load, and session/resume (except config-probe sessions) to inject
 	// user MCP servers.
@@ -250,10 +241,6 @@ func NormalizeAgentServers(agentServers map[string]AgentServerConfig) map[string
 			normalized[DefaultAgentServerName] = mergeDefaultAgentServerConfig(cfg)
 			continue
 		}
-		if normalizedName == LocalAgentServerName {
-			normalized[LocalAgentServerName] = mergeLocalAgentServerConfig(cfg)
-			continue
-		}
 		normalized[normalizedName] = cfg
 	}
 	return normalized
@@ -272,34 +259,12 @@ func defaultAgentServerConfig() AgentServerConfig {
 	}
 }
 
-func defaultLocalAgentServerConfig() AgentServerConfig {
-	return AgentServerConfig{
-		Type:    "local",
-		Command: "",
-	}
-}
-
 func mergeDefaultAgentServerConfig(cfg AgentServerConfig) AgentServerConfig {
 	merged := defaultAgentServerConfig()
 	merged.Type = cfg.Type
 	if cfg.Command != "" && !isLegacySelfCommand(cfg.Command) {
 		merged.Command = cfg.Command
 		merged.Args = cfg.Args
-	}
-	merged.Env = cfg.Env
-	merged.Binary = cfg.Binary
-	merged.DefaultConfigOptions = cfg.DefaultConfigOptions
-	return merged
-}
-
-func mergeLocalAgentServerConfig(cfg AgentServerConfig) AgentServerConfig {
-	merged := defaultLocalAgentServerConfig()
-	if cfg.Command != "" && !isLegacySelfCommand(cfg.Command) {
-		merged.Command = cfg.Command
-		merged.Args = cfg.Args
-	}
-	if cfg.Type != "" {
-		merged.Type = cfg.Type
 	}
 	merged.Env = cfg.Env
 	merged.Binary = cfg.Binary
@@ -745,13 +710,6 @@ func (p *process) ensureStarted(ctx context.Context, cfgFn ConfigFn, serverName 
 		resolved.Env = mergeStringMaps(resolved.Env, serverCfg.Env)
 		serverCfg = resolved
 	}
-	if cfg.AgentServerEnvProvider != nil {
-		env, err := cfg.AgentServerEnvProvider(ctx, serverName)
-		if err != nil {
-			return fmt.Errorf("acpproxy: agent server %q environment: %w", serverName, err)
-		}
-		serverCfg.Env = mergeStringMaps(serverCfg.Env, env)
-	}
 	if serverCfg.Command == "" && len(serverCfg.Binary) == 0 {
 		return fmt.Errorf("acpproxy: agent server %q command is required", serverName)
 	}
@@ -783,7 +741,7 @@ func shouldResolveBundledCamberBinary(serverName string, cfg AgentServerConfig) 
 	if cfg.Type == "registry" || cfg.Command != "" || len(cfg.Binary) > 0 {
 		return false
 	}
-	return serverName == DefaultAgentServerName || serverName == LocalAgentServerName
+	return serverName == DefaultAgentServerName
 }
 
 // waitForRestartBackoffLocked keeps repeated starts from thrashing after a

@@ -21,7 +21,6 @@ import (
 type Server struct {
 	store            *Store
 	agentServerStore AgentServerStore
-	stateFilter      func(methods.ACPNavState) methods.ACPNavState
 	mu               sync.Mutex
 	liveStatuses     map[string]methods.ACPNavConversationLiveStatus
 	// activeSessions tracks which conversations each client connection is
@@ -117,10 +116,6 @@ func chatStorageName(sessionID string) string {
 
 func (s *Server) SetAgentServerStore(store AgentServerStore) {
 	s.agentServerStore = store
-}
-
-func (s *Server) SetStateFilter(filter func(methods.ACPNavState) methods.ACPNavState) {
-	s.stateFilter = filter
 }
 
 func (s *Server) HasStore() bool {
@@ -919,9 +914,6 @@ func (s *Server) listWithLiveStatus(ctx context.Context) (methods.ACPNavState, e
 		return methods.ACPNavState{}, err
 	}
 	state = s.overlayLiveStatus(state)
-	if s.stateFilter != nil {
-		state = s.stateFilter(state)
-	}
 	return state, nil
 }
 

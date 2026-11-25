@@ -68,7 +68,7 @@ base under `/var/tmp`. It:
 
 1. Bazel-builds `//cmd/camber-helper:camber-helper` from the checkout.
 2. Copies it to Tauri as `camber-helper-aarch64-apple-darwin`.
-3. Downloads the pinned MLX and Whisper release sidecars if needed.
+3. Downloads the pinned Whisper release sidecar if needed.
 
 Then compile and bundle the desktop app:
 
@@ -153,7 +153,6 @@ and ad-hoc sign only those that fail:
 ```sh
 for BIN in \
   "$APP/Contents/MacOS/camber-helper" \
-  "$APP/Contents/MacOS/camber-mlx-sidecar" \
   "$APP/Contents/MacOS/camber-whisper-server"
 do
   codesign --verify --strict "$BIN" || codesign --force --sign - "$BIN"

@@ -10,10 +10,7 @@ import { FALLBACK_NATIVE_MENU_THEME } from "./nativeMenuTheme";
  * - `{ name, color }` to override that color (e.g. destructive rows),
  * - `{ url, color }` for mask-style image icons (agent icons): the image's
  *   alpha is filled with `color` — or the default glyph color — matching the
- *   DOM's `bg-current` CSS mask (brand-tinted rows pass the tint as `color`);
- *   `overlayUrl` stacks a second mask over the first (the local agent's badge
- *   sits in the notch of its roundel), both silhouettes filled flat with the
- *   same color like the DOM's stacked `bg-current` spans,
+ *   DOM's `bg-current` CSS mask (brand-tinted rows pass the tint as `color`),
  * - `{ image }` for full-color artwork (app icons passed as data URIs): drawn
  *   contain-fit and centered with its own colors, never masked or recolored;
  *   `scale` grows the artwork about the center, mirroring the DOM's slight
@@ -31,7 +28,7 @@ import { FALLBACK_NATIVE_MENU_THEME } from "./nativeMenuTheme";
 export type NativeMenuIcon =
   | IconName
   | { name: IconName; color?: string }
-  | { url: string; color?: string; overlayUrl?: string }
+  | { url: string; color?: string }
   | { image: string; scale?: number }
   | { svg: string; color?: string }
   | { file: string };
@@ -166,8 +163,7 @@ function cacheKey(icon: NativeMenuIcon, iconColor: string): string {
   // window that moved between displays from serving stale-resolution icons.
   const dpr = window.devicePixelRatio || 1;
   if (typeof icon === "string") return `dpr:${dpr}:name:${icon}:${iconColor}`;
-  if ("url" in icon)
-    return `dpr:${dpr}:url:${icon.url}:overlay:${icon.overlayUrl ?? ""}:${icon.color ?? iconColor}`;
+  if ("url" in icon) return `dpr:${dpr}:url:${icon.url}:${icon.color ?? iconColor}`;
   if ("image" in icon) return `dpr:${dpr}:image:${icon.scale ?? 1}:${icon.image}`;
   if ("svg" in icon) return `dpr:${dpr}:svg:${icon.color ?? iconColor}:${icon.svg}`;
   // The OS resolves file icons at native resolution, so DPR never applies.
@@ -184,9 +180,7 @@ async function buildWireIcon(
     return { pngBase64: await rasterizeGlyph(icon, iconColor) };
   }
   if ("url" in icon) {
-    return {
-      pngBase64: await rasterizeUrlMask(icon.url, icon.color ?? iconColor, icon.overlayUrl, signal),
-    };
+    return { pngBase64: await rasterizeUrlMask(icon.url, icon.color ?? iconColor, signal) };
   }
   if ("image" in icon) {
     return { pngBase64: await rasterizeImage(icon.image, icon.scale) };
@@ -244,20 +238,11 @@ async function rasterizeSvgMarkup(markup: string, color: string): Promise<string
 /**
  * Rasterizes a mask-style image icon the way the DOM renders it: the image's
  * alpha silhouette filled with a flat color (`RegistryAgentIcon` masks its
- * URLs to `bg-current`, `center / contain`). An overlay mask (the local
- * agent's badge) draws over the base before the single fill — `fillMask`
- * recolors everything drawn so far, so filling once after both draws leaves
- * both silhouettes flat in the same color, like the DOM's stacked spans.
+ * URLs to `bg-current`, `center / contain`).
  */
-async function rasterizeUrlMask(
-  url: string,
-  color: string,
-  overlayUrl: string | undefined,
-  signal: AbortSignal,
-): Promise<string> {
+async function rasterizeUrlMask(url: string, color: string, signal: AbortSignal): Promise<string> {
   const surface = createRasterSurface();
   surface.drawContained(await loadMaskImage(url, signal));
-  if (overlayUrl) surface.drawContained(await loadMaskImage(overlayUrl, signal));
   surface.fillMask(color);
   return surface.toBase64();
 }

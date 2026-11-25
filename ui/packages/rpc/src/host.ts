@@ -153,7 +153,7 @@ export type AttachedUrl = {
 };
 
 export interface ACPAgentServerConfig {
-  type?: "custom" | "registry" | "local";
+  type?: "custom" | "registry";
   command?: string;
   args?: string[];
   env?: Record<string, string>;

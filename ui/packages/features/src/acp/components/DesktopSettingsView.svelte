@@ -8,7 +8,6 @@
   import DesktopGitHubConnectorSection from "./DesktopGitHubConnectorSection.svelte";
   import DesktopPreferencesSection from "./DesktopPreferencesSection.svelte";
   import DesktopRemoteAccessSection from "./DesktopRemoteAccessSection.svelte";
-  import LocalInferenceSettingsSection from "./LocalInferenceSettingsSection.svelte";
   import VoiceRecognitionSettingsSection from "./VoiceRecognitionSettingsSection.svelte";
   import UserMCPServersSection from "./UserMCPServersSection.svelte";
   import DesktopSettingsPanelFrame from "./settings/DesktopSettingsPanelFrame.svelte";
@@ -32,7 +31,6 @@
     availableSections?: readonly DesktopSettingsSection[];
     sectionNav?: boolean;
     onSectionChange?: (section: DesktopSettingsSection) => void;
-    onShowConnectors?: () => void;
     onShowChat?: () => void;
     activeConversationId?: string | null;
     onActiveConversationIdChange?: (id: string | null) => void;
@@ -47,7 +45,6 @@
     availableSections = DESKTOP_SETTINGS_SECTIONS,
     sectionNav = true,
     onSectionChange,
-    onShowConnectors,
     onShowChat,
     activeConversationId = null,
     onActiveConversationIdChange,
@@ -80,10 +77,6 @@
     <DesktopGitHubConnectorSection showHeading={false} />
   {:else if sectionName === "agents"}
     <AcpAgentConfigurationSection />
-  {:else if sectionName === "models"}
-    {#if isDesktop}
-      <LocalInferenceSettingsSection {onShowConnectors} />
-    {/if}
   {:else if sectionName === "voice"}
     {#if isDesktop}
       <VoiceRecognitionSettingsSection />
@@ -118,7 +111,6 @@
 
     {@render settingsSection("connectors")}
     {#if isDesktop}
-      {@render settingsSection("models")}
       {@render settingsSection("voice")}
     {/if}
     {@render settingsSection("github")}
@@ -133,8 +125,6 @@
     {/if}
   {:else if section === "shortcuts"}
     {@render settingsSection("shortcuts")}
-  {:else if section === "models"}
-    {@render settingsSection("models")}
   {:else if section === "voice"}
     {@render settingsSection("voice")}
   {:else if section === "connectors"}

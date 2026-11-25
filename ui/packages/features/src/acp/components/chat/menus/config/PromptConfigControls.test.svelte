@@ -6,7 +6,6 @@
   import { _setACPAgentServersContextForTests } from "../../../../features/AgentServersRepository.svelte";
   import { setACPChatSessionScope } from "../../../../features/ChatSessionScope.svelte";
   import { setACPHandoffConfirmationContext } from "../../../../features/HandoffConfirmationContext";
-  import { _setLocalInferenceContextForTests } from "../../../../features/LocalInferenceRepository.svelte";
   import {
     _setACPContextForTests,
     type ACPSessionRepository,
@@ -18,7 +17,6 @@
     registry?: unknown;
     agentServers?: unknown;
     handoff?: { request: (request: unknown) => void };
-    localInference?: unknown;
     conversationId?: string | null;
   }
 
@@ -27,7 +25,6 @@
     registry = { getAgent: () => undefined },
     agentServers = { setDefaultAgentServer: async () => {} },
     handoff = { request: () => {} },
-    localInference,
     conversationId = "conversation:test",
   }: Props = $props();
 
@@ -35,7 +32,6 @@
   _setACPAgentRegistryContextForTests(registry as never);
   _setACPAgentServersContextForTests(agentServers as never);
   setACPHandoffConfirmationContext(handoff as never);
-  if (localInference) _setLocalInferenceContextForTests(localInference as never);
   setACPChatSessionScope(repo as ACPSessionRepository, () => conversationId);
 </script>
 

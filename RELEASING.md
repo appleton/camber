@@ -6,7 +6,7 @@ The mobile remote UI is embedded in the helper.
 ## Helper runtime
 
 A `helper/vM.m.p` release contains macOS arm64 and amd64 helper archives,
-the Apple Silicon MLX and whisper sidecars, and a SHA-256 checksum for each.
+the Apple Silicon whisper sidecar, and a SHA-256 checksum for each.
 Run `scripts/verify-helper-runtime.sh <directory>` before publication.
 The helper must embed the mobile UI (`pnpm -F @camber/mobile-remote embed`).
 Build from a clean committed tree on Apple Silicon with:

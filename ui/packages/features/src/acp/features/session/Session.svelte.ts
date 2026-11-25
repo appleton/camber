@@ -17,7 +17,7 @@ import type { ACPResolvedSessionInfo } from "../../sessionInfo";
 import { TurnMaterializer, type SessionEvent, type TurnMetadata } from "../../TurnMaterializer";
 import { textPromptContent } from "./content";
 import { CamberSessionExtensions } from "./extensions/CamberSessionExtensions.svelte";
-import { ACPSessionConfig, type ACPSetConfigOptionOptions } from "./SessionConfig";
+import { ACPSessionConfig } from "./SessionConfig";
 import { ACPSessionEvents } from "./SessionEvents";
 import { ACPSessionLoader } from "./SessionLoader";
 import {
@@ -570,20 +570,12 @@ export class ACPSession {
     return this.config.setMode(modeId);
   }
 
-  setConfigOption(
-    configId: string,
-    value: string,
-    options?: ACPSetConfigOptionOptions,
-  ): Promise<void> {
-    return this.config.setOption(configId, value, options);
+  setConfigOption(configId: string, value: string): Promise<void> {
+    return this.config.setOption(configId, value);
   }
 
-  setBooleanConfigOption(
-    configId: string,
-    value: boolean,
-    options?: ACPSetConfigOptionOptions,
-  ): Promise<void> {
-    return this.config.setBooleanOption(configId, value, options);
+  setBooleanConfigOption(configId: string, value: boolean): Promise<void> {
+    return this.config.setBooleanOption(configId, value);
   }
 
   togglePlanMode(): Promise<void> {

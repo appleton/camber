@@ -24,11 +24,9 @@
   import {
     DEFAULT_AGENT_SERVER,
     LEGACY_DEFAULT_AGENT_SERVER,
-    LOCAL_AGENT_SERVER,
     resolveAgentServers,
   } from "../agentServers";
   import { versionFromConfig } from "../agentVersions";
-  import { LOCAL_AGENT_ROUNDEL_ICON_URL, LOCAL_AGENT_SYSTEM_ICON_URL } from "../localAgentIcon";
   import { agentPickerIconProps } from "./chat/menus/config/agentConfig";
   import RegistryAgentIcon from "./RegistryAgentIcon.svelte";
   import Icon from "@camber/components/icon";
@@ -85,7 +83,6 @@
         (name) =>
           name !== DEFAULT_AGENT_SERVER &&
           name !== LEGACY_DEFAULT_AGENT_SERVER &&
-          name !== LOCAL_AGENT_SERVER &&
           !registry.getAgent(name),
       )
       .sort((left, right) => left.localeCompare(right)),
@@ -112,7 +109,6 @@
     bundledCamberAgent ? registryAgentReleaseUrl(bundledCamberAgent) : undefined,
   );
   let camberUpdate = $derived(agentUpdates.updateFor(DEFAULT_AGENT_SERVER));
-  let isDesktop = $derived($appState.environment.assistantHost === "desktop");
   let isBusy = $derived(busyAgentId != null || agentUpdates.busyAgentServer != null);
   let visibleSaveError = $derived(saveError ?? agentUpdates.error);
 
@@ -553,47 +549,6 @@
           </div>
         {/if}
       </article>
-
-      {#if isDesktop}
-        <article class={`${catalogCardClass} flex min-w-0 cursor-default flex-col rounded-xl p-4`}>
-          <div class="flex min-w-0 items-center gap-2">
-            <span
-              class="border-psx-border bg-psx-panel inline-grid size-8 shrink-0 place-items-center rounded-[9px] border dark:border-black/10 dark:bg-white"
-              aria-hidden="true"
-            >
-              <RegistryAgentIcon
-                iconUrl={LOCAL_AGENT_ROUNDEL_ICON_URL}
-                overlayIconUrl={LOCAL_AGENT_SYSTEM_ICON_URL}
-                overlayClass="text-psx-icon dark:text-neutral-500"
-                fallback="lab"
-                size={20}
-                class="text-psx-vibrant shrink-0"
-              />
-            </span>
-            <h3 class="text-psx-foreground-primary truncate text-[13px]/[18px] font-medium">
-              Camber Local
-            </h3>
-            <span
-              class="bg-psx-info-foreground/10 text-psx-info-foreground shrink-0 rounded-full px-1.5 py-0.5 text-xs"
-            >
-              on-device
-            </span>
-            <span
-              class="bg-psx-chrome text-psx-foreground-secondary shrink-0 rounded-full px-1.5 py-0.5 text-xs"
-            >
-              local
-            </span>
-          </div>
-          <p class="text-psx-foreground-secondary leading-4.5 mt-2 text-sm">
-            Runs local, on-device models configured in On-Device Models. Use this when you want the
-            model runtime to stay on this machine instead of using Poolside cloud models.
-          </p>
-          {@render likelyRequirements([
-            "downloaded on-device model",
-            "sufficient disk space and memory",
-          ])}
-        </article>
-      {/if}
     </div>
   </div>
 </SettingsSection>

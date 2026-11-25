@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Agents, MCP connectors, skills and local models. Each command dispatches a
+// Agents, MCP connectors and skills. Each command dispatches a
 // helper action that runs the desktop's own handler for the operation (see
 // control/tools*.go). Commands that define something the desktop will run or
 // connect to need --caller-token from a conversation in a permission-bypass
@@ -19,7 +19,7 @@ import (
 func init() {
 	registerCommandExtension(addAgentToolCommands)
 	registerCommandExtension(addMCPCommands)
-	registerCommandExtension(addSkillsAndModelsCommands)
+	registerCommandExtension(addSkillsCommands)
 }
 
 const bypassNote = " Needs --caller-token from a conversation running in a permission-bypass mode."
@@ -201,7 +201,7 @@ func addMCPCommands(kit CommandKit) {
 	kit.Add(mcp, "sign-out NAME", "Sign out of an OAuth connector", "mcp.signOut", cobra.ExactArgs(1), nameArg)
 }
 
-func addSkillsAndModelsCommands(kit CommandKit) {
+func addSkillsCommands(kit CommandKit) {
 	skills := kit.Group("skills", "List installed skills")
 	listSkills := kit.Add(skills, "list", "List installed skills and where each comes from", "skills.list", cobra.NoArgs, func(cmd *cobra.Command, args []string) (map[string]any, error) {
 		input := map[string]any{}
@@ -215,29 +215,6 @@ func addSkillsAndModelsCommands(kit CommandKit) {
 	})
 	listSkills.Flags().String("workspace", "", "Registered project or worktree to scan instead of the desktop's workspace folders")
 	listSkills.Flags().String("agent", "", "Also include skill commands this agent publishes")
-
-	models := kit.Group("models", "Manage local models")
-	modelArg := func(cmd *cobra.Command, args []string) (map[string]any, error) {
-		return map[string]any{"modelId": args[0]}, nil
-	}
-	kit.Add(models, "list", "List local models and the local runtime's state", "models.list", cobra.NoArgs, noActionArgs)
-	kit.Add(models, "search QUERY", "Search Hugging Face for installable local models", "models.search", cobra.ExactArgs(1), func(cmd *cobra.Command, args []string) (map[string]any, error) {
-		return map[string]any{"query": args[0]}, nil
-	})
-	download := &cobra.Command{Use: "download MODEL", Short: "Start downloading a local model, or --cancel a download", Args: cobra.ExactArgs(1)}
-	cancelRun := kit.Add(&cobra.Command{}, "cancel", "", "models.cancel", cobra.ExactArgs(1), modelArg).RunE
-	downloadRun := kit.Add(&cobra.Command{}, "download", "", "models.download", cobra.ExactArgs(1), modelArg).RunE
-	download.RunE = func(cmd *cobra.Command, args []string) error {
-		if cancel, _ := cmd.Flags().GetBool("cancel"); cancel {
-			return cancelRun(cmd, args)
-		}
-		return downloadRun(cmd, args)
-	}
-	download.Flags().Bool("cancel", false, "Cancel the model's download instead")
-	models.AddCommand(download)
-	kit.Add(models, "delete MODEL", "Delete a downloaded local model from disk", "models.delete", cobra.ExactArgs(1), modelArg)
-	kit.Add(models, "default MODEL", "Make a downloaded model the local agent's default", "models.default", cobra.ExactArgs(1), modelArg)
-	kit.Add(models, "unload", "Release the model resident in the local runtime's memory", "models.unload", cobra.NoArgs, noActionArgs)
 }
 
 func noActionArgs(*cobra.Command, []string) (map[string]any, error) { return map[string]any{}, nil }

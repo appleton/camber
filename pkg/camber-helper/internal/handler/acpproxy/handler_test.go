@@ -1325,81 +1325,22 @@ func TestClaudeAutonomousUsageUpdate(t *testing.T) {
 	}
 }
 
-func TestProcessReadyForSessionPreflight(t *testing.T) {
-	t.Run("keeps healthy process", func(t *testing.T) {
-		calls := 0
-		h := NewHandler(preflightConfig(func(_ context.Context, agentServer string) (bool, error) {
-			calls++
-			assert.Equal(t, LocalAgentServerName, agentServer)
-			return true, nil
-		}), nil, nil)
-		gCtx := newGlspContext(nil, nil)
-		proc, _ := h.processFor(LocalAgentServerName, gCtx)
-		proc.state = processState{kind: processStateRunning}
-		proc.stdin = nopWriteCloser{}
-		proc.initResp = &acpsdk.InitializeResponse{ProtocolVersion: acpsdk.ProtocolVersionNumber}
+const selfHealServerName = "selfheal"
 
-		got, err := h.processReadyForSession(context.Background(), gCtx, LocalAgentServerName)
-
-		require.NoError(t, err)
-		assert.Same(t, proc, got)
-		assert.Equal(t, 1, calls)
-		assert.Equal(t, processStateRunning, proc.state.kind)
-		assert.NotNil(t, proc.stdin)
-	})
-
-	t.Run("restarts unhealthy process", func(t *testing.T) {
-		calls := 0
-		h := NewHandler(preflightConfig(func(_ context.Context, agentServer string) (bool, error) {
-			calls++
-			assert.Equal(t, LocalAgentServerName, agentServer)
-			return false, nil
-		}), nil, nil)
-		gCtx := newGlspContext(nil, nil)
-		proc, _ := h.processFor(LocalAgentServerName, gCtx)
-		proc.state = processState{kind: processStateRunning}
-		proc.stdin = nopWriteCloser{}
-		proc.initResp = &acpsdk.InitializeResponse{ProtocolVersion: acpsdk.ProtocolVersionNumber}
-		proc.initReq = &acpsdk.InitializeRequest{
-			ProtocolVersion: acpsdk.ProtocolVersionNumber,
-			ClientInfo: &acpsdk.Implementation{
-				Name:    "camber-test",
-				Version: "test",
-			},
+func selfHealConfig() ConfigFn {
+	return func() HandlerConfig {
+		return HandlerConfig{
+			WorkingDir:   "/tmp",
+			AgentServers: map[string]AgentServerConfig{selfHealServerName: {Command: "/nonexistent"}},
 		}
-
-		_, err := h.processReadyForSession(context.Background(), gCtx, LocalAgentServerName)
-
-		require.ErrorContains(t, err, "acpproxy: start")
-		assert.Equal(t, 1, calls)
-		assert.Equal(t, processStateUnstarted, proc.state.kind)
-		assert.Nil(t, proc.stdin)
-		req := proc.initializeRequest()
-		require.NotNil(t, req)
-		require.NotNil(t, req.ClientInfo)
-		assert.Equal(t, "camber-test", req.ClientInfo.Name)
-	})
-
-	t.Run("skips stopped process", func(t *testing.T) {
-		calls := 0
-		h := NewHandler(preflightConfig(func(context.Context, string) (bool, error) {
-			calls++
-			return false, nil
-		}), nil, nil)
-		gCtx := newGlspContext(nil, nil)
-
-		_, err := h.processReadyForSession(context.Background(), gCtx, LocalAgentServerName)
-
-		require.NoError(t, err)
-		assert.Equal(t, 0, calls)
-	})
+	}
 }
 
 func TestProcessReadyForSessionSelfHeal(t *testing.T) {
 	t.Run("restarts exited process with retained initialize request", func(t *testing.T) {
-		h := NewHandler(preflightConfig(nil), nil, nil)
+		h := NewHandler(selfHealConfig(), nil, nil)
 		gCtx := newGlspContext(nil, nil)
-		proc, _ := h.processFor(LocalAgentServerName, gCtx)
+		proc, _ := h.processFor(selfHealServerName, gCtx)
 		proc.state = processState{kind: processStateExited}
 		proc.initReq = &acpsdk.InitializeRequest{
 			ProtocolVersion: acpsdk.ProtocolVersionNumber,
@@ -1409,7 +1350,7 @@ func TestProcessReadyForSessionSelfHeal(t *testing.T) {
 			},
 		}
 
-		_, err := h.processReadyForSession(context.Background(), gCtx, LocalAgentServerName)
+		_, err := h.processReadyForSession(context.Background(), gCtx, selfHealServerName)
 
 		// The restart attempt reached spawn (and failed on the test's
 		// nonexistent binary) instead of leaving the dead slot to fail the
@@ -1422,23 +1363,23 @@ func TestProcessReadyForSessionSelfHeal(t *testing.T) {
 	})
 
 	t.Run("leaves a never-initialized slot for the initialize-first error", func(t *testing.T) {
-		h := NewHandler(preflightConfig(nil), nil, nil)
+		h := NewHandler(selfHealConfig(), nil, nil)
 		gCtx := newGlspContext(nil, nil)
 
-		_, err := h.processReadyForSession(context.Background(), gCtx, LocalAgentServerName)
+		_, err := h.processReadyForSession(context.Background(), gCtx, selfHealServerName)
 
 		require.NoError(t, err)
 	})
 
 	t.Run("declines to restart once the handler is closed", func(t *testing.T) {
-		h := NewHandler(preflightConfig(nil), nil, nil)
+		h := NewHandler(selfHealConfig(), nil, nil)
 		gCtx := newGlspContext(nil, nil)
-		proc, _ := h.processFor(LocalAgentServerName, gCtx)
+		proc, _ := h.processFor(selfHealServerName, gCtx)
 		proc.state = processState{kind: processStateExited}
 		proc.initReq = &acpsdk.InitializeRequest{ProtocolVersion: acpsdk.ProtocolVersionNumber}
 		require.NoError(t, h.Close())
 
-		_, err := h.processReadyForSession(context.Background(), gCtx, LocalAgentServerName)
+		_, err := h.processReadyForSession(context.Background(), gCtx, selfHealServerName)
 
 		// No spawn was attempted: a subprocess started now would outlive the
 		// helper that owns it.
@@ -1755,20 +1696,6 @@ func dummyConfig() ConfigFn {
 					Command: "/nonexistent",
 				},
 			},
-		}
-	}
-}
-
-func preflightConfig(ready AgentServerReadinessProvider) ConfigFn {
-	return func() HandlerConfig {
-		return HandlerConfig{
-			WorkingDir: "/tmp",
-			AgentServers: map[string]AgentServerConfig{
-				LocalAgentServerName: {
-					Command: "/nonexistent",
-				},
-			},
-			AgentServerReady: ready,
 		}
 	}
 }

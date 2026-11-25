@@ -461,7 +461,6 @@ export async function applySessionConfigSelections({
   reportedConfigOptions = configOptions,
   selections,
   isCurrent,
-  reconcileConfigOptions,
   onApplied,
 }: {
   conn: Pick<ClientSideConnection, "setSessionConfigOption">;
@@ -470,10 +469,6 @@ export async function applySessionConfigSelections({
   reportedConfigOptions?: SessionConfigOption[];
   selections: Map<string, string | boolean>;
   isCurrent: () => boolean;
-  reconcileConfigOptions?: (
-    reported: SessionConfigOption[],
-    fallback: SessionConfigOption[],
-  ) => SessionConfigOption[];
   onApplied?: (configOptions: SessionConfigOption[]) => void;
 }): Promise<SessionConfigOption[] | null> {
   let nextConfigOptions = configOptions;
@@ -492,9 +487,7 @@ export async function applySessionConfigSelections({
         ? updateBooleanConfigOptionValue(nextConfigOptions, configId, value)
         : updateConfigOptionValue(nextConfigOptions, configId, value);
     nextReportedConfigOptions = res?.configOptions ?? fallback;
-    nextConfigOptions = res?.configOptions
-      ? (reconcileConfigOptions?.(res.configOptions, fallback) ?? res.configOptions)
-      : fallback;
+    nextConfigOptions = res?.configOptions ?? fallback;
     onApplied?.(nextConfigOptions);
   }
   return nextConfigOptions;

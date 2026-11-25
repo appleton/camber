@@ -5,7 +5,6 @@ import {
   createACPWorktreeRepository,
   createAssistantTerminalCommandRunner,
   isClaudeAgent,
-  LocalInferenceAgentSync,
   onACPAgentServersDidChange,
   readStoredWorktreeSetupSurface,
   setACPAgentRegistryContext,
@@ -23,7 +22,6 @@ import {
   setACPSetupScriptOutputContext,
   setACPWorktreeContext,
   setAssistantTerminalContext,
-  setLocalInferenceContext,
   setNotificationContext,
   terminalPlacementForWorktreeSetupSurface,
   wireACPGithubSync,
@@ -70,8 +68,6 @@ export class Repositories {
   readonly acpConnectionPool: ACPConnectionPool;
   readonly acpAgentServers: ReturnType<typeof setACPAgentServersContext>;
   readonly acpAgentUpdates: ReturnType<typeof setACPAgentUpdateContext>;
-  readonly localInference = setLocalInferenceContext();
-  readonly localInferenceAgentSync: LocalInferenceAgentSync | undefined;
   readonly secrets: ReturnType<typeof setSecretsContext>;
   readonly acpWorktreeRepo: ReturnType<typeof setACPWorktreeContext>;
 
@@ -146,9 +142,6 @@ export class Repositories {
         void this.acpAgentServers.handleDidChange();
       }),
     );
-    if (get(appState).environment.assistantHost === "desktop") {
-      this.localInferenceAgentSync = new LocalInferenceAgentSync(this.localInference, this.acpRepo);
-    }
   }
 
   // Installs the debug RPC bridge over the connection pool; torn down on unmount.

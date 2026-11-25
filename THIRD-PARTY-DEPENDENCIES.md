@@ -3,9 +3,9 @@
 Generated from the patched Syft SBOM and evaluated by Grant against `grant.yaml`.
 
 - Grant result: `compliant`
-- SBOM package records: `1898`
-- Grant packages evaluated: `1695`
-- Allowed: `1695`
+- SBOM package records: `1873`
+- Grant packages evaluated: `1670`
+- Allowed: `1670`
 - Denied: `0`
 - Ignored: `0`
 - Unlicensed: `0`
@@ -1887,28 +1887,3 @@ The table preserves every unique ecosystem, package, and version record from the
 | rust-crate | zvariant | 5.11.0 | MIT |
 | rust-crate | zvariant_derive | 5.11.0 | MIT |
 | rust-crate | zvariant_utils | 3.3.1 | MIT |
-| swift | async-http-client | 1.34.0 | Apache-2.0 |
-| swift | swift-algorithms | 1.2.1 | Apache-2.0 |
-| swift | swift-asn1 | 1.7.1 | Apache-2.0 |
-| swift | swift-async-algorithms | 1.1.4 | Apache-2.0 |
-| swift | swift-atomics | 1.3.1 | Apache-2.0 |
-| swift | swift-certificates | 1.19.2 | Apache-2.0 |
-| swift | swift-collections | 1.6.0 | Apache-2.0 |
-| swift | swift-configuration | 1.2.0 | Apache-2.0 |
-| swift | swift-crypto | 4.5.0 | Apache-2.0 |
-| swift | swift-distributed-tracing | 1.4.1 | Apache-2.0 |
-| swift | swift-http-structured-headers | 1.7.0 | Apache-2.0 |
-| swift | swift-http-types | 1.6.0 | Apache-2.0 |
-| swift | swift-log | 1.14.0 | Apache-2.0 |
-| swift | swift-nio | 2.101.2 | Apache-2.0 |
-| swift | swift-nio-extras | 1.34.1 | Apache-2.0 |
-| swift | swift-nio-http2 | 1.44.0 | Apache-2.0 |
-| swift | swift-nio-ssl | 2.37.1 | Apache-2.0 |
-| swift | swift-nio-transport-services | 1.28.0 | Apache-2.0 |
-| swift | swift-numerics | 1.1.1 | Apache-2.0 |
-| swift | swift-service-context | 1.3.0 | Apache-2.0 |
-| swift | swift-service-lifecycle | 2.11.0 | Apache-2.0 |
-| swift | swift-syntax | 600.0.1 | Apache-2.0 |
-| swift | swift-system | 1.7.2 | Apache-2.0 |
-| swift | vmlx-swift | UNKNOWN | MIT |
-| swift | yyjson | 0.12.0 | MIT |

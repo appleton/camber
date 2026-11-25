@@ -12,7 +12,7 @@ describe("client", () => {
   let removeEventListener: Mock;
   let send: MockInstance<WebViewRPCResponseSender>;
   let acpTransport: { receive: Mock };
-  let localInferenceRepo: { applyDidChange: Mock };
+  let acpProjectRepo: { replaceProjects: Mock };
   let assistantTerminals: {
     terminalDidOpen: Mock;
     terminalDidUpdate: Mock;
@@ -25,7 +25,7 @@ describe("client", () => {
     addEventListener = vi.fn();
     removeEventListener = vi.fn();
     acpTransport = { receive: vi.fn() };
-    localInferenceRepo = { applyDidChange: vi.fn() };
+    acpProjectRepo = { replaceProjects: vi.fn() };
     assistantTerminals = {
       terminalDidOpen: vi.fn(),
       terminalDidUpdate: vi.fn(),
@@ -45,9 +45,8 @@ describe("client", () => {
       {} as any,
       undefined,
       undefined,
-      undefined,
-      undefined,
-      localInferenceRepo as any,
+      acpProjectRepo as any,
+      { replaceConversations: vi.fn() } as any,
     );
 
     send = vi.spyOn(server, "sendMessage");
@@ -76,20 +75,12 @@ describe("client", () => {
         await server.route({
           source: iframe.contentWindow,
           data: {
-            command: "localInferenceDidChange",
-            payload: [
-              {
-                state: {
-                  modelsDirectory: "/tmp/models",
-                  catalog: [],
-                  runtime: { supported: true, status: "stopped", agentServer: "local" },
-                },
-              },
-            ],
+            command: "acpNavDidChange",
+            payload: [{ state: { projects: [], conversations: [] } }],
             requestId: "forged",
           },
         });
-        expect(localInferenceRepo.applyDidChange).not.toHaveBeenCalled();
+        expect(acpProjectRepo.replaceProjects).not.toHaveBeenCalled();
         expect(send).not.toHaveBeenCalled();
       } finally {
         iframe.remove();
@@ -99,34 +90,6 @@ describe("client", () => {
     it("skips when no handler is configured", async () => {
       await server.route({ data: {} } as MessageEvent<AssistantMessage>);
       expect(send).not.toHaveBeenCalled();
-    });
-
-    it("applies local inference notifications to the injected repository", async () => {
-      const params = {
-        state: {
-          modelsDirectory: "/tmp/models",
-          catalog: [],
-          runtime: {
-            supported: true,
-            status: "stopped",
-            agentServer: "local",
-          },
-        },
-      };
-
-      await server.route({
-        data: {
-          command: "localInferenceDidChange",
-          payload: [params],
-          requestId: "local-inference",
-        },
-      });
-
-      expect(localInferenceRepo.applyDidChange).toHaveBeenCalledWith(params);
-      expect(send).toHaveBeenCalledWith("localInferenceDidChange", {
-        requestId: "local-inference",
-        response: undefined,
-      });
     });
 
     it("hands agent server store changes to the runtime's subscribers", async () => {
@@ -207,7 +170,6 @@ describe("client", () => {
         undefined,
         { removeProject: async (path: string) => void order.push(`remove:${path}`) } as any,
         { refresh: async () => void order.push("refresh") } as any,
-        undefined,
         { closeProject: async (path: string) => void order.push(`close:${path}`) },
       );
       const desktopSend = vi.spyOn(desktop, "sendMessage");

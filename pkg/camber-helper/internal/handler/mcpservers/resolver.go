@@ -144,8 +144,7 @@ func resolveOne(ctx context.Context, e methods.MCPServerEntry, caps acpsdk.McpCa
 
 // resolveOAuthToken loads, refreshes-if-needed, and returns the access token for
 // an OAuth server. On failure it returns a reason + message for the unavailable list.
-// The shared load/refresh/persist logic lives in mcp.ResolveAccessToken so other
-// features (e.g. gated Hugging Face model downloads) can reuse the same token.
+// The shared load/refresh/persist logic lives in mcp.ResolveAccessToken.
 func resolveOAuthToken(ctx context.Context, e methods.MCPServerEntry) (token, reason, message string) {
 	token, err := mcp.ResolveAccessToken(ctx, mcp.NewKeyringSecretsServerStore(), e.URL, e.Name)
 	if err == nil {

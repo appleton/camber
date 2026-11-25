@@ -29,27 +29,6 @@ agents you trust, and review the command or binary before installing.
    - **Desktop app**: Click **New conversation**.
 4. In the prompt controls, select the agent you installed.
 
-### Use a local model on your device
-
-Camber Local runs models on your own machine with the
-[MLX framework](https://mlx-framework.org). Use it when you want the model runtime to stay on your device.
-
-Camber Local requires the desktop app on a Mac with Apple silicon. The
-**On-Device Models** settings run on the Mac hosting the desktop app.
-
-1. In the desktop app, click **Settings** in the sidebar, then click
-   **On-Device Models**.
-2. Choose a model under **Recommended models**, or search Hugging Face for an
-   MLX model, then download it.
-   Gated and private Hugging Face models need the **Hugging Face** connector.
-   If the model you chose needs it, Camber Assistant sends you to
-   **Connectors** to add the connector and sign in to Hugging Face.
-   Recommended models and ungated Hugging Face models download without a
-   connector.
-3. Start a new conversation.
-4. In the prompt controls, select **Camber Local** as the agent, then select
-   the model you downloaded.
-
 ### Use a custom agent
 
 To use a custom agent that is not listed under **ACP Agents**, add it to

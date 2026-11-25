@@ -1,24 +1,15 @@
 <script lang="ts">
   import type { SessionConfigOption, SessionConfigSelectOption } from "@agentclientprotocol/sdk";
-  import { mount, unmount, untrack } from "svelte";
+  import { mount, unmount } from "svelte";
   import type { Attachment } from "svelte/attachments";
   import Icon from "@camber/components/icon";
   import { fuzzyScore } from "@camber/components/assistant-ui";
-  import { LOCAL_AGENT_SERVER } from "../../../../agentServers";
   import { getACPChatSessionScope } from "../../../../features/ChatSessionScope.svelte";
   import { getACPAgentRegistryRepo } from "../../../../features/AgentRegistryRepository.svelte";
   import { getACPAgentServersRepo } from "../../../../features/AgentServersRepository.svelte";
   import { getACPHandoffConfirmation } from "../../../../features/HandoffConfirmationContext";
-  import { getLocalInferenceRepo } from "../../../../features/LocalInferenceRepository.svelte";
   import { getACPSessionRepo } from "../../../../features/SessionRepository.svelte";
   import { appState, resolveSessionCwd } from "../../../../hostAdapter";
-  import {
-    formatLastPrompt,
-    formatMemoryBytes,
-    isExternalLocalInferenceRuntime,
-    localRuntimeResidency,
-  } from "../../../../localInferenceRuntime";
-  import { localInferenceModelMissing } from "../../../../localInferenceModelOptions";
   import { pointerHeadedToRect, type Point } from "../../../../shared/safeTriangle";
   import { Spinner } from "@camber/components/spinner";
   import { supportsNativeMenus } from "../../desktopContextMenu";
@@ -28,14 +19,12 @@
   import RegistryAgentIcon from "../../../RegistryAgentIcon.svelte";
   import "../../desktopEmptyStateControl.css";
   import { isAgentPickerOptionId } from "../menus";
-  import Tooltip from "../../../ui/Tooltip.svelte";
   import { resolveCssColorToHex } from "../../nativeMenuTheme";
   import {
     agentBrandTint,
     agentName,
     agentPickerIconProps,
     agentPickerIconUrl,
-    agentPickerOverlayIconUrl,
     agentServerOptions,
     isClaudeAgent,
     selectedAgentServer,
@@ -94,62 +83,6 @@
   const canChangeAgent = $derived(chatSession.canChangeAgent);
   const currentAgent = $derived(selectedAgentServer(chatSession));
   const serverName = $derived(agentName(registry, currentAgent));
-
-  // --- local-agent warm/cold model indicator ---------------------------------
-  // The local runtime context is provided app-wide by Repositories (every ACP
-  // host constructs one), but that wiring lives outside this component's
-  // reach; fall back to "no indicator" rather than crash if some future host
-  // ever renders the prompt config controls without it.
-  function optionalLocalInferenceRepo(): ReturnType<typeof getLocalInferenceRepo> | null {
-    try {
-      return getLocalInferenceRepo();
-    } catch {
-      return null;
-    }
-  }
-  const localInference = optionalLocalInferenceRepo();
-
-  const isLocalAgent = $derived(currentAgent === LOCAL_AGENT_SERVER);
-
-  // Picking the local agent for a new conversation rescans the models
-  // directory: a model placed there outside the app's download flow is only
-  // discovered by a helper state read, so without this it stays missing from
-  // the model picker until settings is opened or the app restarts. untrack
-  // keeps the refresh from re-triggering itself when the new state lands.
-  $effect(() => {
-    if (!localInference || !isLocalAgent || chatSession.hasSession) return;
-    void untrack(() => localInference.refreshIfStale());
-  });
-
-  // With no downloaded model the merge drops the model option entirely, so
-  // nothing model-shaped would render; this puts a "No model available" note
-  // where the model list belongs instead (the composer is locked on the same
-  // condition, and this note is where it points).
-  const localModelMissing = $derived(
-    isLocalAgent && !!localInference && localInferenceModelMissing(localInference.state),
-  );
-
-  const showLocalModelWarmth = $derived(
-    isLocalAgent && !!localInference && !isExternalLocalInferenceRuntime(localInference.state),
-  );
-  // Only meaningful for the local agent: which model (if any) is currently
-  // resident in the sidecar's memory, so its next prompt skips the load.
-  const localResidency = $derived(
-    showLocalModelWarmth && localInference ? localRuntimeResidency(localInference.state) : null,
-  );
-
-  // loadedModelId and the catalog option values both come from the same
-  // catalog and are normally identical strings; the last-path-segment
-  // fallback tolerates an owner/name vs. bare-name mismatch between the two.
-  function localModelValueIsResident(value: string): boolean {
-    if (!localResidency) return false;
-    if (value === localResidency.modelId) return true;
-    return value.split("/").at(-1) === localResidency.modelId.split("/").at(-1);
-  }
-
-  function currentSelectValue(option: SessionConfigOption): string | undefined {
-    return option.type === "select" ? option.currentValue : undefined;
-  }
 
   const availableAgents = $derived(agentServerOptions(repo));
   const showAgentOption = $derived(
@@ -313,9 +246,6 @@
   // Keep the control available when another agent can take over, even if the
   // current agent did not publish model or effort options — and while loading
   // or awaiting login, so the empty-state header always has a live picker.
-  // Same for the local agent with no model: the menu carries the "No model
-  // available" note the locked composer points to, so it must stay reachable
-  // even in a local-agent-only install with nothing else to show.
   const hasOptions = $derived(
     Boolean(
       showAgentOption ||
@@ -324,8 +254,7 @@
         effort ||
         extraOptions.length > 0 ||
         configLoading ||
-        optionsNeedAuth ||
-        localModelMissing,
+        optionsNeedAuth,
     ),
   );
 
@@ -366,13 +295,6 @@
         icon: configIcon(model),
         detail: selectedValueName(model),
         submenu: true,
-      });
-    } else if (localModelMissing) {
-      // Mirrors the desktop panel's note; the locked composer points here.
-      rows.push({
-        id: "no-local-model",
-        label: "No model available",
-        disabled: true,
       });
     }
     if (fast) {
@@ -926,12 +848,10 @@
     // Same masked-URL icon RegistryAgentIcon renders, with its fallback glyph
     // and the same brand tint the DOM rows apply through agentPickerIconProps
     // (Camber's vibrant, Claude's orange); untinted agents keep the default
-    // glyph color, as in the DOM. The local agent's badge overlay (the
-    // computer glyph sitting in the roundel's notch) composites in too.
+    // glyph color, as in the DOM.
     if (!url) return "sparkles";
-    const overlayUrl = agentPickerOverlayIconUrl(agentServer);
     const color = resolveCssColorToHex(agentBrandTint(registry, agentServer));
-    return color !== undefined ? { url, color, overlayUrl } : { url, overlayUrl };
+    return color !== undefined ? { url, color } : { url };
   }
 
   // The native counterpart of EffortBarsIcon is the component itself: render
@@ -953,21 +873,6 @@
     } finally {
       container.remove();
     }
-  }
-
-  // The DOM warmth dot's tooltip text; the native row carries it as toolTip
-  // only (the DOM shows no textual warmth state, so the sublabel stays the
-  // agent's own description).
-  function nativeWarmthToolTip(value: string): string | undefined {
-    if (!showLocalModelWarmth) return undefined;
-    if (localModelValueIsResident(value) && localResidency) {
-      const memoryLabel = formatMemoryBytes(localResidency.memoryBytes);
-      const lastPromptLabel = formatLastPrompt(localResidency.lastActivityUnixMs, Date.now());
-      return `Loaded in memory${memoryLabel ? ` (${memoryLabel})` : ""}${
-        lastPromptLabel ? ` · last prompt ${lastPromptLabel}` : ""
-      }`;
-    }
-    return "Not loaded — first prompt loads the model";
   }
 
   // One native action per selectable value, mirroring valueRow: the value's
@@ -1003,7 +908,6 @@
       icon,
       checked:
         option.type === "select" && value.value === (bars?.activeValue ?? option.currentValue),
-      toolTip: kind === "model" ? nativeWarmthToolTip(value.value) : undefined,
       star: { starred: isPinnedDefault(option, value.value) },
       // One radio group per option: starring a value clears only its
       // siblings' stars, never another option's pinned row. The opt: prefix
@@ -1104,8 +1008,8 @@
   // The native top level mirrors the DOM panel's first-level rows in order:
   // rows that open the side panel become submenus with the same contents
   // (each carrying the DOM row's dimmed current-selection text as `detail`),
-  // the inline model list stays inline, and the loading / auth /
-  // no-local-model notes become disabled items (the DOM prose has no action
+  // the inline model list stays inline, and the loading / auth
+  // notes become disabled items (the DOM prose has no action
   // to trigger). Every submenu carries the DOM sub-panel's fixed width as its
   // own `minWidth`, so long value descriptions (e.g. an agent's persona
   // sublabels) wrap to two lines at the sub-panel's width instead of
@@ -1161,16 +1065,6 @@
         icon: configIcon(model),
         minWidth: SUB_W,
         items: modelItems,
-      });
-    } else if (localModelMissing) {
-      // Where the model list belongs; the locked composer points here.
-      if (showAgentOption) items.push({ kind: "separator" });
-      else items.push({ kind: "separator", label: `${serverName} models` });
-      items.push({
-        kind: "action",
-        id: "status:no-local-model",
-        label: "No model available",
-        enabled: false,
       });
     }
     if (fast) {
@@ -1364,32 +1258,6 @@
   onmousemovecapture={handleWindowMousemove}
 />
 
-{#snippet localModelWarmthDot(value: string)}
-  {@const warm = localModelValueIsResident(value)}
-  <Tooltip placement="top" gutter={6} openDelay={400}>
-    {#snippet label()}
-      {#if warm && localResidency}
-        {@const memoryLabel = formatMemoryBytes(localResidency.memoryBytes)}
-        {@const lastPromptLabel = formatLastPrompt(localResidency.lastActivityUnixMs, Date.now())}
-        <span>
-          Loaded in memory{memoryLabel ? ` (${memoryLabel})` : ""}{lastPromptLabel
-            ? ` · last prompt ${lastPromptLabel}`
-            : ""}
-        </span>
-      {:else}
-        <span>Not loaded — first prompt loads the model</span>
-      {/if}
-    {/snippet}
-    <span
-      class={[
-        "size-1.5 shrink-0 rounded-full",
-        warm ? "bg-emerald-500" : "border-psx-foreground-tertiary border",
-      ]}
-      aria-hidden="true"
-    ></span>
-  </Tooltip>
-{/snippet}
-
 {#snippet valueRow(
   option: SessionConfigOption,
   value: SessionConfigSelectOption,
@@ -1408,7 +1276,7 @@
     onkeydown={(event) => rowKeydown(event, activate)}
     onmouseenter={inMainMenu ? (event) => hoverWithGrace(event, closeSub) : undefined}
   >
-    {#if bars || (kind === "model" && showLocalModelWarmth) || (kind !== "model" && kind !== "effort")}
+    {#if bars || (kind !== "model" && kind !== "effort")}
       <!-- Sized to one line of the name (the menu's own line box) so the
            glyph centres on the first line rather than on the whole, possibly
            two-line, row. Model names stand on their own, and an unrecognized
@@ -1425,8 +1293,6 @@
             <!-- Not a magnitude: the agent's default/auto entry. -->
             <Icon name="wand" size={16} class="shrink-0" aria-hidden="true" />
           {/if}
-        {:else if kind === "model"}
-          {@render localModelWarmthDot(value.value)}
         {:else}
           <Icon name={configIcon(option)} size={16} class="shrink-0" aria-hidden="true" />
         {/if}
@@ -1811,21 +1677,9 @@
         <Icon name={configIcon(model)} size={16} class="shrink-0" aria-hidden="true" />
         <span class={labelValueClass}>
           <span class="shrink-0">Model</span>
-          {#if showLocalModelWarmth}
-            <!-- The dot has no text baseline of its own, so this can't join
-                 the label/value baseline pairing the way the plain-text
-                 branch below does — it keeps the old vertical centering. -->
-            <span
-              class="text-psx-foreground-tertiary flex min-w-0 items-center gap-1.5 self-center truncate text-xs"
-            >
-              {@render localModelWarmthDot(currentSelectValue(model) ?? "")}
-              <span class="truncate">{selectedValueName(model)}</span>
-            </span>
-          {:else}
-            <span class="text-psx-foreground-tertiary min-w-0 truncate text-xs">
-              {selectedValueName(model)}
-            </span>
-          {/if}
+          <span class="text-psx-foreground-tertiary min-w-0 truncate text-xs">
+            {selectedValueName(model)}
+          </span>
         </span>
         <Icon
           name="chevron"
@@ -1835,19 +1689,6 @@
           aria-hidden="true"
         />
       </button>
-    {:else if localModelMissing}
-      <!-- Where the model list belongs; the locked composer points here. -->
-      {#if showAgentOption}
-        <div class="menu-separator"></div>
-      {:else}
-        {@render modelsHeader()}
-      {/if}
-      <p
-        class="text-psx-foreground-tertiary px-2 py-1.5 text-xs"
-        data-testid="prompt-config-no-local-model"
-      >
-        No model available
-      </p>
     {/if}
 
     {#if fast}
@@ -1913,7 +1754,7 @@
     {#if extraEntries.length > 0}
       <!-- The agent's own extra options, set apart from the dedicated rows —
            unless they are the only content. -->
-      {#if showAgentOption || model || localModelMissing || fast || effort || configLoading || optionsNeedAuth}
+      {#if showAgentOption || model || fast || effort || configLoading || optionsNeedAuth}
         <div class="menu-separator"></div>
       {/if}
       {#each extraEntries as entry (entry.option.id)}

@@ -1,5 +1,5 @@
 import { createContext } from "svelte";
-import { DEFAULT_AGENT_SERVER, LOCAL_AGENT_SERVER } from "../../agentServers";
+import { DEFAULT_AGENT_SERVER } from "../../agentServers";
 import { getACPAgentRegistryRepo } from "../../features/AgentRegistryRepository.svelte";
 import { getACPConversationRepo } from "../../features/ConversationRepository.svelte";
 import { supportsSessionDelete } from "../../features/HistoryRepository.svelte";
@@ -186,14 +186,11 @@ export class AcpSidebarController {
     if (agentServer === DEFAULT_AGENT_SERVER) {
       return "Camber";
     }
-    if (agentServer === LOCAL_AGENT_SERVER) {
-      return "Camber Local";
-    }
     return this.registry.getAgent(agentServer)?.name ?? agentServer;
   }
 
   // Brand tint for an agent's roundel in the row hover preview, reusing the
-  // agent-picker palette (Camber / Camber Local purple, Claude orange).
+  // agent-picker palette (Camber purple, Claude orange).
   // Agents without a brand colour fall back to the neutral icon token.
   agentIconColorClass(agentServer: string): string {
     return agentPickerIconProps(this.registry, agentServer).class || "text-psx-icon";
@@ -202,8 +199,6 @@ export class AcpSidebarController {
   agentPickerIconAppearance(agentServer: string): {
     iconUrl?: string;
     class: string;
-    overlayIconUrl?: string;
-    overlayClass?: string;
   } {
     return {
       iconUrl: agentPickerIconUrl(this.registry, agentServer),

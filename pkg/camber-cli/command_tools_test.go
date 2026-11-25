@@ -25,9 +25,6 @@ func TestToolCommandsDispatchActions(t *testing.T) {
 		{[]string{"mcp", "enable", "files"}, "mcp.enable", map[string]any{"name": "files"}},
 		{[]string{"mcp", "sign-in", "files"}, "mcp.signIn", map[string]any{"name": "files"}},
 		{[]string{"skills", "list", "--agent", "claude"}, "skills.list", map[string]any{"agentServer": "claude"}},
-		{[]string{"models", "download", "org/m"}, "models.download", map[string]any{"modelId": "org/m"}},
-		{[]string{"models", "download", "org/m", "--cancel"}, "models.cancel", map[string]any{"modelId": "org/m"}},
-		{[]string{"models", "unload"}, "models.unload", map[string]any{}},
 	}
 	for _, tc := range cases {
 		f := &fakeCaller{}

@@ -277,7 +277,6 @@
     return (
       view === "settings" ||
       view === "shortcuts" ||
-      view === "models" ||
       view === "voice" ||
       view === "github" ||
       view === "agents" ||
@@ -293,7 +292,6 @@
   function activeSettingsSection(view: string, isDesktop: boolean): DesktopSettingsSection {
     if (
       view === "shortcuts" ||
-      view === "models" ||
       view === "voice" ||
       view === "connectors" ||
       view === "github" ||
@@ -304,7 +302,7 @@
       return view;
     }
     // Fall back to a section the host actually renders: the IDE section list
-    // (IDE_SETTINGS_SECTIONS) has no "models", so it would come up empty.
+    // (IDE_SETTINGS_SECTIONS) has no "preferences", so it would come up empty.
     return isDesktop ? "preferences" : "connectors";
   }
 
@@ -393,7 +391,6 @@
         section={activeSettingsSection(desktop.view, desktop.isDesktop)}
         availableSections={desktop.isDesktop ? DESKTOP_SETTINGS_SECTIONS : IDE_SETTINGS_SECTIONS}
         onSectionChange={showSettingsSection}
-        onShowConnectors={desktop.showConnectors}
         onDone={desktop.showChat}
       />
     </div>
@@ -417,7 +414,6 @@
           showCollapsedActions={desktop.view === "agents" ||
             desktop.view === "settings" ||
             desktop.view === "shortcuts" ||
-            desktop.view === "models" ||
             desktop.view === "voice" ||
             desktop.view === "connectors" ||
             desktop.view === "github" ||
@@ -434,7 +430,6 @@
           onNewChat={desktop.handleNewChat}
           onShowSettings={desktop.showSettings}
           onShowShortcuts={desktop.showShortcuts}
-          onShowModels={desktop.showModels}
           onShowVoice={desktop.showVoice}
           onShowConnectors={desktop.showConnectors}
           onShowGithub={desktop.showGithub}
@@ -469,7 +464,6 @@
           section={activeSettingsSection(desktop.view, desktop.isDesktop)}
           availableSections={DESKTOP_SETTINGS_SECTIONS}
           onSectionChange={showSettingsSection}
-          onShowConnectors={desktop.showConnectors}
           onShowChat={desktop.showChat}
           activeConversationId={desktop.activeConversationId}
           onActiveConversationIdChange={desktop.handleActiveConversationIdChange}
@@ -526,7 +520,6 @@
           onNewConversation={desktop.handleNewConversation}
           onAddProject={desktop.handleAddProject}
           onShowAgentSettings={desktop.showAgents}
-          onShowModelSettings={desktop.isDesktop ? desktop.showModels : undefined}
         >
           {#snippet promptBanners()}
             <AssistantConfigErrorBanner />
@@ -547,7 +540,6 @@
           onNewConversation={desktop.handleNewConversation}
           onAddProject={desktop.handleAddProject}
           onShowAgentSettings={desktop.showAgents}
-          onShowModelSettings={desktop.isDesktop ? desktop.showModels : undefined}
         >
           {#snippet promptBanners()}
             <AssistantConfigErrorBanner />

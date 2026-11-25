@@ -78,8 +78,6 @@
   import { acpLogCaptureMenuAction, type ACPLogCaptureTarget } from "./sidebar/acpLogCapture";
   import SidebarNavButton from "./sidebar/SidebarNavButton.svelte";
   import SidebarIconButton from "./sidebar/SidebarIconButton.svelte";
-  import SidebarLocalDownloads from "./sidebar/SidebarLocalDownloads.svelte";
-  import SidebarLocalRuntime from "./sidebar/SidebarLocalRuntime.svelte";
   import SidebarToasts from "./sidebar/SidebarToasts.svelte";
   import { sidebarToasts } from "./sidebar/sidebarToastsState.svelte";
   import { sidebarInlineRenameLabel, sidebarOpensViewLabel } from "./sidebar/menuLabels";
@@ -108,7 +106,6 @@
       | "agents"
       | "settings"
       | "shortcuts"
-      | "models"
       | "voice"
       | "connectors"
       | "github"
@@ -128,7 +125,6 @@
     onNewChat?: () => string | null | void | Promise<string | null | void>;
     onShowSettings: () => void;
     onShowShortcuts?: () => void;
-    onShowModels?: () => void;
     onShowVoice?: () => void;
     onShowConnectors?: () => void;
     onShowGithub?: () => void;
@@ -199,7 +195,6 @@
     onNewChat,
     onShowSettings,
     onShowShortcuts,
-    onShowModels,
     onShowVoice,
     onShowConnectors,
     onShowGithub,
@@ -598,7 +593,6 @@
   const settingsViewActive = $derived(
     currentView === "settings" ||
       currentView === "shortcuts" ||
-      currentView === "models" ||
       currentView === "voice" ||
       currentView === "github" ||
       currentView === "agents" ||
@@ -1840,9 +1834,6 @@
       case "shortcuts":
         onShowShortcuts?.();
         break;
-      case "models":
-        onShowModels?.();
-        break;
       case "voice":
         onShowVoice?.();
         break;
@@ -1862,14 +1853,6 @@
         onShowRemote?.();
         break;
     }
-  }
-
-  function showLocalInferenceSettings() {
-    if (onShowModels) {
-      onShowModels();
-      return;
-    }
-    onShowSettings();
   }
 
   function setCollapsed(nextCollapsed: boolean) {
@@ -2393,16 +2376,6 @@
            translate off-screen. -->
       <SidebarToasts class="flex shrink-0 flex-col px-1.5 pb-1" />
 
-      <SidebarLocalRuntime
-        class="flex shrink-0 flex-col gap-1 p-1.5 pt-0"
-        onShowSettings={showLocalInferenceSettings}
-      />
-
-      <SidebarLocalDownloads
-        class="flex shrink-0 flex-col gap-1 p-1.5 pt-0"
-        onShowSettings={showLocalInferenceSettings}
-      />
-
       <div class="relative shrink-0 p-1.5">
         <SidebarNavButton
           icon="gear"
@@ -2438,21 +2411,8 @@
             />
           {/each}
         </nav>
-        <!-- One bottom container: toasts and downloads must share a single
-             mt-auto, or flex would split the free space between their two
-             auto margins and float the toasts mid-sidebar. -->
         <div class="mt-auto flex shrink-0 flex-col">
           <SidebarToasts class="flex shrink-0 flex-col px-1.5 pb-1" />
-          {#if currentView !== "models"}
-            <SidebarLocalRuntime
-              class="flex shrink-0 flex-col gap-1 p-1.5"
-              onShowSettings={showLocalInferenceSettings}
-            />
-            <SidebarLocalDownloads
-              class="flex shrink-0 flex-col gap-1 p-1.5"
-              onShowSettings={showLocalInferenceSettings}
-            />
-          {/if}
         </div>
       {/if}
     {/snippet}

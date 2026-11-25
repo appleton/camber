@@ -24,9 +24,6 @@ use tauri_plugin_shell::{
 };
 
 const HELPER_SIDECAR: &str = "camber-helper";
-const MLX_SIDECAR: &str = "camber-mlx-sidecar";
-const MLX_SIDECAR_ENV: &str = "CAMBER_MLX_SIDECAR";
-const MLX_SIDECAR_DISABLE_DEV_BUILD_ENV: &str = "CAMBER_MLX_SIDECAR_DISABLE_DEV_BUILD";
 const REPO_ROOT_FROM_CARGO_MANIFEST_DIR: usize = 4;
 const HELPER_JSONRPC_REQUEST_EVENT: &str = "camber:helper-jsonrpc-request";
 const HELPER_JSONRPC_NOTIFICATION_BATCH_EVENT: &str = "camber:helper-jsonrpc-notification-batch";
@@ -42,9 +39,8 @@ const HELPER_LOG_SESSIONS_TO_KEEP: usize = 20;
 // escalating to kill. Its shutdown handler runs cleanup before responding —
 // including giving ACP agents a graceful stop so they can flush session state
 // (PE-2460) — so quitting must give that cleanup time to finish. The helper
-// currently runs remote-access (up to 3s), ACP (3s), local-inference (2s), and
-// voice-input (2s) cleanup sequentially; leave margin above that combined
-// budget.
+// currently runs remote-access (up to 3s), ACP (3s), and voice-input (2s) cleanup
+// sequentially; leave margin above that combined budget.
 const HELPER_SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(15);
 
 static HELPER_LOG_FILE_NAME: OnceLock<String> = OnceLock::new();
@@ -565,9 +561,7 @@ impl HelperCommandSpec {
     }
 
     fn development_env(manifest_dir: &Path) -> Vec<(String, String)> {
-        let mut env = Self::remote_access_dev_env(manifest_dir);
-        env.extend(Self::local_inference_dev_env(manifest_dir));
-        env
+        Self::remote_access_dev_env(manifest_dir)
     }
 
     /// Dev builds serve the mobile-remote UI live: the helper proxies UI
@@ -603,43 +597,6 @@ impl HelperCommandSpec {
                 ));
             }
         }
-        env
-    }
-
-    fn local_inference_dev_env(manifest_dir: &Path) -> Vec<(String, String)> {
-        Self::local_inference_dev_env_with(
-            manifest_dir,
-            current_mlx_sidecar_target_triple(),
-            |name| std::env::var(name).ok(),
-            file_exists_and_is_non_empty,
-        )
-    }
-
-    fn local_inference_dev_env_with(
-        manifest_dir: &Path,
-        target_triple: Option<&str>,
-        lookup: impl Fn(&str) -> Option<String>,
-        file_exists: impl Fn(&Path) -> bool,
-    ) -> Vec<(String, String)> {
-        let mut env = vec![(
-            MLX_SIDECAR_DISABLE_DEV_BUILD_ENV.to_string(),
-            "1".to_string(),
-        )];
-
-        if lookup(MLX_SIDECAR_ENV).is_none() {
-            if let Some(target_triple) = target_triple {
-                let path = manifest_dir
-                    .join("binaries")
-                    .join(format!("{MLX_SIDECAR}-{target_triple}"));
-                if file_exists(&path) {
-                    env.push((
-                        MLX_SIDECAR_ENV.to_string(),
-                        path.to_string_lossy().into_owned(),
-                    ));
-                }
-            }
-        }
-
         env
     }
 
@@ -720,21 +677,6 @@ fn repo_root(manifest_dir: &Path) -> Option<PathBuf> {
         .ancestors()
         .nth(REPO_ROOT_FROM_CARGO_MANIFEST_DIR)
         .map(Path::to_path_buf)
-}
-
-fn current_mlx_sidecar_target_triple() -> Option<&'static str> {
-    if cfg!(target_os = "macos") && cfg!(target_arch = "aarch64") {
-        Some("aarch64-apple-darwin")
-    } else {
-        None
-    }
-}
-
-fn file_exists_and_is_non_empty(path: &Path) -> bool {
-    match fs::metadata(path) {
-        Ok(metadata) => metadata.is_file() && metadata.len() > 0,
-        Err(_) => false,
-    }
 }
 
 fn helper_log_path(app_handle: &AppHandle) -> Result<PathBuf, String> {
@@ -1512,15 +1454,10 @@ mod tests {
         );
         assert_eq!(spec.cwd, Some(PathBuf::from("/repo")));
         assert!(!spec.sidecar);
-        assert!(spec
-            .env
-            .iter()
-            .any(|(name, value)| { name == MLX_SIDECAR_DISABLE_DEV_BUILD_ENV && value == "1" }));
         // spec.env comes from remote_access_dev_env, which defers to any
         // CAMBER_REMOTE_* already present in the ambient environment (as in
-        // shells descended from a running desktop's helper), plus local
-        // inference env, so the full contents are asserted only in the
-        // controlled-lookup tests below.
+        // shells descended from a running desktop's helper), so the full
+        // contents are asserted only in the controlled-lookup tests below.
     }
 
     #[test]
@@ -1552,61 +1489,6 @@ mod tests {
             _ => None,
         });
         assert!(env.is_empty());
-    }
-
-    #[test]
-    fn local_inference_dev_env_uses_downloaded_mlx_sidecar() {
-        let manifest_dir = Path::new("/repo/ui/apps/desktop-assistant/src-tauri");
-        let sidecar = manifest_dir
-            .join("binaries")
-            .join("camber-mlx-sidecar-aarch64-apple-darwin");
-
-        let env = HelperCommandSpec::local_inference_dev_env_with(
-            manifest_dir,
-            Some("aarch64-apple-darwin"),
-            |_| None,
-            |path| path == sidecar.as_path(),
-        );
-
-        assert_eq!(
-            env,
-            vec![
-                (
-                    MLX_SIDECAR_DISABLE_DEV_BUILD_ENV.to_string(),
-                    "1".to_string()
-                ),
-                (
-                    MLX_SIDECAR_ENV.to_string(),
-                    sidecar.to_string_lossy().into_owned()
-                ),
-            ]
-        );
-    }
-
-    #[test]
-    fn local_inference_dev_env_respects_existing_sidecar_env() {
-        let manifest_dir = Path::new("/repo/ui/apps/desktop-assistant/src-tauri");
-
-        let env = HelperCommandSpec::local_inference_dev_env_with(
-            manifest_dir,
-            Some("aarch64-apple-darwin"),
-            |name| {
-                if name == MLX_SIDECAR_ENV {
-                    Some("/custom/camber-mlx-sidecar".to_string())
-                } else {
-                    None
-                }
-            },
-            |_| true,
-        );
-
-        assert_eq!(
-            env,
-            vec![(
-                MLX_SIDECAR_DISABLE_DEV_BUILD_ENV.to_string(),
-                "1".to_string()
-            )]
-        );
     }
 
     #[test]
@@ -1648,10 +1530,6 @@ mod tests {
                 ("CGO_CPPFLAGS".to_string(), "-w".to_string())
             ]
         );
-        assert!(spec
-            .env
-            .iter()
-            .any(|(name, value)| { name == MLX_SIDECAR_DISABLE_DEV_BUILD_ENV && value == "1" }));
     }
 
     #[test]
@@ -1663,13 +1541,6 @@ mod tests {
         assert_eq!(spec.cwd, None);
         assert!(spec.sidecar);
         assert!(spec.env.is_empty());
-    }
-
-    #[test]
-    fn forwards_local_inference_notifications() {
-        assert!(should_forward_helper_notification(
-            "camber/localInference/didChange"
-        ));
     }
 
     #[test]

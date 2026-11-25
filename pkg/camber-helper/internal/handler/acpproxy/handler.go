@@ -453,35 +453,7 @@ func (h *Handler) processReadyForSession(ctx context.Context, gCtx *glsp.Context
 			}
 		}
 	}
-	if err := h.preflightAgentServerForSession(ctx, gCtx, serverName, proc); err != nil {
-		return nil, err
-	}
 	return proc, nil
-}
-
-func (h *Handler) preflightAgentServerForSession(ctx context.Context, gCtx *glsp.Context, serverName string, proc *process) error {
-	if !proc.isRunning() {
-		return nil
-	}
-	readiness := h.configFn().AgentServerReady
-	if readiness == nil {
-		return nil
-	}
-	ready, err := readiness(ctx, serverName)
-	if err != nil {
-		return fmt.Errorf("acpproxy: agent server %q readiness: %w", serverName, err)
-	}
-	if ready {
-		return nil
-	}
-
-	slog.Info("acpproxy: restarting agent server after failed readiness check", "server", serverName)
-	initReq := proc.initializeRequest()
-	if err := proc.stop(); err != nil {
-		return err
-	}
-	_, err = h.ensureStarted(ctx, gCtx, serverName, initReq)
-	return err
 }
 
 func (h *Handler) Initialize(ctx context.Context, params *methods.ACPInitializeParams, gCtx *glsp.Context) (*methods.ACPInitializeOutput, error) {

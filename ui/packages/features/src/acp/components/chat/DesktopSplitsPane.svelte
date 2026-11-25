@@ -15,7 +15,7 @@
     type TabID,
   } from "@camber/splits";
   import { onDestroy, tick, untrack, type Component, type Snippet } from "svelte";
-  import { DEFAULT_AGENT_SERVER, LOCAL_AGENT_SERVER } from "../../agentServers";
+  import { DEFAULT_AGENT_SERVER } from "../../agentServers";
   import { agentPickerIconProps, agentPickerIconUrl } from "./menus/config/agentConfig";
   import { desktopUpdate } from "../../desktopUpdate";
   import { getContextRepoContext } from "../../../context";
@@ -156,7 +156,6 @@
     onNewConversation: (cwd?: string) => string | null | void | Promise<string | null | void>;
     onAddProject: () => Promise<void> | void;
     onShowAgentSettings: () => void;
-    onShowModelSettings?: () => void;
     desktopFileViewerPanel?: Component<DesktopFileViewerPanelProps>;
     promptBanners?: Snippet;
     promptCommandItems?: Snippet;
@@ -260,7 +259,6 @@
     onNewConversation,
     onAddProject,
     onShowAgentSettings,
-    onShowModelSettings,
     desktopFileViewerPanel,
     promptBanners,
     promptCommandItems,
@@ -579,11 +577,7 @@
   );
   let agent = $derived(registry.getAgent(agentServer) ?? null);
   let agentName = $derived(
-    agentServer === DEFAULT_AGENT_SERVER
-      ? "Camber"
-      : agentServer === LOCAL_AGENT_SERVER
-        ? "Camber Local"
-        : (agent?.name ?? agentServer),
+    agentServer === DEFAULT_AGENT_SERVER ? "Camber" : (agent?.name ?? agentServer),
   );
   let chatTabTitle = $derived(`Chatting with ${agentName}`);
   let chatTabIconUrl = $derived(agentPickerIconUrl(registry, agentServer));
@@ -4170,7 +4164,6 @@
         {onNewConversation}
         {onAddProject}
         {onShowAgentSettings}
-        {onShowModelSettings}
       />
     {:else if descriptor?.kind === "subagent-chat"}
       <SubagentChatPane subagentKey={descriptor.subagentKey} />

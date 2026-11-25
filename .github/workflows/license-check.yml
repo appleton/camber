@@ -20,7 +20,6 @@ on:
       - ui/**/package.json
       - ui/apps/desktop-assistant/src-tauri/Cargo.toml
       - ui/apps/desktop-assistant/src-tauri/Cargo.lock
-      - cmd/camber-mlx-sidecar/Package.resolved
   # Required checks must report on every PR, including documentation-only changes.
   pull_request:
 

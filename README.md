@@ -18,8 +18,6 @@ Chat with agents locally and control desktop sessions from your phone.
   your own agent.
 - **Desktop workflows for larger changes.** Use worktrees, GitHub awareness,
   built-in terminals, and change review tools from the desktop app.
-- **Optional on-device models.** In the desktop app on Apple Silicon,
-  download and run supported models locally.
 - **Remote access.** Drive your desktop assistant from your phone over
   Tailscale.
 - **Voice input.** Dictate prompts instead of typing them.

@@ -1,7 +1,6 @@
-import type { ACPAgentServers } from "@camber/rpc";
+import type { ACPAgentServerConfig, ACPAgentServers } from "@camber/rpc";
 
 export const DEFAULT_AGENT_SERVER = "poolside";
-export const LOCAL_AGENT_SERVER = "local";
 export const LEGACY_DEFAULT_AGENT_SERVER = "default";
 const LEGACY_SELF_PLACEHOLDERS = new Set(["{{SELF}}", "{{$SELF}}"]);
 
@@ -20,18 +19,12 @@ export function resolveAgentServers(agentServers?: ACPAgentServers | null): ACPA
         },
   };
 
-  if (input[LOCAL_AGENT_SERVER]) {
-    resolved[LOCAL_AGENT_SERVER] = {
-      ...input[LOCAL_AGENT_SERVER],
-      type: input[LOCAL_AGENT_SERVER].type ?? "local",
-      command: input[LOCAL_AGENT_SERVER].command ?? "",
-      args: input[LOCAL_AGENT_SERVER].args,
-    };
-  }
-
   for (const [name, config] of Object.entries(input)) {
     const normalizedName = normalizeAgentServerName(name);
-    if (normalizedName === DEFAULT_AGENT_SERVER || normalizedName === LOCAL_AGENT_SERVER) {
+    if (
+      normalizedName === DEFAULT_AGENT_SERVER ||
+      isRetiredLocalAgentServer(normalizedName, config)
+    ) {
       continue;
     }
     resolved[normalizedName] = config;
@@ -48,8 +41,6 @@ export function orderAgentServerNames(names: Iterable<string>): string[] {
   return Array.from(new Set(Array.from(names, normalizeAgentServerName))).sort((a, b) => {
     if (a === DEFAULT_AGENT_SERVER) return -1;
     if (b === DEFAULT_AGENT_SERVER) return 1;
-    if (a === LOCAL_AGENT_SERVER) return -1;
-    if (b === LOCAL_AGENT_SERVER) return 1;
     return a.localeCompare(b);
   });
 }
@@ -67,4 +58,25 @@ export function normalizeAgentServerName(name?: string | null): string {
     return DEFAULT_AGENT_SERVER;
   }
   return name;
+}
+
+const RETIRED_LOCAL_AGENT_SERVER = "local";
+
+/**
+ * Whether an entry is the removed built-in local-inference agent. A helper
+ * built before its removal still advertises it as `local` with type "local"
+ * (or no type) and no command or binary; a custom agent the user named
+ * `local` has a command and is kept.
+ */
+function isRetiredLocalAgentServer(
+  name: string,
+  config: ACPAgentServerConfig | undefined,
+): boolean {
+  if (name !== RETIRED_LOCAL_AGENT_SERVER || !config) return false;
+  const type = (config.type as string | undefined)?.trim();
+  return (
+    (type === undefined || type === "" || type === RETIRED_LOCAL_AGENT_SERVER) &&
+    !config.command?.trim() &&
+    !config.binary
+  );
 }
