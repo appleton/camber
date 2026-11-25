@@ -80,16 +80,16 @@ async function installBinary({
   archiveName,
   extractedName,
   installedName,
-  requiredSiblings = [],
 }) {
   const installedPath = join(binaryDir, installedName);
   const versionPath = `${installedPath}.version`;
 
+  // A debug build.rs placeholder is an empty file, so only a non-empty binary
+  // counts as installed even when its version stamp matches.
   if (
-    existsSync(installedPath) &&
+    fileExistsAndIsNonEmpty(installedPath) &&
     existsSync(versionPath) &&
-    helperVersionsMatch(readFileSync(versionPath, "utf8").trim(), version) &&
-    requiredSiblings.every((name) => fileExistsAndIsNonEmpty(join(binaryDir, name)))
+    helperVersionsMatch(readFileSync(versionPath, "utf8").trim(), version)
   ) {
     console.log(`${installedName} is already present for ${version}`);
     return;
@@ -103,11 +103,6 @@ async function installBinary({
 
   if (!existsSync(extractedPath)) {
     throw new Error(`Expected ${extractedPath} after extracting ${archiveName}`);
-  }
-  for (const name of requiredSiblings) {
-    if (!fileExistsAndIsNonEmpty(join(binaryDir, name))) {
-      throw new Error(`Expected ${name} after extracting ${archiveName}`);
-    }
   }
 
   if (extractedPath !== installedPath) {
