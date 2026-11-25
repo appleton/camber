@@ -17,6 +17,18 @@ expected=(
   camber-whisper-server-darwin-arm64
 )
 
+# Helper releases published before local inference was removed also carry the
+# MLX sidecar. Desktop releases may still pin those immutable tags, so accept
+# that pair when both files are present and verify it like the others.
+legacy=(
+  camber-mlx-sidecar-darwin-arm64
+)
+for asset in "${legacy[@]}"; do
+  if [[ -e "${runtime_dir}/${asset}.tar.gz" || -e "${runtime_dir}/${asset}.checksum" ]]; then
+    expected+=("${asset}")
+  fi
+done
+
 for asset in "${expected[@]}"; do
   [[ -s "${runtime_dir}/${asset}.tar.gz" ]] || {
     echo "Missing helper runtime archive: ${asset}.tar.gz" >&2
