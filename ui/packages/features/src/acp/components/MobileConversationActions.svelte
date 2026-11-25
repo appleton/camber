@@ -7,7 +7,6 @@
     isWorktreeConversation,
     registerConversationActions,
   } from "../conversationActions.svelte";
-  import { collectSubAgentDescendants } from "../conversationDescendants";
   import { getACPConversationRepo } from "../features/ConversationRepository.svelte";
   import { getACPProjectRepo } from "../features/ProjectRepository.svelte";
   import type { ACPSession } from "../features/Session.svelte";
@@ -56,18 +55,19 @@
   async function archive(session: ACPConversationSummary) {
     archiving.add(session.id);
     const agentServer = session.agentServer || "poolside";
-    // The helper archives same-group sub-agents with their parent; the user
-    // may have opened one while the archive was in flight.
-    const archived = new Set([
-      session.id,
-      ...collectSubAgentDescendants(
-        dedupeConversationSummaries(conversations.sessions),
-        session.id,
-      ).map((child) => child.id),
-    ]);
     try {
       await cancelRunningTurn(session);
-      await conversations.archiveSession(session.cwd, session.sessionId, agentServer, session.id);
+      // The helper also archives same-group sub-agents, any of which the user
+      // may have opened while the archive was in flight.
+      const archived = new Set([
+        session.id,
+        ...((await conversations.archiveSession(
+          session.cwd,
+          session.sessionId,
+          agentServer,
+          session.id,
+        )) ?? []),
+      ]);
       if (activeConversationId && archived.has(activeConversationId)) onLeaveConversation();
     } catch (error) {
       rpc.showInfoMessage(

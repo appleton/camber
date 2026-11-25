@@ -440,6 +440,8 @@
     // A host without these actions (e.g. the chat-only panel) keeps sending
     // the text to the agent, as before the commands existed.
     if (!getConversationActions()) return false;
+    // A same-named config option keeps its typed shortcut.
+    if (chatSession.configOptions.some((option) => option.id === command)) return false;
     // Skills of the same name are invoked as $name, so they don't own it.
     if (
       chatSession.availableCommands.some(

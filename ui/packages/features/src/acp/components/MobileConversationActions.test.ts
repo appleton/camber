@@ -159,17 +159,18 @@ describe("MobileConversationActions", () => {
     await waitFor(() => expect(order).toEqual(["cancel", "remove"]));
   });
 
-  it("leaves a sub-agent opened while its parent was being archived with it", async () => {
-    let finishArchive = () => {};
+  it("leaves a sub-agent the helper archived with its parent while the archive ran", async () => {
+    let finishArchive = (_archived: string[]) => {};
     const archiveSession = () =>
-      new Promise<void>((resolve) => {
+      new Promise<string[]>((resolve) => {
         finishArchive = resolve;
       });
     const onLeaveConversation = vi.fn();
-    const child = { ...conversation("c", "/repo"), parentId: "p", rootId: "p" };
     const props = {
       projects,
-      sessions: [conversation("p", "/repo"), child as ACPConversationSummary],
+      // The sub-agent "c" appeared after the archive started, so only the
+      // helper's result knows it was taken too.
+      sessions: [conversation("p", "/repo")],
       activeConversationId: "p" as string | null,
       archiveSession,
       onLeaveConversation,
@@ -177,7 +178,29 @@ describe("MobileConversationActions", () => {
     const { rerender } = render(Harness, { props });
     expect(registered().archiveConversation("p")).toBe(true);
     await rerender({ ...props, activeConversationId: "c" });
-    finishArchive();
+    finishArchive(["p", "c"]);
     await waitFor(() => expect(onLeaveConversation).toHaveBeenCalled());
+  });
+
+  it("stays in an unrelated conversation opened while an archive ran", async () => {
+    let finishArchive = (_archived: string[]) => {};
+    const archiveSession = () =>
+      new Promise<string[]>((resolve) => {
+        finishArchive = resolve;
+      });
+    const onLeaveConversation = vi.fn();
+    const props = {
+      projects,
+      sessions: [conversation("p", "/repo"), conversation("other", "/repo")],
+      activeConversationId: "p" as string | null,
+      archiveSession,
+      onLeaveConversation,
+    };
+    const { rerender } = render(Harness, { props });
+    registered().archiveConversation("p");
+    await rerender({ ...props, activeConversationId: "other" });
+    finishArchive(["p"]);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(onLeaveConversation).not.toHaveBeenCalled();
   });
 });

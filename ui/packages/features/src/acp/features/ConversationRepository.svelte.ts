@@ -210,7 +210,7 @@ export class ACPConversationRepositoryWriter {
     sessionId: SessionId | null,
     agentServer = DEFAULT_AGENT_SERVER,
     conversationId?: string,
-  ): Promise<void> {
+  ): Promise<string[]> {
     agentServer = normalizeAgentServerName(agentServer);
     // The helper archives the row (cascading to the sub-agents rendered under
     // it) and then closes the agent session with cancelInFlight, logging a
@@ -225,6 +225,8 @@ export class ACPConversationRepositoryWriter {
     });
     this.applyNavState(archived.state);
     this.emitClosedSession({ agentServer, sessionId, conversationId });
+    // Every conversation the archive took: the selected ones and their sub-agents.
+    return [...(archived.archived ?? []), ...(archived.descendants ?? [])];
   }
 
   /**

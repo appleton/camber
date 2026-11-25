@@ -20,7 +20,7 @@
     sessions: ACPConversationSummary[];
     activeConversationId: string | null;
     activeSession?: ACPSession | null;
-    archiveSession?: (...args: unknown[]) => Promise<void>;
+    archiveSession?: (...args: unknown[]) => Promise<string[] | void>;
     removeWorktree?: (path: string) => Promise<void>;
     onLeaveConversation: () => void;
   }
