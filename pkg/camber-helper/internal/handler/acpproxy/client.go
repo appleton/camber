@@ -166,10 +166,10 @@ func showMessageType(t string) protocol.MessageType {
 
 func (c *acpClient) SessionUpdate(_ context.Context, params acpsdk.SessionNotification) error {
 	// Observe Claude's result-boundary usage update before queueing the
-	// notification for UI delivery. The adapter can settle its original ACP
-	// prompt immediately after an injected steer while the continuation keeps
-	// streaming; prompt lifecycle bookkeeping must see the boundary in wire
-	// order even if the async delivery queue is busy.
+	// notification for UI delivery. Claude adapters before 0.65.0 can settle
+	// their original ACP prompt immediately after an injected steer while the
+	// continuation keeps streaming; prompt lifecycle bookkeeping must see the
+	// boundary in wire order even if the async delivery queue is busy.
 	if c.handler != nil {
 		c.handler.observeSessionUpdate(c.agentServer, string(params.SessionId), params.Update)
 		// Revoke a leaked caller token before the update reaches any surface

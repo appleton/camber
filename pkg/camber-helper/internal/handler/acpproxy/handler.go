@@ -1296,7 +1296,7 @@ func (h *Handler) runTurn(ctx context.Context, params *methods.ACPPromptParams, 
 	req.Prompt = withControlContext(req.Prompt, h.promptControlContext(ctx, serverName, string(sessionID)), embeddedContext)
 
 	resp, promptErr := conn.Prompt(promptCtx, req)
-	if proc.isClaudeAgent() {
+	if proc.claudeSettlesSteeredPromptEarly() {
 		h.markPromptReturned(turn)
 		steerCompletion, waitErr := h.waitForClaudeSteeredCompletion(promptCtx, turn)
 		if waitErr != nil {
@@ -1310,8 +1310,8 @@ func (h *Handler) runTurn(ctx context.Context, params *methods.ACPPromptParams, 
 			return &methods.ACPPromptOutput{StopReason: acpsdk.StopReasonCancelled}, nil
 		}
 		if steerCompletion.accepted && (promptErr == nil || isSteeringTurnBoundaryError(promptErr)) {
-			// Claude currently settles the ACP request at the interrupted
-			// generation's result, then streams the injected continuation outside
+			// Claude adapters before 0.65.0 settle the ACP request at the interrupted
+			// generation's result, then stream the injected continuation outside
 			// that request. The wait above extends the helper-owned turn through
 			// the continuation's result boundary, so normalize the interrupted
 			// response (including the SDK's user-result diagnostic) to the logical
@@ -1352,7 +1352,7 @@ type activeTurn struct {
 	endCursor      SessionCursor
 	startCursor    SessionCursor
 
-	// Claude's adapter currently returns from session/prompt at the result
+	// Claude adapters before 0.65.0 return from session/prompt at the result
 	// boundary interrupted by steering, while the injected continuation keeps
 	// streaming. These fields let the helper extend its logical prompt through
 	// the continuation's own terminal usage update. They are guarded by Handler.mu.

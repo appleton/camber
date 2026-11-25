@@ -887,7 +887,7 @@ func TestClaudeSteerKeepsPromptOpenThroughContinuation(t *testing.T) {
 			proc.conn = acpsdk.NewClientSideConnection(client, agentInW, agentOutR)
 			proc.initResp = &acpsdk.InitializeResponse{
 				ProtocolVersion: acpsdk.ProtocolVersionNumber,
-				AgentInfo:       &acpsdk.Implementation{Name: claudeAgentPackageName},
+				AgentInfo:       &acpsdk.Implementation{Name: claudeAgentPackageName, Version: "0.64.2"},
 			}
 			proc.session = "sess-1"
 
@@ -953,6 +953,185 @@ func TestClaudeSteerKeepsPromptOpenThroughContinuation(t *testing.T) {
 			case <-time.After(time.Second):
 				t.Fatal("fake agent did not finish")
 			}
+		})
+	}
+}
+
+func TestClaudeSteerEndsWithPromptResponseWhenAdapterSettlesAtIdle(t *testing.T) {
+	agentInR, agentInW := io.Pipe()
+	agentOutR, agentOutW := io.Pipe()
+	t.Cleanup(func() {
+		agentInR.Close()
+		agentInW.Close()
+		agentOutR.Close()
+		agentOutW.Close()
+	})
+
+	type wireRequest struct {
+		ID     any    `json:"id"`
+		Method string `json:"method"`
+	}
+	promptReceived := make(chan struct{})
+	agentDone := make(chan struct{})
+	go func() {
+		defer close(agentDone)
+		write := func(message map[string]any) bool {
+			encoded, _ := json.Marshal(message)
+			_, err := agentOutW.Write(append(encoded, '\n'))
+			return err == nil
+		}
+		notification := func(update map[string]any) map[string]any {
+			return map[string]any{
+				"jsonrpc": "2.0",
+				"method":  acpsdk.ClientMethodSessionUpdate,
+				"params":  map[string]any{"sessionId": "sess-1", "update": update},
+			}
+		}
+		usageUpdate := func(used int, origin string) map[string]any {
+			update := map[string]any{
+				"sessionUpdate": "usage_update",
+				"used":          used,
+				"size":          200_000,
+				"cost":          map[string]any{"amount": 0.01, "currency": "USD"},
+			}
+			if origin != "" {
+				update["_meta"] = map[string]any{
+					"_claude/origin": map[string]any{"kind": origin},
+				}
+			}
+			return notification(update)
+		}
+
+		var promptID any
+		scanner := bufio.NewScanner(agentInR)
+		for scanner.Scan() {
+			var req wireRequest
+			if err := json.Unmarshal(scanner.Bytes(), &req); err != nil {
+				continue
+			}
+			switch req.Method {
+			case acpsdk.AgentMethodSessionPrompt:
+				promptID = req.ID
+				close(promptReceived)
+			case methods.ACPSessionSteeringExtensionMethod:
+				// Modern adapters hold the prompt open and settle it only after
+				// the steered work's result, so the response is the last message.
+				write(map[string]any{
+					"jsonrpc": "2.0",
+					"id":      req.ID,
+					"result":  map[string]any{"outcome": "injected"},
+				})
+				write(usageUpdate(100, ""))
+				write(notification(map[string]any{
+					"sessionUpdate": "agent_message_chunk",
+					"content":       map[string]any{"type": "text", "text": "continued"},
+				}))
+				write(usageUpdate(150, "user"))
+				write(map[string]any{
+					"jsonrpc": "2.0",
+					"id":      promptID,
+					"result":  map[string]any{"stopReason": "end_turn"},
+				})
+				return
+			}
+		}
+	}()
+
+	h := NewHandler(func() HandlerConfig {
+		return HandlerConfig{AgentServers: map[string]AgentServerConfig{
+			"claude-acp": {Command: "unused-in-test"},
+		}}
+	}, nil, nil)
+	gCtx := newGlspContext(nil, nil)
+	proc, client := h.processFor("claude-acp", gCtx)
+	proc.state = processState{kind: processStateRunning}
+	proc.conn = acpsdk.NewClientSideConnection(client, agentInW, agentOutR)
+	proc.initResp = &acpsdk.InitializeResponse{
+		ProtocolVersion: acpsdk.ProtocolVersionNumber,
+		AgentInfo:       &acpsdk.Implementation{Name: claudeAgentPackageName, Version: "0.110.0"},
+	}
+	proc.session = "sess-1"
+
+	type promptResult struct {
+		resp *methods.ACPPromptOutput
+		err  error
+	}
+	promptDone := make(chan promptResult, 1)
+	go func() {
+		resp, err := h.Prompt(context.Background(), &methods.ACPPromptParams{
+			ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: "claude-acp"},
+			PromptRequest: acpsdk.PromptRequest{
+				SessionId: "sess-1",
+				Prompt: []acpsdk.ContentBlock{{
+					Text: &acpsdk.ContentBlockText{Type: "text", Text: "write a long poem"},
+				}},
+			},
+		}, gCtx)
+		promptDone <- promptResult{resp: resp, err: err}
+	}()
+
+	select {
+	case <-promptReceived:
+	case <-time.After(time.Second):
+		t.Fatal("prompt was not forwarded to the agent")
+	}
+
+	steerResp, err := h.Steer(context.Background(), &methods.ACPSteerParams{
+		ACPAgentServerParams: methods.ACPAgentServerParams{AgentServer: "claude-acp"},
+		ACPSteerRequest: methods.ACPSteerRequest{
+			SessionID: "sess-1",
+			Prompt: []acpsdk.ContentBlock{{
+				Text: &acpsdk.ContentBlockText{Type: "text", Text: "make it shorter"},
+			}},
+		},
+	}, gCtx)
+	require.NoError(t, err)
+	require.NotNil(t, steerResp)
+	assert.Equal(t, methods.ACPSteerOutcomeInjected, steerResp.Outcome)
+
+	select {
+	case result := <-promptDone:
+		require.NoError(t, result.err)
+		require.NotNil(t, result.resp)
+		assert.Equal(t, acpsdk.StopReasonEndTurn, result.resp.StopReason)
+	case <-time.After(time.Second):
+		t.Fatal("prompt did not settle at the adapter's prompt response")
+	}
+	select {
+	case <-agentDone:
+	case <-time.After(time.Second):
+		t.Fatal("fake agent did not finish")
+	}
+}
+
+func TestClaudeSettlesSteeredPromptEarly(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		agent   string
+		version string
+		want    bool
+	}{
+		{"0.61.0", claudeAgentPackageName, "0.61.0", true},
+		{"0.64.2", claudeAgentPackageName, "0.64.2", true},
+		{"0.64.3 prerelease", claudeAgentPackageName, "0.64.3-preview.1", true},
+		{"0.65.0", claudeAgentPackageName, "0.65.0", false},
+		{"0.110.0", claudeAgentPackageName, "0.110.0", false},
+		{"missing version", claudeAgentPackageName, "", false},
+		{"invalid version", claudeAgentPackageName, "not-a-version", false},
+		{"non-Claude agent", "some-other-agent", "0.62.0", false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			h := NewHandler(func() HandlerConfig {
+				return HandlerConfig{AgentServers: map[string]AgentServerConfig{
+					"claude-acp": {Command: "unused-in-test"},
+				}}
+			}, nil, nil)
+			proc, _ := h.processFor("claude-acp", newGlspContext(nil, nil))
+			proc.initResp = &acpsdk.InitializeResponse{
+				ProtocolVersion: acpsdk.ProtocolVersionNumber,
+				AgentInfo:       &acpsdk.Implementation{Name: tt.agent, Version: tt.version},
+			}
+			assert.Equal(t, tt.want, proc.claudeSettlesSteeredPromptEarly())
 		})
 	}
 }
