@@ -327,21 +327,21 @@ describe("ACPAgentServersRepository", () => {
     expect(repo.defaultAgentServerPinned).toBe(false);
   });
 
-  it("keeps the local agent when the Desktop helper advertises it", async () => {
+  it("drops the retired local agent an older helper still advertises", async () => {
     const appStore = createAppStore({
       environment: { assistantHost: "desktop" },
       userSettings: { acpAgentServers: {} },
     });
     const { camberAcpNavListAgentServers } = await import("@camber/helperapi");
     vi.mocked(camberAcpNavListAgentServers).mockResolvedValue({
-      agentServers: { local: { type: "local" } },
+      agentServers: { local: { type: "local" } as never },
     });
     const { repo, sessionRepo } = createRepo(appStore);
 
     await repo.refresh();
 
     expect(sessionRepo.agents.configureAgentServers).toHaveBeenCalledWith(
-      ["poolside", "local"],
+      ["poolside"],
       undefined,
       false,
     );

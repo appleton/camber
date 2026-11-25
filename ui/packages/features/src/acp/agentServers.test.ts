@@ -27,6 +27,17 @@ describe("resolveAgentServers", () => {
     });
   });
 
+  it("drops the retired local agent but keeps a custom agent named local", () => {
+    expect(resolveAgentServers({ local: { type: "local" } as never })).not.toHaveProperty("local");
+    expect(resolveAgentServers({ local: {} })).not.toHaveProperty("local");
+    expect(resolveAgentServers({ local: { command: "my-agent" } }).local).toEqual({
+      command: "my-agent",
+    });
+    expect(resolveAgentServers({ local: { type: "registry", binary: {} } })).toHaveProperty(
+      "local",
+    );
+  });
+
   it("preserves configured Camber entries", () => {
     const servers = resolveAgentServers({
       [DEFAULT_AGENT_SERVER]: {
