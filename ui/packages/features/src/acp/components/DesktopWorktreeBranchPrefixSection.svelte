@@ -52,6 +52,8 @@
         return;
       }
       status = "saving";
+      // An error belongs to the value that failed, not to a newer one.
+      error = null;
       try {
         const result = await camberAcpNavSetWorktreeBranchPrefix({ prefix: next });
         savedPrefix = result.prefix;
@@ -60,6 +62,9 @@
         error = null;
         status = "idle";
       } catch (saveError) {
+        // A newer value was committed during the failed save: save it too
+        // instead of leaving the correction displayed but unsaved.
+        if (commitQueued && prefix.trim() !== next) continue;
         commitQueued = false;
         error = formatError(saveError);
         status = "error";
