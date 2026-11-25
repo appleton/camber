@@ -158,4 +158,26 @@ describe("MobileConversationActions", () => {
     await fireEvent.click(await screen.findByRole("button", { name: "Delete Worktree" }));
     await waitFor(() => expect(order).toEqual(["cancel", "remove"]));
   });
+
+  it("leaves a sub-agent opened while its parent was being archived with it", async () => {
+    let finishArchive = () => {};
+    const archiveSession = () =>
+      new Promise<void>((resolve) => {
+        finishArchive = resolve;
+      });
+    const onLeaveConversation = vi.fn();
+    const child = { ...conversation("c", "/repo"), parentId: "p", rootId: "p" };
+    const props = {
+      projects,
+      sessions: [conversation("p", "/repo"), child as ACPConversationSummary],
+      activeConversationId: "p" as string | null,
+      archiveSession,
+      onLeaveConversation,
+    };
+    const { rerender } = render(Harness, { props });
+    expect(registered().archiveConversation("p")).toBe(true);
+    await rerender({ ...props, activeConversationId: "c" });
+    finishArchive();
+    await waitFor(() => expect(onLeaveConversation).toHaveBeenCalled());
+  });
 });

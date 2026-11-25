@@ -84,12 +84,14 @@
     selectOptions.filter(
       (option) =>
         !isAgentPickerOptionId(option.id) &&
-        !(planIsLocal && promptConfigKind(option) === "collaboration"),
+        !(planIsLocal && promptConfigKind(option) === "collaboration") &&
+        !conversationCommandNames.has(option.id),
     ),
   );
   const booleanOptions = $derived(
     chatSession.configOptions.filter(
-      (option): option is BooleanSessionConfigOption => option.type === "boolean",
+      (option): option is BooleanSessionConfigOption =>
+        option.type === "boolean" && !conversationCommandNames.has(option.id),
     ),
   );
 
@@ -130,14 +132,16 @@
       ? conversationActions.worktreeFor(chatSession.conversationId)
       : null,
   );
-  // Where Camber offers /archive or /delete-worktree, it owns that name: an
-  // agent command of the same name would submit as the same text.
-  const shadowedCommandNames = $derived(
+  // Camber's /archive and /delete-worktree where they apply. They own the name:
+  // a same-named agent command or config option would submit as the same text.
+  const conversationCommandNames = $derived(
     new Set<string>([
-      ...(planIsLocal ? [LocalCommand.plan] : []),
       ...(canArchive ? [LocalCommand.archive] : []),
       ...(conversationWorktree ? [LocalCommand.deleteWorktree] : []),
     ]),
+  );
+  const shadowedCommandNames = $derived(
+    new Set<string>([...(planIsLocal ? [LocalCommand.plan] : []), ...conversationCommandNames]),
   );
   const otherCommands = $derived(
     chatSession.availableCommands.filter(

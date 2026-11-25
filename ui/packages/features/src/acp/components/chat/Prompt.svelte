@@ -386,6 +386,10 @@
 
   function handleTypedLocalCommand(value: string): boolean {
     const command = slashCommandName(value);
+    // Camber's conversation commands win over a same-named config option.
+    if (command === AcpSlashCommand.archive || command === AcpSlashCommand.deleteWorktree) {
+      if (bareSlashCommand(value) === command && handleConversationCommand(command)) return true;
+    }
     if (command === AGENT_CONFIG_OPTION_LABEL) {
       return openAgentConfigMenu();
     }
@@ -420,11 +424,6 @@
       case AcpSlashCommand.secrets:
         setTimeout(() => handleCommand(AcpSlashCommand.secrets), 0);
         return true;
-      // Typed without the menu: only the bare command, so "/archive the old
-      // logs" still reaches the agent.
-      case AcpSlashCommand.archive:
-      case AcpSlashCommand.deleteWorktree:
-        return bareSlashCommand(value) === command && handleConversationCommand(command);
       default:
         return false;
     }
