@@ -24,7 +24,6 @@ go_library(
         "github.go",
         "invoke_lsp.go",
         "jsonrpc_error.go",
-        "local_inference.go",
         "mcp_oauth.go",
         "mcp_servers.go",
         "remote_access.go",

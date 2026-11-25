@@ -36,7 +36,6 @@ func TestAssistantConfigSchemaContract(t *testing.T) {
 		[]string{
 			"agentServer",
 			"customAgentServer",
-			"localAgentServer",
 			"pinnedConfigOptions",
 			"registryAgentServer",
 			"stringMap",
@@ -45,7 +44,6 @@ func TestAssistantConfigSchemaContract(t *testing.T) {
 	)
 	for _, definition := range []string{
 		"customAgentServer",
-		"localAgentServer",
 		"registryAgentServer",
 	} {
 		assert.Equalf(
@@ -63,10 +61,6 @@ func TestAssistantConfigSchemaContract(t *testing.T) {
 	assert.Equal(t,
 		[]string{"default_config_options", "pinned_config_options", "type"},
 		sortedSchemaKeys(schemaMap(t, schemaMap(t, defs, "registryAgentServer"), "properties")),
-	)
-	assert.Equal(t,
-		[]string{"type"},
-		sortedSchemaKeys(schemaMap(t, schemaMap(t, defs, "localAgentServer"), "properties")),
 	)
 }
 

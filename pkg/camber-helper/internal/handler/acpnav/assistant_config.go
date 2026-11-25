@@ -21,7 +21,11 @@ const assistantConfigSchemaURL = "https://raw.githubusercontent.com/appleton/cam
 const assistantRegistryInstallsFilename = "assistant-registry-installs.json"
 const assistantConfigAgentServerTypeRegistry = "registry"
 const assistantConfigAgentServerTypeCustom = "custom"
-const assistantConfigAgentServerTypeLocal = "local"
+
+// retiredLocalAgentServerName and Type identify the removed built-in local
+// inference agent. Stale configs may still carry it; it is dropped on read.
+const retiredLocalAgentServerName = "local"
+const retiredLocalAgentServerType = "local"
 
 type AgentServerStore interface {
 	ListAgentServers(ctx context.Context) (methods.ACPAgentServers, error)
@@ -367,7 +371,23 @@ func (s *AssistantConfigAgentServerStore) loadLocked() (assistantConfig, map[str
 	if cfg.AgentServers == nil {
 		cfg.AgentServers = methods.ACPAgentServers{}
 	}
+	for name, entry := range cfg.AgentServers {
+		if isRetiredLocalAgentServer(normalizeAgentServerName(name), entry) {
+			delete(cfg.AgentServers, name)
+			if normalizeAgentServerName(cfg.DefaultAgentServer) == retiredLocalAgentServerName {
+				cfg.DefaultAgentServer = ""
+			}
+		}
+	}
 	return cfg, raw, nil
+}
+
+// isRetiredLocalAgentServer reports whether an entry is the stale built-in
+// "local" agent (no command or binary of its own).
+func isRetiredLocalAgentServer(name string, cfg methods.ACPAgentServerConfig) bool {
+	return name == retiredLocalAgentServerName &&
+		strings.TrimSpace(cfg.Type) == retiredLocalAgentServerType &&
+		strings.TrimSpace(cfg.Command) == "" && len(cfg.Binary) == 0
 }
 
 func (s *AssistantConfigAgentServerStore) saveLocked(cfg assistantConfig, raw map[string]json.RawMessage) error {
@@ -551,11 +571,7 @@ func normalizeAssistantConfigAgentServers(agentServers methods.ACPAgentServers) 
 			normalized[name] = cfg
 			continue
 		}
-		if name == methods.LocalAgentServerName {
-			if cfg.Type == "" {
-				cfg.Type = assistantConfigAgentServerTypeLocal
-			}
-			normalized[name] = cfg
+		if isRetiredLocalAgentServer(name, cfg) {
 			continue
 		}
 		cfg.Type = assistantConfigAgentServerTypeCustom
@@ -593,14 +609,6 @@ func compactAssistantConfigAgentServers(agentServers methods.ACPAgentServers) me
 	for name, cfg := range agentServers {
 		cfg = cloneAgentServerConfig(cfg)
 		name = normalizeAgentServerName(name)
-		if name == methods.LocalAgentServerName && cfg.Command == "" && len(cfg.Binary) == 0 {
-			compacted[name] = methods.ACPAgentServerConfig{
-				Type:                 assistantConfigAgentServerTypeLocal,
-				DefaultConfigOptions: cfg.DefaultConfigOptions,
-				PinnedConfigOptions:  cfg.PinnedConfigOptions,
-			}
-			continue
-		}
 		if cfg.Type == assistantConfigAgentServerTypeRegistry || len(cfg.Binary) > 0 {
 			compacted[name] = methods.ACPAgentServerConfig{
 				Type:                 assistantConfigAgentServerTypeRegistry,
@@ -651,11 +659,6 @@ func withManagedAgentServers(agentServers methods.ACPAgentServers) methods.ACPAg
 	if _, ok := out[defaultAgentServerName]; !ok {
 		out[defaultAgentServerName] = methods.ACPAgentServerConfig{
 			Type: assistantConfigAgentServerTypeCustom,
-		}
-	}
-	if _, ok := out[methods.LocalAgentServerName]; !ok {
-		out[methods.LocalAgentServerName] = methods.ACPAgentServerConfig{
-			Type: assistantConfigAgentServerTypeLocal,
 		}
 	}
 	return out

@@ -25,9 +25,6 @@ func (s *Server) ControlConversation(ctx context.Context, id string) (methods.AC
 		return methods.ACPNavConversation{}, err
 	}
 	state := s.overlayLiveStatus(methods.ACPNavState{Conversations: conversations})
-	if s.stateFilter != nil {
-		state = s.stateFilter(state)
-	}
 	if len(state.Conversations) != 1 {
 		return methods.ACPNavConversation{}, pkgerrors.Errorf("conversation %q does not exist", id)
 	}

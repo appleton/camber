@@ -44,7 +44,6 @@ func TestControlToolsShareAgentServerHandlersAndBroadcastChanges(t *testing.T) {
 	defer mu.Unlock()
 	assert.Contains(t, notified, methods.ACPNavAgentServersDidChangeMethod)
 	assert.Same(t, h.mcpServersHandler, tools.MCPServers)
-	assert.Same(t, h.localInferenceHandler, tools.LocalInference)
 }
 
 func TestControlToolsListSkillsUsesGivenWorkspaces(t *testing.T) {

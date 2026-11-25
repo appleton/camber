@@ -31,7 +31,6 @@ import (
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/approvals"
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/control"
 	"github.com/appleton/camber/pkg/camber-helper/internal/handler/filesearch"
-	"github.com/appleton/camber/pkg/camber-helper/internal/handler/localinference"
 	acpsdk "github.com/coder/acp-go-sdk"
 
 	githandler "github.com/appleton/camber/pkg/camber-helper/internal/handler/git"
@@ -102,7 +101,6 @@ type CamberHandler struct {
 	acpProxyHandler            *acpproxy.Handler
 	acpNavHandler              *acpnav.Server
 	fileSearchHandler          *filesearch.Server
-	localInferenceHandler      *localinference.Server
 	voiceInputHandler          *voiceinput.Server
 	secretsHandler             *secretshandler.Server
 	githubHandler              *githubhandler.Server
@@ -389,41 +387,6 @@ func New() *CamberHandler {
 		Description: "enable/disable a pool MCP server globally via user settings",
 	}, handler.mcpServersHandler.SetPoolServerDisabled)
 
-	registerExtensionMethod(handler, JSONRPCOperation{
-		Method:      methods.LocalInferenceGetStateMethod,
-		Description: "returns local on-device inference state and catalog",
-	}, handler.localInferenceHandler.GetState)
-
-	registerExtensionMethod(handler, JSONRPCOperation{
-		Method:      methods.LocalInferenceSetDefaultModelMethod,
-		Description: "updates the default local on-device model",
-	}, handler.localInferenceHandler.SetDefaultModel)
-
-	registerExtensionMethod(handler, JSONRPCOperation{
-		Method:      methods.LocalInferenceSearchModelsMethod,
-		Description: "searches Hugging Face for installable local on-device models",
-	}, handler.localInferenceHandler.SearchModels)
-
-	registerExtensionMethod(handler, JSONRPCOperation{
-		Method:      methods.LocalInferenceDownloadModelMethod,
-		Description: "starts downloading a local on-device model",
-	}, handler.localInferenceHandler.DownloadModel)
-
-	registerExtensionMethod(handler, JSONRPCOperation{
-		Method:      methods.LocalInferenceCancelDownloadMethod,
-		Description: "cancels the download of a local on-device model",
-	}, handler.localInferenceHandler.CancelDownload)
-
-	registerExtensionMethod(handler, JSONRPCOperation{
-		Method:      methods.LocalInferenceDeleteModelMethod,
-		Description: "deletes a local on-device model from disk",
-	}, handler.localInferenceHandler.DeleteModel)
-
-	registerExtensionMethod(handler, JSONRPCOperation{
-		Method:      methods.LocalInferenceUnloadModelMethod,
-		Description: "releases the model resident in the local sidecar's memory",
-	}, handler.localInferenceHandler.UnloadModel)
-
 	registerExtensionMethodNoDeadline(handler, JSONRPCOperation{Method: methods.ControlDispatchMethod, Description: "dispatches discoverable local desktop orchestration actions"}, handler.controlHandler.Dispatch)
 
 	registerExtensionMethod(handler, JSONRPCOperation{
@@ -654,9 +617,6 @@ func New() *CamberHandler {
 	publishClientSideTypes(handler, methods.ACPNavDidChangeMethod, methods.ACPNavDidChangeParams{},
 		"notifies the client when ACP navigation state changes")
 
-	publishClientSideTypes(handler, methods.LocalInferenceDidChangeMethod, methods.LocalInferenceDidChangeParams{},
-		"notifies the client when local on-device inference state changes")
-
 	publishClientSideTypes(handler, methods.SearchSymbolDefinitionsParams{}.MethodName(), methods.SearchSymbolDefinitionsParams{},
 		"allows the helper to lookup project symbols using the editor")
 
@@ -847,26 +807,19 @@ func newHandlerBaseState() *CamberHandler {
 		/*         Sub-handlers           */
 		// for allocate handlers to allow for registration, and we'll
 		// assign sub-handler values into these addresses on initialize
-		acpNavHandler:         acpnav.NewServer(),
-		localInferenceHandler: localinference.NewServer(),
-		voiceInputHandler:     voiceinput.NewServer(),
-		secretsHandler:        secretshandler.NewServer(),
-		githubHandler:         githubhandler.NewServer(http.DefaultClient),
-		gitHandler:            githandler.NewServer(),
-		mcpServersHandler:     mcpservers.NewServer(),
+		acpNavHandler:     acpnav.NewServer(),
+		voiceInputHandler: voiceinput.NewServer(),
+		secretsHandler:    secretshandler.NewServer(),
+		githubHandler:     githubhandler.NewServer(http.DefaultClient),
+		gitHandler:        githandler.NewServer(),
+		mcpServersHandler: mcpservers.NewServer(),
 	}
 	h.fileSearchHandler = filesearch.NewServer(h.searchFileWorkspaceFolders)
-	h.acpNavHandler.SetStateFilter(h.acpNavStateForHost)
 	h.mcpServersHandler.SetDeepLinkOAuthCapable(func() bool {
 		h.mx.Lock()
 		defer h.mx.Unlock()
 		return h.config != nil && h.config.ClientCapabilities.MCPOAuthDeepLink
 	})
-
-	// Reuse the Hugging Face MCP connector's OAuth token for Hugging Face API
-	// requests (e.g. downloading gated models that require TOS acceptance).
-	h.localInferenceHandler.SetHuggingFaceTokenSource(h.mcpServersHandler.HuggingFaceTokenSource())
-	h.localInferenceHandler.SetHuggingFaceTokenInvalidator(h.mcpServersHandler.InvalidateHuggingFaceToken)
 
 	h.acpProxyHandler = acpproxy.NewHandler(
 		func() acpproxy.HandlerConfig {
@@ -885,9 +838,6 @@ func newHandlerBaseState() *CamberHandler {
 				})
 				return result.Servers, result.Unavailable
 			}
-
-			cfg.AgentServerEnvProvider = h.localInferenceHandler.AgentServerEnv
-			cfg.AgentServerReady = h.localInferenceHandler.AgentServerReady
 
 			return cfg
 		},
@@ -946,18 +896,12 @@ func newHandlerBaseState() *CamberHandler {
 	})
 	h.cleanupFns = append(h.cleanupFns, h.mcpServersHandler.WatchStoreForExternalChanges())
 
-	// Models placed in the local models directory outside the app download
-	// flow are only discovered by a state read; watch the directory so they
-	// reach every client without waiting for one (PE-2474).
-	h.cleanupFns = append(h.cleanupFns, h.localInferenceHandler.WatchModelsDirectory())
-
 	h.remoteTerminals = remoteterminal.NewManager(h.remoteHub.NotifyClient)
 	h.cleanupFns = append(h.cleanupFns, h.remoteTerminals.Close)
 
 	h.cleanupFns = append(h.cleanupFns, h.acpProxyHandler.Close)
 	h.cleanupFns = append(h.cleanupFns, h.sessionLog.Close)
 	h.cleanupFns = append(h.cleanupFns, h.acpNavHandler.Close)
-	h.cleanupFns = append(h.cleanupFns, h.localInferenceHandler.Close)
 	h.cleanupFns = append(h.cleanupFns, h.voiceInputHandler.Close)
 
 	return h

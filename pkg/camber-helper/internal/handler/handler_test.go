@@ -18,7 +18,6 @@ import (
 	"github.com/tliron/glsp"
 
 	"github.com/appleton/camber/pkg/camber-helper/internal/gopls/gotoolsinternal/jsonrpc2"
-	"github.com/appleton/camber/pkg/camber-helper/internal/handler/acpproxy"
 	"github.com/appleton/camber/pkg/camber-helper/internal/lsptest"
 	"github.com/appleton/camber/pkg/camber-helper/methods"
 )
@@ -484,60 +483,6 @@ func TestAgentServerBinaryDistributionConversionsPreserveSHA256(t *testing.T) {
 	roundTripped := toMethodsAgentServerBinaries(proxyBinaries)
 	require.Contains(t, roundTripped, "darwin-aarch64")
 	assert.Equal(t, "0123456789abcdef", roundTripped["darwin-aarch64"].SHA256)
-}
-
-func TestAgentServersForHost(t *testing.T) {
-	state := methods.ACPNavAgentServersState{
-		AgentServers: methods.ACPAgentServers{
-			acpproxy.DefaultAgentServerName: {},
-			methods.LocalAgentServerName:    {Type: "local"},
-		},
-		DefaultAgentServer: methods.LocalAgentServerName,
-	}
-
-	t.Run("desktop keeps local inference", func(t *testing.T) {
-		h := New()
-		h.config = &Config{AssistantHost: "desktop"}
-
-		filtered := h.agentServersForHost(state)
-
-		assert.Contains(t, filtered.AgentServers, methods.LocalAgentServerName)
-		assert.Equal(t, methods.LocalAgentServerName, filtered.DefaultAgentServer)
-	})
-
-	t.Run("VS Code removes local inference and falls back to Camber", func(t *testing.T) {
-		h := New()
-		h.config = &Config{AssistantHost: "vscode"}
-
-		filtered := h.agentServersForHost(state)
-
-		assert.NotContains(t, filtered.AgentServers, methods.LocalAgentServerName)
-		assert.Equal(t, acpproxy.DefaultAgentServerName, filtered.DefaultAgentServer)
-		assert.Contains(t, state.AgentServers, methods.LocalAgentServerName)
-	})
-}
-
-func TestACPNavStateForHost(t *testing.T) {
-	state := methods.ACPNavState{
-		Conversations: []methods.ACPNavConversation{
-			{ID: "poolside", AgentServer: acpproxy.DefaultAgentServerName},
-			{ID: "local", AgentServer: methods.LocalAgentServerName},
-		},
-	}
-
-	t.Run("desktop keeps local conversations", func(t *testing.T) {
-		h := &CamberHandler{config: &Config{AssistantHost: "desktop"}}
-		filtered := h.acpNavStateForHost(state)
-		require.Len(t, filtered.Conversations, 2)
-	})
-
-	t.Run("vscode hides local conversations", func(t *testing.T) {
-		h := &CamberHandler{config: &Config{AssistantHost: "vscode"}}
-		filtered := h.acpNavStateForHost(state)
-		require.Len(t, filtered.Conversations, 1)
-		assert.Equal(t, "poolside", filtered.Conversations[0].ID)
-		require.Len(t, state.Conversations, 2, "filter must not mutate shared state")
-	})
 }
 
 func testLogger() *strings.Builder {

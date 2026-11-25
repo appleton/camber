@@ -75,15 +75,6 @@ import type {
   ListSecretsParams,
   ListSkillsOutput,
   ListSkillsParams,
-  LocalInferenceCancelDownloadParams,
-  LocalInferenceDeleteModelParams,
-  LocalInferenceDownloadModelParams,
-  LocalInferenceGetStateParams,
-  LocalInferenceSearchModelsParams,
-  LocalInferenceSearchModelsState,
-  LocalInferenceSetDefaultModelParams,
-  LocalInferenceState,
-  LocalInferenceUnloadModelParams,
   MCPServersAuthenticateOutput,
   MCPServersAuthenticateParams,
   MCPServersDeleteOutput,
@@ -602,83 +593,6 @@ export const camberListSkills = async (
   listSkillsParams: NonReadonly<ListSkillsParams>,
 ): Promise<ListSkillsOutput> => {
   return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/listSkills"), listSkillsParams);
-};
-/**
- * cancels the download of a local on-device model
- */
-export const camberLocalInferenceCancelDownload = async (
-  localInferenceCancelDownloadParams: NonReadonly<LocalInferenceCancelDownloadParams>,
-): Promise<LocalInferenceState> => {
-  return await runtime.jsonrpcCall(
-    toJsonrpcMethod("/camber/localInference/cancelDownload"),
-    localInferenceCancelDownloadParams,
-  );
-};
-/**
- * deletes a local on-device model from disk
- */
-export const camberLocalInferenceDeleteModel = async (
-  localInferenceDeleteModelParams: NonReadonly<LocalInferenceDeleteModelParams>,
-): Promise<LocalInferenceState> => {
-  return await runtime.jsonrpcCall(
-    toJsonrpcMethod("/camber/localInference/deleteModel"),
-    localInferenceDeleteModelParams,
-  );
-};
-/**
- * starts downloading a local on-device model
- */
-export const camberLocalInferenceDownloadModel = async (
-  localInferenceDownloadModelParams: NonReadonly<LocalInferenceDownloadModelParams>,
-): Promise<LocalInferenceState> => {
-  return await runtime.jsonrpcCall(
-    toJsonrpcMethod("/camber/localInference/downloadModel"),
-    localInferenceDownloadModelParams,
-  );
-};
-/**
- * returns local on-device inference state and catalog
- */
-export const camberLocalInferenceGetState = async (
-  localInferenceGetStateParams: NonReadonly<LocalInferenceGetStateParams>,
-): Promise<LocalInferenceState> => {
-  return await runtime.jsonrpcCall(
-    toJsonrpcMethod("/camber/localInference/getState"),
-    localInferenceGetStateParams,
-  );
-};
-/**
- * searches Hugging Face for installable local on-device models
- */
-export const camberLocalInferenceSearchModels = async (
-  localInferenceSearchModelsParams: NonReadonly<LocalInferenceSearchModelsParams>,
-): Promise<LocalInferenceSearchModelsState> => {
-  return await runtime.jsonrpcCall(
-    toJsonrpcMethod("/camber/localInference/searchModels"),
-    localInferenceSearchModelsParams,
-  );
-};
-/**
- * updates the default local on-device model
- */
-export const camberLocalInferenceSetDefaultModel = async (
-  localInferenceSetDefaultModelParams: NonReadonly<LocalInferenceSetDefaultModelParams>,
-): Promise<LocalInferenceState> => {
-  return await runtime.jsonrpcCall(
-    toJsonrpcMethod("/camber/localInference/setDefaultModel"),
-    localInferenceSetDefaultModelParams,
-  );
-};
-/**
- * releases the model resident in the local sidecar's memory
- */
-export const camberLocalInferenceUnloadModel = async (
-  localInferenceUnloadModelParams: NonReadonly<LocalInferenceUnloadModelParams>,
-): Promise<LocalInferenceState> => {
-  return await runtime.jsonrpcCall(
-    toJsonrpcMethod("/camber/localInference/unloadModel"),
-    localInferenceUnloadModelParams,
-  );
 };
 /**
  * initiate OAuth flow for a user MCP server

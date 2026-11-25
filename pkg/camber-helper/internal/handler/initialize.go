@@ -297,7 +297,6 @@ func (h *CamberHandler) SetACPNavAgentServers(ctx context.Context, req *methods.
 	if err != nil {
 		return methods.ACPNavAgentServersState{}, err
 	}
-	state = h.agentServersForHost(state)
 	after := toProxyAgentServers(state.AgentServers)
 	if err := h.acpProxyHandler.StopChangedAgentServers(before, after); err != nil {
 		slog.Warn("failed to stop changed ACP agent subprocesses after agent server update", "err", err)
@@ -337,15 +336,11 @@ func (h *CamberHandler) activeACPAgentServers(ctx context.Context) map[string]ac
 	if h.acpNavHandler != nil && h.acpNavHandler.HasStore() {
 		agentServers, err := h.acpNavHandler.AgentServers(ctx)
 		if err == nil {
-			state := h.agentServersForHost(methods.ACPNavAgentServersState{AgentServers: agentServers})
-			return toProxyAgentServers(state.AgentServers)
+			return toProxyAgentServers(agentServers)
 		}
 		slog.Warn("failed to load ACP agent servers from assistant config; falling back to config", "err", err)
 	}
-	state := h.agentServersForHost(methods.ACPNavAgentServersState{
-		AgentServers: toMethodsAgentServers(h.config.ACPAgentServers),
-	})
-	return toProxyAgentServers(state.AgentServers)
+	return toProxyAgentServers(toMethodsAgentServers(h.config.ACPAgentServers))
 }
 
 func toMethodsAgentServers(agentServers map[string]acpproxy.AgentServerConfig) methods.ACPAgentServers {

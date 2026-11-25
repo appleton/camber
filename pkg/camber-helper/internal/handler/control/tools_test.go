@@ -3,7 +3,6 @@ package control
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"sync"
 	"testing"
 
@@ -81,7 +80,7 @@ func TestAgentsAddEditRemoveCustomAgent(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, archived.Archived)
 	assert.Contains(t, agent.callList(), "close:cancel")
-	_, err = dispatchTool(s, "tok-parent", "agents.remove", map[string]any{"agentServer": "local"})
+	_, err = dispatchTool(s, "tok-parent", "agents.remove", map[string]any{"agentServer": "poolside"})
 	require.ErrorContains(t, err, "managed by the app")
 }
 
@@ -198,30 +197,6 @@ func TestMCPActionsRedactAndGuard(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestModelsActionsSummarizeState(t *testing.T) {
-	s, _ := fixture(t)
-	local := &fakeLocalInference{}
-	s.SetTools(Tools{LocalInference: local})
-	out, err := dispatchTool(s, "", "models.list", nil)
-	require.NoError(t, err)
-	models := out["models"].([]any)
-	require.Len(t, models, 1)
-	model := models[0].(map[string]any)
-	assert.Equal(t, "org/model", model["id"])
-	assert.Equal(t, "high", model["runConfidence"])
-	assert.NotContains(t, model, "description")
-
-	_, err = dispatchTool(s, "", "models.download", map[string]any{"modelId": "org/model"})
-	require.NoError(t, err)
-	_, err = dispatchTool(s, "", "models.cancel", map[string]any{"modelId": "org/model"})
-	require.NoError(t, err)
-	_, err = dispatchTool(s, "", "models.default", map[string]any{"modelId": "org/model"})
-	require.NoError(t, err)
-	assert.Equal(t, []string{"get", "download:org/model", "cancel:org/model", "default:org/model"}, local.calls)
-	_, err = dispatchTool(s, "", "models.delete", map[string]any{})
-	require.ErrorContains(t, err, "modelId is required")
-}
-
 func TestSkillsListMergesAgentPublishedSkills(t *testing.T) {
 	s, _ := fixture(t)
 	var gotWorkspaces []string
@@ -249,7 +224,7 @@ func TestSkillsListMergesAgentPublishedSkills(t *testing.T) {
 
 func TestToolsActionsWithoutBackendFailClearly(t *testing.T) {
 	s, _ := fixture(t)
-	for _, action := range []string{"agents.runtimes", "mcp.list", "models.list", "skills.list"} {
+	for _, action := range []string{"agents.runtimes", "mcp.list", "skills.list"} {
 		_, err := dispatchTool(s, "", action, nil)
 		require.Error(t, err, action)
 		assert.Contains(t, err.Error(), "not available", action)
@@ -283,7 +258,6 @@ func newFakeAgentStore() *fakeAgentStore {
 		DefaultAgentServer: "poolside",
 		AgentServers: methods.ACPAgentServers{
 			"poolside": {Type: "custom"},
-			"local":    {Type: "local"},
 			"custom-a": {Type: "custom", Command: "a-acp", DefaultConfigOptions: map[string]string{"model": "big"}},
 			"reg":      {Type: "registry", Command: "npx"},
 		},
@@ -411,33 +385,4 @@ func (f *fakeMCP) TestConfig(context.Context, *methods.MCPServersTestConfigParam
 	f.probes++
 	out := methods.MCPServersTestConfigOutput(f.test)
 	return &out, nil
-}
-
-type fakeLocalInference struct {
-	LocalInferenceTools
-	calls []string
-}
-
-func (f *fakeLocalInference) state() methods.LocalInferenceState {
-	return methods.LocalInferenceState{Catalog: []methods.LocalInferenceModel{{ID: "org/model", Name: "Model", Description: strings.Repeat("long ", 10), RunEstimate: &methods.LocalInferenceRunEstimate{Confidence: "high", Summary: "fits"}}}}
-}
-
-func (f *fakeLocalInference) GetState(context.Context, *methods.LocalInferenceGetStateParams, *glsp.Context) (methods.LocalInferenceState, error) {
-	f.calls = append(f.calls, "get")
-	return f.state(), nil
-}
-
-func (f *fakeLocalInference) DownloadModel(_ context.Context, p *methods.LocalInferenceDownloadModelParams, _ *glsp.Context) (methods.LocalInferenceState, error) {
-	f.calls = append(f.calls, "download:"+p.ModelID)
-	return f.state(), nil
-}
-
-func (f *fakeLocalInference) CancelDownload(_ context.Context, p *methods.LocalInferenceCancelDownloadParams, _ *glsp.Context) (methods.LocalInferenceState, error) {
-	f.calls = append(f.calls, "cancel:"+p.ModelID)
-	return f.state(), nil
-}
-
-func (f *fakeLocalInference) SetDefaultModel(_ context.Context, p *methods.LocalInferenceSetDefaultModelParams, _ *glsp.Context) (methods.LocalInferenceState, error) {
-	f.calls = append(f.calls, "default:"+p.ModelID)
-	return f.state(), nil
 }

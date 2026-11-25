@@ -4,7 +4,7 @@ Camber Assistant uses `assistant.json` to configure custom
 [Agent Client Protocol (ACP)](https://agentclientprotocol.com) agents and
 defaults for registry-managed agents.
 
-Registry agents and Camber Local are installed and managed from **Settings >
+Registry agents are installed and managed from **Settings >
 ACP Agents**. Edit `assistant.json` when you need to run a custom executable,
 such as a development build of an agent.
 
@@ -118,7 +118,7 @@ registry entry. Install the agent through the UI instead.
 | --- | --- | --- |
 | `agent_servers` | object | Maps display names to ACP agent configurations. |
 | `default_agent_server` | string | Selects the agent for new conversations. Set this to the ID of your chosen agent. |
-| `type` | `custom`, `registry`, or `local` | `custom` starts your command, `registry` uses a UI-managed registry installation, and `local` is reserved for Camber Local. A custom entry may omit `type`. |
+| `type` | `custom` or `registry` | `custom` starts your command and `registry` uses a UI-managed registry installation. A custom entry may omit `type`. |
 | `command` | string | Executable name or path for a custom agent. Required for custom agents. |
 | `args` | string array | Arguments passed verbatim to the custom agent. |
 | `env` | string map | Variables added to the agent process environment. |

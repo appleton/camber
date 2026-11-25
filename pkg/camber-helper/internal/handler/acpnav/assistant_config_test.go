@@ -103,33 +103,26 @@ func TestAssistantConfigAgentServerStorePinnedConfigOptionsRoundTrip(t *testing.
 	assert.Contains(t, string(data), `"pinned_config_options"`)
 }
 
-func TestAssistantConfigAgentServerStoreLocalAgentConfigOptionsRoundTrip(t *testing.T) {
+func TestAssistantConfigAgentServerStoreDropsRetiredLocalAgent(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "poolside", "assistant.json")
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+	require.NoError(t, os.WriteFile(path, []byte(`{"default_agent_server":"local","agent_servers":{"local":{"type":"local","default_config_options":{"model":"x"}},"claude":{"command":"npx"}}}`), 0o644))
 	store := NewAssistantConfigAgentServerStore(path)
-
-	require.NoError(t, store.SetAgentServers(ctx, methods.ACPAgentServers{
-		methods.LocalAgentServerName: {
-			Type: "local",
-			DefaultConfigOptions: map[string]string{
-				"model": "malibu-local",
-			},
-			PinnedConfigOptions: []string{"model"},
-		},
-	}, nil, nil))
 
 	agentServers, err := store.ListAgentServers(ctx)
 	require.NoError(t, err)
-	local, ok := agentServers[methods.LocalAgentServerName]
-	require.True(t, ok)
-	assert.Equal(t, "local", local.Type)
-	assert.Equal(t, map[string]string{"model": "malibu-local"}, local.DefaultConfigOptions)
-	assert.Equal(t, []string{"model"}, local.PinnedConfigOptions)
-
-	data, err := os.ReadFile(path)
+	assert.NotContains(t, agentServers, "local")
+	assert.Equal(t, "npx", agentServers["claude"].Command)
+	defaultServer, err := store.GetDefaultAgentServer(ctx)
 	require.NoError(t, err)
-	assert.Contains(t, string(data), `"default_config_options"`)
-	assert.Contains(t, string(data), `"pinned_config_options"`)
+	assert.Equal(t, "poolside", defaultServer)
+
+	// Writing a stale entry back is ignored rather than rejected.
+	require.NoError(t, store.SetAgentServers(ctx, methods.ACPAgentServers{
+		"local":  {Type: "local"},
+		"claude": {Command: "npx"},
+	}, nil, nil))
 }
 
 func TestAssistantConfigAgentServerStoreDefaultAgentServerPinnedRoundTrip(t *testing.T) {

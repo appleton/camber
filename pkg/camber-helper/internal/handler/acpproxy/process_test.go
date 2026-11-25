@@ -812,20 +812,11 @@ func TestNormalizeAgentServers(t *testing.T) {
 		assert.Equal(t, AgentServerConfig{
 			Command: "",
 		}, servers[DefaultAgentServerName])
-		assert.NotContains(t, servers, LocalAgentServerName)
 		assert.NotContains(t, servers, LegacyDefaultAgentServerName)
 		assert.Equal(t, AgentServerConfig{
 			Command: "node",
 			Args:    []string{"echo-acp.mjs"},
 		}, servers["echo"])
-	})
-
-	t.Run("preserves explicitly configured local server", func(t *testing.T) {
-		servers := NormalizeAgentServers(map[string]AgentServerConfig{
-			LocalAgentServerName: {Type: "local"},
-		})
-
-		assert.Equal(t, AgentServerConfig{Type: "local"}, servers[LocalAgentServerName])
 	})
 
 	t.Run("preserves configured Camber entries", func(t *testing.T) {

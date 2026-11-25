@@ -281,7 +281,7 @@ The token is checked where it unlocks extra permission: bypass modes on
 restoring, archiving, renaming, deleting or opening a conversation that is (or
 would resume) in a bypass mode; and the configuration changes listed under
 [Manage conversations, projects and worktrees](#manage-conversations-projects-and-worktrees)
-and [Agents, connectors, skills and models](#agents-connectors-skills-and-models). A missing or unknown
+and [Agents, connectors and skills](#agents-connectors-and-skills). A missing or unknown
 token makes those requests unproven; it does not otherwise fail them. Any local
 process that can reach the desktop's control socket (the same OS user) can
 still list, inspect, read or stop any conversation, send to or steer any
@@ -412,7 +412,7 @@ conversations in a permission-bypass mode. `projects add` and `projects
 remove` change which folders agents may work in, so they need `--caller-token`
 from a conversation running in a permission-bypass mode right now.
 
-## Agents, connectors, skills and models
+## Agents, connectors and skills
 
 These commands run the same helper code as the desktop's settings, and an open
 desktop updates straight away.
@@ -430,15 +430,13 @@ desktop updates straight away.
   browser from the desktop and waits for the user.
 - `camber skills list` lists installed skills (user, workspace, or published
   by an agent with `--agent`).
-- `camber models list|search|download|delete|default|unload` manages local
-  models; `models download ID --cancel` cancels a download.
 
 Commands that define something the desktop will later run or connect to need
 `--caller-token` from a conversation that is running in a permission-bypass
 mode right now; otherwise they fail with `PERMISSION_ESCALATION`. That covers
 `agents install`, `add`, `edit` and `remove`, `mcp add`, `edit`, `remove` and
 `sign-in`, and `agents config default` with a bypass value. Restart, enable,
-disable, test, sign-out, skills, models and `agents default` are not scoped.
+disable, test, sign-out, skills and `agents default` are not scoped.
 Environment, header and token values are never printed (shown as `[set]`);
 pass them with `--env-file`, `--header-file` or `--bearer-token-file` (or `-`
 for stdin) to keep them out of the process list.
@@ -469,8 +467,6 @@ The current CLI command surface is:
 - `mcp list`, `add`, `edit`, `remove`, `enable`, `disable`, `test`,
   `sign-in`, `sign-out`
 - `skills list` (installed skills; not the `skill` guide group)
-- `models list`, `search`, `download [--cancel]`, `delete`, `default`,
-  `unload`
 - `projects list`, `add`, `remove`
 - `worktrees list`, `inspect`, `create`, `rename`, `remove`
 - `chat list`, `inspect`, `children`, `snapshot`, `subagent`, `new`

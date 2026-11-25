@@ -17,8 +17,7 @@ func (h *CamberHandler) controlTools() control.Tools {
 			Restart:       h.acpProxyHandler.RestartServer,
 			Ops:           h.appAgentServers,
 		},
-		MCPServers:     h.mcpServersHandler,
-		LocalInference: h.localInferenceHandler,
+		MCPServers: h.mcpServersHandler,
 		ListSkills: func(workspacePaths []string) []control.InstalledSkill {
 			if workspacePaths == nil {
 				workspacePaths = h.workspaceFolderPaths()

@@ -69,12 +69,6 @@ func TestControlConversationIncludesLiveStatusAndHostFiltering(t *testing.T) {
 	assert.True(t, conversation.LiveStatus.Working)
 	_, err = server.ControlConversation(ctx, "missing")
 	require.ErrorContains(t, err, "does not exist")
-	server.SetStateFilter(func(state methods.ACPNavState) methods.ACPNavState {
-		state.Conversations = nil
-		return state
-	})
-	_, err = server.ControlConversation(ctx, "wanted")
-	require.ErrorContains(t, err, "does not exist")
 }
 
 func TestListIncludesControlParentLinks(t *testing.T) {

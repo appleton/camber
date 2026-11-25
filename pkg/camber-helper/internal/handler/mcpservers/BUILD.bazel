@@ -3,7 +3,6 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "mcpservers",
     srcs = [
-        "huggingface.go",
         "pool_settings.go",
         "probe.go",
         "resolver.go",
@@ -28,7 +27,6 @@ go_library(
 go_test(
     name = "mcpservers_test",
     srcs = [
-        "huggingface_test.go",
         "pool_settings_test.go",
         "probe_test.go",
         "resolver_test.go",
