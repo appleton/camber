@@ -3,11 +3,14 @@ package acpnav
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -355,6 +358,59 @@ func TestWorktreeBranchEmptyPrefix(t *testing.T) {
 	require.NoError(t, store.RenameProject(ctx, wt.Path, "Third name"))
 	assert.Equal(t, "someone-elses-pr", currentBranch(t, wt.Path))
 	assert.False(t, localBranchExists(ctx, repo, "third-name"))
+}
+
+func TestConcurrentRenamesLeaveBranchMatchingFinalName(t *testing.T) {
+	isolationEnv(t)
+	ctx := context.Background()
+	repo, _ := gitRepo(t, nil)
+	store := isolationStore(t, repo)
+
+	for i := range 5 {
+		wt, err := store.CreateWorktree(ctx, repo, fmt.Sprintf("racy-%d", i))
+		require.NoError(t, err)
+
+		// Hold the repo lock so both renames read their state before either
+		// runs, then release them together.
+		rl := store.repoLock(repo)
+		rl.Lock()
+		var wg sync.WaitGroup
+		for _, name := range []string{fmt.Sprintf("First %d", i), fmt.Sprintf("Second %d", i)} {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				assert.NoError(t, store.RenameProject(ctx, wt.Path, name))
+			}()
+			time.Sleep(100 * time.Millisecond)
+		}
+		rl.Unlock()
+		wg.Wait()
+
+		final := projectByPath(t, store, wt.Path).Nickname
+		require.Contains(t, []string{fmt.Sprintf("First %d", i), fmt.Sprintf("Second %d", i)}, final)
+		assert.Equal(t, "camber/"+branchSlug(final), currentBranch(t, wt.Path))
+	}
+}
+
+func TestBranchRenameUndoSurvivesCancelledContext(t *testing.T) {
+	isolationEnv(t)
+	ctx := context.Background()
+	repo, _ := gitRepo(t, nil)
+	store := isolationStore(t, repo)
+
+	wt, err := store.CreateWorktree(ctx, repo, "undo-me")
+	require.NoError(t, err)
+	require.Equal(t, "camber/undo-me", currentBranch(t, wt.Path))
+
+	rename, env, err := store.renameWorktreeBranch(ctx, wt.Path, "undo-me", "Renamed")
+	require.NoError(t, err)
+	require.NotNil(t, rename)
+	require.Equal(t, "camber/renamed", currentBranch(t, wt.Path))
+
+	cancelled, cancel := context.WithCancel(ctx)
+	cancel()
+	rename.undo(cancelled, store, env)
+	assert.Equal(t, "camber/undo-me", currentBranch(t, wt.Path))
 }
 
 func TestSetWorktreeBranchPrefixValidates(t *testing.T) {

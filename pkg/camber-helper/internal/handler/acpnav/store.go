@@ -657,6 +657,17 @@ func (s *Store) RenameProject(ctx context.Context, path, name string) error {
 		rl := s.repoLock(parent.String)
 		rl.Lock()
 		defer rl.Unlock()
+		// Another rename may have finished while this one waited for the
+		// lock: re-read the name so the ownership check sees the current
+		// branch's source name rather than a stale one.
+		err = s.db.QueryRowContext(ctx, `SELECT name, nickname FROM projects WHERE path = ?`, path).
+			Scan(&currentName, &currentNickname)
+		if stderrors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("project not found: %s", path)
+		}
+		if err != nil {
+			return fmt.Errorf("looking up project: %w", err)
+		}
 		displayName := currentName
 		if currentNickname.Valid && strings.TrimSpace(currentNickname.String) != "" {
 			displayName = currentNickname.String
@@ -986,6 +997,10 @@ func (r *worktreeBranchRename) undo(ctx context.Context, s *Store, env []string)
 	if r == nil {
 		return
 	}
+	// The request context is typically why the DB update failed, so run the
+	// undo detached from its cancellation.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
+	defer cancel()
 	_, _ = s.runGit(ctx, env, "-C", r.worktreePath, "branch", "-m", r.to, r.from)
 }
 
