@@ -38,6 +38,7 @@ go_library(
         "@com_github_coder_acp_go_sdk//:acp-go-sdk",
         "@com_github_google_uuid//:uuid",
         "@com_github_tliron_glsp//:glsp",
+        "@org_golang_x_mod//semver",
     ],
 )
 

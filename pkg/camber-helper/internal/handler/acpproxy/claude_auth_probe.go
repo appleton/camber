@@ -9,6 +9,7 @@ import (
 	"time"
 
 	acpsdk "github.com/coder/acp-go-sdk"
+	"golang.org/x/mod/semver"
 )
 
 // The Claude ACP adapter creates sessions without checking credentials — auth
@@ -121,14 +122,31 @@ func (p *process) needsClaudeAuthStatusCheck() bool {
 	return len(p.initResp.AuthMethods) > 0
 }
 
-// isClaudeAgent reports whether this process is the Claude ACP adapter. Keep
-// the identity check here beside the adapter-specific auth workaround so
-// callers do not infer the implementation from a user-configured server name.
-func (p *process) isClaudeAgent() bool {
+// claudeSteeredPromptSettlesEarlyBefore is the first Claude adapter version
+// (@agentclientprotocol/claude-agent-acp) that holds a steered session/prompt
+// open itself. Versions 0.61.0 through 0.64.x settled the prompt at the
+// interrupted generation's result and streamed the steered continuation
+// afterwards, so the helper extends the turn by counting terminal usage
+// trailers. From 0.65.0 the adapter settles only after the steered work's
+// result and the SDK idle (a steer during a tool call can even join the
+// running cycle, yielding a single result), so the prompt response ends the
+// logical turn and trailer counting would wait forever.
+const claudeSteeredPromptSettlesEarlyBefore = "v0.65.0"
+
+// claudeSettlesSteeredPromptEarly reports whether this is a Claude adapter that
+// returns from session/prompt before a steered continuation finishes. A
+// missing or invalid version reports false: ending at the prompt response is
+// safer than a turn that never completes. The identity check reads the
+// adapter's own name, never the user-configured server name.
+func (p *process) claudeSettlesSteeredPromptEarly() bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	return p.initResp != nil && p.initResp.AgentInfo != nil && p.initResp.AgentInfo.Name == claudeAgentPackageName
+	if p.initResp == nil || p.initResp.AgentInfo == nil || p.initResp.AgentInfo.Name != claudeAgentPackageName {
+		return false
+	}
+	version := "v" + p.initResp.AgentInfo.Version
+	return semver.IsValid(version) && semver.Compare(version, claudeSteeredPromptSettlesEarlyBefore) < 0
 }
 
 // markClaudeAuthStatusVerified records a positive result, but only when the
