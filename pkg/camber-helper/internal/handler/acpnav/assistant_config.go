@@ -371,22 +371,37 @@ func (s *AssistantConfigAgentServerStore) loadLocked() (assistantConfig, map[str
 	if cfg.AgentServers == nil {
 		cfg.AgentServers = methods.ACPAgentServers{}
 	}
-	for name, entry := range cfg.AgentServers {
-		if isRetiredLocalAgentServer(normalizeAgentServerName(name), entry) {
-			delete(cfg.AgentServers, name)
-			if normalizeAgentServerName(cfg.DefaultAgentServer) == retiredLocalAgentServerName {
-				cfg.DefaultAgentServer = ""
-			}
-		}
-	}
+	dropRetiredLocalAgentServer(&cfg)
 	return cfg, raw, nil
 }
 
+// dropRetiredLocalAgentServer removes the stale built-in "local" agent from a
+// loaded config. The old helper supplied that agent itself, so a config may
+// name it as the (possibly pinned) default without any entry for it; such a
+// default is cleared together with its pin so it falls back to Poolside.
+func dropRetiredLocalAgentServer(cfg *assistantConfig) {
+	localConfigured := false
+	for name, entry := range cfg.AgentServers {
+		normalized := normalizeAgentServerName(name)
+		if isRetiredLocalAgentServer(normalized, entry) {
+			delete(cfg.AgentServers, name)
+		} else if normalized == retiredLocalAgentServerName {
+			localConfigured = true
+		}
+	}
+	if !localConfigured && normalizeAgentServerName(cfg.DefaultAgentServer) == retiredLocalAgentServerName {
+		cfg.DefaultAgentServer = ""
+		cfg.DefaultAgentServerPinned = false
+	}
+}
+
 // isRetiredLocalAgentServer reports whether an entry is the stale built-in
-// "local" agent (no command or binary of its own).
+// "local" agent: named "local", typed "local" or untyped, and without a
+// command or binary of its own.
 func isRetiredLocalAgentServer(name string, cfg methods.ACPAgentServerConfig) bool {
+	entryType := strings.TrimSpace(cfg.Type)
 	return name == retiredLocalAgentServerName &&
-		strings.TrimSpace(cfg.Type) == retiredLocalAgentServerType &&
+		(entryType == retiredLocalAgentServerType || entryType == "") &&
 		strings.TrimSpace(cfg.Command) == "" && len(cfg.Binary) == 0
 }
 

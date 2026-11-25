@@ -123,6 +123,66 @@ func TestAssistantConfigAgentServerStoreDropsRetiredLocalAgent(t *testing.T) {
 		"local":  {Type: "local"},
 		"claude": {Command: "npx"},
 	}, nil, nil))
+	require.NoError(t, store.SetAgentServers(ctx, methods.ACPAgentServers{
+		"local":  {},
+		"claude": {Command: "npx"},
+	}, nil, nil))
+}
+
+func TestAssistantConfigAgentServerStoreRetiredLocalAgentVariants(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      string
+		wantLocal   bool
+		wantDefault string
+		wantPinned  bool
+	}{
+		{
+			name:        "untyped entry without command",
+			config:      `{"default_agent_server":"local","agent_servers":{"local":{}}}`,
+			wantDefault: "poolside",
+		},
+		{
+			name:        "default without an entry",
+			config:      `{"default_agent_server":"local"}`,
+			wantDefault: "poolside",
+		},
+		{
+			name:        "pinned default is unpinned",
+			config:      `{"default_agent_server":"local","default_agent_server_pinned":true,"agent_servers":{"local":{"type":"local"}}}`,
+			wantDefault: "poolside",
+		},
+		{
+			name:        "custom agent named local is kept",
+			config:      `{"default_agent_server":"local","default_agent_server_pinned":true,"agent_servers":{"local":{"command":"my-agent"}}}`,
+			wantLocal:   true,
+			wantDefault: "local",
+			wantPinned:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			path := filepath.Join(t.TempDir(), "poolside", "assistant.json")
+			require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+			require.NoError(t, os.WriteFile(path, []byte(tt.config), 0o644))
+			store := NewAssistantConfigAgentServerStore(path)
+
+			agentServers, err := store.ListAgentServers(ctx)
+			require.NoError(t, err)
+			local, ok := agentServers["local"]
+			assert.Equal(t, tt.wantLocal, ok)
+			if tt.wantLocal {
+				assert.Equal(t, "my-agent", local.Command)
+			}
+			defaultServer, err := store.GetDefaultAgentServer(ctx)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantDefault, defaultServer)
+			pinned, err := store.GetDefaultAgentServerPinned(ctx)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantPinned, pinned)
+		})
+	}
 }
 
 func TestAssistantConfigAgentServerStoreDefaultAgentServerPinnedRoundTrip(t *testing.T) {
