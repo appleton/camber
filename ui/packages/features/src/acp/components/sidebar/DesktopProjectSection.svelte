@@ -428,11 +428,19 @@
                   source={worktreeReorderMotion.isSource(worktree)}
                   style={worktreeReorderMotion.contentStyle(worktree)}
                 >
+                  <!-- The context menu lives on the row, not the name button: that button is
+                       disabled while the worktree is busy (e.g. still being created), and
+                       disabled buttons swallow contextmenu events, which would surface the
+                       webview's default menu instead of ours. -->
                   <div
                     class={[
                       "group/wthead flex items-center gap-0.5 px-1",
                       worktreeDeleteRequested ? "opacity-60" : "",
                     ]}
+                    oncontextmenu={sidebar.isRenamingWorkspace("worktree", worktree.path)
+                      ? undefined
+                      : (event) => onWorktreeContextMenu(worktree, event)}
+                    role="presentation"
                   >
                     {#if sidebar.isRenamingWorkspace("worktree", worktree.path)}
                       <!-- py compensates for the input's border box so the row keeps its height. -->
@@ -480,7 +488,6 @@
                             onToggleProjectCollapsed(worktree);
                           }
                         }}
-                        oncontextmenu={(event) => onWorktreeContextMenu(worktree, event)}
                         title={worktreeBusyTooltip ?? (githubHasPR ? undefined : worktree.path)}
                       >
                         <span

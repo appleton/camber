@@ -63,7 +63,7 @@ describe("DesktopGithubControl", () => {
       await fireEvent.click(screen.getByRole("button", { name: "GitHub actions" }));
       await waitFor(() => expect(githubRepo.links).toHaveBeenCalledWith("/repo"));
 
-      const issuesRow = await screen.findByRole("menuitem", { name: "Open Issues" });
+      const issuesRow = await screen.findByRole("menuitem", { name: "View Issues" });
       await fireEvent.click(issuesRow);
 
       expect(sender).toHaveBeenCalledWith("openExternalURL", [links.issuesUrl]);
@@ -82,11 +82,11 @@ describe("DesktopGithubControl", () => {
 
       await fireEvent.click(screen.getByRole("button", { name: "GitHub actions" }));
 
-      expect(screen.getByRole("menuitem", { name: /Open Issues/ })).toBeDisabled();
+      expect(screen.getByRole("menuitem", { name: /View Issues/ })).toBeDisabled();
 
       resolveLinks(links);
       await waitFor(() =>
-        expect(screen.getByRole("menuitem", { name: /Open Issues/ })).not.toBeDisabled(),
+        expect(screen.getByRole("menuitem", { name: /View Issues/ })).not.toBeDisabled(),
       );
     });
   });
@@ -118,19 +118,19 @@ describe("DesktopGithubControl", () => {
         {
           kind: "action",
           id: "openPr",
-          label: "Open Current PR",
+          label: "View Current Pull Request",
           icon: "git-branch",
           enabled: true,
         },
         {
           kind: "action",
           id: "openPulls",
-          label: "Open All Pull Requests",
+          label: "View All Pull Requests",
           icon: "review",
           enabled: true,
         },
-        { kind: "action", id: "openIssues", label: "Open Issues", icon: "alert", enabled: true },
-        { kind: "action", id: "openRepo", label: "Open Repository", icon: "github", enabled: true },
+        { kind: "action", id: "openIssues", label: "View Issues", icon: "alert", enabled: true },
+        { kind: "action", id: "openRepo", label: "View Repository", icon: "github", enabled: true },
       ]);
 
       // Reflects open state on the trigger while the native menu is up, then

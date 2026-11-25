@@ -258,6 +258,26 @@ export async function camberAcpNavSetGithubColorMode(params: {
   return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/acpNav/setGithubColorMode"), params);
 }
 
+// The prefix for branches the helper creates for new worktrees (and follows
+// when a worktree is renamed), persisted in the acpNav settings DB. The helper
+// defaults it to "camber/"; an empty prefix is a valid explicit choice.
+export interface ACPNavWorktreeBranchPrefixState {
+  prefix: string;
+}
+
+export async function camberAcpNavGetWorktreeBranchPrefix(): Promise<ACPNavWorktreeBranchPrefixState> {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/acpNav/getWorktreeBranchPrefix"), {});
+}
+
+export async function camberAcpNavSetWorktreeBranchPrefix(params: {
+  prefix: string;
+}): Promise<ACPNavWorktreeBranchPrefixState> {
+  return await runtime.jsonrpcCall(
+    toJsonrpcMethod("/camber/acpNav/setWorktreeBranchPrefix"),
+    params,
+  );
+}
+
 // --- Voice input (camber/voiceInput/*) ---
 //
 // Hand-written bindings for the helper's local Whisper speech-to-text; the

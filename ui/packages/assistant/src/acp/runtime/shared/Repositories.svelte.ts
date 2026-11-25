@@ -26,6 +26,7 @@ import {
   setLocalInferenceContext,
   setNotificationContext,
   terminalPlacementForWorktreeSetupSurface,
+  wireACPGithubSync,
   type ACPConversationsState,
   type Notifier,
 } from "@camber/features/acp";
@@ -114,6 +115,12 @@ export class Repositories {
       const detail = (event as CustomEvent<ACPConversationsState>).detail;
       this.acpConversationStatusRepo.syncRemoteStatuses(detail?.sessions ?? []);
     });
+
+    // Renaming a worktree renames its git branch: refresh the cached branch
+    // whichever surface (UI, deferred rename, CLI) performed the rename.
+    onDestroy(
+      wireACPGithubSync({ emitter: this.acpProjectRepo.emitter, github: this.acpGithubRepo }),
+    );
 
     setACPHostStateStore(appState);
     setACPHostActions({ trackClick });

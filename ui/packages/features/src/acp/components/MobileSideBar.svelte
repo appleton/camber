@@ -20,6 +20,7 @@
   import { getACPWorktreeRepo } from "../features/WorktreeRepository";
   import type { ACPSession } from "../features/Session.svelte";
   import { rpc } from "../hostRpc";
+  import { githubPRActionLabel } from "../github/githubStatus";
   import { formatRelativeTimeWithoutAgo } from "../shared/time";
   import {
     camberqaSlotForWorktree,
@@ -144,7 +145,7 @@
       },
       { kind: "separator" },
       {
-        name: "Open GitHub Repository",
+        name: "View GitHub Repository",
         icon: "github",
         callback: () => openGithubUrl(project.path, (links) => links.repoUrl),
       },
@@ -186,7 +187,7 @@
         },
       },
       {
-        name: "Open Pull Request",
+        name: githubPRActionLabel(github.statusFor(worktree.path)),
         icon: "git-branch",
         disabled: blocked,
         callback: () => openGithubUrl(worktree.path, (links) => links.prUrl),
@@ -413,7 +414,13 @@
         await projects.renameProject(target.path, value);
       }
     } catch (error) {
+      // A worktree rename also renames its git branch (or is deferred until
+      // creation finishes), so it can fail; tell the user the name was kept.
       console.error("Failed to rename ACP sidebar item", error);
+      rpc.showInfoMessage(
+        formatError(error, { prefix: "Failed to rename" }),
+        InfoMessageType.error,
+      );
     }
   }
 </script>

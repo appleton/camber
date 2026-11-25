@@ -641,6 +641,16 @@ func New() *CamberHandler {
 		Description: "updates the user's worktree status color mode",
 	}, handler.acpNavHandler.SetGithubColorMode)
 
+	registerExtensionMethod(handler, JSONRPCOperation{
+		Method:      methods.ACPNavGetWorktreeBranchPrefixMethod,
+		Description: "gets the prefix for branches created for new worktrees",
+	}, handler.acpNavHandler.GetWorktreeBranchPrefix)
+
+	registerExtensionMethod(handler, JSONRPCOperation{
+		Method:      methods.ACPNavSetWorktreeBranchPrefixMethod,
+		Description: "updates the prefix for branches created for new worktrees",
+	}, handler.acpNavHandler.SetWorktreeBranchPrefix)
+
 	publishClientSideTypes(handler, methods.ACPNavDidChangeMethod, methods.ACPNavDidChangeParams{},
 		"notifies the client when ACP navigation state changes")
 

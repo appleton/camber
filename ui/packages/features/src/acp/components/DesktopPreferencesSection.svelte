@@ -14,6 +14,7 @@
   } from "./DesktopFileOpenerSelect.svelte";
   import DesktopThemeToggle, { type DesktopThemePreference } from "./DesktopThemeToggle.svelte";
   import DesktopToolActivitySelect from "./DesktopToolActivitySelect.svelte";
+  import DesktopWorktreeBranchPrefixSection from "./DesktopWorktreeBranchPrefixSection.svelte";
   import SettingsSection from "./settings/SettingsSection.svelte";
 
   type SaveStatus = "loading" | "saved" | "saving" | "error";
@@ -1158,6 +1159,8 @@
 </SettingsSection>
 
 <DesktopDefaultLayoutSection />
+
+<DesktopWorktreeBranchPrefixSection />
 
 <SettingsSection title="Updates channel">
   <div class="flex flex-col items-start gap-2 px-3 pb-3 pt-3">

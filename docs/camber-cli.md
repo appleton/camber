@@ -401,7 +401,11 @@ These commands run the same code as the desktop:
   `camber projects remove PATH` removes a root project as the sidebar does: it
   unregisters the project and its worktrees, drops their conversations from
   the list and closes its terminals, but leaves files on disk.
-- `camber worktrees rename PATH NAME` changes a worktree's display name only.
+- `camber worktrees rename PATH NAME` changes a worktree's display name. It also
+  renames the checked-out branch to the configured prefix plus a slug of the
+  name when the helper created that branch and it is unpublished (no upstream
+  and no remote-tracking ref); other branches are left alone. The directory is
+  unchanged, and git runs without repository hooks.
 
 Archive, restore, rename, delete and open follow the `chat send` rule for
 conversations in a permission-bypass mode. `projects add` and `projects

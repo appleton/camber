@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/big"
 	"os/exec"
+	"strings"
+	"unicode"
 )
 
 type alliterativeWordSet struct {
@@ -291,8 +293,44 @@ func uniqueWorktreeName(name string, exists func(string) bool) string {
 	}
 }
 
-func worktreeBranch(name string) string {
-	return fmt.Sprintf("camber/%s", name)
+// defaultWorktreeBranchPrefix prefixes the branches created for new worktrees
+// until the user configures another prefix (see Store.GetWorktreeBranchPrefix).
+const defaultWorktreeBranchPrefix = "camber/"
+
+func worktreeBranch(prefix, name string) string {
+	return prefix + name
+}
+
+// branchSlug turns a worktree display name into a git branch name component:
+// lowercase, with every run of characters other than letters, digits, '.' and
+// '_' collapsed into a single '-'. Sequences git rejects in a ref ("..", a
+// leading or trailing '.', a ".lock" suffix) are removed. It returns "" when
+// nothing usable remains.
+func branchSlug(name string) string {
+	var b strings.Builder
+	pendingDash := false
+	for _, r := range strings.ToLower(name) {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '.' || r == '_' {
+			if pendingDash && b.Len() > 0 {
+				b.WriteByte('-')
+			}
+			pendingDash = false
+			b.WriteRune(r)
+			continue
+		}
+		pendingDash = true
+	}
+	slug := b.String()
+	for strings.Contains(slug, "..") {
+		slug = strings.ReplaceAll(slug, "..", ".")
+	}
+	for {
+		trimmed := strings.Trim(strings.TrimSuffix(slug, ".lock"), "-.")
+		if trimmed == slug {
+			return slug
+		}
+		slug = trimmed
+	}
 }
 
 func localBranchExists(ctx context.Context, projectPath, branch string) bool {

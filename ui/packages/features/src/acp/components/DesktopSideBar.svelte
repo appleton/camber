@@ -833,7 +833,16 @@
   }
 
   async function handleRenameProject(path: string, name: string) {
-    await projects.renameProject(path, name);
+    try {
+      await projects.renameProject(path, name);
+    } catch (error) {
+      // Renaming a worktree also renames its git branch, which can fail; the
+      // inline rename otherwise only logs, so tell the user the name was kept.
+      rpc.showInfoMessage(
+        formatError(error, { prefix: "Failed to rename" }),
+        InfoMessageType.error,
+      );
+    }
   }
 
   function handleProjectSettings(path: string) {
@@ -1565,7 +1574,7 @@
 
     if (github.supportedFor(project.path)) {
       openActions.push({
-        name: "Open GitHub Repository",
+        name: "View GitHub Repository",
         icon: "github",
         callback: () => handleOpenGithubRepository(project.path),
       });
@@ -1666,6 +1675,8 @@
       {
         name: "Copy Worktree Path",
         icon: "copy",
+        // The directory does not exist yet while the worktree is being created.
+        disabled: worktree.busy === "creating",
         callback: () => rpc.writeToClipboard(worktree.path),
       },
       {
@@ -1685,6 +1696,12 @@
       {
         name: sidebarInlineRenameLabel("Worktree"),
         icon: "pencil",
+        // Stays available while the worktree is still being created; the
+        // repository applies the name once the server row exists.
+        disabled:
+          worktree.deleteRequested === true ||
+          worktree.busy === "tearing_down" ||
+          worktree.busy === "deleting",
         callback: () => {
           sidebar.beginRename({ kind: "worktree", path: worktree.path }, (name) =>
             handleRenameProject(worktree.path, name),

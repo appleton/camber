@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ACP_WORKTREE_RENAMED_EVENT } from "../navTypes";
 import { ACPProjectRepositoryWriter } from "./ProjectRepository.svelte";
 
 vi.mock("@camber/helperapi", () => ({
   camberAcpNavGetProjectSettings: vi.fn(),
   camberAcpNavList: vi.fn(),
   camberAcpNavRemoveProject: vi.fn(),
+  camberAcpNavRenameProject: vi.fn(),
   camberAcpNavReorderProjects: vi.fn(),
   camberAcpNavReorderWorktrees: vi.fn(),
   camberAcpNavSetProjectCollapsed: vi.fn(),
@@ -249,6 +251,179 @@ describe("ACPProjectRepositoryWriter", () => {
       name: "server feature",
       busy: "creating",
       deleteRequested: true,
+    });
+  });
+  it("keeps a rename made while a worktree is pending and applies it after creation", async () => {
+    const { camberAcpNavList, camberAcpNavRenameProject } = await import("@camber/helperapi");
+    const base = {
+      path: "/repo/worktrees/feature",
+      isWorktree: true,
+      parentPath: "/repo",
+      collapsed: false,
+      displayOrder: 0,
+      createdAt: "2026-05-20T10:00:00Z",
+      updatedAt: "2026-05-20T10:00:00Z",
+    };
+    vi.mocked(camberAcpNavList).mockResolvedValue({
+      conversations: [],
+      projects: [{ ...base, name: "generated" }],
+    });
+    vi.mocked(camberAcpNavRenameProject).mockResolvedValue({
+      projects: [{ ...base, name: "mine" }],
+    } as never);
+    const repo = new ACPProjectRepositoryWriter();
+    const path = repo.addPendingWorktree({ ...base, name: "generated" });
+
+    const renamed = repo.renameProject(path, "  mine  ");
+    expect(camberAcpNavRenameProject).not.toHaveBeenCalled();
+    expect(repo.projects[0]).toMatchObject({ name: "mine", busy: "creating" });
+
+    // Creation upserts the row with the generated name; the user's name still wins.
+    await repo.refresh();
+    expect(repo.projects[0]).toMatchObject({ name: "mine" });
+
+    repo.clearWorktreeBusy(path);
+    await vi.waitFor(() =>
+      expect(camberAcpNavRenameProject).toHaveBeenCalledWith({ path, name: "mine" }),
+    );
+    await expect(renamed).resolves.toBeUndefined();
+  });
+
+  describe("deferred rename of a pending worktree", () => {
+    const base = {
+      path: "/repo/worktrees/feature",
+      isWorktree: true,
+      parentPath: "/repo",
+      collapsed: false,
+      displayOrder: 0,
+      createdAt: "2026-05-20T10:00:00Z",
+      updatedAt: "2026-05-20T10:00:00Z",
+    };
+
+    async function setup(serverRows: boolean) {
+      const api = await import("@camber/helperapi");
+      vi.mocked(api.camberAcpNavList).mockResolvedValue({
+        conversations: [],
+        projects: serverRows ? [{ ...base, name: "generated" }] : [],
+      });
+      const repo = new ACPProjectRepositoryWriter();
+      const path = repo.addPendingWorktree({ ...base, name: "generated" });
+      if (serverRows) await repo.refresh();
+      return { api, repo, path };
+    }
+
+    it("keeps the overlay name until the rename RPC resolves", async () => {
+      const { api, repo, path } = await setup(true);
+      let resolveRpc!: (value: never) => void;
+      vi.mocked(api.camberAcpNavRenameProject).mockReturnValue(
+        new Promise((resolve) => {
+          resolveRpc = resolve;
+        }),
+      );
+      const settled = vi.fn();
+      void repo.renameProject(path, "mine").then(settled);
+
+      repo.clearWorktreeBusy(path);
+      await vi.waitFor(() => expect(api.camberAcpNavRenameProject).toHaveBeenCalled());
+      expect(repo.projects[0]?.name).toBe("mine");
+      expect(settled).not.toHaveBeenCalled();
+
+      resolveRpc({ projects: [{ ...base, name: "mine" }] } as never);
+      await vi.waitFor(() => expect(settled).toHaveBeenCalled());
+      expect(repo.projects[0]?.name).toBe("mine");
+    });
+
+    it("rejects the original promise and drops the overlay on RPC failure", async () => {
+      const { api, repo, path } = await setup(true);
+      const failure = new Error("branch exists");
+      vi.mocked(api.camberAcpNavRenameProject).mockRejectedValue(failure);
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const result = repo.renameProject(path, "mine");
+      const assertion = expect(result).rejects.toBe(failure);
+
+      repo.clearWorktreeBusy(path);
+      await assertion;
+      expect(repo.projects[0]?.name).toBe("generated");
+    });
+
+    it("resolves a superseded rename and applies only the latest name", async () => {
+      const { api, repo, path } = await setup(true);
+      vi.mocked(api.camberAcpNavRenameProject).mockResolvedValue({
+        projects: [{ ...base, name: "second" }],
+      } as never);
+      const first = repo.renameProject(path, "first");
+      const second = repo.renameProject(path, "second");
+      await expect(first).resolves.toBeUndefined();
+
+      repo.clearWorktreeBusy(path);
+      await expect(second).resolves.toBeUndefined();
+      expect(api.camberAcpNavRenameProject).toHaveBeenCalledTimes(1);
+      expect(api.camberAcpNavRenameProject).toHaveBeenCalledWith({ path, name: "second" });
+    });
+
+    it("resolves without calling the RPC when creation failed", async () => {
+      const { api, repo, path } = await setup(false);
+      const result = repo.renameProject(path, "mine");
+
+      repo.clearWorktreeBusy(path);
+      await expect(result).resolves.toBeUndefined();
+      expect(api.camberAcpNavRenameProject).not.toHaveBeenCalled();
+      expect(repo.projects).toEqual([]);
+    });
+  });
+
+  describe("worktree rename event", () => {
+    const base = {
+      path: "/repo/worktrees/feature",
+      isWorktree: true,
+      parentPath: "/repo",
+      collapsed: false,
+      displayOrder: 0,
+      createdAt: "2026-05-20T10:00:00Z",
+      updatedAt: "2026-05-20T10:00:00Z",
+    };
+
+    function listen(repo: ACPProjectRepositoryWriter) {
+      const paths: string[][] = [];
+      repo.emitter.addEventListener(ACP_WORKTREE_RENAMED_EVENT, (event) => {
+        paths.push((event as CustomEvent<{ paths: string[] }>).detail.paths);
+      });
+      return paths;
+    }
+
+    it("emits when a worktree display name changes, not on unrelated updates", () => {
+      const repo = new ACPProjectRepositoryWriter();
+      const paths = listen(repo);
+
+      repo.replaceProjects([{ ...base, name: "one" }]);
+      expect(paths).toEqual([]);
+
+      repo.replaceProjects([{ ...base, name: "one", collapsed: true, displayOrder: 3 }]);
+      expect(paths).toEqual([]);
+
+      repo.replaceProjects([{ ...base, name: "two", collapsed: true }]);
+      expect(paths).toEqual([[base.path]]);
+
+      repo.replaceProjects([{ ...base, name: "two", nickname: "nick" }]);
+      expect(paths).toEqual([[base.path], [base.path]]);
+    });
+
+    it("emits when a deferred rename is applied after creation", async () => {
+      const { camberAcpNavRenameProject } = await import("@camber/helperapi");
+      vi.mocked(camberAcpNavRenameProject).mockResolvedValue({
+        projects: [{ ...base, name: "mine" }],
+      } as never);
+      const repo = new ACPProjectRepositoryWriter();
+      const paths = listen(repo);
+      const path = repo.addPendingWorktree({ ...base, name: "generated" });
+      const renamed = repo.renameProject(path, "mine");
+
+      repo.replaceProjects([{ ...base, name: "generated" }]);
+      expect(paths).toEqual([]);
+
+      repo.clearWorktreeBusy(path);
+      await renamed;
+      expect(paths).toEqual([[base.path]]);
     });
   });
 });

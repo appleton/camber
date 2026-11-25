@@ -136,7 +136,7 @@ export function githubStatusSummary(status: GitHubPRStatus | undefined): string 
 }
 
 export function githubPRActionLabel(status: GitHubPRStatus | undefined): string {
-  return status && status.state !== "none" ? "Open Current Pull Request" : "Open New Pull Request";
+  return status && status.state !== "none" ? "View Current Pull Request" : "Open New Pull Request";
 }
 
 export function githubChecksCountLabel(status: GitHubPRStatus): string {

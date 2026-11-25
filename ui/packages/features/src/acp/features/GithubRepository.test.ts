@@ -125,6 +125,29 @@ describe("ACPGithubRepositoryWriter", () => {
     expect(camberGithubWorktreeStatuses).toHaveBeenCalledTimes(1);
   });
 
+  it("a forced refresh of the tracked paths picks up a renamed branch (worktree rename)", async () => {
+    const { camberGithubWorktreeStatuses } = await import("@camber/helperapi");
+    vi.mocked(camberGithubWorktreeStatuses)
+      .mockResolvedValueOnce({
+        configured: true,
+        statuses: [{ ...worktreeStatus("/a", true, prStatus()), branch: "camber/old" }],
+      })
+      .mockResolvedValueOnce({
+        configured: true,
+        statuses: [{ ...worktreeStatus("/a", true, prStatus()), branch: "camber/new" }],
+      });
+
+    const repo = new ACPGithubRepositoryWriter();
+    const getPaths = () => ["/a"];
+    repo.start(getPaths);
+    repo.stop();
+    await vi.waitFor(() => expect(repo.branchFor("/a")).toBe("camber/old"));
+
+    await repo.refresh(undefined, { force: true });
+    expect(camberGithubWorktreeStatuses).toHaveBeenLastCalledWith({ paths: ["/a"] });
+    expect(repo.branchFor("/a")).toBe("camber/new");
+  });
+
   it("force bypasses the inFlight guard (e.g. after a token change)", async () => {
     const { camberGithubWorktreeStatuses } = await import("@camber/helperapi");
     let resolveFirst!: (v: { configured: boolean; statuses: GitHubWorktreeStatus[] }) => void;

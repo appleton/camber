@@ -14,6 +14,7 @@ import { createContext } from "svelte";
 import { normalizeACPError, type ACPRequestError } from "../errors";
 import {
   ACP_DESKTOP_PROJECTS_EVENT,
+  ACP_WORKTREE_RENAMED_EVENT,
   type ACPNavProject,
   type ACPNavProjectSettings,
   type ACPProjectsState,
@@ -37,6 +38,16 @@ export class ACPProjectRepositoryWriter {
   private pendingWorktrees = new Map<string, ACPNavProject>();
   private busyWorktrees = new Map<string, WorktreeBusyKind>();
   private deleteRequested = new Set<string>();
+  // Names the user chose for a worktree before its server row existed (or
+  // while creation was still running). createWorktree upserts the row with the
+  // generated name, so the rename is applied after creation to make the
+  // user's name win.
+  private pendingRenames = new Map<string, string>();
+  // Settles the renameProject() promise of the latest deferred rename.
+  private renameWaiters = new Map<
+    string,
+    { resolve: () => void; reject: (error: unknown) => void }
+  >();
 
   refreshState = $state<AsyncState<ACPNavProject[], ACPRequestError>>(waiting);
   emitter = new EventTarget();
@@ -102,6 +113,16 @@ export class ACPProjectRepositoryWriter {
   async renameProject(path: string, name: string): Promise<void> {
     const trimmed = name.trim();
     if (!path || !trimmed) return;
+    if (this.pendingWorktrees.has(path)) {
+      this.pendingRenames.set(path, trimmed);
+      // A newer name supersedes the earlier one; its caller is done.
+      this.renameWaiters.get(path)?.resolve();
+      // Settles when the deferred rename settles (see clearWorktreeBusy).
+      return new Promise<void>((resolve, reject) => {
+        this.renameWaiters.set(path, { resolve, reject });
+        this.reapplyOverlays();
+      });
+    }
     this.applyProjects((await camberAcpNavRenameProject({ path, name: trimmed })).projects ?? []);
   }
 
@@ -193,6 +214,38 @@ export class ACPProjectRepositoryWriter {
     this.pendingWorktrees.delete(path);
     this.deleteRequested.delete(path);
     this.reapplyOverlays();
+    const rename = this.pendingRenames.get(path);
+    if (rename !== undefined) void this.flushPendingRename(path, rename);
+  }
+
+  // Applies a rename queued while the worktree was pending. The overlay name
+  // stays in place until the RPC settles so the row never flashes the
+  // generated name; on failure the server name shows again and the error
+  // reaches the original renameProject() caller.
+  private async flushPendingRename(path: string, name: string): Promise<void> {
+    const waiter = this.renameWaiters.get(path);
+    this.renameWaiters.delete(path);
+    const finish = () => {
+      if (this.pendingRenames.get(path) === name) this.pendingRenames.delete(path);
+    };
+    const row = this.serverProjects.find((project) => project.path === path);
+    if (!row || row.name === name) {
+      finish();
+      this.reapplyOverlays();
+      waiter?.resolve();
+      return;
+    }
+    try {
+      const result = await camberAcpNavRenameProject({ path, name });
+      finish();
+      this.applyProjects(result.projects ?? []);
+      waiter?.resolve();
+    } catch (error) {
+      finish();
+      this.reapplyOverlays();
+      console.error("Failed to apply worktree rename after creation", error);
+      waiter?.reject(error);
+    }
   }
 
   private reapplyOverlays(): void {
@@ -207,11 +260,36 @@ export class ACPProjectRepositoryWriter {
   // Caching it lets later overlay changes re-merge without sneaking in
   // already-merged data.
   private applyProjects(projects: ACPNavProject[]): void {
+    const renamed = this.renamedWorktreePaths(this.serverProjects, projects);
     this.serverProjects = projects;
     const merged = this.mergeTransientWorktrees(projects);
     this.lastLoadedProjects = merged;
     this.refreshState = success(merged);
     this.emitState();
+    if (renamed.length > 0) {
+      this.emitter.dispatchEvent(
+        new CustomEvent<{ paths: string[] }>(ACP_WORKTREE_RENAMED_EVENT, {
+          detail: { paths: renamed },
+        }),
+      );
+    }
+  }
+
+  // Worktrees present in both snapshots whose display name changed. Compares
+  // server snapshots (not the merged overlay) so a rename applied from any
+  // source is seen, including a deferred rename whose overlay name was already
+  // showing when the RPC result arrives. A rename also renames the git branch.
+  private renamedWorktreePaths(before: ACPNavProject[], after: ACPNavProject[]): string[] {
+    const previous = new Map(before.map((project) => [project.path, project]));
+    const paths: string[] = [];
+    for (const project of after) {
+      const old = previous.get(project.path);
+      if (!old || !project.isWorktree) continue;
+      if ((old.nickname || old.name) !== (project.nickname || project.name)) {
+        paths.push(project.path);
+      }
+    }
+    return paths;
   }
 
   // Overlays in-memory transient state (busy kind, pending placeholders) onto
@@ -228,6 +306,8 @@ export class ACPProjectRepositoryWriter {
     const merged: ACPNavProject[] = [];
     for (const project of byPath.values()) {
       const { busy: _dropBusy, deleteRequested: _dropDeleteRequested, ...baseProject } = project;
+      const renamed = this.pendingRenames.get(project.path);
+      if (renamed !== undefined) baseProject.name = renamed;
       const busy = this.busyWorktrees.get(project.path);
       const requestedDelete = this.deleteRequested.has(project.path);
       if (busy || requestedDelete) {

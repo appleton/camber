@@ -73,6 +73,7 @@ go_test(
         "conversation_handoff_test.go",
         "server_test.go",
         "store_test.go",
+        "worktree_branch_test.go",
         "worktree_isolation_test.go",
     ],
     data = [

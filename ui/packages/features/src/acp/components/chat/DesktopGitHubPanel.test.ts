@@ -102,7 +102,7 @@ describe("DesktopGitHubPanel", () => {
     expect(screen.getByText("build")).toBeTruthy();
     expect(screen.getByText("LGTM")).toBeTruthy();
 
-    await fireEvent.click(screen.getByRole("button", { name: "Open PR" }));
+    await fireEvent.click(screen.getByRole("button", { name: "View Current Pull Request" }));
     expect(sender).toHaveBeenCalledWith("openExternalURL", ["https://github.com/o/r/pull/7"]);
   });
 

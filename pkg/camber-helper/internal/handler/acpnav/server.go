@@ -284,6 +284,31 @@ func (s *Server) SetGithubColorMode(ctx context.Context, req *methods.ACPNavSetG
 	return methods.ACPNavGithubColorModeState{ColorMode: mode}, nil
 }
 
+func (s *Server) GetWorktreeBranchPrefix(ctx context.Context, _ *methods.ACPNavGetWorktreeBranchPrefixParams, _ *glsp.Context) (methods.ACPNavWorktreeBranchPrefixState, error) {
+	if s.store == nil {
+		return methods.ACPNavWorktreeBranchPrefixState{}, sql.ErrConnDone
+	}
+	prefix, err := s.store.GetWorktreeBranchPrefix(ctx)
+	if err != nil {
+		return methods.ACPNavWorktreeBranchPrefixState{}, err
+	}
+	return methods.ACPNavWorktreeBranchPrefixState{Prefix: prefix}, nil
+}
+
+func (s *Server) SetWorktreeBranchPrefix(ctx context.Context, req *methods.ACPNavSetWorktreeBranchPrefixParams, _ *glsp.Context) (methods.ACPNavWorktreeBranchPrefixState, error) {
+	if s.store == nil {
+		return methods.ACPNavWorktreeBranchPrefixState{}, sql.ErrConnDone
+	}
+	if err := s.store.SetWorktreeBranchPrefix(ctx, req.Prefix); err != nil {
+		return methods.ACPNavWorktreeBranchPrefixState{}, err
+	}
+	prefix, err := s.store.GetWorktreeBranchPrefix(ctx)
+	if err != nil {
+		return methods.ACPNavWorktreeBranchPrefixState{}, err
+	}
+	return methods.ACPNavWorktreeBranchPrefixState{Prefix: prefix}, nil
+}
+
 func (s *Server) GetKeybindings(ctx context.Context, _ *methods.ACPNavGetKeybindingsParams, _ *glsp.Context) (methods.ACPNavKeybindingsState, error) {
 	if s.store == nil {
 		return methods.ACPNavKeybindingsState{}, sql.ErrConnDone
