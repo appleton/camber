@@ -82,7 +82,6 @@ import Microphone from "./glyphs/microphone.svelte";
 import Minus from "./glyphs/minus.svelte";
 import More from "./glyphs/more.svelte";
 import New from "./glyphs/new.svelte";
-import OnDevice from "./glyphs/on-device.svelte";
 import Output from "./glyphs/output.svelte";
 import Package from "./glyphs/package.svelte";
 import PanelBottomClosed from "./glyphs/panel-bottom-closed.svelte";
@@ -233,7 +232,6 @@ export const iconMap: Record<IconName, Component> = {
   minus: Minus,
   more: More,
   new: New,
-  "on-device": OnDevice,
   output: Output,
   "panel-bottom-closed": PanelBottomClosed,
   "panel-bottom-open": PanelBottomOpen,
@@ -386,7 +384,6 @@ export const iconVariantSupport: Record<
   minus: { weight: true },
   more: { weight: true },
   new: { weight: true },
-  "on-device": { weight: true },
   output: { weight: true },
   "panel-bottom-closed": { weight: true },
   "panel-bottom-open": { weight: true },

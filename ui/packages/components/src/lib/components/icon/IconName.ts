@@ -85,7 +85,6 @@ export type IconName =
   | "minus"
   | "more"
   | "new"
-  | "on-device"
   | "output"
   | "package"
   | "panel-bottom-closed"

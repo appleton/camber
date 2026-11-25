@@ -122,7 +122,7 @@ function prepareTemplate() {
 }
 
 async function measureOnce(runDir) {
-  fs.mkdirSync(path.join(runDir, "models"), { recursive: true });
+  fs.mkdirSync(runDir, { recursive: true });
   // APFS clone: instant, and each run gets a private writable DB.
   execFileSync("cp", ["-c", path.join(templateDir, "acp-nav.db"), path.join(runDir, "acp-nav.db")]);
   fs.copyFileSync(

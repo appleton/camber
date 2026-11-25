@@ -17,20 +17,17 @@ const CAMBER_ROUNDEL_STROKE_WIDTH = "0.25";
 
 // The brand mark fills its 0–16 artboard edge to edge, so it reads a touch
 // bigger than the sibling agent icons, which carry a little built-in padding.
-// Shrink it a hair about the artboard centre (8,8) to match the others. Shared
-// by the plain and badged variants so both roundels render at the same size.
+// Shrink it a hair about the artboard centre (8,8) to match the others.
 const CAMBER_ROUNDEL_SCALE = 0.93;
 const CAMBER_ROUNDEL_TRANSFORM = `translate(8 8) scale(${CAMBER_ROUNDEL_SCALE}) translate(-8 -8)`;
 
 // The filled brand roundel as mask-ready markup: the mark, emboldened with a
-// thin same-colour stroke and shrunk via the shared transform. When maskId is
-// given the roundel is wrapped in an untransformed group carrying the mask, so
-// the badge knockout stays fixed at the corner while only the roundel scales.
+// thin same-colour stroke and shrunk via the transform above.
 function brandRoundel(): string {
   return (
-    `<g><g transform="${CAMBER_ROUNDEL_TRANSFORM}">` +
+    `<g transform="${CAMBER_ROUNDEL_TRANSFORM}">` +
     `<path d="${CAMBER_BRAND_PATH}" fill="#000" fill-rule="evenodd" clip-rule="evenodd" stroke="#000" stroke-width="${CAMBER_ROUNDEL_STROKE_WIDTH}" stroke-linejoin="round" stroke-linecap="round"/>` +
-    "</g></g>"
+    "</g>"
   );
 }
 
