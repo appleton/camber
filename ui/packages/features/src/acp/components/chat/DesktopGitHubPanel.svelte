@@ -70,7 +70,7 @@
 
   // Load on mount and whenever the worktree changes. Deliberately NOT keyed on
   // focusToken: that bumps on every pane click (didFocusPane), which would
-  // reload the panel mid-interaction (e.g. clicking "Open PR"). Use the manual
+  // reload the panel mid-interaction (e.g. clicking "View Current Pull Request"). Use the manual
   // refresh button to re-fetch.
   $effect(() => {
     const path = worktreePath;
@@ -260,7 +260,7 @@
         <div class="github-panel-actions">
           <button type="button" class="github-panel-button" onclick={() => openPR(detail.url)}>
             <Icon name="git-branch" size={12} />
-            Open PR
+            View Current Pull Request
           </button>
           <button
             type="button"
