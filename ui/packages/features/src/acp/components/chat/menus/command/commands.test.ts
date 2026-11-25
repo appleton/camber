@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bareSlashCommand } from "./commands";
+import { bareSlashCommand, isSlashCommandOnlyPrompt } from "./commands";
 
 describe("bareSlashCommand", () => {
   it("returns the name of a lone slash command", () => {
@@ -13,5 +13,20 @@ describe("bareSlashCommand", () => {
     expect(bareSlashCommand("archive")).toBeNull();
     expect(bareSlashCommand("/")).toBeNull();
     expect(bareSlashCommand("")).toBeNull();
+  });
+});
+
+describe("isSlashCommandOnlyPrompt", () => {
+  it("accepts an empty prompt, a lone slash and a partly typed command", () => {
+    expect(isSlashCommandOnlyPrompt("")).toBe(true);
+    expect(isSlashCommandOnlyPrompt("/")).toBe(true);
+    expect(isSlashCommandOnlyPrompt("/arc")).toBe(true);
+    expect(isSlashCommandOnlyPrompt(" /delete-worktree ")).toBe(true);
+  });
+
+  it("rejects commands after other text or with arguments", () => {
+    expect(isSlashCommandOnlyPrompt("Look in /arc")).toBe(false);
+    expect(isSlashCommandOnlyPrompt("/archive the old logs")).toBe(false);
+    expect(isSlashCommandOnlyPrompt("archive")).toBe(false);
   });
 });

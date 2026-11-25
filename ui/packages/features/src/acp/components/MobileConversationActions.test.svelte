@@ -11,6 +11,7 @@
     _setACPWorktreeContextForTests,
     type ACPWorktreeRepository,
   } from "../features/WorktreeRepository";
+  import type { ACPSession } from "../features/Session.svelte";
   import type { ACPConversationSummary, ACPNavProject } from "../navTypes";
   import MobileConversationActions from "./MobileConversationActions.svelte";
 
@@ -18,6 +19,7 @@
     projects: ACPNavProject[];
     sessions: ACPConversationSummary[];
     activeConversationId: string | null;
+    activeSession?: ACPSession | null;
     archiveSession?: (...args: unknown[]) => Promise<void>;
     removeWorktree?: (path: string) => Promise<void>;
     onLeaveConversation: () => void;
@@ -27,6 +29,7 @@
     projects,
     sessions,
     activeConversationId,
+    activeSession = null,
     archiveSession = async () => {},
     removeWorktree = async () => {},
     onLeaveConversation,
@@ -48,4 +51,4 @@
   } as unknown as ACPWorktreeRepository);
 </script>
 
-<MobileConversationActions {activeConversationId} activeSession={null} {onLeaveConversation} />
+<MobileConversationActions {activeConversationId} {activeSession} {onLeaveConversation} />

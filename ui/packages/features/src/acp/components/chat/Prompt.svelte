@@ -25,7 +25,11 @@
   import PlanModeIndicator from "./PlanModeIndicator.svelte";
   import GoalIndicator from "./GoalIndicator.svelte";
   import PromptModeControl from "./menus/config/PromptModeControl.svelte";
-  import { AcpSlashCommand, bareSlashCommand } from "./menus/command/commands";
+  import {
+    AcpSlashCommand,
+    bareSlashCommand,
+    isSlashCommandOnlyPrompt,
+  } from "./menus/command/commands";
   import {
     AGENT_CONFIG_OPTION_ID,
     AGENT_CONFIG_OPTION_LABEL,
@@ -59,6 +63,7 @@
   import { getKeybindingService, withShortcut } from "../../../keybindings";
   import ActivePromptSubmit from "./ActivePromptSubmit.svelte";
   import { getConversationActions } from "../../conversationActions.svelte";
+  import { isSkillCommand } from "./menus/command/serverCommands";
 
   interface Props extends ComponentProps<typeof Prompt.Root> {
     onConfigureAgents?: () => void;
@@ -433,7 +438,15 @@
     const ran =
       command === AcpSlashCommand.archive ? archiveConversation() : deleteConversationWorktree();
     if (ran) return true;
-    if (chatSession.availableCommands.some((agentCommand) => agentCommand.name === command)) {
+    // A host without these actions (e.g. the chat-only panel) keeps sending
+    // the text to the agent, as before the commands existed.
+    if (!getConversationActions()) return false;
+    // Skills of the same name are invoked as $name, so they don't own it.
+    if (
+      chatSession.availableCommands.some(
+        (agentCommand) => agentCommand.name === command && !isSkillCommand(agentCommand),
+      )
+    ) {
       return false;
     }
     rpc.showInfoMessage(`/${command} isn't available in this conversation`, InfoMessageType.info);
@@ -661,7 +674,7 @@
   <Prompt.Menu.Root {...acpMenus.command}>
     <CommandMenu
       onCommand={handleCommand}
-      commandOnlyPrompt={bareSlashCommand(promptValue) !== null}
+      commandOnlyPrompt={isSlashCommandOnlyPrompt(promptValue)}
       {promptCommandItems}
       fallbackSkills={installedSkills.commands}
     />

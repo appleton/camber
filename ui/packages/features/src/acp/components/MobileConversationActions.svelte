@@ -55,16 +55,8 @@
   async function archive(session: ACPConversationSummary) {
     archiving.add(session.id);
     const agentServer = session.agentServer || "poolside";
-    const live = activeSession;
-    const isActive = activeConversationId === session.id;
     try {
-      if (
-        isActive &&
-        live?.sessionId === session.sessionId &&
-        (live.isPrompting || live.isSending)
-      ) {
-        await live.cancel();
-      }
+      await cancelRunningTurn(session);
       await conversations.archiveSession(session.cwd, session.sessionId, agentServer, session.id);
       if (activeConversationId === session.id) onLeaveConversation();
     } catch (error) {
@@ -77,22 +69,27 @@
     }
   }
 
+  // A turn may be running on this phone or on another surface (pushed as the
+  // conversation's live status); either way, stop it first.
+  async function cancelRunningTurn(session: ACPConversationSummary) {
+    const live = activeSession;
+    if (!live || activeConversationId !== session.id || live.sessionId !== session.sessionId)
+      return;
+    if (live.isPrompting || live.isSending || session.liveStatus?.working) await live.cancel();
+  }
+
   // Errors propagate so the confirmation dialog stays open with the message.
   async function removeWorktree(path: string) {
+    const sessions = dedupeConversationSummaries(conversations.sessions);
+    // The helper archives or deletes the worktree's conversations by stored
+    // workspace, so those are the ones the user must not be left in.
     const affected = new Set(
-      dedupeConversationSummaries(conversations.sessions)
-        .filter((session) => session.cwd === path)
-        .map((session) => session.id),
+      sessions.filter((session) => session.workspacePath === path).map((session) => session.id),
     );
-    // Stop a turn running in the worktree before its directory goes away.
-    const live = activeSession;
-    if (
-      activeConversationId &&
-      affected.has(activeConversationId) &&
-      (live?.isPrompting || live?.isSending)
-    ) {
-      await live.cancel();
-    }
+    const running = sessions.find(
+      (session) => session.id === activeConversationId && session.cwd === path,
+    );
+    if (running) await cancelRunningTurn(running);
     try {
       projects.setWorktreeBusy(path, "tearing_down");
       await worktrees.removeWorktree(path, (kind) => projects.setWorktreeBusy(path, kind));

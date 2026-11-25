@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
 import { getConversationActions } from "../conversationActions.svelte";
+import type { ACPSession } from "../features/Session.svelte";
 import type { ACPConversationSummary, ACPNavProject } from "../navTypes";
 import Harness from "./MobileConversationActions.test.svelte";
 
@@ -124,5 +125,37 @@ describe("MobileConversationActions", () => {
       expect(screen.queryByRole("button", { name: "Delete Worktree" })).toBeNull(),
     );
     expect(onLeaveConversation).not.toHaveBeenCalled();
+  });
+
+  it("stops a turn running on another surface before deleting its worktree", async () => {
+    const order: string[] = [];
+    const cancel = vi.fn(async () => {
+      order.push("cancel");
+    });
+    const working = {
+      ...conversation("w", "/wt"),
+      liveStatus: { working: true, waitingForUser: false, unread: false },
+    } as ACPConversationSummary;
+    render(Harness, {
+      props: {
+        projects,
+        sessions: [working],
+        activeConversationId: "w",
+        // Started elsewhere: nothing is prompting from this phone.
+        activeSession: {
+          sessionId: "session-w",
+          isPrompting: false,
+          isSending: false,
+          cancel,
+        } as unknown as ACPSession,
+        removeWorktree: async () => {
+          order.push("remove");
+        },
+        onLeaveConversation: () => {},
+      },
+    });
+    registered().deleteWorktree("/wt");
+    await fireEvent.click(await screen.findByRole("button", { name: "Delete Worktree" }));
+    await waitFor(() => expect(order).toEqual(["cancel", "remove"]));
   });
 });
