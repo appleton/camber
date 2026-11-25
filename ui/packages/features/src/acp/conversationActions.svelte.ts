@@ -33,3 +33,14 @@ export function registerConversationActions(actions: ConversationActions): () =>
 export function getConversationActions(): ConversationActions | null {
   return registered;
 }
+
+/**
+ * Whether a conversation lives in a worktree in the way worktree removal
+ * expects: its cwd is the worktree and so is its stored workspace. Removal (in
+ * the UI and the helper) only cleans up conversations whose workspace is the
+ * worktree itself, so one in a subdirectory, or one whose workspace is the IDE
+ * scope (sessions started from mobile), would be left on a deleted directory.
+ */
+export function isWorktreeConversation(session: { cwd: string; workspacePath?: string }): boolean {
+  return session.cwd !== "" && session.workspacePath === session.cwd;
+}

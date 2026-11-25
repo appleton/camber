@@ -25,7 +25,7 @@
   import PlanModeIndicator from "./PlanModeIndicator.svelte";
   import GoalIndicator from "./GoalIndicator.svelte";
   import PromptModeControl from "./menus/config/PromptModeControl.svelte";
-  import { AcpSlashCommand } from "./menus/command/commands";
+  import { AcpSlashCommand, bareSlashCommand } from "./menus/command/commands";
   import {
     AGENT_CONFIG_OPTION_ID,
     AGENT_CONFIG_OPTION_LABEL,
@@ -415,20 +415,29 @@
       case AcpSlashCommand.secrets:
         setTimeout(() => handleCommand(AcpSlashCommand.secrets), 0);
         return true;
-      // Typed without the menu: claim only the bare command, and only where it
-      // applies, so "/archive the old logs" or an agent's own command of the
-      // same name still reaches the agent.
+      // Typed without the menu: only the bare command, so "/archive the old
+      // logs" still reaches the agent.
       case AcpSlashCommand.archive:
-        return isBareCommand(value) && archiveConversation();
       case AcpSlashCommand.deleteWorktree:
-        return isBareCommand(value) && deleteConversationWorktree();
+        return bareSlashCommand(value) === command && handleConversationCommand(command);
       default:
         return false;
     }
   }
 
-  function isBareCommand(value: string): boolean {
-    return !/\s/.test(value.trim());
+  // Where it doesn't apply, a bare /archive or /delete-worktree is still kept
+  // from the agent unless the agent publishes that command itself: an agent
+  // with shell access could act on "/delete-worktree" without Camber's
+  // confirmation or conversation cleanup.
+  function handleConversationCommand(command: string): boolean {
+    const ran =
+      command === AcpSlashCommand.archive ? archiveConversation() : deleteConversationWorktree();
+    if (ran) return true;
+    if (chatSession.availableCommands.some((agentCommand) => agentCommand.name === command)) {
+      return false;
+    }
+    rpc.showInfoMessage(`/${command} isn't available in this conversation`, InfoMessageType.info);
+    return true;
   }
 
   function slashCommandName(value: string): string | null {
@@ -652,7 +661,7 @@
   <Prompt.Menu.Root {...acpMenus.command}>
     <CommandMenu
       onCommand={handleCommand}
-      commandOnlyPrompt={isBareCommand(promptValue) && promptValue.trim().startsWith("/")}
+      commandOnlyPrompt={bareSlashCommand(promptValue) !== null}
       {promptCommandItems}
       fallbackSkills={installedSkills.commands}
     />

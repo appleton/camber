@@ -311,6 +311,8 @@
       archiveConversation: (conversationId) => {
         const session = archivableSession(conversationId);
         if (!session) return false;
+        // The undo toast lives in the sidebar.
+        if (collapsed) onCollapsedChange(false);
         handleArchiveRowSession(session);
         return true;
       },

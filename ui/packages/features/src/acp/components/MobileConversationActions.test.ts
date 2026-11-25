@@ -17,11 +17,11 @@ function project(path: string, extra: Partial<ACPNavProject> = {}): ACPNavProjec
   };
 }
 
-function conversation(id: string, cwd: string): ACPConversationSummary {
+function conversation(id: string, cwd: string, workspacePath = cwd): ACPConversationSummary {
   return {
     id,
     cwd,
-    workspacePath: cwd,
+    workspacePath,
     agentServer: "poolside",
     sessionId: `session-${id}`,
     title: `Title ${id}`,
@@ -49,6 +49,9 @@ describe("MobileConversationActions", () => {
           conversation("root", "/repo"),
           conversation("top", "/wt"),
           conversation("sub", "/wt/pkg"),
+          // Sessions started on mobile store the IDE scope as their workspace,
+          // which worktree removal would not clean up.
+          conversation("ide", "/wt", "IDE"),
         ],
         activeConversationId: null,
         onLeaveConversation: () => {},
@@ -57,6 +60,7 @@ describe("MobileConversationActions", () => {
     expect(registered().worktreeFor("root")).toBeNull();
     expect(registered().worktreeFor("top")).toEqual({ path: "/wt", name: "Feature" });
     expect(registered().worktreeFor("sub")).toBeNull();
+    expect(registered().worktreeFor("ide")).toBeNull();
   });
 
   it("archives the open conversation and leaves it", async () => {

@@ -253,8 +253,10 @@
 
   // /archive or /delete-worktree removed the open conversation: return to the
   // list, as the list's own archive does, rather than leave a dead chat open.
+  // From the file viewer too: the router unwinds both history entries when
+  // the shell jumps straight to the list.
   function leaveConversation() {
-    if (view === "chat") goBack();
+    if (view === "chat" || view === "file") showList();
     core.activeConversationId = null;
   }
 

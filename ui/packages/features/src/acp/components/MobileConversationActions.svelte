@@ -3,7 +3,10 @@
   import { InfoMessageType } from "@camber/rpc";
   import { onMount } from "svelte";
   import { SvelteSet } from "svelte/reactivity";
-  import { registerConversationActions } from "../conversationActions.svelte";
+  import {
+    isWorktreeConversation,
+    registerConversationActions,
+  } from "../conversationActions.svelte";
   import { getACPConversationRepo } from "../features/ConversationRepository.svelte";
   import { getACPProjectRepo } from "../features/ProjectRepository.svelte";
   import type { ACPSession } from "../features/Session.svelte";
@@ -81,6 +84,15 @@
         .filter((session) => session.cwd === path)
         .map((session) => session.id),
     );
+    // Stop a turn running in the worktree before its directory goes away.
+    const live = activeSession;
+    if (
+      activeConversationId &&
+      affected.has(activeConversationId) &&
+      (live?.isPrompting || live?.isSending)
+    ) {
+      await live.cancel();
+    }
     try {
       projects.setWorktreeBusy(path, "tearing_down");
       await worktrees.removeWorktree(path, (kind) => projects.setWorktreeBusy(path, kind));
@@ -113,8 +125,7 @@
       worktreeFor: (conversationId) => {
         const session = summary(conversationId);
         if (!session) return null;
-        // Exact match, as on desktop: removal only cleans up conversations
-        // whose workspace is the worktree itself.
+        if (!isWorktreeConversation(session)) return null;
         const worktree = deletableWorktree(session.cwd);
         if (!worktree) return null;
         return { path: worktree.path, name: worktree.nickname || worktree.name };
