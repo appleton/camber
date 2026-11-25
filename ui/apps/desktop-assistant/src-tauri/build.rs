@@ -19,6 +19,7 @@ fn ensure_debug_sidecar_placeholder() {
     std::fs::create_dir_all(&binary_dir).expect("failed to create Tauri sidecar binary dir");
     write_debug_sidecar_placeholder(&binary_dir, &format!("camber-{target}"));
     write_debug_sidecar_placeholder(&binary_dir, &format!("camber-helper-{target}"));
+    write_debug_sidecar_placeholder(&binary_dir, &format!("camber-whisper-server-{target}"));
 }
 
 fn write_debug_sidecar_placeholder(binary_dir: &std::path::Path, file_name: &str) {
