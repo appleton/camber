@@ -54,11 +54,6 @@ few package managers need extra evidence:
 - Rust: Syft finds crates from `Cargo.lock`, but does not populate their
   licenses. The script merges license expressions from `cargo metadata
   --locked` for `ui/apps/desktop-assistant/src-tauri`.
-- Swift: Syft finds packages from `cmd/camber-mlx-sidecar/Package.resolved`,
-  but Swift Package Manager pins carry no license metadata. The script records
-  the license declared by each upstream repository (Apache-2.0 for the Apple
-  and swift-server packages, MIT for `vmlx-swift` and `yyjson`) and fails if an
-  override no longer matches a pinned package.
 - SPDX expressions: Grant evaluates license IDs rather than repository policy
   intent. The script normalizes common ecosystem license strings, treats simple
   dual-license `OR` expressions as acceptable when one side is allow-listed, and

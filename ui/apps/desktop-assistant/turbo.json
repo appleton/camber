@@ -25,7 +25,6 @@
         "dist-isolation/**",
         "src-tauri/target/**",
         "src-tauri/binaries/camber-helper-*",
-        "src-tauri/binaries/camber-mlx-sidecar-*",
         "src-tauri/binaries/camber-whisper-server-*",
         "src-tauri/binaries/pool-*"
       ]

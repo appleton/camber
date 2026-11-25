@@ -29,9 +29,7 @@ const { refresh, targetInput } = parseArguments(process.argv.slice(2));
 const targetTriple = targetTripleFromInput(targetInput);
 const target = helperTarget(targetTriple);
 const needsPublishedRuntime =
-  process.env.CAMBER_DESKTOP_LOCAL_HELPER !== "1" ||
-  supportsMLXSidecar(targetTriple) ||
-  supportsWhisperServer(targetTriple);
+  process.env.CAMBER_DESKTOP_LOCAL_HELPER !== "1" || supportsWhisperServer(targetTriple);
 const explicitHelperVersion = process.env.CAMBER_HELPER_VERSION;
 const cachedHelperVersion =
   runtimeArtifactDir || explicitHelperVersion || refresh || !needsPublishedRuntime
@@ -69,13 +67,6 @@ if (process.env.CAMBER_DESKTOP_LOCAL_HELPER === "1") {
     extractedName: `camber-helper-${target.platform}-${target.arch}${target.extension}`,
     installedName: `camber-helper-${targetTriple}${target.extension}`,
   });
-}
-// Keep the Swift/MLX build explicit: normal desktop dev and camberqa launches
-// should consume the prebuilt release sidecar.
-if (process.env.CAMBER_DESKTOP_LOCAL_MLX_SIDECAR === "1") {
-  installLocalMLXSidecar({ target, targetTriple });
-} else {
-  await installReleaseMLXSidecar({ target, targetTriple });
 }
 // whisper.cpp is not built from this repo. Local development takes it from the
 // cached or highest permanent helper release; product releases use the
@@ -197,74 +188,6 @@ function warnIfMobileWebUIMissing() {
   );
 }
 
-async function installReleaseMLXSidecar({ target, targetTriple }) {
-  const installedName = `camber-mlx-sidecar-${targetTriple}${target.extension}`;
-  if (!supportsMLXSidecar(targetTriple)) {
-    installPlaceholderBinary({
-      installedName,
-      version: "unsupported",
-      reason: `MLX sidecar is not supported on ${targetTriple}`,
-    });
-    return;
-  }
-
-  try {
-    await installBinary({
-      binary: "camber-mlx-sidecar",
-      version: runtimeVersion,
-      download: downloadRuntimeAsset,
-      archiveName: `camber-mlx-sidecar-${target.platform}-${target.arch}.tar.gz`,
-      extractedName: `camber-mlx-sidecar-${target.platform}-${target.arch}${target.extension}`,
-      installedName,
-      requiredSiblings: ["default.metallib", "mlx.metallib"],
-    });
-  } catch (error) {
-    if (runtimeArtifactDir) throw error;
-    console.warn(`Unable to install camber-mlx-sidecar from ${runtimeVersion}: ${error.message}`);
-    installPlaceholderBinary({
-      installedName,
-      version: `missing:${runtimeVersion}`,
-      reason: `camber-mlx-sidecar is not present in ${runtimeVersion}`,
-    });
-  }
-}
-
-function installLocalMLXSidecar({ targetTriple }) {
-  const target = helperTarget(targetTriple);
-  const installedName = `camber-mlx-sidecar-${targetTriple}${target.extension}`;
-  if (!supportsMLXSidecar(targetTriple)) {
-    installPlaceholderBinary({
-      installedName,
-      version: "unsupported",
-      reason: `MLX sidecar is not supported on ${targetTriple}`,
-    });
-    return;
-  }
-
-  const packagePath = join(repoRoot, "cmd", "camber-mlx-sidecar");
-  console.log("Building local camber-mlx-sidecar from cmd/camber-mlx-sidecar");
-  // build.sh shares a SwiftPM scratch path across worktrees, serializes
-  // concurrent builds, and installs the binary and metallibs into binaryDir
-  // while it still holds the build lock (so a rebuild from another worktree
-  // cannot mutate them mid-copy).
-  execFileSync(join(packagePath, "scripts", "build.sh"), [binaryDir], {
-    cwd: repoRoot,
-    stdio: ["ignore", "ignore", "inherit"],
-  });
-
-  const builtPath = join(binaryDir, "camber-mlx-sidecar");
-  if (!existsSync(builtPath)) {
-    throw new Error(`Expected ${builtPath} after Swift build`);
-  }
-
-  const installedPath = join(binaryDir, installedName);
-  rmSync(installedPath, { force: true });
-  renameSync(builtPath, installedPath);
-  execFileSync("chmod", ["+x", installedPath], { stdio: "inherit" });
-  writeFileSync(`${installedPath}.version`, "local\n");
-  console.log(`Installed camber-mlx-sidecar as ${installedName} from local Swift build`);
-}
-
 async function installReleaseWhisperServer({ target, targetTriple }) {
   const installedName = `camber-whisper-server-${targetTriple}${target.extension}`;
   if (!supportsWhisperServer(targetTriple)) {
@@ -306,10 +229,6 @@ function installPlaceholderBinary({ installedName, version, reason }) {
   console.log(`Installed placeholder ${installedName}: ${reason}`);
 }
 
-function supportsMLXSidecar(triple) {
-  return triple === "aarch64-apple-darwin";
-}
-
 // Whisper-server release assets are only built for Apple Silicon today; other
 // targets get a placeholder and fall back to PATH/env resolution at runtime.
 function supportsWhisperServer(triple) {
@@ -349,9 +268,6 @@ function resolveHelperVersion() {
 function findCachedHelperVersion() {
   const installedNames = [
     `camber-helper-${targetTriple}${target.extension}`,
-    ...(supportsMLXSidecar(targetTriple)
-      ? [`camber-mlx-sidecar-${targetTriple}${target.extension}`]
-      : []),
     ...(supportsWhisperServer(targetTriple)
       ? [`camber-whisper-server-${targetTriple}${target.extension}`]
       : []),
@@ -369,13 +285,6 @@ function findCachedHelperVersion() {
   });
 
   if (versions.length !== installedNames.length || new Set(versions).size !== 1) {
-    return undefined;
-  }
-  if (
-    supportsMLXSidecar(targetTriple) &&
-    (!fileExistsAndIsNonEmpty(join(binaryDir, "default.metallib")) ||
-      !fileExistsAndIsNonEmpty(join(binaryDir, "mlx.metallib")))
-  ) {
     return undefined;
   }
   return versions[0];

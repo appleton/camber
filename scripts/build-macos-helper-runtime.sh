@@ -25,10 +25,6 @@ for arch in arm64 amd64; do
   codesign --force --sign - "$build_dir/$name"
   tar -C "$build_dir" -czf "$output/$name.tar.gz" "$name"
 done
-cmd/camber-mlx-sidecar/scripts/build.sh "$build_dir/mlx"
-cp "$build_dir/mlx/camber-mlx-sidecar" "$build_dir/mlx/camber-mlx-sidecar-darwin-arm64"
-tar -C "$build_dir/mlx" -czf "$output/camber-mlx-sidecar-darwin-arm64.tar.gz" \
-  camber-mlx-sidecar-darwin-arm64 default.metallib mlx.metallib
 whisper_revision=f049fff95a089aa9969deb009cdd4892b3e74916
 if [[ ! -d "$build_dir/whisper.cpp/.git" ]]; then
   git clone https://github.com/ggml-org/whisper.cpp.git "$build_dir/whisper.cpp"

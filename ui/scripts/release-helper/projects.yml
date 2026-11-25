@@ -5,7 +5,6 @@ projects:
     dirs:
       - cmd/camber
       - cmd/camber-helper
-      - cmd/camber-mlx-sidecar
       - pkg
       - ui/apps/desktop-assistant
       - ui/apps/mobile-remote

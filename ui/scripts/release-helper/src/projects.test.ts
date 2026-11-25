@@ -76,10 +76,6 @@ describe("release project ownership", () => {
     );
   });
 
-  it("assigns the Desktop-only MLX sidecar only to Desktop", () => {
-    expect(dirsFor("desktop")).toContain("cmd/camber-mlx-sidecar");
-  });
-
   it.each(products)("does not treat %s release automation as product code", (product) => {
     expect(dirsFor(product).some((dir) => dir.startsWith(".github/"))).toBe(false);
   });

@@ -19,9 +19,6 @@ fn ensure_debug_sidecar_placeholder() {
     std::fs::create_dir_all(&binary_dir).expect("failed to create Tauri sidecar binary dir");
     write_debug_sidecar_placeholder(&binary_dir, &format!("camber-{target}"));
     write_debug_sidecar_placeholder(&binary_dir, &format!("camber-helper-{target}"));
-    write_debug_sidecar_placeholder(&binary_dir, &format!("camber-mlx-sidecar-{target}"));
-    write_debug_resource_placeholder(&binary_dir, "default.metallib");
-    write_debug_resource_placeholder(&binary_dir, "mlx.metallib");
 }
 
 fn write_debug_sidecar_placeholder(binary_dir: &std::path::Path, file_name: &str) {
@@ -39,13 +36,4 @@ fn write_debug_sidecar_placeholder(binary_dir: &std::path::Path, file_name: &str
         std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
             .expect("failed to mark debug sidecar placeholder executable");
     }
-}
-
-fn write_debug_resource_placeholder(binary_dir: &std::path::Path, file_name: &str) {
-    let path = binary_dir.join(file_name);
-    if path.exists() {
-        return;
-    }
-
-    std::fs::write(&path, []).expect("failed to create debug sidecar resource placeholder");
 }

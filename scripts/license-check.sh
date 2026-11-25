@@ -109,40 +109,6 @@ cat >"$NPM_OVERRIDES" <<'JSON'
 }
 JSON
 
-# Swift Package Manager pins (cmd/camber-mlx-sidecar/Package.resolved) carry
-# no license metadata Syft can use, so record the licenses declared by each
-# upstream repository. Keyed by package identity; applies to any pinned version.
-SWIFT_OVERRIDES="${TMP_DIR}/swift-overrides.json"
-cat >"$SWIFT_OVERRIDES" <<'JSON'
-{
-  "async-http-client": "Apache-2.0",
-  "swift-algorithms": "Apache-2.0",
-  "swift-asn1": "Apache-2.0",
-  "swift-async-algorithms": "Apache-2.0",
-  "swift-atomics": "Apache-2.0",
-  "swift-certificates": "Apache-2.0",
-  "swift-collections": "Apache-2.0",
-  "swift-configuration": "Apache-2.0",
-  "swift-crypto": "Apache-2.0",
-  "swift-distributed-tracing": "Apache-2.0",
-  "swift-http-structured-headers": "Apache-2.0",
-  "swift-http-types": "Apache-2.0",
-  "swift-log": "Apache-2.0",
-  "swift-nio": "Apache-2.0",
-  "swift-nio-extras": "Apache-2.0",
-  "swift-nio-http2": "Apache-2.0",
-  "swift-nio-ssl": "Apache-2.0",
-  "swift-nio-transport-services": "Apache-2.0",
-  "swift-numerics": "Apache-2.0",
-  "swift-service-context": "Apache-2.0",
-  "swift-service-lifecycle": "Apache-2.0",
-  "swift-syntax": "Apache-2.0",
-  "swift-system": "Apache-2.0",
-  "vmlx-swift": "MIT",
-  "yyjson": "MIT"
-}
-JSON
-
 # Syft identifies the native esbuild executable as its embedded Go module in
 # addition to the licensed @esbuild/* npm package. Go build metadata does not
 # carry license evidence, so preserve the license declared by the same upstream
@@ -317,49 +283,12 @@ jq --slurpfile overrides "$GO_BINARY_OVERRIDES" '
     )
 ' "$RUST_PATCHED" >"$GO_BINARY_PATCHED"
 
-missing_swift_overrides="$(
-  jq -r --slurpfile overrides "$SWIFT_OVERRIDES" '
-    $overrides[0] as $overrideMap
-    | (.artifacts // [] | map(select(.type == "swift") | .name)) as $swiftNames
-    | $overrideMap
-    | keys[]
-    | select(($swiftNames | index(.)) == null)
-  ' "$RAW_SBOM"
-)"
-
-if [[ -n "$missing_swift_overrides" ]]; then
-  echo "swift license override targets not found in SBOM:" >&2
-  printf '%s\n' "$missing_swift_overrides" >&2
-  exit 1
-fi
-
-SWIFT_PATCHED="${TMP_DIR}/swift-patched.json"
-jq --slurpfile overrides "$SWIFT_OVERRIDES" '
-  $overrides[0] as $overrideMap
-  | .artifacts = (
-      .artifacts
-      | map(
-          if .type == "swift" and ((.licenses // []) | length == 0) and ($overrideMap[.name] != null) then
-            .licenses = [{
-              value: $overrideMap[.name],
-              spdxExpression: $overrideMap[.name],
-              type: "declared",
-              urls: [],
-              locations: []
-            }]
-          else
-            .
-          end
-        )
-    )
-' "$GO_BINARY_PATCHED" >"$SWIFT_PATCHED"
-
 REMOVED_FIRST_PARTY="${TMP_DIR}/removed-first-party.json"
 jq --slurpfile firstParty "$FIRST_PARTY_PACKAGES" '
   .artifacts
   | map(select((.name as $name | $firstParty[0] | index($name)) != null))
   | unique_by(.type, .name, .version)
-' "$SWIFT_PATCHED" >"$REMOVED_FIRST_PARTY"
+' "$GO_BINARY_PATCHED" >"$REMOVED_FIRST_PARTY"
 
 EXCLUDED_POLICY_SCOPE="${TMP_DIR}/excluded-policy-scope.json"
 jq --slurpfile firstParty "$FIRST_PARTY_PACKAGES" '
@@ -371,7 +300,7 @@ jq --slurpfile firstParty "$FIRST_PARTY_PACKAGES" '
   | map(select((.name as $name | $firstParty[0] | index($name)) == null))
   | map(select(is_policy_scope_excluded))
   | unique_by(.type, .name, .version)
-' "$SWIFT_PATCHED" >"$EXCLUDED_POLICY_SCOPE"
+' "$GO_BINARY_PATCHED" >"$EXCLUDED_POLICY_SCOPE"
 
 jq --slurpfile firstParty "$FIRST_PARTY_PACKAGES" '
   def trim:
@@ -455,7 +384,7 @@ jq --slurpfile firstParty "$FIRST_PARTY_PACKAGES" '
         )
       )
   )
-' "$SWIFT_PATCHED" >"$PATCHED_SBOM"
+' "$GO_BINARY_PATCHED" >"$PATCHED_SBOM"
 
 jq -r \
   --arg patched "$PATCHED_SBOM" \

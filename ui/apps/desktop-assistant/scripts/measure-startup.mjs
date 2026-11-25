@@ -154,7 +154,6 @@ async function measureOnce(runDir) {
       CAMBER_DESKTOP_HELPER_LOG_FILE: helperLog,
       CAMBER_ACP_NAV_DB_PATH: path.join(runDir, "acp-nav.db"),
       CAMBER_ASSISTANT_CONFIG_PATH: path.join(runDir, "assistant-config.json"),
-      CAMBER_LOCAL_INFERENCE_MODELS_DIR: path.join(runDir, "models"),
     },
   });
   child.on("error", (err) => console.error("spawn failed:", err));

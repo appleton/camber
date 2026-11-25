@@ -49,13 +49,11 @@
     "externalBin": [
       "binaries/camber",
       "binaries/camber-helper",
-      "binaries/camber-mlx-sidecar",
       "binaries/camber-whisper-server"
     ],
     "resources": {
       "../../../../LICENSE": "LICENSE",
-      "Credits.html": "Credits.html",
-      "binaries/default.metallib": "default.metallib"
+      "Credits.html": "Credits.html"
     },
     "icon": [
       "icons/32x32.png",
