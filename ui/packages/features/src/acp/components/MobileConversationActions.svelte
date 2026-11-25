@@ -57,12 +57,19 @@
     const agentServer = session.agentServer || "poolside";
     try {
       await cancelRunningTurn(session);
-      // What the helper actually archived: the conversation and same-group
-      // sub-agents, any of which the user may have opened while the archive
-      // was in flight. Nothing, if the row was already gone.
-      const archived = new Set(
-        await conversations.archiveSession(session.cwd, session.sessionId, agentServer, session.id),
-      );
+      // The conversation plus the same-group sub-agents the helper archived
+      // with it, any of which the user may have opened in the meantime. The
+      // repository closes the requested session whatever the helper reports,
+      // so staying in it would leave a chat stuck loading.
+      const archived = new Set([
+        session.id,
+        ...(await conversations.archiveSession(
+          session.cwd,
+          session.sessionId,
+          agentServer,
+          session.id,
+        )),
+      ]);
       if (activeConversationId && archived.has(activeConversationId)) onLeaveConversation();
     } catch (error) {
       rpc.showInfoMessage(
@@ -86,10 +93,14 @@
   // Errors propagate so the confirmation dialog stays open with the message.
   async function removeWorktree(path: string) {
     const sessions = dedupeConversationSummaries(conversations.sessions);
-    // The helper archives or deletes the worktree's conversations by stored
-    // workspace, so those are the ones the user must not be left in.
+    // Snapshot before teardown: the helper's navigation update can land before
+    // removal returns. It archives or deletes the worktree's conversations by
+    // stored workspace, and cascades to sub-agents grouped by cwd.
     const affected = new Set(
       sessions.filter((session) => session.workspacePath === path).map((session) => session.id),
+    );
+    const inWorktree = new Set(
+      sessions.filter((session) => session.cwd === path).map((session) => session.id),
     );
     const running = sessions.find(
       (session) => session.id === activeConversationId && session.cwd === path,
@@ -106,31 +117,22 @@
     } finally {
       projects.clearWorktreeBusy(path);
     }
-    // The open conversation, as it was when removal finished.
-    const open = activeConversationId ? summary(activeConversationId) : undefined;
-    try {
-      await projects.refresh();
-      await conversations.refresh();
-    } catch (error) {
-      // The worktree is already gone; the next notification reconciles the list.
-      console.error("Failed to refresh after deleting worktree", error);
-    }
-    // Leave only if the user is still in a conversation the removal took:
-    // teardown is slow, and they may have opened another chat meanwhile. The
-    // helper also archives sub-agents grouped by cwd, so one in the worktree
-    // that has since left the list was taken too.
+    // Refreshes record failures instead of throwing, and an unrefreshed list
+    // is empty: only trust a list whose refresh succeeded.
+    await projects.refresh({ showLoading: false });
+    await conversations.refresh({ showLoading: false });
+    const listed = conversations.refreshState.status === "success";
+    // Leave only if the user is still in a conversation the removal took;
+    // teardown is slow, and they may have opened another chat meanwhile.
     const current = activeConversationId;
     if (!current) return;
-    const tookOpen = open?.id === current && open.cwd === path && summary(current) === undefined;
-    if (affected.has(current) || tookOpen) onLeaveConversation();
+    const cascaded = listed && inWorktree.has(current) && summary(current) === undefined;
+    if (affected.has(current) || cascaded) onLeaveConversation();
   }
 
   async function worktreeRemoved(path: string): Promise<boolean> {
-    try {
-      await projects.refresh();
-    } catch {
-      return false;
-    }
+    await projects.refresh({ showLoading: false });
+    if (projects.refreshState.status !== "success") return false;
     return !projects.projects.some((project) => project.path === path);
   }
 

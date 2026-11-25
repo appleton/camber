@@ -20,9 +20,11 @@
     sessions: ACPConversationSummary[];
     activeConversationId: string | null;
     activeSession?: ACPSession | null;
-    archiveSession?: (...args: unknown[]) => Promise<string[] | void>;
+    archiveSession?: (...args: unknown[]) => Promise<string[]>;
     removeWorktree?: (path: string) => Promise<void>;
     onLeaveConversation: () => void;
+    /** The helper can't be reached: refreshes record a failure and lists are empty. */
+    refreshFails?: boolean;
   }
 
   let {
@@ -30,19 +32,29 @@
     sessions,
     activeConversationId,
     activeSession = null,
-    archiveSession = async () => {},
+    archiveSession = async () => [],
     removeWorktree = async () => {},
     onLeaveConversation,
+    refreshFails = false,
   }: Props = $props();
 
-  _setACPProjectContextForTests({
+  // A failing refresh records the failure and empties the list, like the
+  // real repository, rather than throwing.
+  const projectRepo = {
     projects,
-    refresh: async () => {},
+    refreshState: { status: "success", value: projects } as unknown,
+    refresh: async () => {
+      if (!refreshFails) return;
+      projectRepo.projects = [];
+      projectRepo.refreshState = { status: "failure", error: new Error("offline") };
+    },
     setWorktreeBusy: () => {},
     clearWorktreeBusy: () => {},
-  } as unknown as ACPProjectRepository);
+  };
+  _setACPProjectContextForTests(projectRepo as unknown as ACPProjectRepository);
   _setACPConversationContextForTests({
     sessions,
+    refreshState: { status: "success", value: sessions },
     refresh: async () => {},
     archiveSession: (...args: unknown[]) => archiveSession(...args),
   } as unknown as ACPConversationRepository);

@@ -204,21 +204,23 @@ describe("MobileConversationActions", () => {
     expect(onLeaveConversation).not.toHaveBeenCalled();
   });
 
-  it("stays in the conversation when the helper archived nothing", async () => {
-    const archiveSession = vi.fn(async () => [] as string[]);
+  it("keeps offering a retry when deletion fails and the list can't be refreshed", async () => {
     const onLeaveConversation = vi.fn();
     render(Harness, {
       props: {
         projects,
-        sessions: [conversation("a", "/repo")],
-        activeConversationId: "a",
-        archiveSession,
+        sessions: [conversation("w", "/wt")],
+        activeConversationId: "w",
+        removeWorktree: async () => {
+          throw new Error("connection lost");
+        },
         onLeaveConversation,
+        refreshFails: true,
       },
     });
-    registered().archiveConversation("a");
-    await waitFor(() => expect(archiveSession).toHaveBeenCalled());
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    registered().deleteWorktree("/wt");
+    await fireEvent.click(await screen.findByRole("button", { name: "Delete Worktree" }));
+    expect(await screen.findByText(/connection lost/)).toBeInTheDocument();
     expect(onLeaveConversation).not.toHaveBeenCalled();
   });
 });
