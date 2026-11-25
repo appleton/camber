@@ -42,6 +42,11 @@ export class ACPProjectRepositoryWriter {
   // generated name, so the rename is applied after creation to make the
   // user's name win.
   private pendingRenames = new Map<string, string>();
+  // Settles the renameProject() promise of the latest deferred rename.
+  private renameWaiters = new Map<
+    string,
+    { resolve: () => void; reject: (error: unknown) => void }
+  >();
 
   refreshState = $state<AsyncState<ACPNavProject[], ACPRequestError>>(waiting);
   emitter = new EventTarget();
@@ -109,8 +114,13 @@ export class ACPProjectRepositoryWriter {
     if (!path || !trimmed) return;
     if (this.pendingWorktrees.has(path)) {
       this.pendingRenames.set(path, trimmed);
-      this.reapplyOverlays();
-      return;
+      // A newer name supersedes the earlier one; its caller is done.
+      this.renameWaiters.get(path)?.resolve();
+      // Settles when the deferred rename settles (see clearWorktreeBusy).
+      return new Promise<void>((resolve, reject) => {
+        this.renameWaiters.set(path, { resolve, reject });
+        this.reapplyOverlays();
+      });
     }
     this.applyProjects((await camberAcpNavRenameProject({ path, name: trimmed })).projects ?? []);
   }
@@ -202,19 +212,38 @@ export class ACPProjectRepositoryWriter {
     this.busyWorktrees.delete(path);
     this.pendingWorktrees.delete(path);
     this.deleteRequested.delete(path);
-    const rename = this.pendingRenames.get(path);
-    this.pendingRenames.delete(path);
     this.reapplyOverlays();
+    const rename = this.pendingRenames.get(path);
     if (rename !== undefined) void this.flushPendingRename(path, rename);
   }
 
+  // Applies a rename queued while the worktree was pending. The overlay name
+  // stays in place until the RPC settles so the row never flashes the
+  // generated name; on failure the server name shows again and the error
+  // reaches the original renameProject() caller.
   private async flushPendingRename(path: string, name: string): Promise<void> {
+    const waiter = this.renameWaiters.get(path);
+    this.renameWaiters.delete(path);
+    const finish = () => {
+      if (this.pendingRenames.get(path) === name) this.pendingRenames.delete(path);
+    };
     const row = this.serverProjects.find((project) => project.path === path);
-    if (!row || row.name === name) return;
+    if (!row || row.name === name) {
+      finish();
+      this.reapplyOverlays();
+      waiter?.resolve();
+      return;
+    }
     try {
-      await this.renameProject(path, name);
+      const result = await camberAcpNavRenameProject({ path, name });
+      finish();
+      this.applyProjects(result.projects ?? []);
+      waiter?.resolve();
     } catch (error) {
+      finish();
+      this.reapplyOverlays();
       console.error("Failed to apply worktree rename after creation", error);
+      waiter?.reject(error);
     }
   }
 

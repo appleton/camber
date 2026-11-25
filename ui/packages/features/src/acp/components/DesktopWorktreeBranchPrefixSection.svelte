@@ -32,25 +32,40 @@
     }
   }
 
+  // A commit made while a save is in flight is remembered and saved once the
+  // current save finishes, so it is never dropped or overwritten.
+  let commitQueued = false;
+
   async function persist() {
-    const next = prefix.trim();
-    prefix = next;
-    if (status === "loading" || status === "saving") return;
-    if (next === savedPrefix) {
-      error = null;
+    prefix = prefix.trim();
+    if (status === "loading") return;
+    if (status === "saving") {
+      commitQueued = true;
       return;
     }
-    status = "saving";
-    try {
-      const result = await camberAcpNavSetWorktreeBranchPrefix({ prefix: next });
-      prefix = result.prefix;
-      savedPrefix = result.prefix;
-      error = null;
-      status = "idle";
-    } catch (saveError) {
-      error = formatError(saveError);
-      status = "error";
-    }
+    do {
+      commitQueued = false;
+      const next = prefix.trim();
+      if (next === savedPrefix) {
+        error = null;
+        status = "idle";
+        return;
+      }
+      status = "saving";
+      try {
+        const result = await camberAcpNavSetWorktreeBranchPrefix({ prefix: next });
+        savedPrefix = result.prefix;
+        // Never replace what the user typed after this save started.
+        if (prefix.trim() === next) prefix = result.prefix;
+        error = null;
+        status = "idle";
+      } catch (saveError) {
+        commitQueued = false;
+        error = formatError(saveError);
+        status = "error";
+        return;
+      }
+    } while (commitQueued);
   }
 </script>
 

@@ -273,7 +273,7 @@ describe("ACPProjectRepositoryWriter", () => {
     const repo = new ACPProjectRepositoryWriter();
     const path = repo.addPendingWorktree({ ...base, name: "generated" });
 
-    await repo.renameProject(path, "  mine  ");
+    const renamed = repo.renameProject(path, "  mine  ");
     expect(camberAcpNavRenameProject).not.toHaveBeenCalled();
     expect(repo.projects[0]).toMatchObject({ name: "mine", busy: "creating" });
 
@@ -285,5 +285,89 @@ describe("ACPProjectRepositoryWriter", () => {
     await vi.waitFor(() =>
       expect(camberAcpNavRenameProject).toHaveBeenCalledWith({ path, name: "mine" }),
     );
+    await expect(renamed).resolves.toBeUndefined();
+  });
+
+  describe("deferred rename of a pending worktree", () => {
+    const base = {
+      path: "/repo/worktrees/feature",
+      isWorktree: true,
+      parentPath: "/repo",
+      collapsed: false,
+      displayOrder: 0,
+      createdAt: "2026-05-20T10:00:00Z",
+      updatedAt: "2026-05-20T10:00:00Z",
+    };
+
+    async function setup(serverRows: boolean) {
+      const api = await import("@camber/helperapi");
+      vi.mocked(api.camberAcpNavList).mockResolvedValue({
+        conversations: [],
+        projects: serverRows ? [{ ...base, name: "generated" }] : [],
+      });
+      const repo = new ACPProjectRepositoryWriter();
+      const path = repo.addPendingWorktree({ ...base, name: "generated" });
+      if (serverRows) await repo.refresh();
+      return { api, repo, path };
+    }
+
+    it("keeps the overlay name until the rename RPC resolves", async () => {
+      const { api, repo, path } = await setup(true);
+      let resolveRpc!: (value: never) => void;
+      vi.mocked(api.camberAcpNavRenameProject).mockReturnValue(
+        new Promise((resolve) => {
+          resolveRpc = resolve;
+        }),
+      );
+      const settled = vi.fn();
+      void repo.renameProject(path, "mine").then(settled);
+
+      repo.clearWorktreeBusy(path);
+      await vi.waitFor(() => expect(api.camberAcpNavRenameProject).toHaveBeenCalled());
+      expect(repo.projects[0]?.name).toBe("mine");
+      expect(settled).not.toHaveBeenCalled();
+
+      resolveRpc({ projects: [{ ...base, name: "mine" }] } as never);
+      await vi.waitFor(() => expect(settled).toHaveBeenCalled());
+      expect(repo.projects[0]?.name).toBe("mine");
+    });
+
+    it("rejects the original promise and drops the overlay on RPC failure", async () => {
+      const { api, repo, path } = await setup(true);
+      const failure = new Error("branch exists");
+      vi.mocked(api.camberAcpNavRenameProject).mockRejectedValue(failure);
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const result = repo.renameProject(path, "mine");
+      const assertion = expect(result).rejects.toBe(failure);
+
+      repo.clearWorktreeBusy(path);
+      await assertion;
+      expect(repo.projects[0]?.name).toBe("generated");
+    });
+
+    it("resolves a superseded rename and applies only the latest name", async () => {
+      const { api, repo, path } = await setup(true);
+      vi.mocked(api.camberAcpNavRenameProject).mockResolvedValue({
+        projects: [{ ...base, name: "second" }],
+      } as never);
+      const first = repo.renameProject(path, "first");
+      const second = repo.renameProject(path, "second");
+      await expect(first).resolves.toBeUndefined();
+
+      repo.clearWorktreeBusy(path);
+      await expect(second).resolves.toBeUndefined();
+      expect(api.camberAcpNavRenameProject).toHaveBeenCalledTimes(1);
+      expect(api.camberAcpNavRenameProject).toHaveBeenCalledWith({ path, name: "second" });
+    });
+
+    it("resolves without calling the RPC when creation failed", async () => {
+      const { api, repo, path } = await setup(false);
+      const result = repo.renameProject(path, "mine");
+
+      repo.clearWorktreeBusy(path);
+      await expect(result).resolves.toBeUndefined();
+      expect(api.camberAcpNavRenameProject).not.toHaveBeenCalled();
+      expect(repo.projects).toEqual([]);
+    });
   });
 });
