@@ -223,4 +223,21 @@ describe("MobileConversationActions", () => {
     expect(await screen.findByText(/connection lost/)).toBeInTheDocument();
     expect(onLeaveConversation).not.toHaveBeenCalled();
   });
+
+  it("leaves the chat that asked even if the list emptied while the dialog was open", async () => {
+    const onLeaveConversation = vi.fn();
+    const { component } = render(Harness, {
+      props: {
+        projects,
+        sessions: [conversation("w", "/wt")],
+        activeConversationId: "w",
+        onLeaveConversation,
+      },
+    });
+    registered().deleteWorktree("/wt");
+    const confirm = await screen.findByRole("button", { name: "Delete Worktree" });
+    component.failConversationList();
+    await fireEvent.click(confirm);
+    await waitFor(() => expect(onLeaveConversation).toHaveBeenCalled());
+  });
 });

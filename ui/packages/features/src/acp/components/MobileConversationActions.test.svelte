@@ -52,12 +52,19 @@
     clearWorktreeBusy: () => {},
   };
   _setACPProjectContextForTests(projectRepo as unknown as ACPProjectRepository);
-  _setACPConversationContextForTests({
+  // `listFailsAfterOpen` empties the list as a failed background refresh does.
+  const conversationRepo = {
     sessions,
-    refreshState: { status: "success", value: sessions },
+    refreshState: { status: "success", value: sessions } as unknown,
     refresh: async () => {},
     archiveSession: (...args: unknown[]) => archiveSession(...args),
-  } as unknown as ACPConversationRepository);
+  };
+  _setACPConversationContextForTests(conversationRepo as unknown as ACPConversationRepository);
+
+  export function failConversationList() {
+    conversationRepo.sessions = [];
+    conversationRepo.refreshState = { status: "failure", error: new Error("offline") };
+  }
   _setACPWorktreeContextForTests({
     removeWorktree: (path: string) => removeWorktree(path),
   } as unknown as ACPWorktreeRepository);

@@ -35,7 +35,12 @@
   const worktrees = getACPWorktreeRepo();
 
   const archiving = new SvelteSet<string>();
-  let deleteWorktreeTarget = $state<{ path: string; name: string } | null>(null);
+  // `origin` is the conversation whose composer asked: on mobile, the open one.
+  let deleteWorktreeTarget = $state<{
+    path: string;
+    name: string;
+    origin: string | null;
+  } | null>(null);
 
   function summary(conversationId: string): ACPConversationSummary | undefined {
     return dedupeConversationSummaries(conversations.sessions).find(
@@ -91,14 +96,17 @@
   }
 
   // Errors propagate so the confirmation dialog stays open with the message.
-  async function removeWorktree(path: string) {
+  async function removeWorktree(path: string, origin: string | null) {
     const sessions = dedupeConversationSummaries(conversations.sessions);
     // Snapshot before teardown: the helper's navigation update can land before
     // removal returns. It archives or deletes the worktree's conversations by
     // stored workspace, and cascades to sub-agents grouped by cwd.
-    const affected = new Set(
-      sessions.filter((session) => session.workspacePath === path).map((session) => session.id),
-    );
+    // The conversation that asked is in the worktree, even if the list is
+    // empty because a background refresh failed while the dialog was open.
+    const affected = new Set([
+      ...(origin ? [origin] : []),
+      ...sessions.filter((session) => session.workspacePath === path).map((session) => session.id),
+    ]);
     const inWorktree = new Set(
       sessions.filter((session) => session.cwd === path).map((session) => session.id),
     );
@@ -158,7 +166,11 @@
       deleteWorktree: (path) => {
         const worktree = deletableWorktree(path);
         if (!worktree) return;
-        deleteWorktreeTarget = { path, name: worktree.nickname || worktree.name };
+        deleteWorktreeTarget = {
+          path,
+          name: worktree.nickname || worktree.name,
+          origin: activeConversationId,
+        };
       },
     }),
   );
@@ -174,7 +186,7 @@
     onConfirm={async () => {
       const target = deleteWorktreeTarget;
       if (!target) return;
-      await removeWorktree(target.path);
+      await removeWorktree(target.path, target.origin);
       deleteWorktreeTarget = null;
     }}
   />
