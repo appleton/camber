@@ -80,7 +80,7 @@ func init() {
 		Run:         removeProject,
 	})
 	registerAction("worktrees.rename", RegisteredAction{
-		Summary: "Rename a registered worktree's display name as the desktop does; its directory and branch are unchanged.",
+		Summary: "Rename a registered worktree's display name as the desktop does; its directory is unchanged. A helper-created, unpublished branch is renamed to follow it (prefix + slug of the name), run without repository hooks.",
 		InputSchema: objectSchema(map[string]any{
 			"workspacePath": map[string]any{"type": "string", "description": "Absolute worktree path"},
 			"name":          map[string]any{"type": "string", "description": "New display name"},

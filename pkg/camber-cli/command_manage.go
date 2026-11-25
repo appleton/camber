@@ -42,7 +42,7 @@ func init() {
 		})
 
 		worktrees := kit.Group("worktrees", "Inspect and manage project worktrees")
-		kit.Add(worktrees, "rename PATH NAME", "Rename a worktree's display name (directory and branch unchanged)", "worktrees.rename", cobra.ExactArgs(2), func(cmd *cobra.Command, args []string) (map[string]any, error) {
+		kit.Add(worktrees, "rename PATH NAME", "Rename a worktree's display name and its helper-created, unpublished branch (directory unchanged; no repo hooks run)", "worktrees.rename", cobra.ExactArgs(2), func(cmd *cobra.Command, args []string) (map[string]any, error) {
 			return map[string]any{"workspacePath": absPath(args[0]), "name": args[1]}, nil
 		})
 	})

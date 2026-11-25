@@ -2,7 +2,9 @@ package acpnav
 
 import (
 	"context"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -89,7 +91,7 @@ func TestRenameWorktreeUniquifiesCollidingBranch(t *testing.T) {
 	assert.Equal(t, "camber/fix-login-2", currentBranch(t, wt.Path))
 }
 
-func TestRenameWorktreeKeepsUpstreamConfigAndRemote(t *testing.T) {
+func TestRenameWorktreeLeavesPushedBranchAlone(t *testing.T) {
 	isolationEnv(t)
 	ctx := context.Background()
 	repo, git := gitRepo(t, nil)
@@ -104,11 +106,95 @@ func TestRenameWorktreeKeepsUpstreamConfigAndRemote(t *testing.T) {
 
 	require.NoError(t, store.RenameProject(ctx, wt.Path, "Pushed work"))
 
-	assert.Equal(t, "camber/pushed-work", currentBranch(t, wt.Path))
-	assert.Equal(t, "refs/heads/camber/bubbly-buoy", gitOutput(t, wt.Path, "config", "branch.camber/pushed-work.merge"))
-	assert.Equal(t, "origin", gitOutput(t, wt.Path, "config", "branch.camber/pushed-work.remote"))
-	assert.True(t, localBranchExists(ctx, remote, "camber/bubbly-buoy"), "remote branch must be untouched")
-	assert.False(t, localBranchExists(ctx, remote, "camber/pushed-work"))
+	assert.Equal(t, "camber/bubbly-buoy", currentBranch(t, wt.Path))
+	assert.Equal(t, "Pushed work", projectByPath(t, store, wt.Path).Nickname)
+	assert.False(t, localBranchExists(ctx, repo, "camber/pushed-work"))
+}
+
+func TestRenameWorktreeLeavesBranchWithRemoteTrackingRefAlone(t *testing.T) {
+	isolationEnv(t)
+	ctx := context.Background()
+	repo, git := gitRepo(t, nil)
+	remote := t.TempDir()
+	git(remote, "init", "-q", "--bare")
+	git(repo, "remote", "add", "origin", remote)
+	store := isolationStore(t, repo)
+
+	wt, err := store.CreateWorktree(ctx, repo, "bubbly-buoy")
+	require.NoError(t, err)
+	// Pushed without -u: no upstream config, but origin/<branch> exists.
+	git(wt.Path, "push", "-q", "origin", "camber/bubbly-buoy")
+	require.Error(t, exec.Command("git", "-C", wt.Path, "config", "--get", "branch.camber/bubbly-buoy.remote").Run())
+	require.NotEmpty(t, gitOutput(t, wt.Path, "for-each-ref", "refs/remotes/origin/camber/bubbly-buoy"))
+
+	require.NoError(t, store.RenameProject(ctx, wt.Path, "Pushed work"))
+
+	assert.Equal(t, "camber/bubbly-buoy", currentBranch(t, wt.Path))
+	assert.Equal(t, "Pushed work", projectByPath(t, store, wt.Path).Nickname)
+}
+
+func TestRenameWorktreeAvoidsDirectoryRefConflict(t *testing.T) {
+	isolationEnv(t)
+	ctx := context.Background()
+	repo, git := gitRepo(t, nil)
+	store := isolationStore(t, repo)
+	git(repo, "branch", "camber/fix-login/extra")
+
+	wt, err := store.CreateWorktree(ctx, repo, "bubbly-buoy")
+	require.NoError(t, err)
+
+	require.NoError(t, store.RenameProject(ctx, wt.Path, "Fix login"))
+
+	assert.Equal(t, "camber/fix-login-2", currentBranch(t, wt.Path))
+	assert.True(t, localBranchExists(ctx, repo, "camber/fix-login/extra"))
+}
+
+func TestRenameWorktreeBranchSkipsRepoHooks(t *testing.T) {
+	for _, mode := range []string{"hooks-dir", "core.hooksPath"} {
+		t.Run(mode, func(t *testing.T) {
+			isolationEnv(t)
+			ctx := context.Background()
+			repo, git := gitRepo(t, nil)
+			store := isolationStore(t, repo)
+			wt, err := store.CreateWorktree(ctx, repo, "bubbly-buoy")
+			require.NoError(t, err)
+
+			marker := filepath.Join(t.TempDir(), "hook-ran")
+			hook := "#!/bin/sh\ntouch '" + marker + "'\n"
+			hooksDir := filepath.Join(repo, ".git", "hooks")
+			if mode == "core.hooksPath" {
+				hooksDir = t.TempDir()
+				git(repo, "config", "core.hooksPath", hooksDir)
+			}
+			require.NoError(t, os.WriteFile(filepath.Join(hooksDir, "reference-transaction"), []byte(hook), 0o755))
+
+			// Sanity check: the hook fires for an ordinary, non-isolated
+			// git command.
+			git(repo, "branch", "hook-probe")
+			require.FileExists(t, marker)
+			require.NoError(t, os.Remove(marker))
+
+			require.NoError(t, store.RenameProject(ctx, wt.Path, "Hook test"))
+
+			assert.Equal(t, "camber/hook-test", currentBranch(t, wt.Path))
+			assert.NoFileExists(t, marker)
+		})
+	}
+}
+
+func TestRenameWorktreeBranchSkippedWhenRepoRefusedIsolation(t *testing.T) {
+	isolationEnv(t)
+	ctx := context.Background()
+	repo, git := gitRepo(t, nil)
+	store := isolationStore(t, repo)
+	wt, err := store.CreateWorktree(ctx, repo, "bubbly-buoy")
+	require.NoError(t, err)
+	git(repo, "config", "core.sshCommand", "true")
+
+	require.NoError(t, store.RenameProject(ctx, wt.Path, "Refused"))
+
+	assert.Equal(t, "camber/bubbly-buoy", currentBranch(t, wt.Path))
+	assert.Equal(t, "Refused", projectByPath(t, store, wt.Path).Nickname)
 }
 
 func TestWorktreeBranchCustomPrefix(t *testing.T) {
@@ -218,9 +304,16 @@ func TestBranchSlug(t *testing.T) {
 }
 
 func TestOwnedWorktreeBranch(t *testing.T) {
-	assert.True(t, ownedWorktreeBranch("andy/x", "andy/", "dir", "Name"))
-	assert.True(t, ownedWorktreeBranch("camber/x", "andy/", "dir", "Name"), "default prefix is always ours")
-	assert.False(t, ownedWorktreeBranch("pr-branch", "andy/", "dir", "pr-branch"))
+	assert.True(t, ownedWorktreeBranch("andy/dir", "andy/", "dir", "Name"))
+	assert.True(t, ownedWorktreeBranch("andy/name-2", "andy/", "dir", "Name"))
+	assert.True(t, ownedWorktreeBranch("camber/dir", "andy/", "dir", "Name"), "default prefix is always ours")
+	assert.True(t, ownedWorktreeBranch("camber/my-name-3", "andy/", "dir", "My name"))
+	assert.False(t, ownedWorktreeBranch("andy/my-own-feature", "andy/", "dir", "Name"))
+	assert.False(t, ownedWorktreeBranch("camber/other", "camber/", "dir", "Name"))
+	assert.False(t, ownedWorktreeBranch("andy/name-x", "andy/", "dir", "Name"))
+	assert.False(t, ownedWorktreeBranch("andy/name-", "andy/", "dir", "Name"))
+	assert.False(t, ownedWorktreeBranch("pr-branch", "andy/", "dir", "pr-branch"), "no empty prefix when one is configured")
+	assert.False(t, ownedWorktreeBranch("dir", "andy/", "dir", "Name"))
 	assert.True(t, ownedWorktreeBranch("dir", "", "dir", "Name"))
 	assert.True(t, ownedWorktreeBranch("my-name-3", "", "dir", "My name"))
 	assert.False(t, ownedWorktreeBranch("my-name-x", "", "dir", "My name"))

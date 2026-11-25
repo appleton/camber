@@ -649,7 +649,10 @@ func (s *Store) RenameProject(ctx context.Context, path, name string) error {
 
 	// A worktree's branch follows its name. The branch is renamed first so a
 	// git failure leaves the display name unchanged too.
-	var branchRename *worktreeBranchRename
+	var (
+		branchRename *worktreeBranchRename
+		gitEnv       []string
+	)
 	if isWorktree && parent.Valid && parent.String != "" {
 		rl := s.repoLock(parent.String)
 		rl.Lock()
@@ -658,7 +661,7 @@ func (s *Store) RenameProject(ctx context.Context, path, name string) error {
 		if currentNickname.Valid && strings.TrimSpace(currentNickname.String) != "" {
 			displayName = currentNickname.String
 		}
-		branchRename, err = s.renameWorktreeBranch(ctx, path, displayName, name)
+		branchRename, gitEnv, err = s.renameWorktreeBranch(ctx, path, displayName, name)
 		if err != nil {
 			return err
 		}
@@ -672,7 +675,7 @@ SET name = CASE WHEN is_worktree = 0 THEN ? ELSE name END,
 WHERE path = ?
 `, name, name, nowString(), path)
 	if err != nil {
-		branchRename.undo(ctx, s)
+		branchRename.undo(ctx, s, gitEnv)
 		return fmt.Errorf("renaming project: %w", err)
 	}
 	affected, err := result.RowsAffected()
@@ -977,86 +980,134 @@ type worktreeBranchRename struct {
 	from, to     string
 }
 
-// undo best-effort renames the branch back. A nil rename is a no-op.
-func (r *worktreeBranchRename) undo(ctx context.Context, s *Store) {
+// undo best-effort renames the branch back, with hooks disabled like the
+// rename itself. A nil rename is a no-op.
+func (r *worktreeBranchRename) undo(ctx context.Context, s *Store, env []string) {
 	if r == nil {
 		return
 	}
-	_, _ = s.runGit(ctx, nil, "-C", r.worktreePath, "branch", "-m", r.to, r.from)
+	_, _ = s.runGit(ctx, env, "-C", r.worktreePath, "branch", "-m", r.to, r.from)
 }
 
 // renameWorktreeBranch renames the branch checked out in the worktree at
 // worktreePath to follow newName: the configured prefix plus branchSlug of
 // newName, uniquified with a numeric suffix if another local branch has that
-// name. Only branches the helper created are renamed (see ownedWorktreeBranch);
-// any other checked-out branch, a detached HEAD, a missing worktree directory
-// or a name with no usable branch characters leaves git untouched and returns
-// nil. Only the local branch is renamed: its upstream configuration moves with
-// it and the remote is never touched.
+// name or any branch lives under it (git cannot hold both "a" and "a/b").
+//
+// The branch is left alone, with a nil result and no error, when it is not
+// one the helper created (see ownedWorktreeBranch), when HEAD is detached,
+// when the worktree directory is missing, when newName has no usable branch
+// characters, or when the branch has been published: it has an upstream
+// configured or a remote-tracking ref of the same name exists. Renaming a
+// published branch breaks git push under push.default=simple and the PR
+// lookup by local branch name. Only the local branch is ever renamed.
+//
+// Every git command runs isolated (see isolatedWorktreeEnv), so repository
+// hooks and other repo-controlled commands never execute, whether the rename
+// comes from the desktop app or the CLI. If the repository cannot be run
+// isolated (for example it sets command-running config keys) the branch is
+// left alone and no error is returned, so the display name still changes.
+// The returned env is the isolated environment, for undoing the rename.
 //
 // Must be called with the parent repo's repoLock held.
-func (s *Store) renameWorktreeBranch(ctx context.Context, worktreePath, currentName, newName string) (*worktreeBranchRename, error) {
+func (s *Store) renameWorktreeBranch(ctx context.Context, worktreePath, currentName, newName string) (*worktreeBranchRename, []string, error) {
 	if !pathExists(worktreePath) {
-		return nil, nil
+		return nil, nil, nil
 	}
-	out, err := s.runGit(ctx, nil, "-C", worktreePath, "symbolic-ref", "--quiet", "--short", "HEAD")
+	env, _, err := s.isolatedWorktreeEnv(ctx, worktreePath)
+	if err != nil {
+		// The branch rename is a convenience; refusing the repository must
+		// not block renaming the worktree's display name.
+		return nil, nil, nil
+	}
+	out, err := s.runGit(ctx, env, "-C", worktreePath, "symbolic-ref", "--quiet", "--short", "HEAD")
 	if err != nil {
 		// Detached HEAD: there is no branch to rename.
-		return nil, nil
+		return nil, nil, nil
 	}
 	current := strings.TrimSpace(string(out))
 	prefix, err := s.GetWorktreeBranchPrefix(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if !ownedWorktreeBranch(current, prefix, filepath.Base(worktreePath), currentName) {
-		return nil, nil
+		return nil, nil, nil
+	}
+	if s.branchPublished(ctx, env, worktreePath, current) {
+		return nil, nil, nil
 	}
 	slug := branchSlug(newName)
 	if slug == "" {
-		return nil, nil
+		return nil, nil, nil
 	}
 	branch := uniqueWorktreeName(worktreeBranch(prefix, slug), func(candidate string) bool {
-		return candidate != current && localBranchExists(ctx, worktreePath, candidate)
+		return candidate != current && s.branchNameTaken(ctx, env, worktreePath, candidate)
 	})
 	if branch == current {
-		return nil, nil
+		return nil, nil, nil
 	}
 	if err := s.validateBranchName(ctx, branch); err != nil {
-		return nil, fmt.Errorf("renaming worktree branch: %w", err)
+		return nil, nil, fmt.Errorf("renaming worktree branch: %w", err)
 	}
-	if out, err := s.runGit(ctx, nil, "-C", worktreePath, "branch", "-m", current, branch); err != nil {
-		return nil, fmt.Errorf("renaming worktree branch %s to %s: %w: %s", current, branch, err, strings.TrimSpace(string(out)))
+	if out, err := s.runGit(ctx, env, "-C", worktreePath, "branch", "-m", current, branch); err != nil {
+		return nil, nil, fmt.Errorf("renaming worktree branch %s to %s: %w: %s", current, branch, err, strings.TrimSpace(string(out)))
 	}
-	return &worktreeBranchRename{worktreePath: worktreePath, from: current, to: branch}, nil
+	return &worktreeBranchRename{worktreePath: worktreePath, from: current, to: branch}, env, nil
+}
+
+// branchPublished reports whether branch has an upstream configured or a
+// remote-tracking ref named after it. Failures to query count as published,
+// so the branch is left alone.
+func (s *Store) branchPublished(ctx context.Context, env []string, dir, branch string) bool {
+	if out, err := s.runGit(ctx, env, "-C", dir, "config", "--get", "branch."+branch+".remote"); err == nil && strings.TrimSpace(string(out)) != "" {
+		return true
+	}
+	out, err := s.runGit(ctx, env, "-C", dir, "for-each-ref", "--format=%(refname)", "refs/remotes/")
+	if err != nil {
+		return true
+	}
+	for _, ref := range strings.Split(string(out), "\n") {
+		if rest, ok := strings.CutPrefix(strings.TrimSpace(ref), "refs/remotes/"); ok && strings.HasSuffix(rest, "/"+branch) {
+			return true
+		}
+	}
+	return false
+}
+
+// branchNameTaken reports whether a local branch cannot be created or renamed
+// to candidate: it exists, or branches exist under candidate/.
+func (s *Store) branchNameTaken(ctx context.Context, env []string, dir, candidate string) bool {
+	if _, err := s.runGit(ctx, env, "-C", dir, "show-ref", "--verify", "--quiet", "refs/heads/"+candidate); err == nil {
+		return true
+	}
+	out, err := s.runGit(ctx, env, "-C", dir, "for-each-ref", "--count=1", "--format=%(refname)", "refs/heads/"+candidate+"/")
+	return err != nil || strings.TrimSpace(string(out)) != ""
 }
 
 // ownedWorktreeBranch reports whether branch is one the helper created for a
-// worktree, so renaming the worktree may rename it too. Branches under the
-// configured prefix or the default prefix (worktrees created before the prefix
-// changed) qualify. An empty prefix matches every branch, so in that case the
-// branch must also be named after the worktree's directory or its current
-// display name (with an optional numeric uniquifying suffix); otherwise a PR
-// branch the user checked out would be renamed.
+// worktree, so renaming the worktree may rename it too. It must equal P+base
+// or P+base+"-"+digits, where P is the configured prefix, the default prefix
+// (worktrees created before the prefix changed) or, only when the configured
+// prefix is empty, nothing; and base is the worktree's directory name or the
+// slug of its current display name. A branch the user created or checked out
+// elsewhere under the same prefix is therefore left alone.
 func ownedWorktreeBranch(branch, prefix, dirName, displayName string) bool {
-	if prefix != "" && strings.HasPrefix(branch, prefix) {
-		return true
-	}
-	if strings.HasPrefix(branch, defaultWorktreeBranchPrefix) {
-		return true
-	}
-	if prefix != "" {
-		return false
-	}
+	prefixes := []string{prefix, defaultWorktreeBranchPrefix}
 	for _, base := range []string{dirName, branchSlug(displayName)} {
 		if base == "" {
 			continue
 		}
-		if branch == base {
-			return true
-		}
-		if suffix, ok := strings.CutPrefix(branch, base+"-"); ok && suffix != "" && strings.Trim(suffix, "0123456789") == "" {
-			return true
+		for _, p := range prefixes {
+			rest, ok := strings.CutPrefix(branch, p+base)
+			if !ok {
+				continue
+			}
+			if rest == "" {
+				return true
+			}
+			if suffix, ok := strings.CutPrefix(rest, "-"); ok && suffix != "" && strings.Trim(suffix, "0123456789") == "" {
+				return true
+			}
 		}
 	}
 	return false
