@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ACP_WORKTREE_RENAMED_EVENT } from "../navTypes";
 import { ACPProjectRepositoryWriter } from "./ProjectRepository.svelte";
 
 vi.mock("@camber/helperapi", () => ({
@@ -368,6 +369,61 @@ describe("ACPProjectRepositoryWriter", () => {
       await expect(result).resolves.toBeUndefined();
       expect(api.camberAcpNavRenameProject).not.toHaveBeenCalled();
       expect(repo.projects).toEqual([]);
+    });
+  });
+
+  describe("worktree rename event", () => {
+    const base = {
+      path: "/repo/worktrees/feature",
+      isWorktree: true,
+      parentPath: "/repo",
+      collapsed: false,
+      displayOrder: 0,
+      createdAt: "2026-05-20T10:00:00Z",
+      updatedAt: "2026-05-20T10:00:00Z",
+    };
+
+    function listen(repo: ACPProjectRepositoryWriter) {
+      const paths: string[][] = [];
+      repo.emitter.addEventListener(ACP_WORKTREE_RENAMED_EVENT, (event) => {
+        paths.push((event as CustomEvent<{ paths: string[] }>).detail.paths);
+      });
+      return paths;
+    }
+
+    it("emits when a worktree display name changes, not on unrelated updates", () => {
+      const repo = new ACPProjectRepositoryWriter();
+      const paths = listen(repo);
+
+      repo.replaceProjects([{ ...base, name: "one" }]);
+      expect(paths).toEqual([]);
+
+      repo.replaceProjects([{ ...base, name: "one", collapsed: true, displayOrder: 3 }]);
+      expect(paths).toEqual([]);
+
+      repo.replaceProjects([{ ...base, name: "two", collapsed: true }]);
+      expect(paths).toEqual([[base.path]]);
+
+      repo.replaceProjects([{ ...base, name: "two", nickname: "nick" }]);
+      expect(paths).toEqual([[base.path], [base.path]]);
+    });
+
+    it("emits when a deferred rename is applied after creation", async () => {
+      const { camberAcpNavRenameProject } = await import("@camber/helperapi");
+      vi.mocked(camberAcpNavRenameProject).mockResolvedValue({
+        projects: [{ ...base, name: "mine" }],
+      } as never);
+      const repo = new ACPProjectRepositoryWriter();
+      const paths = listen(repo);
+      const path = repo.addPendingWorktree({ ...base, name: "generated" });
+      const renamed = repo.renameProject(path, "mine");
+
+      repo.replaceProjects([{ ...base, name: "generated" }]);
+      expect(paths).toEqual([]);
+
+      repo.clearWorktreeBusy(path);
+      await renamed;
+      expect(paths).toEqual([[base.path]]);
     });
   });
 });

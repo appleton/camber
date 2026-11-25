@@ -319,6 +319,7 @@ export type {
 } from "./navTypes";
 export type { ACPTransport } from "./RPCTransport";
 export type { ACPResolvedSessionInfo } from "./sessionInfo";
+export { wireACPGithubSync } from "./wireACPGithubSync";
 export { wireACPHistorySync } from "./wireACPHistorySync";
 export { wireACPSessionSync } from "./wireACPSessionSync";
 export {

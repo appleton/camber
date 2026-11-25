@@ -14,6 +14,7 @@ import { createContext } from "svelte";
 import { normalizeACPError, type ACPRequestError } from "../errors";
 import {
   ACP_DESKTOP_PROJECTS_EVENT,
+  ACP_WORKTREE_RENAMED_EVENT,
   type ACPNavProject,
   type ACPNavProjectSettings,
   type ACPProjectsState,
@@ -259,11 +260,36 @@ export class ACPProjectRepositoryWriter {
   // Caching it lets later overlay changes re-merge without sneaking in
   // already-merged data.
   private applyProjects(projects: ACPNavProject[]): void {
+    const renamed = this.renamedWorktreePaths(this.serverProjects, projects);
     this.serverProjects = projects;
     const merged = this.mergeTransientWorktrees(projects);
     this.lastLoadedProjects = merged;
     this.refreshState = success(merged);
     this.emitState();
+    if (renamed.length > 0) {
+      this.emitter.dispatchEvent(
+        new CustomEvent<{ paths: string[] }>(ACP_WORKTREE_RENAMED_EVENT, {
+          detail: { paths: renamed },
+        }),
+      );
+    }
+  }
+
+  // Worktrees present in both snapshots whose display name changed. Compares
+  // server snapshots (not the merged overlay) so a rename applied from any
+  // source is seen, including a deferred rename whose overlay name was already
+  // showing when the RPC result arrives. A rename also renames the git branch.
+  private renamedWorktreePaths(before: ACPNavProject[], after: ACPNavProject[]): string[] {
+    const previous = new Map(before.map((project) => [project.path, project]));
+    const paths: string[] = [];
+    for (const project of after) {
+      const old = previous.get(project.path);
+      if (!old || !project.isWorktree) continue;
+      if ((old.nickname || old.name) !== (project.nickname || project.name)) {
+        paths.push(project.path);
+      }
+    }
+    return paths;
   }
 
   // Overlays in-memory transient state (busy kind, pending placeholders) onto

@@ -10,6 +10,7 @@ import { ACP_CHAT_WORKSPACE_PATH } from "./workspaceScope";
 export const ACP_SESSION_DELETE_EVENT = "session:delete";
 export const ACP_SESSION_CLOSE_EVENT = "session:close";
 export const ACP_DESKTOP_PROJECTS_EVENT = "desktop-projects:state";
+export const ACP_WORKTREE_RENAMED_EVENT = "worktree:renamed";
 export const ACP_DESKTOP_CONVERSATIONS_EVENT = "desktop-conversations:state";
 
 export type ACPConversationSummary = Omit<ACPResolvedSessionInfo, "sessionId"> & {
