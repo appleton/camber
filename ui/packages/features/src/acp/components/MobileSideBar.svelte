@@ -186,7 +186,7 @@
         },
       },
       {
-        name: "Open Pull Request",
+        name: "View Pull Request",
         icon: "git-branch",
         disabled: blocked,
         callback: () => openGithubUrl(worktree.path, (links) => links.prUrl),

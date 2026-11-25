@@ -138,7 +138,7 @@ describe("github tooltip labels", () => {
   it("formats the PR action from current status", () => {
     expect(githubPRActionLabel(undefined)).toBe("Open New Pull Request");
     expect(githubPRActionLabel(status({ state: "none" }))).toBe("Open New Pull Request");
-    expect(githubPRActionLabel(status({ state: "open" }))).toBe("Open Current Pull Request");
+    expect(githubPRActionLabel(status({ state: "open" }))).toBe("View Current Pull Request");
   });
 
   it("formats counts and review decision for the visual tooltip", () => {
