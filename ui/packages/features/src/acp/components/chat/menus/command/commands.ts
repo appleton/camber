@@ -4,4 +4,6 @@ export enum AcpSlashCommand {
   load = "load",
   plan = "plan",
   secrets = "secrets",
+  archive = "archive",
+  deleteWorktree = "delete-worktree",
 }

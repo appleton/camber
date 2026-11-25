@@ -34,6 +34,7 @@
   import { getACPGithubRepo } from "../features/GithubRepository.svelte";
   import { getACPProjectRepo } from "../features/ProjectRepository.svelte";
   import { getACPWorktreeRepo } from "../features/WorktreeRepository";
+  import { registerConversationActions } from "../conversationActions.svelte";
   import { removeProjectFromApp } from "../features/removeProject";
   import type { ACPSession } from "../features/Session.svelte";
   import { workspacePathFitsWorkspaceFolders } from "../workspacePaths";
@@ -1408,9 +1409,9 @@
     }
   }
 
-  function handleArchiveSession(session: ACPConversationSummary, event: MouseEvent) {
-    event.preventDefault();
-    event.stopPropagation();
+  function handleArchiveSession(session: ACPConversationSummary, event?: MouseEvent) {
+    event?.preventDefault();
+    event?.stopPropagation();
     const agentServer = getSessionAgentServer(session);
     const sessionToCancel = shouldInterruptSelectedSession(session.sessionId, agentServer)
       ? activeSession
@@ -1631,15 +1632,50 @@
     openContextMenu(event, projectMenuActions(project));
   }
 
+  function canDeleteWorktree(worktree: ACPNavProject): boolean {
+    return (
+      worktree.deleteRequested !== true &&
+      (worktree.busy === undefined ||
+        worktree.busy === "creating" ||
+        worktree.busy === "running_setup")
+    );
+  }
+
+  function requestDeleteWorktree(worktree: ACPNavProject) {
+    deleteWorktreeTarget = { path: worktree.path, name: projectDisplayName(worktree) };
+  }
+
+  // The chat composer's /archive and /delete-worktree run these same flows.
+  onMount(() =>
+    registerConversationActions({
+      archiveConversation: (conversationId) => {
+        if (exitingConversationIds.has(conversationId)) return false;
+        const session = navSessions.find((candidate) => candidate.id === conversationId);
+        if (!session) return false;
+        handleArchiveSession(session);
+        return true;
+      },
+      worktreeFor: (conversationId) => {
+        const session = navSessions.find((candidate) => candidate.id === conversationId);
+        if (!session || exitingWorktreePaths.has(session.cwd)) return null;
+        const worktree = navProjects.find(
+          (project) => project.isWorktree && project.path === session.cwd,
+        );
+        if (!worktree || !canDeleteWorktree(worktree)) return null;
+        return { path: worktree.path, name: projectDisplayName(worktree) };
+      },
+      deleteWorktree: (path) => {
+        const worktree = navProjects.find((project) => project.isWorktree && project.path === path);
+        if (worktree && canDeleteWorktree(worktree)) requestDeleteWorktree(worktree);
+      },
+    }),
+  );
+
   function openWorktreeContextMenu(worktree: ACPNavProject, event: MouseEvent) {
     const blocked =
       worktree.deleteRequested === true ||
       (worktree.busy !== undefined && worktreeBlocksUI(worktree.busy));
-    const canDelete =
-      worktree.deleteRequested !== true &&
-      (worktree.busy === undefined ||
-        worktree.busy === "creating" ||
-        worktree.busy === "running_setup");
+    const canDelete = canDeleteWorktree(worktree);
     const actions: ContextMenuItem[] = [
       {
         name: "New Conversation",
@@ -1697,7 +1733,7 @@
         icon: "trash",
         disabled: !canDelete,
         callback: () => {
-          deleteWorktreeTarget = { path: worktree.path, name: projectDisplayName(worktree) };
+          requestDeleteWorktree(worktree);
         },
       },
     );

@@ -58,6 +58,7 @@
   } from "./promptSubmitContextMenu";
   import { getKeybindingService, withShortcut } from "../../../keybindings";
   import ActivePromptSubmit from "./ActivePromptSubmit.svelte";
+  import { getConversationActions } from "../../conversationActions.svelte";
 
   interface Props extends ComponentProps<typeof Prompt.Root> {
     onConfigureAgents?: () => void;
@@ -341,7 +342,36 @@
         void chatSession.togglePlanMode();
         break;
       }
+
+      case AcpSlashCommand.archive: {
+        archiveConversation();
+        break;
+      }
+
+      case AcpSlashCommand.deleteWorktree: {
+        deleteConversationWorktree();
+        break;
+      }
     }
+  }
+
+  function archiveConversation(): boolean {
+    const actions = getConversationActions();
+    const conversationId = chatSession.conversationId;
+    if (!actions || !conversationId) return false;
+    if (!actions.archiveConversation(conversationId)) {
+      rpc.showInfoMessage("This conversation can't be archived right now", InfoMessageType.error);
+    }
+    return true;
+  }
+
+  function deleteConversationWorktree(): boolean {
+    const actions = getConversationActions();
+    const conversationId = chatSession.conversationId;
+    const worktree = actions && conversationId ? actions.worktreeFor(conversationId) : null;
+    if (!actions || !worktree) return false;
+    actions.deleteWorktree(worktree.path);
+    return true;
   }
 
   function handleTypedLocalCommand(value: string): boolean {
@@ -380,6 +410,12 @@
       case AcpSlashCommand.secrets:
         setTimeout(() => handleCommand(AcpSlashCommand.secrets), 0);
         return true;
+      // Typed without the menu: only claim the command where it applies, so an
+      // agent's own command of the same name still goes through elsewhere.
+      case AcpSlashCommand.archive:
+        return archiveConversation();
+      case AcpSlashCommand.deleteWorktree:
+        return deleteConversationWorktree();
       default:
         return false;
     }

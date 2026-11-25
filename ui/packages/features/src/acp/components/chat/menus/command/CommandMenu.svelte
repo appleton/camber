@@ -30,6 +30,7 @@
   import SkillCommandItems from "./SkillCommandItems.svelte";
   import type { Snippet } from "svelte";
   import { slashCommandIcon } from "../../goalPresentation";
+  import { getConversationActions } from "../../../../conversationActions.svelte";
 
   interface Props {
     onCommand?: (command: AcpSlashCommand) => void;
@@ -109,6 +110,15 @@
     ),
   );
   const visibleCommandEntries = $derived(visibleServerCommandEntries(otherCommands, $search));
+  // Archive and worktree deletion are sidebar flows, so they are only offered
+  // where a sidebar registered them (the desktop) and for a saved conversation.
+  const conversationActions = $derived(getConversationActions());
+  const canArchive = $derived(!!conversationActions && !!chatSession.conversationId);
+  const conversationWorktree = $derived(
+    conversationActions && chatSession.conversationId
+      ? conversationActions.worktreeFor(chatSession.conversationId)
+      : null,
+  );
   const isCamberServer = $derived(selectedAgentServer(chatSession) === DEFAULT_AGENT_SERVER);
 
   // When the agent publishes its own "plan" command it shows up in the
@@ -170,6 +180,28 @@
       >
         <Prompt.Actions.Action onAction={() => onCommand?.(LocalCommand.load)} />
       </Prompt.Menu.Popup.Item>
+
+      {#if canArchive}
+        <Prompt.Menu.Popup.Item
+          title={LocalCommand.archive}
+          subtitle="Archive this conversation"
+          icon="archive"
+          keywords={["close", "done"]}
+        >
+          <Prompt.Actions.Action onAction={() => onCommand?.(LocalCommand.archive)} />
+        </Prompt.Menu.Popup.Item>
+      {/if}
+
+      {#if conversationWorktree}
+        <Prompt.Menu.Popup.Item
+          title={LocalCommand.deleteWorktree}
+          subtitle={`Delete the ${conversationWorktree.name} worktree`}
+          icon="trash"
+          keywords={["remove", "worktree"]}
+        >
+          <Prompt.Actions.Action onAction={() => onCommand?.(LocalCommand.deleteWorktree)} />
+        </Prompt.Menu.Popup.Item>
+      {/if}
     </Prompt.Menu.Popup.Section>
 
     <Prompt.Menu.Popup.Separator />
