@@ -65,7 +65,7 @@ describe("MobileConversationActions", () => {
   });
 
   it("archives the open conversation and leaves it", async () => {
-    const archiveSession = vi.fn(async () => {});
+    const archiveSession = vi.fn(async () => ["a"]);
     const onLeaveConversation = vi.fn();
     render(Harness, {
       props: {
@@ -200,6 +200,24 @@ describe("MobileConversationActions", () => {
     registered().archiveConversation("p");
     await rerender({ ...props, activeConversationId: "other" });
     finishArchive(["p"]);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(onLeaveConversation).not.toHaveBeenCalled();
+  });
+
+  it("stays in the conversation when the helper archived nothing", async () => {
+    const archiveSession = vi.fn(async () => [] as string[]);
+    const onLeaveConversation = vi.fn();
+    render(Harness, {
+      props: {
+        projects,
+        sessions: [conversation("a", "/repo")],
+        activeConversationId: "a",
+        archiveSession,
+        onLeaveConversation,
+      },
+    });
+    registered().archiveConversation("a");
+    await waitFor(() => expect(archiveSession).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(onLeaveConversation).not.toHaveBeenCalled();
   });

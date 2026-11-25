@@ -57,17 +57,12 @@
     const agentServer = session.agentServer || "poolside";
     try {
       await cancelRunningTurn(session);
-      // The helper also archives same-group sub-agents, any of which the user
-      // may have opened while the archive was in flight.
-      const archived = new Set([
-        session.id,
-        ...((await conversations.archiveSession(
-          session.cwd,
-          session.sessionId,
-          agentServer,
-          session.id,
-        )) ?? []),
-      ]);
+      // What the helper actually archived: the conversation and same-group
+      // sub-agents, any of which the user may have opened while the archive
+      // was in flight. Nothing, if the row was already gone.
+      const archived = new Set(
+        await conversations.archiveSession(session.cwd, session.sessionId, agentServer, session.id),
+      );
       if (activeConversationId && archived.has(activeConversationId)) onLeaveConversation();
     } catch (error) {
       rpc.showInfoMessage(
@@ -103,12 +98,16 @@
     try {
       projects.setWorktreeBusy(path, "tearing_down");
       await worktrees.removeWorktree(path, (kind) => projects.setWorktreeBusy(path, kind));
+    } catch (error) {
+      // Removal can fail after the worktree is already gone (e.g. its
+      // terminal cleanup lost the connection): only offer a retry if it isn't.
+      if (!(await worktreeRemoved(path))) throw error;
+      console.error("Worktree deleted, but cleanup afterwards failed", error);
     } finally {
       projects.clearWorktreeBusy(path);
     }
-    // Leave only if the user is still in one of the removed conversations;
-    // teardown is slow, and they may have opened another chat meanwhile.
-    if (activeConversationId && affected.has(activeConversationId)) onLeaveConversation();
+    // The open conversation, as it was when removal finished.
+    const open = activeConversationId ? summary(activeConversationId) : undefined;
     try {
       await projects.refresh();
       await conversations.refresh();
@@ -116,6 +115,23 @@
       // The worktree is already gone; the next notification reconciles the list.
       console.error("Failed to refresh after deleting worktree", error);
     }
+    // Leave only if the user is still in a conversation the removal took:
+    // teardown is slow, and they may have opened another chat meanwhile. The
+    // helper also archives sub-agents grouped by cwd, so one in the worktree
+    // that has since left the list was taken too.
+    const current = activeConversationId;
+    if (!current) return;
+    const tookOpen = open?.id === current && open.cwd === path && summary(current) === undefined;
+    if (affected.has(current) || tookOpen) onLeaveConversation();
+  }
+
+  async function worktreeRemoved(path: string): Promise<boolean> {
+    try {
+      await projects.refresh();
+    } catch {
+      return false;
+    }
+    return !projects.projects.some((project) => project.path === path);
   }
 
   onMount(() =>
