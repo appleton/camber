@@ -34,7 +34,7 @@
   import { getACPGithubRepo } from "../features/GithubRepository.svelte";
   import { getACPProjectRepo } from "../features/ProjectRepository.svelte";
   import { getACPWorktreeRepo } from "../features/WorktreeRepository";
-  import { containingWorktree, registerConversationActions } from "../conversationActions.svelte";
+  import { registerConversationActions } from "../conversationActions.svelte";
   import { removeProjectFromApp } from "../features/removeProject";
   import type { ACPSession } from "../features/Session.svelte";
   import { workspacePathFitsWorkspaceFolders } from "../workspacePaths";
@@ -1666,7 +1666,12 @@
       worktreeFor: (conversationId) => {
         const session = navSessions.find((candidate) => candidate.id === conversationId);
         if (!session) return null;
-        const worktree = containingWorktree(navProjects, session.cwd);
+        // Exact match only: worktree removal (here and in the helper) acts on
+        // conversations whose workspace is the worktree itself, so one running
+        // in a subdirectory would be left pointing at a deleted directory.
+        const worktree = navProjects.find(
+          (project) => project.isWorktree && project.path === session.cwd,
+        );
         if (!worktree || exitingWorktreePaths.has(worktree.path)) return null;
         if (!canDeleteWorktree(worktree)) return null;
         return { path: worktree.path, name: projectDisplayName(worktree) };

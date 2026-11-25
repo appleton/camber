@@ -3,7 +3,7 @@
   import { InfoMessageType } from "@camber/rpc";
   import { onMount } from "svelte";
   import { SvelteSet } from "svelte/reactivity";
-  import { containingWorktree, registerConversationActions } from "../conversationActions.svelte";
+  import { registerConversationActions } from "../conversationActions.svelte";
   import { getACPConversationRepo } from "../features/ConversationRepository.svelte";
   import { getACPProjectRepo } from "../features/ProjectRepository.svelte";
   import type { ACPSession } from "../features/Session.svelte";
@@ -74,24 +74,28 @@
     }
   }
 
+  // Errors propagate so the confirmation dialog stays open with the message.
   async function removeWorktree(path: string) {
-    const leaving = (() => {
-      const active = activeConversationId ? summary(activeConversationId) : undefined;
-      return !!active && containingWorktree(projects.projects, active.cwd)?.path === path;
-    })();
+    const affected = new Set(
+      dedupeConversationSummaries(conversations.sessions)
+        .filter((session) => session.cwd === path)
+        .map((session) => session.id),
+    );
     try {
       projects.setWorktreeBusy(path, "tearing_down");
       await worktrees.removeWorktree(path, (kind) => projects.setWorktreeBusy(path, kind));
-      await projects.refresh();
-      await conversations.refresh();
-      if (leaving) onLeaveConversation();
-    } catch (error) {
-      rpc.showInfoMessage(
-        formatError(error, { prefix: "Failed to delete worktree" }),
-        InfoMessageType.error,
-      );
     } finally {
       projects.clearWorktreeBusy(path);
+    }
+    // Leave only if the user is still in one of the removed conversations;
+    // teardown is slow, and they may have opened another chat meanwhile.
+    if (activeConversationId && affected.has(activeConversationId)) onLeaveConversation();
+    try {
+      await projects.refresh();
+      await conversations.refresh();
+    } catch (error) {
+      // The worktree is already gone; the next notification reconciles the list.
+      console.error("Failed to refresh after deleting worktree", error);
     }
   }
 
@@ -109,8 +113,10 @@
       worktreeFor: (conversationId) => {
         const session = summary(conversationId);
         if (!session) return null;
-        const worktree = containingWorktree(projects.projects, session.cwd);
-        if (!worktree || !deletableWorktree(worktree.path)) return null;
+        // Exact match, as on desktop: removal only cleans up conversations
+        // whose workspace is the worktree itself.
+        const worktree = deletableWorktree(session.cwd);
+        if (!worktree) return null;
         return { path: worktree.path, name: worktree.nickname || worktree.name };
       },
       deleteWorktree: (path) => {

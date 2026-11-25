@@ -355,13 +355,18 @@
     }
   }
 
+  // Archive and worktree deletion switch away from this conversation, so they
+  // run after the composer has cleared the command text; otherwise the clear
+  // lands on the next conversation's draft and "/archive" lingers here.
   function archiveConversation(): boolean {
     const actions = getConversationActions();
     const conversationId = chatSession.conversationId;
     if (!actions || !conversationId || !actions.canArchive(conversationId)) return false;
-    if (!actions.archiveConversation(conversationId)) {
-      rpc.showInfoMessage("This conversation can't be archived right now", InfoMessageType.error);
-    }
+    setTimeout(() => {
+      if (!actions.archiveConversation(conversationId)) {
+        rpc.showInfoMessage("This conversation can't be archived right now", InfoMessageType.error);
+      }
+    }, 0);
     return true;
   }
 
@@ -370,7 +375,7 @@
     const conversationId = chatSession.conversationId;
     const worktree = actions && conversationId ? actions.worktreeFor(conversationId) : null;
     if (!actions || !worktree) return false;
-    actions.deleteWorktree(worktree.path);
+    setTimeout(() => actions.deleteWorktree(worktree.path), 0);
     return true;
   }
 
@@ -647,6 +652,7 @@
   <Prompt.Menu.Root {...acpMenus.command}>
     <CommandMenu
       onCommand={handleCommand}
+      commandOnlyPrompt={isBareCommand(promptValue) && promptValue.trim().startsWith("/")}
       {promptCommandItems}
       fallbackSkills={installedSkills.commands}
     />

@@ -306,7 +306,7 @@ describe("DesktopSideBar composer conversation actions", () => {
     expect(registered().archiveConversation("missing")).toBe(false);
   });
 
-  it("resolves the worktree of a conversation in it or in a subdirectory of it", () => {
+  it("resolves the worktree a conversation runs in, but not from a subdirectory", () => {
     render(Harness, {
       props: {
         projects: [project("/repo"), worktree("/wt", "/repo", { nickname: "Feature" })],
@@ -319,7 +319,8 @@ describe("DesktopSideBar composer conversation actions", () => {
     });
     expect(registered().worktreeFor("root")).toBeNull();
     expect(registered().worktreeFor("top")).toEqual({ path: "/wt", name: "Feature" });
-    expect(registered().worktreeFor("sub")).toEqual({ path: "/wt", name: "Feature" });
+    // Worktree removal only cleans up conversations in the worktree itself.
+    expect(registered().worktreeFor("sub")).toBeNull();
   });
 
   it("opens a collapsed sidebar so the archive undo toast is visible", async () => {

@@ -1,5 +1,3 @@
-import type { ACPNavProject } from "./navTypes";
-
 // Conversation-level actions owned by the host's conversation list (archive,
 // delete worktree with confirmation) that the chat composer also exposes as
 // slash commands. The composer is not a descendant of the code that owns those
@@ -34,28 +32,4 @@ export function registerConversationActions(actions: ConversationActions): () =>
 
 export function getConversationActions(): ConversationActions | null {
   return registered;
-}
-
-/**
- * The worktree whose directory contains `cwd`. A conversation may run in a
- * subdirectory of a registered worktree, so match whole path components and
- * prefer the deepest match.
- */
-export function containingWorktree(
-  projects: ReadonlyArray<ACPNavProject>,
-  cwd: string,
-): ACPNavProject | null {
-  let match: ACPNavProject | null = null;
-  for (const project of projects) {
-    if (!project.isWorktree || !isWithin(cwd, project.path)) continue;
-    if (!match || project.path.length > match.path.length) match = project;
-  }
-  return match;
-}
-
-function isWithin(path: string, directory: string): boolean {
-  const base = directory.replace(/[\\/]+$/, "");
-  if (!base) return false;
-  if (path === base) return true;
-  return path.startsWith(base) && (path[base.length] === "/" || path[base.length] === "\\");
 }

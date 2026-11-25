@@ -36,9 +36,20 @@
     onCommand?: (command: AcpSlashCommand) => void;
     promptCommandItems?: Snippet;
     fallbackSkills?: AvailableCommand[];
+    /**
+     * The prompt holds nothing but the slash command being typed. The menu
+     * also opens after a space mid-sentence, where Enter must not archive the
+     * conversation or start deleting its worktree.
+     */
+    commandOnlyPrompt?: boolean;
   }
 
-  let { onCommand, promptCommandItems, fallbackSkills = [] }: Props = $props();
+  let {
+    onCommand,
+    promptCommandItems,
+    fallbackSkills = [],
+    commandOnlyPrompt = false,
+  }: Props = $props();
 
   const registry = getACPAgentRegistryRepo();
   const chatSession = getACPChatSessionScope();
@@ -109,12 +120,13 @@
   // can take them right now.
   const conversationActions = $derived(getConversationActions());
   const canArchive = $derived(
-    !!conversationActions &&
+    commandOnlyPrompt &&
+      !!conversationActions &&
       !!chatSession.conversationId &&
       conversationActions.canArchive(chatSession.conversationId),
   );
   const conversationWorktree = $derived(
-    conversationActions && chatSession.conversationId
+    commandOnlyPrompt && conversationActions && chatSession.conversationId
       ? conversationActions.worktreeFor(chatSession.conversationId)
       : null,
   );

@@ -12,6 +12,7 @@
     type ACPConversationSummary,
     type ACPConversationsState,
   } from "../navTypes";
+  import { registerConversationActions } from "../conversationActions.svelte";
   import { getACPConversationRepo } from "../features/ConversationRepository.svelte";
   import { getACPLocalHistoryRepo } from "../features/LocalHistoryRepository.svelte";
   import { conversationFitsWorkspaceFolders } from "../workspacePaths";
@@ -279,9 +280,9 @@
     await performArchiveSession(sessionId, agentServer, conversationId);
   }
 
-  function handleArchiveRowSession(session: ACPConversationSummary, event: MouseEvent) {
-    event.preventDefault();
-    event.stopPropagation();
+  function handleArchiveRowSession(session: ACPConversationSummary, event?: MouseEvent) {
+    event?.preventDefault();
+    event?.stopPropagation();
     setConversationExiting(session.id, true);
     sidebarToasts.addProgressToast(
       conversationArchiveToastId(session.id),
@@ -295,6 +296,28 @@
         void performArchiveSession(session.sessionId, getSessionAgentServer(session), session.id),
     );
   }
+
+  function archivableSession(conversationId: string): ACPConversationSummary | undefined {
+    if (exitingConversationIds.has(conversationId)) return undefined;
+    return navSessions.find((session) => session.id === conversationId);
+  }
+
+  // The chat composer's /archive runs the same undoable archive as the row
+  // button. The IDE has no worktree management, so /delete-worktree is never
+  // offered here.
+  onMount(() =>
+    registerConversationActions({
+      canArchive: (conversationId) => archivableSession(conversationId) !== undefined,
+      archiveConversation: (conversationId) => {
+        const session = archivableSession(conversationId);
+        if (!session) return false;
+        handleArchiveRowSession(session);
+        return true;
+      },
+      worktreeFor: () => null,
+      deleteWorktree: () => {},
+    }),
+  );
 
   function handleArchiveRowSessionNow(session: ACPConversationSummary, event: MouseEvent) {
     event.preventDefault();
