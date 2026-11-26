@@ -1,11 +1,18 @@
 import { camberAcpQuotaRead } from "@camber/helperapi";
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
+import { get } from "svelte/store";
 import { expect, it, vi } from "vitest";
+import { appState } from "../../hostAdapter";
 import { rpc } from "../../hostRpc";
+import { showDesktopQuotaPopover, updateDesktopQuotaPopover } from "./desktopQuotaPopover";
 import QuotaUsageButton from "./QuotaUsageButton.svelte";
 
 vi.mock("@camber/helperapi", () => ({ camberAcpQuotaRead: vi.fn() }));
 vi.mock("../../hostRpc", () => ({ rpc: { openExternalURL: vi.fn() } }));
+vi.mock("./desktopQuotaPopover", () => ({
+  showDesktopQuotaPopover: vi.fn(),
+  updateDesktopQuotaPopover: vi.fn().mockResolvedValue(undefined),
+}));
 
 it("opens the account usage popover on click and shows each bucket", async () => {
   vi.mocked(camberAcpQuotaRead).mockResolvedValue({
@@ -60,6 +67,74 @@ it("queues a background refresh when a turn ends during the cooldown", async () 
     expect(camberAcpQuotaRead).toHaveBeenCalledTimes(2);
   } finally {
     vi.useRealTimers();
+  }
+});
+
+it("opens natively before a quota read completes and updates the open popover", async () => {
+  const initialState = get(appState);
+  appState.set({
+    ...initialState,
+    environment: {
+      ...initialState.environment,
+      assistantHost: "desktop",
+      operatingSystem: "darwin",
+    },
+  });
+  try {
+    vi.mocked(rpc.openExternalURL).mockClear();
+    const usage = {
+      buckets: [{ label: "Weekly limit", usedPercent: 25 }],
+      availableResets: 4,
+    };
+    let completeRead!: (value: typeof usage) => void;
+    vi.mocked(camberAcpQuotaRead).mockReturnValueOnce(
+      new Promise((resolve) => {
+        completeRead = resolve;
+      }),
+    );
+    let closePopover!: (selected: boolean) => void;
+    vi.mocked(showDesktopQuotaPopover).mockReturnValueOnce(
+      new Promise((resolve) => {
+        closePopover = resolve;
+      }),
+    );
+    const view = render(QuotaUsageButton, {
+      agentServer: "codex-acp",
+      hasSession: false,
+      turnActive: false,
+    });
+    const button = screen.getByRole("button", { name: "Account usage" });
+    await fireEvent.click(button);
+
+    const [request] = vi.mocked(showDesktopQuotaPopover).mock.lastCall!;
+    expect(request.content).toEqual({
+      buckets: [],
+      message: "Loading usage…",
+      usageLinkLabel: "Manage usage",
+    });
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    expect(updateDesktopQuotaPopover).not.toHaveBeenCalled();
+
+    completeRead(usage);
+    await waitFor(() =>
+      expect(updateDesktopQuotaPopover).toHaveBeenCalledExactlyOnceWith(request.id, {
+        buckets: [{ label: "Weekly limit", usedPercent: 25, valueLabel: "25% used" }],
+        message: undefined,
+        usageLinkLabel: "4 resets available",
+      }),
+    );
+    expect(showDesktopQuotaPopover).toHaveBeenCalledTimes(1);
+    expect(rpc.openExternalURL).not.toHaveBeenCalled();
+
+    closePopover(true);
+    await waitFor(() => expect(button).toHaveAttribute("aria-expanded", "false"));
+    expect(rpc.openExternalURL).toHaveBeenCalledExactlyOnceWith(
+      "https://chatgpt.com/settings/usage?tab=overview",
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+    view.unmount();
+  } finally {
+    appState.set(initialState);
   }
 });
 

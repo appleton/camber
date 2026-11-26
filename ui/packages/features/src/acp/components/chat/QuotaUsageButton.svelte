@@ -2,10 +2,18 @@
   import { createPopover, melt } from "@melt-ui/svelte";
   import Icon from "@camber/components/icon";
   import { tick, untrack } from "svelte";
+  import { get } from "svelte/store";
   import { getAccountQuota } from "../../accountQuota";
   import { getOptionalACPConnectionPoolContext } from "../../connectionPoolContext";
+  import { appState } from "../../hostAdapter";
   import { rpc } from "../../hostRpc";
   import Gauge from "../ui/Gauge.svelte";
+  import { supportsNativeMenus } from "./desktopContextMenu";
+  import {
+    showDesktopQuotaPopover,
+    updateDesktopQuotaPopover,
+    type DesktopQuotaPopoverContent,
+  } from "./desktopQuotaPopover";
 
   interface Props {
     agentServer: string;
@@ -16,6 +24,8 @@
   let { agentServer, hasSession, turnActive }: Props = $props();
   const connectionPool = getOptionalACPConnectionPoolContext();
   const gutter = 8;
+  const buttonClass =
+    "text-psx-foreground-secondary hover:bg-psx-chrome-hover focus-visible:outline-psx-focus flex size-[22px] shrink-0 items-center justify-center rounded-full focus-visible:outline-2";
   const usagePages: Partial<Record<string, string>> = {
     "claude-acp": "https://claude.ai/settings/usage",
     "codex-acp": "https://chatgpt.com/settings/usage?tab=overview",
@@ -34,7 +44,17 @@
   let button = $state<HTMLButtonElement>();
   let popover = $state<HTMLDivElement>();
   const buckets = $derived($quota.buckets ?? []);
-  const availableResets = $derived($quota.availableResets ?? 0);
+  type QuotaSnapshot = typeof $quota;
+  const usageLinkLabel = $derived(formatUsageLinkLabel($quota.availableResets));
+  const usageMessage = $derived(formatUsageMessage($quota));
+  let nativeUnavailable = $state(false);
+  let nativeOpen = $state.raw<{
+    id: string;
+    source: typeof quota;
+    initial: QuotaSnapshot;
+    page: string | undefined;
+  }>();
+  const useNative = $derived(supportsNativeMenus($appState.environment) && !nativeUnavailable);
   let wasTurnActive = false;
   const highestUsage = $derived(Math.max(0, ...buckets.map((bucket) => bucket.usedPercent)));
   const resetTimeFormat = new Intl.DateTimeFormat(undefined, {
@@ -69,6 +89,75 @@
     });
   });
 
+  $effect(() => {
+    const pending = nativeOpen;
+    if (!pending || pending.source !== quota || $quota === pending.initial || $quota.loading)
+      return;
+    const content = nativeContent($quota, pending.page);
+    void updateDesktopQuotaPopover(pending.id, content).catch(() => {
+      // Presentation errors are handled by the open request.
+    });
+  });
+
+  async function openNativePopover(): Promise<void> {
+    const anchor = button;
+    if (nativeOpen || !anchor?.isConnected) return;
+    const source = quota;
+    const page = usagePage;
+    source.refresh();
+    const initial = get(source);
+    const id = crypto.randomUUID();
+    nativeOpen = { id, source, initial, page };
+    try {
+      const { x, y, width, height } = anchor.getBoundingClientRect();
+      const selected = await showDesktopQuotaPopover({
+        id,
+        anchor: { x, y, width, height },
+        content: nativeContent(initial, page),
+      });
+      if (selected && page) void rpc.openExternalURL(page);
+    } catch {
+      if (!anchor.isConnected) return;
+      nativeUnavailable = true;
+      await tick();
+      open.set(true);
+    } finally {
+      nativeOpen = undefined;
+    }
+  }
+
+  function nativeContent(
+    snapshot: QuotaSnapshot,
+    page: string | undefined,
+  ): DesktopQuotaPopoverContent {
+    return {
+      buckets: (snapshot.buckets ?? []).map((bucket) => {
+        const reset = formatReset(bucket.resetsAt);
+        return {
+          label: bucket.label,
+          usedPercent: bucket.usedPercent,
+          valueLabel: `${percentFormat.format(bucket.usedPercent / 100)} used`,
+          resetLabel: reset ? `Resets ${reset}` : undefined,
+        };
+      }),
+      message: formatUsageMessage(snapshot),
+      usageLinkLabel: page ? formatUsageLinkLabel(snapshot.availableResets) : undefined,
+    };
+  }
+
+  function formatUsageLinkLabel(availableResets = 0): string {
+    return availableResets > 0
+      ? `${availableResets.toLocaleString()} ${availableResets === 1 ? "reset" : "resets"} available`
+      : "Manage usage";
+  }
+
+  function formatUsageMessage(snapshot: QuotaSnapshot): string | undefined {
+    if (!snapshot.buckets?.length) {
+      return snapshot.loading ? "Loading usage…" : "Account usage is unavailable.";
+    }
+    return snapshot.unavailable ? "Couldn’t refresh usage." : undefined;
+  }
+
   function formatReset(reset: string | undefined): string | null {
     if (!reset) return null;
     const date = new Date(reset);
@@ -82,18 +171,35 @@
   }
 </script>
 
-<button
-  use:melt={$trigger}
-  bind:this={button}
-  type="button"
-  aria-label="Account usage"
-  title="Account usage"
-  data-testid="prompt-usage-button"
-  class="text-psx-foreground-secondary hover:bg-psx-chrome-hover focus-visible:outline-psx-focus flex size-[22px] shrink-0 items-center justify-center rounded-full focus-visible:outline-2"
-  class:bg-psx-chrome-hover={$open}
->
-  <Gauge size={12} usedTokens={highestUsage} totalTokens={100} />
-</button>
+{#if useNative}
+  <button
+    bind:this={button}
+    type="button"
+    aria-label="Account usage"
+    aria-haspopup="dialog"
+    aria-expanded={Boolean(nativeOpen)}
+    title="Account usage"
+    data-testid="prompt-usage-button"
+    class={buttonClass}
+    class:bg-psx-chrome-hover={Boolean(nativeOpen)}
+    onclick={openNativePopover}
+  >
+    <Gauge size={12} usedTokens={highestUsage} totalTokens={100} />
+  </button>
+{:else}
+  <button
+    use:melt={$trigger}
+    bind:this={button}
+    type="button"
+    aria-label="Account usage"
+    title="Account usage"
+    data-testid="prompt-usage-button"
+    class={buttonClass}
+    class:bg-psx-chrome-hover={$open}
+  >
+    <Gauge size={12} usedTokens={highestUsage} totalTokens={100} />
+  </button>
+{/if}
 
 {#if $open}
   <div
@@ -131,11 +237,11 @@
       </div>
     {:else}
       <p role="status" class="text-psx-foreground-secondary text-xs">
-        {$quota.loading ? "Loading usage…" : "Account usage is unavailable."}
+        {usageMessage}
       </p>
     {/each}
-    {#if $quota.unavailable && buckets.length > 0}
-      <p role="status" class="text-psx-foreground-secondary text-xs">Couldn’t refresh usage.</p>
+    {#if usageMessage && buckets.length > 0}
+      <p role="status" class="text-psx-foreground-secondary text-xs">{usageMessage}</p>
     {/if}
     {#if usagePage}
       <div class="-mx-2 -mb-2">
@@ -145,14 +251,7 @@
           class="text-psx-foreground-primary hover:bg-psx-menu-hover-background focus-visible:bg-psx-menu-hover-background outline-hidden flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left"
           onclick={openUsagePage}
         >
-          <span>
-            {#if availableResets > 0}
-              {availableResets.toLocaleString()}
-              {availableResets === 1 ? "reset" : "resets"} available
-            {:else}
-              Manage usage
-            {/if}
-          </span>
+          <span>{usageLinkLabel}</span>
           <Icon name="arrow-up-right" size={14} class="text-psx-icon shrink-0" aria-hidden="true" />
         </button>
       </div>

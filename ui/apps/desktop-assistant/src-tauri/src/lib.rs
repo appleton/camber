@@ -9,6 +9,7 @@ mod file_watcher;
 mod helper;
 mod native_dialog;
 mod native_menu;
+mod native_quota_popover;
 mod navigation;
 mod settings;
 mod shell_env;
@@ -169,6 +170,8 @@ pub fn run() {
             native_dialog::show_error_dialog,
             native_menu::file_icon_png,
             native_menu::show_native_menu,
+            native_quota_popover::show_native_quota_popover,
+            native_quota_popover::update_native_quota_popover,
             navigation::open_changelog,
             navigation::open_third_party_licenses,
             settings::get_desktop_settings,

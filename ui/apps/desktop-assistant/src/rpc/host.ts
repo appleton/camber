@@ -5,6 +5,8 @@ import {
   fileTreeSpecToGenericSpec,
   resolveNativeMenuTheme,
   type DesktopContextMenuRequest,
+  type DesktopQuotaPopoverContent,
+  type DesktopQuotaPopoverRequest,
   type DesktopSystemContextMenuRequest,
   type NativeConfirmationRequest,
   type NativeErrorRequest,
@@ -32,7 +34,7 @@ import {
   type JSONRPCNotifyBatchResult,
 } from "@camber/rpc/assistant";
 import { getVersion } from "@tauri-apps/api/app";
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { Menu, type MenuOptions } from "@tauri-apps/api/menu";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -330,6 +332,7 @@ export class DesktopHost {
   private fileIconDefinitionResolver?: (iconName: string) => Promise<string | undefined>;
   private readonly webviewReady: Promise<void>;
   private resolveReady!: () => void;
+  private quotaPopover?: { id: string; shown: Promise<void> };
 
   constructor(
     private readonly initialState: DesktopInitialState,
@@ -715,6 +718,35 @@ export class DesktopHost {
 
   async showDesktopContextMenu(request: DesktopContextMenuRequest): Promise<string | null> {
     return await showDesktopContextMenu(request);
+  }
+
+  async showDesktopQuotaPopover(request: DesktopQuotaPopoverRequest): Promise<boolean> {
+    if (this.quotaPopover) return false;
+    let markShown!: () => void;
+    const shown = new Promise<void>((resolve) => {
+      markShown = resolve;
+    });
+    const popover = { id: request.id, shown };
+    this.quotaPopover = popover;
+    try {
+      return await invoke("show_native_quota_popover", {
+        request,
+        onShown: new Channel<void>(markShown),
+      });
+    } finally {
+      this.quotaPopover = undefined;
+      markShown();
+    }
+  }
+
+  async updateDesktopQuotaPopover(id: string, content: DesktopQuotaPopoverContent): Promise<void> {
+    const popover = this.quotaPopover;
+    if (id !== popover?.id) return;
+    // A cached response can arrive before AppKit has processed the show request.
+    await popover.shown;
+    if (this.quotaPopover === popover) {
+      await invoke("update_native_quota_popover", { id, content });
+    }
   }
 
   async showDesktopSystemContextMenu(
