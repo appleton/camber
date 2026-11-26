@@ -9,5 +9,6 @@ import type { ACPQuotaBucket } from "./aCPQuotaBucket";
 export interface ACPReadQuotaOutput {
   /** A URL to the JSON Schema for this object. */
   readonly $schema?: string;
+  availableResets?: number;
   buckets: ACPQuotaBucket[];
 }

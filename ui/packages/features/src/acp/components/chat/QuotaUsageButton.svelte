@@ -1,9 +1,11 @@
 <script lang="ts">
   import { createPopover, melt } from "@melt-ui/svelte";
+  import Icon from "@camber/components/icon";
   import { camberAcpQuotaRead } from "@camber/helperapi";
   import type { ACPQuotaBucket } from "@camber/helperapi/schemas";
   import { tick, untrack } from "svelte";
   import { getOptionalACPConnectionPoolContext } from "../../connectionPoolContext";
+  import { rpc } from "../../hostRpc";
   import Gauge from "../ui/Gauge.svelte";
 
   interface Props {
@@ -15,17 +17,24 @@
   let { agentServer, hasSession, turnActive }: Props = $props();
   const connectionPool = getOptionalACPConnectionPoolContext();
   const gutter = 8;
+  const usagePages: Partial<Record<string, string>> = {
+    "claude-acp": "https://claude.ai/settings/usage",
+    "codex-acp": "https://chatgpt.com/settings/usage?tab=overview",
+  };
+  const usagePage = $derived(usagePages[agentServer]);
 
   const {
     elements: { trigger, content },
     states: { open },
   } = createPopover({
     positioning: { placement: "top-end", strategy: "fixed", gutter },
+    openFocus: () => popover ?? null,
   });
 
   let button = $state<HTMLButtonElement>();
   let popover = $state<HTMLDivElement>();
   let buckets = $state.raw<ACPQuotaBucket[]>([]);
+  let availableResets = $state(0);
   let loading = $state(false);
   let unavailable = $state(false);
   let lastRead = 0;
@@ -55,8 +64,10 @@
       await connectionPool?.connect(agentServer);
       const result = await camberAcpQuotaRead({ agentServer });
       buckets = result.buckets ?? [];
+      availableResets = result.availableResets ?? 0;
       lastRead = Date.now();
     } catch {
+      availableResets = 0;
       unavailable = true;
     } finally {
       loading = false;
@@ -73,6 +84,12 @@
     if (!reset) return null;
     const date = new Date(reset);
     return Number.isFinite(date.getTime()) ? resetTimeFormat.format(date) : null;
+  }
+
+  function openUsagePage(): void {
+    if (!usagePage) return;
+    open.set(false);
+    void rpc.openExternalURL(usagePage);
   }
 </script>
 
@@ -95,7 +112,7 @@
     bind:this={popover}
     role="dialog"
     aria-label="Account usage"
-    class="menu-surface prompt-menu-surface z-50 flex max-h-[50vh] w-64 max-w-[calc(100vw-1rem)] cursor-default flex-col gap-3 overflow-y-auto p-3"
+    class="menu-surface prompt-menu-surface outline-hidden z-50 flex max-h-[50vh] w-64 max-w-[calc(100vw-1rem)] cursor-default flex-col gap-3 overflow-y-auto p-3"
   >
     <h2 class="text-psx-foreground-primary text-xs font-medium">Account usage</h2>
     {#each buckets as bucket}
@@ -130,6 +147,26 @@
     {/each}
     {#if unavailable && buckets.length > 0}
       <p role="status" class="text-psx-foreground-secondary text-xs">Couldn’t refresh usage.</p>
+    {/if}
+    {#if usagePage}
+      <div class="-mx-2 -mb-2">
+        <div role="separator" class="menu-separator"></div>
+        <button
+          type="button"
+          class="text-psx-foreground-primary hover:bg-psx-menu-hover-background focus-visible:bg-psx-menu-hover-background outline-hidden flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left"
+          onclick={openUsagePage}
+        >
+          <span>
+            {#if availableResets > 0}
+              {availableResets.toLocaleString()}
+              {availableResets === 1 ? "reset" : "resets"} available
+            {:else}
+              Manage usage
+            {/if}
+          </span>
+          <Icon name="arrow-up-right" size={14} class="text-psx-icon shrink-0" aria-hidden="true" />
+        </button>
+      </div>
     {/if}
   </div>
 {/if}

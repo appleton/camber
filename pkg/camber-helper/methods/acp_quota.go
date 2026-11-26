@@ -11,5 +11,6 @@ type ACPQuotaBucket struct {
 }
 
 type ACPReadQuotaOutput struct {
-	Buckets []ACPQuotaBucket `json:"buckets"`
+	Buckets         []ACPQuotaBucket `json:"buckets"`
+	AvailableResets *int             `json:"availableResets,omitempty"`
 }

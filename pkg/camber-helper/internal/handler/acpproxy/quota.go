@@ -34,7 +34,7 @@ func (h *Handler) ReadQuota(ctx context.Context, params *methods.ACPAgentServerP
 		return output, nil
 	}
 
-	var read func(*quotaPipe) ([]methods.ACPQuotaBucket, error)
+	var read func(*quotaPipe, *methods.ACPReadQuotaOutput) error
 	switch serverName {
 	case "claude-acp":
 		args = append(args, "--cli", "--print", "--input-format", "stream-json", "--output-format", "stream-json",
@@ -73,11 +73,9 @@ func (h *Handler) ReadQuota(ctx context.Context, params *methods.ACPAgentServerP
 
 	scanner := bufio.NewScanner(stdout)
 	scanner.Buffer(make([]byte, 4096), 2*1024*1024)
-	buckets, err := read(&quotaPipe{writer: json.NewEncoder(stdin), reader: scanner})
-	if err != nil {
+	if err := read(&quotaPipe{writer: json.NewEncoder(stdin), reader: scanner}, output); err != nil {
 		return nil, fmt.Errorf("%s quota read: %w", serverName, err)
 	}
-	output.Buckets = append(output.Buckets, buckets...)
 	return output, nil
 }
 
@@ -123,13 +121,13 @@ func (p *quotaPipe) codexRequest(id int, method string, params, result any) erro
 	})
 }
 
-func readCodexQuota(p *quotaPipe) ([]methods.ACPQuotaBucket, error) {
+func readCodexQuota(p *quotaPipe, output *methods.ACPReadQuotaOutput) error {
 	var initialized json.RawMessage
 	if err := p.codexRequest(1, "initialize", map[string]any{"clientInfo": map[string]string{"name": "camber", "version": "0.1"}}, &initialized); err != nil {
-		return nil, err
+		return err
 	}
 	if err := p.writer.Encode(map[string]string{"jsonrpc": "2.0", "method": "initialized"}); err != nil {
-		return nil, err
+		return err
 	}
 	var account struct {
 		Account struct {
@@ -137,27 +135,30 @@ func readCodexQuota(p *quotaPipe) ([]methods.ACPQuotaBucket, error) {
 		} `json:"account"`
 	}
 	if err := p.codexRequest(2, "account/read", map[string]bool{"refreshToken": false}, &account); err != nil || account.Account.Type != "chatgpt" {
-		return nil, err
+		return err
 	}
 	var limits struct {
-		Default codexQuotaLimit            `json:"rateLimits"`
-		ByID    map[string]codexQuotaLimit `json:"rateLimitsByLimitId"`
+		Default      codexQuotaLimit            `json:"rateLimits"`
+		ByID         map[string]codexQuotaLimit `json:"rateLimitsByLimitId"`
+		ResetCredits struct {
+			AvailableCount *int `json:"availableCount"`
+		} `json:"rateLimitResetCredits"`
 	}
 	if err := p.codexRequest(3, "account/rateLimits/read", nil, &limits); err != nil {
-		return nil, err
+		return err
 	}
+	output.AvailableResets = limits.ResetCredits.AvailableCount
 	if len(limits.ByID) == 0 {
 		limits.ByID = map[string]codexQuotaLimit{"codex": limits.Default}
 	}
-	var buckets []methods.ACPQuotaBucket
 	if standard, ok := limits.ByID["codex"]; ok {
-		buckets = appendCodexWindows(buckets, "codex", standard)
+		output.Buckets = appendCodexWindows(output.Buckets, "codex", standard)
 		delete(limits.ByID, "codex")
 	}
 	for _, id := range slices.Sorted(maps.Keys(limits.ByID)) {
-		buckets = appendCodexWindows(buckets, id, limits.ByID[id])
+		output.Buckets = appendCodexWindows(output.Buckets, id, limits.ByID[id])
 	}
-	return buckets, nil
+	return nil
 }
 
 type codexQuotaLimit struct {
@@ -226,10 +227,10 @@ func (p *quotaPipe) claudeRequest(id string, request, result any) error {
 	})
 }
 
-func readClaudeQuota(p *quotaPipe) ([]methods.ACPQuotaBucket, error) {
+func readClaudeQuota(p *quotaPipe, output *methods.ACPReadQuotaOutput) error {
 	var initialized json.RawMessage
 	if err := p.claudeRequest("init", map[string]string{"subtype": "initialize"}, &initialized); err != nil {
-		return nil, err
+		return err
 	}
 	var usage struct {
 		Available bool `json:"rate_limits_available"`
@@ -239,13 +240,14 @@ func readClaudeQuota(p *quotaPipe) ([]methods.ACPQuotaBucket, error) {
 			Opus     claudeQuotaWindow   `json:"seven_day_opus"`
 			Sonnet   claudeQuotaWindow   `json:"seven_day_sonnet"`
 			Model    []claudeQuotaWindow `json:"model_scoped"`
+			Resets   json.RawMessage     `json:"cedar_ember"`
 		} `json:"rate_limits"`
 	}
 	// This control request backs the Claude SDK's experimental /usage API.
 	if err := p.claudeRequest("usage", map[string]any{"subtype": "get_usage", "skip_behaviors": true}, &usage); err != nil || !usage.Available {
-		return nil, err
+		return err
 	}
-	var buckets []methods.ACPQuotaBucket
+	buckets := output.Buckets
 	buckets = appendClaudeWindow(buckets, "5-hour limit", usage.Limits.FiveHour)
 	buckets = appendClaudeWindow(buckets, "Weekly · all models", usage.Limits.Weekly)
 	if len(usage.Limits.Model) == 0 {
@@ -257,7 +259,39 @@ func readClaudeQuota(p *quotaPipe) ([]methods.ACPQuotaBucket, error) {
 			buckets = appendClaudeWindow(buckets, "Weekly · "+label, model)
 		}
 	}
-	return buckets, nil
+	output.Buckets = buckets
+	output.AvailableResets = countClaudeResets(usage.Limits.Resets, time.Now())
+	return nil
+}
+
+// Claude reports promotional reset grants separately from the scheduled
+// refill time of each window. Their schema is experimental, so decoding
+// a missing or malformed inventory must leave the usage windows intact.
+func countClaudeResets(raw json.RawMessage, now time.Time) *int {
+	var inventory struct {
+		Eligible bool              `json:"eligible"`
+		Grants   []json.RawMessage `json:"grants"`
+	}
+	if json.Unmarshal(raw, &inventory) != nil || !inventory.Eligible || inventory.Grants == nil {
+		return nil
+	}
+
+	count := 0
+	for _, rawGrant := range inventory.Grants {
+		var grant struct {
+			Remaining int        `json:"resets_left"`
+			Paused    bool       `json:"paused"`
+			StartsAt  *time.Time `json:"starts_at"`
+			EndsAt    *time.Time `json:"ends_at"`
+		}
+		if json.Unmarshal(rawGrant, &grant) != nil || grant.Remaining <= 0 || grant.Paused ||
+			(grant.StartsAt != nil && now.Before(*grant.StartsAt)) ||
+			(grant.EndsAt != nil && !now.Before(*grant.EndsAt)) {
+			continue
+		}
+		count += grant.Remaining
+	}
+	return &count
 }
 
 type claudeQuotaWindow struct {

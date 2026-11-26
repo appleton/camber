@@ -1,9 +1,11 @@
 import { camberAcpQuotaRead } from "@camber/helperapi";
-import { fireEvent, render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { expect, it, vi } from "vitest";
+import { rpc } from "../../hostRpc";
 import QuotaUsageButton from "./QuotaUsageButton.svelte";
 
 vi.mock("@camber/helperapi", () => ({ camberAcpQuotaRead: vi.fn() }));
+vi.mock("../../hostRpc", () => ({ rpc: { openExternalURL: vi.fn() } }));
 
 it("opens the account usage popover on click and shows each bucket", async () => {
   vi.mocked(camberAcpQuotaRead).mockResolvedValue({
@@ -31,8 +33,38 @@ it("opens the account usage popover on click and shows each bucket", async () =>
   );
   expect(camberAcpQuotaRead).toHaveBeenCalledWith({ agentServer: "claude-acp" });
 
-  await fireEvent.keyDown(screen.getByRole("dialog", { name: "Account usage" }), { key: "Escape" });
+  const dialog = screen.getByRole("dialog", { name: "Account usage" });
+  await waitFor(() => expect(dialog).toHaveFocus());
+  await fireEvent.keyDown(dialog, { key: "Escape" });
 
   expect(screen.queryByRole("progressbar")).toBeNull();
   expect(button).toHaveAttribute("aria-expanded", "false");
+  await waitFor(() => expect(button).toHaveFocus());
 });
+
+it.each([
+  ["codex-acp", "https://chatgpt.com/settings/usage?tab=overview", 4, "4 resets available"],
+  ["claude-acp", "https://claude.ai/settings/usage", 1, "1 reset available"],
+  ["codex-acp", "https://chatgpt.com/settings/usage?tab=overview", 0, "Manage usage"],
+  ["codex-acp", "https://chatgpt.com/settings/usage?tab=overview", undefined, "Manage usage"],
+  ["claude-acp", "https://claude.ai/settings/usage", undefined, "Manage usage"],
+])(
+  "opens %s usage settings (%s) for reset count %s via %s",
+  async (agentServer, url, availableResets, name) => {
+    vi.mocked(rpc.openExternalURL).mockClear();
+    vi.mocked(camberAcpQuotaRead).mockResolvedValue({
+      buckets: [{ label: "5-hour limit", usedPercent: 10 }],
+      availableResets,
+    });
+    render(QuotaUsageButton, { agentServer, hasSession: false, turnActive: false });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Account usage" }));
+    await screen.findByRole("progressbar", { name: "5-hour limit" });
+    const usageRow = screen.getByRole("button", { name });
+    expect(screen.getByRole("separator")).toBeInTheDocument();
+
+    await fireEvent.click(usageRow);
+    expect(rpc.openExternalURL).toHaveBeenCalledExactlyOnceWith(url);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  },
+);
