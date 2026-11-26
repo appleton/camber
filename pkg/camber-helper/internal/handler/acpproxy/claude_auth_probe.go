@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"os/exec"
+	"slices"
 	"time"
 
 	acpsdk "github.com/coder/acp-go-sdk"
@@ -44,7 +45,7 @@ func (h *Handler) maybeProbeClaudeAuthStatus(ctx context.Context, proc *process,
 	if !isConfigProbeSession(meta) || !proc.needsClaudeAuthStatusCheck() {
 		return nil
 	}
-	binary, args, env, dir, snapshotCmd, ok := proc.commandSnapshot()
+	binary, args, env, dir, snapshotCmd, ok := proc.commandSnapshot(claudeAgentPackageName)
 	if !ok {
 		return nil
 	}
@@ -163,14 +164,16 @@ func (p *process) markClaudeAuthStatusVerified(snapshotCmd *exec.Cmd) {
 	p.claudeAuthVerified = true
 }
 
-// commandSnapshot copies the running subprocess's spawn parameters so the
-// auth-status check runs the exact same binary with the same environment. The
-// returned cmd is the identity of the subprocess the snapshot belongs to.
-func (p *process) commandSnapshot() (binary string, args []string, env []string, dir string, cmd *exec.Cmd, ok bool) {
+// commandSnapshot verifies the adapter's reported identity and copies its
+// launch parameters under the same lock. The returned cmd identifies the
+// subprocess the snapshot belongs to.
+func (p *process) commandSnapshot(agentNames ...string) (binary string, args []string, env []string, dir string, cmd *exec.Cmd, ok bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	if p.cmd == nil || len(p.cmd.Args) == 0 {
+	if !p.isRunningLocked() || p.cmd == nil || len(p.cmd.Args) == 0 ||
+		p.initResp == nil || p.initResp.AgentInfo == nil ||
+		!slices.Contains(agentNames, p.initResp.AgentInfo.Name) {
 		return "", nil, nil, "", nil, false
 	}
 	return p.cmd.Args[0], append([]string{}, p.cmd.Args[1:]...), append([]string{}, p.cmd.Env...), p.cmd.Dir, p.cmd, true

@@ -133,7 +133,7 @@
   {...rest}
   class={[
     className,
-    "menu isolate flex max-h-[min(var(--floating-available-height),50svh)] w-full flex-col overflow-hidden shadow-lg select-none",
+    "menu prompt-menu-surface isolate flex max-h-[min(var(--floating-available-height),50svh)] w-full flex-col overflow-hidden shadow-lg select-none",
   ]}
   tabindex={-1}
   bind:this={$contentEl}
@@ -149,7 +149,8 @@
 <style lang="postcss">
   @reference "#tailwind.css";
   :global(body:not(.web-app)) div {
-    @apply rounded-[10px] bg-psx-panel outline-1 outline-black/5 dark:outline-white/30;
+    @apply rounded-[10px] outline-1 outline-black/5 dark:outline-white/30;
+    background-color: var(--psx-prompt-menu-background, var(--psx-panel));
   }
 
   :global(body.web-app) .menu {

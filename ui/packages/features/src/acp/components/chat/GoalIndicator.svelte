@@ -291,6 +291,7 @@
       wide
       {trigger}
       triggerLabel={`Goal, ${statusLabel}: ${goal.objective}`}
+      menuClass="prompt-menu-surface"
     >
       {@render details()}
     </Dropdown>

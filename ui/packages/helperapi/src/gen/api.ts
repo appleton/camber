@@ -49,6 +49,7 @@ import type {
   ACPNavUpsertConfigCacheParams,
   ACPNavUpsertConversationParams,
   ACPNavUpsertProjectParams,
+  ACPReadQuotaOutput,
   ACPRenameSessionParams,
   ACPRestartServerOutput,
   AppAgentServersOutput,
@@ -136,6 +137,14 @@ export const camberAcpPoolsideRenameSession = async (
     toJsonrpcMethod("/camber/acp/_poolside/rename_session"),
     aCPRenameSessionParams,
   );
+};
+/**
+ * reads the active agent account's usage quota windows
+ */
+export const camberAcpQuotaRead = async (
+  aCPAgentServerParams: NonReadonly<ACPAgentServerParams>,
+): Promise<ACPReadQuotaOutput> => {
+  return await runtime.jsonrpcCall(toJsonrpcMethod("/camber/acp/quota/read"), aCPAgentServerParams);
 };
 /**
  * restarts the ACP agent subprocess

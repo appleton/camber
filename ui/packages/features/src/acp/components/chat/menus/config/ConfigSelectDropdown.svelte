@@ -375,6 +375,7 @@
     {trigger}
     {triggerClass}
     triggerLabel={triggerLabel ?? `${option.name}: ${label}`}
+    menuClass="prompt-menu-surface"
     searchable={optionCount > 5}
     searchPlaceholder="Search {option.name} options..."
     wide={describedValues}

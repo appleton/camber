@@ -25,6 +25,7 @@
     trigger?: Snippet<[{ open: boolean }]>;
     triggerClass?: string;
     triggerLabel?: string;
+    menuClass?: string;
   }
 
   let {
@@ -41,6 +42,7 @@
     trigger,
     triggerClass,
     triggerLabel,
+    menuClass,
   }: Props = $props();
 
   const menu = createDropdownMenu({
@@ -184,6 +186,7 @@
       "z-50 max-h-[300px] max-w-[calc(100vw-2rem)] overflow-y-auto menu-surface p-1",
       wide ? "w-[450px]" : "w-[300px]",
       disableFocusFirstItem && "focus:outline-none",
+      menuClass,
     ]}
   >
     {#if header || searchable}

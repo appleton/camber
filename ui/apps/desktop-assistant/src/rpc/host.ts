@@ -5,6 +5,8 @@ import {
   fileTreeSpecToGenericSpec,
   resolveNativeMenuTheme,
   type DesktopContextMenuRequest,
+  type DesktopQuotaPopoverContent,
+  type DesktopQuotaPopoverRequest,
   type DesktopSystemContextMenuRequest,
   type NativeConfirmationRequest,
   type NativeErrorRequest,
@@ -32,7 +34,7 @@ import {
   type JSONRPCNotifyBatchResult,
 } from "@camber/rpc/assistant";
 import { getVersion } from "@tauri-apps/api/app";
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { Menu, type MenuOptions } from "@tauri-apps/api/menu";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -330,6 +332,7 @@ export class DesktopHost {
   private fileIconDefinitionResolver?: (iconName: string) => Promise<string | undefined>;
   private readonly webviewReady: Promise<void>;
   private resolveReady!: () => void;
+  #quotaPopoverCommands = Promise.resolve();
 
   constructor(
     private readonly initialState: DesktopInitialState,
@@ -715,6 +718,35 @@ export class DesktopHost {
 
   async showDesktopContextMenu(request: DesktopContextMenuRequest): Promise<string | null> {
     return await showDesktopContextMenu(request);
+  }
+
+  async showDesktopQuotaPopover(request: DesktopQuotaPopoverRequest): Promise<boolean> {
+    let onClosed!: Channel<boolean>;
+    const selected = new Promise<boolean>((resolve) => {
+      onClosed = new Channel(resolve);
+    });
+    const { hoverBackground, hoverBorder } = resolveNativeMenuTheme();
+    await this.#invokeQuotaPopover("show_native_quota_popover", {
+      request: { ...request, hoverBackground, hoverBorder },
+      onClosed,
+    });
+    return await selected;
+  }
+
+  async updateDesktopQuotaPopover(id: string, content: DesktopQuotaPopoverContent): Promise<void> {
+    await this.#invokeQuotaPopover("update_native_quota_popover", { id, content });
+  }
+
+  async closeDesktopQuotaPopover(id: string): Promise<void> {
+    await this.#invokeQuotaPopover("close_native_quota_popover", { id });
+  }
+
+  #invokeQuotaPopover(command: string, args: Record<string, unknown>): Promise<void> {
+    // Keep presentation, content updates, and teardown in order. A show's
+    // command resolves after presentation, while its channel reports dismissal.
+    const completion = this.#quotaPopoverCommands.then(() => invoke<void>(command, args));
+    this.#quotaPopoverCommands = completion.catch(() => {});
+    return completion;
   }
 
   async showDesktopSystemContextMenu(

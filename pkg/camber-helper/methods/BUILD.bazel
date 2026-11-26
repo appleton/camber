@@ -9,6 +9,7 @@ go_library(
         "acp_codex.go",
         "acp_nav.go",
         "acp_nav_agent_servers.go",
+        "acp_quota.go",
         "acp_session.go",
         "app.go",
         "client_origin.go",

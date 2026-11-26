@@ -71,6 +71,8 @@ export * from "./aCPNavState";
 export * from "./aCPNavUpsertConfigCacheParams";
 export * from "./aCPNavUpsertConversationParams";
 export * from "./aCPNavUpsertProjectParams";
+export * from "./aCPQuotaBucket";
+export * from "./aCPReadQuotaOutput";
 export * from "./aCPRenameSessionParams";
 export * from "./aCPRestartServerOutput";
 export * from "./aCPTurnEndedNotification";

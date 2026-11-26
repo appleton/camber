@@ -17,6 +17,7 @@
     trigger?: Snippet<[{ open: boolean }]>;
     triggerClass?: string;
     triggerLabel?: string;
+    menuClass?: string;
   }
 
   let {
@@ -33,6 +34,7 @@
     trigger,
     triggerClass,
     triggerLabel,
+    menuClass,
   }: Props = $props();
 </script>
 
@@ -49,5 +51,6 @@
   {trigger}
   {triggerClass}
   {triggerLabel}
+  {menuClass}
   {children}
 />

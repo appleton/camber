@@ -65,6 +65,10 @@ export type {
   DesktopSplitNavigationLocation,
   DesktopSplitNavigationRequest,
 } from "./components/chat/desktopNavigation";
+export type {
+  DesktopQuotaPopoverContent,
+  DesktopQuotaPopoverRequest,
+} from "./components/chat/desktopQuotaPopover";
 export {
   desktopRenderedImageTarget,
   imageFromContextMenuEvent,

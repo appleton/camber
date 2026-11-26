@@ -96,9 +96,23 @@ func TestMaybeProbeClaudeAuthStatusSkipsNonProbeSessions(t *testing.T) {
 // the scripted output.
 func claudeProcessWithStatusOutput(script string) *process {
 	return &process{
+		state:    processState{kind: processStateRunning},
 		initResp: claudeInitResp(terminalAuthMethods()),
 		cmd:      exec.Command("/bin/sh", "-c", script),
 	}
+}
+
+func TestCommandSnapshotRequiresMatchingAdapter(t *testing.T) {
+	p := claudeProcessWithStatusOutput("")
+	_, _, _, _, _, ok := p.commandSnapshot(claudeAgentPackageName)
+	assert.True(t, ok)
+
+	_, _, _, _, _, ok = p.commandSnapshot("@agentclientprotocol/codex-acp")
+	assert.False(t, ok)
+
+	p.initResp.AgentInfo = nil
+	_, _, _, _, _, ok = p.commandSnapshot(claudeAgentPackageName)
+	assert.False(t, ok)
 }
 
 func probeMeta() map[string]any {
