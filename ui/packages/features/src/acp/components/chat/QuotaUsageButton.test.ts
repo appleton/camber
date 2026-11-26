@@ -4,12 +4,17 @@ import { get } from "svelte/store";
 import { expect, it, vi } from "vitest";
 import { appState } from "../../hostAdapter";
 import { rpc } from "../../hostRpc";
-import { showDesktopQuotaPopover, updateDesktopQuotaPopover } from "./desktopQuotaPopover";
+import {
+  closeDesktopQuotaPopover,
+  showDesktopQuotaPopover,
+  updateDesktopQuotaPopover,
+} from "./desktopQuotaPopover";
 import QuotaUsageButton from "./QuotaUsageButton.svelte";
 
 vi.mock("@camber/helperapi", () => ({ camberAcpQuotaRead: vi.fn() }));
 vi.mock("../../hostRpc", () => ({ rpc: { openExternalURL: vi.fn() } }));
 vi.mock("./desktopQuotaPopover", () => ({
+  closeDesktopQuotaPopover: vi.fn().mockResolvedValue(undefined),
   showDesktopQuotaPopover: vi.fn(),
   updateDesktopQuotaPopover: vi.fn().mockResolvedValue(undefined),
 }));
@@ -70,7 +75,7 @@ it("queues a background refresh when a turn ends during the cooldown", async () 
   }
 });
 
-it("opens natively before a quota read completes and updates the open popover", async () => {
+function enableNativePopover() {
   const initialState = get(appState);
   appState.set({
     ...initialState,
@@ -80,6 +85,11 @@ it("opens natively before a quota read completes and updates the open popover", 
       operatingSystem: "darwin",
     },
   });
+  return () => appState.set(initialState);
+}
+
+it("opens natively before a quota read completes and updates the open popover", async () => {
+  const restoreEnvironment = enableNativePopover();
   try {
     vi.mocked(rpc.openExternalURL).mockClear();
     const usage = {
@@ -134,7 +144,61 @@ it("opens natively before a quota read completes and updates the open popover", 
     expect(screen.queryByRole("dialog")).toBeNull();
     view.unmount();
   } finally {
-    appState.set(initialState);
+    restoreEnvironment();
+  }
+});
+
+it("retries native presentation after dismissing an HTML fallback", async () => {
+  const restoreEnvironment = enableNativePopover();
+  try {
+    vi.mocked(camberAcpQuotaRead).mockResolvedValue({ buckets: [] });
+    const show = vi.mocked(showDesktopQuotaPopover).mockClear();
+    show.mockRejectedValueOnce(new Error("The anchor moved")).mockResolvedValueOnce(false);
+    render(QuotaUsageButton, { agentServer: "codex-acp", hasSession: false, turnActive: false });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Account usage" }));
+    const dialog = await screen.findByRole("dialog", { name: "Account usage" });
+    await waitFor(() => expect(dialog).toHaveFocus());
+    await fireEvent.keyDown(dialog, { key: "Escape" });
+
+    const button = screen.getByRole("button", { name: "Account usage" });
+    await waitFor(() => expect(button).toHaveFocus());
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await fireEvent.click(button);
+    expect(show).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  } finally {
+    restoreEnvironment();
+  }
+});
+
+it("closes a pending native popover when its usage button is removed", async () => {
+  const restoreEnvironment = enableNativePopover();
+  try {
+    vi.mocked(camberAcpQuotaRead).mockResolvedValue({ buckets: [] });
+    vi.mocked(rpc.openExternalURL).mockClear();
+    const close = vi.mocked(closeDesktopQuotaPopover).mockClear();
+    let finish!: (selected: boolean) => void;
+    const show = vi.mocked(showDesktopQuotaPopover).mockReturnValueOnce(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const view = render(QuotaUsageButton, {
+      agentServer: "codex-acp",
+      hasSession: false,
+      turnActive: false,
+    });
+    await fireEvent.click(screen.getByRole("button", { name: "Account usage" }));
+    const [request] = show.mock.lastCall!;
+    view.unmount();
+    expect(close).toHaveBeenCalledExactlyOnceWith(request.id);
+
+    finish(true);
+    await Promise.resolve();
+    expect(rpc.openExternalURL).not.toHaveBeenCalled();
+  } finally {
+    restoreEnvironment();
   }
 });
 

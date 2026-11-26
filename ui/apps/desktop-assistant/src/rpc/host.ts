@@ -332,7 +332,7 @@ export class DesktopHost {
   private fileIconDefinitionResolver?: (iconName: string) => Promise<string | undefined>;
   private readonly webviewReady: Promise<void>;
   private resolveReady!: () => void;
-  private quotaPopover?: { id: string; shown: Promise<void> };
+  #quotaPopoverCommands = Promise.resolve();
 
   constructor(
     private readonly initialState: DesktopInitialState,
@@ -721,33 +721,32 @@ export class DesktopHost {
   }
 
   async showDesktopQuotaPopover(request: DesktopQuotaPopoverRequest): Promise<boolean> {
-    if (this.quotaPopover) return false;
-    let markShown!: () => void;
-    const shown = new Promise<void>((resolve) => {
-      markShown = resolve;
+    let onClosed!: Channel<boolean>;
+    const selected = new Promise<boolean>((resolve) => {
+      onClosed = new Channel(resolve);
     });
-    const popover = { id: request.id, shown };
-    this.quotaPopover = popover;
-    try {
-      const { hoverBackground, hoverBorder } = resolveNativeMenuTheme();
-      return await invoke("show_native_quota_popover", {
-        request: { ...request, hoverBackground, hoverBorder },
-        onShown: new Channel<void>(markShown),
-      });
-    } finally {
-      this.quotaPopover = undefined;
-      markShown();
-    }
+    const { hoverBackground, hoverBorder } = resolveNativeMenuTheme();
+    await this.#invokeQuotaPopover("show_native_quota_popover", {
+      request: { ...request, hoverBackground, hoverBorder },
+      onClosed,
+    });
+    return await selected;
   }
 
   async updateDesktopQuotaPopover(id: string, content: DesktopQuotaPopoverContent): Promise<void> {
-    const popover = this.quotaPopover;
-    if (id !== popover?.id) return;
-    // A cached response can arrive before AppKit has processed the show request.
-    await popover.shown;
-    if (this.quotaPopover === popover) {
-      await invoke("update_native_quota_popover", { id, content });
-    }
+    await this.#invokeQuotaPopover("update_native_quota_popover", { id, content });
+  }
+
+  async closeDesktopQuotaPopover(id: string): Promise<void> {
+    await this.#invokeQuotaPopover("close_native_quota_popover", { id });
+  }
+
+  #invokeQuotaPopover(command: string, args: Record<string, unknown>): Promise<void> {
+    // Keep presentation, content updates, and teardown in order. A show's
+    // command resolves after presentation, while its channel reports dismissal.
+    const completion = this.#quotaPopoverCommands.then(() => invoke<void>(command, args));
+    this.#quotaPopoverCommands = completion.catch(() => {});
+    return completion;
   }
 
   async showDesktopSystemContextMenu(

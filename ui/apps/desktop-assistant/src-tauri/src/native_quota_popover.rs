@@ -41,20 +41,23 @@ struct QuotaBucket {
     reset_label: Option<String>,
 }
 
-/// Returns true when the usage link was selected, false on dismissal.
+/// Acknowledges presentation. on_closed reports whether the usage link was selected.
 #[tauri::command]
 pub async fn show_native_quota_popover(
     window: WebviewWindow,
     request: QuotaPopoverRequest,
-    on_shown: Channel<()>,
-) -> Result<bool, String> {
+    on_closed: Channel<bool>,
+) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
-        macos::show(window, request, on_shown).await
+        macos::on_main_thread(window, move |window| {
+            macos::present(window, request, on_closed)
+        })
+        .await
     }
     #[cfg(not(target_os = "macos"))]
     {
-        let _ = (window, request, on_shown);
+        let _ = (window, request, on_closed);
         Err("Native quota popovers require macOS".into())
     }
 }
@@ -67,11 +70,32 @@ pub async fn update_native_quota_popover(
 ) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
-        macos::update(window, id, content)
+        macos::on_main_thread(window, move |window| {
+            macos::update(window.label(), &id, content);
+            Ok(())
+        })
+        .await
     }
     #[cfg(not(target_os = "macos"))]
     {
         let _ = (window, id, content);
+        Err("Native quota popovers require macOS".into())
+    }
+}
+
+#[tauri::command]
+pub async fn close_native_quota_popover(window: WebviewWindow, id: String) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        macos::on_main_thread(window, move |window| {
+            macos::close(window.label(), &id);
+            Ok(())
+        })
+        .await
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (window, id);
         Err("Native quota popovers require macOS".into())
     }
 }
@@ -94,7 +118,9 @@ mod macos {
         NSScrollView, NSTextAlignment, NSTextField, NSTrackingArea, NSTrackingAreaOptions, NSView,
         NSViewController,
     };
-    use objc2_foundation::{NSNotification, NSPoint, NSRect, NSRectEdge, NSSize, NSString};
+    use objc2_foundation::{
+        NSMouseInRect, NSNotification, NSPoint, NSRect, NSRectEdge, NSSize, NSString,
+    };
     use std::cell::{Cell, RefCell};
     use tauri::ipc::Channel;
     use tauri::WebviewWindow;
@@ -117,7 +143,7 @@ mod macos {
         popover: Retained<NSPopover>,
         link_highlight: LinkHighlight,
         selected: Cell<bool>,
-        done: RefCell<Option<oneshot::Sender<Result<bool, String>>>>,
+        on_closed: RefCell<Option<Channel<bool>>>,
     }
 
     define_class!(
@@ -131,7 +157,8 @@ mod macos {
             #[unsafe(method(openUsagePage:))]
             fn open_usage_page(&self, _sender: &NSButton) {
                 self.ivars().selected.set(true);
-                self.ivars().popover.close();
+                let popover = self.ivars().popover.clone();
+                popover.close();
             }
         }
 
@@ -151,13 +178,44 @@ mod macos {
 
             #[unsafe(method(popoverDidClose:))]
             fn popover_did_close(&self, _notification: &NSNotification) {
-                if let Some(done) = self.ivars().done.take() {
-                    let _ = done.send(Ok(self.ivars().selected.get()));
-                }
-                ACTIVE.with(|active| active.take());
+                let _retained = self.take_active();
+                self.report_closed();
             }
         }
     );
+
+    impl QuotaPopover {
+        fn take_active(&self) -> Option<Retained<Self>> {
+            ACTIVE.with(|active| {
+                let mut active = active.borrow_mut();
+                if active
+                    .as_deref()
+                    .is_some_and(|current| std::ptr::eq(current, self))
+                {
+                    active.take()
+                } else {
+                    None
+                }
+            })
+        }
+
+        fn report_closed(&self) {
+            let state = self.ivars();
+            if let Some(on_closed) = state.on_closed.take() {
+                let _ = on_closed.send(state.selected.get());
+            }
+        }
+
+        fn close_immediately(&self) {
+            let popover = &self.ivars().popover;
+            // A replacement or teardown must finish even if AppKit already
+            // started dismissing the popover and its delegate callback is pending.
+            popover.setDelegate(None);
+            popover.setAnimates(false);
+            popover.close();
+            self.report_closed();
+        }
+    }
 
     #[derive(Clone)]
     struct LinkHighlight {
@@ -180,14 +238,12 @@ mod macos {
         impl UsageLink {
             #[unsafe(method(mouseEntered:))]
             fn mouse_entered(&self, _event: &NSEvent) {
-                self.ivars().hovered.set(true);
-                NSView::setNeedsDisplay(self, true);
+                self.set_hovered(true);
             }
 
             #[unsafe(method(mouseExited:))]
             fn mouse_exited(&self, _event: &NSEvent) {
-                self.ivars().hovered.set(false);
-                NSView::setNeedsDisplay(self, true);
+                self.set_hovered(false);
             }
 
             #[unsafe(method(drawRect:))]
@@ -222,7 +278,7 @@ mod macos {
             title: &str,
             delegate: &QuotaPopover,
             mtm: MainThreadMarker,
-        ) -> Retained<NSButton> {
+        ) -> Retained<Self> {
             let button = Self::alloc(mtm).set_ivars(UsageLinkState {
                 highlight: delegate.ivars().link_highlight.clone(),
                 hovered: Cell::new(false),
@@ -252,107 +308,125 @@ mod macos {
                 )
             };
             button.addTrackingArea(&area);
-            Retained::into_super(button)
+            button
+        }
+
+        fn set_hovered(&self, hovered: bool) {
+            if self.ivars().hovered.replace(hovered) != hovered {
+                NSView::setNeedsDisplay(self, true);
+            }
+        }
+
+        fn refresh_hover(&self) {
+            // AppKit won't send a mouse-entered event if the button was rebuilt
+            // while the pointer was already over its tracking area.
+            let hovered = self.window().is_some_and(|window| {
+                let point =
+                    self.convertPoint_fromView(window.mouseLocationOutsideOfEventStream(), None);
+                NSMouseInRect(point, self.visibleRect(), self.isFlipped())
+            });
+            self.set_hovered(hovered);
         }
     }
 
-    pub async fn show(
+    pub async fn on_main_thread(
         window: WebviewWindow,
-        request: QuotaPopoverRequest,
-        on_shown: Channel<()>,
-    ) -> Result<bool, String> {
+        task: impl FnOnce(&WebviewWindow) -> Result<(), String> + Send + 'static,
+    ) -> Result<(), String> {
         let (tx, rx) = oneshot::channel();
-        let anchor_window = window.clone();
+        let task_window = window.clone();
         window
             .run_on_main_thread(move || {
-                if let Err(error) = present(&anchor_window, request, tx, on_shown) {
-                    let (tx, reason) = error;
-                    let _ = tx.send(Err(reason));
-                }
+                let _ = tx.send(task(&task_window));
             })
             .map_err(|err| err.to_string())?;
         rx.await.map_err(|err| err.to_string())?
     }
 
-    pub fn update(
-        window: WebviewWindow,
-        id: String,
-        content: QuotaPopoverContent,
-    ) -> Result<(), String> {
-        let window_label = window.label().to_owned();
-        window
-            .run_on_main_thread(move || {
-                let delegate = ACTIVE.with(|active| active.borrow().clone());
-                let Some(delegate) = delegate else { return };
-                let state = delegate.ivars();
-                if state.id != id || state.window_label != window_label || !state.popover.isShown()
-                {
-                    return;
-                }
-                let mtm = delegate.mtm();
-                let popover = &state.popover;
-                let anchor = popover.positioningRect();
-                let old_size = popover.contentSize();
-                let link_focused = popover
-                    .contentViewController()
-                    .and_then(|controller| controller.view().window())
-                    .and_then(|window| window.firstResponder())
-                    .is_some_and(|responder| responder.downcast::<NSButton>().is_ok());
-                let animates = popover.animates();
-                popover.setAnimates(false);
-                let (view, link) = set_content(popover, &content, &delegate, mtm);
-                if popover.contentSize() != old_size {
-                    if let Some(anchor_view) = state
-                        .anchor_view
-                        .load()
-                        .filter(|view| view.window().is_some())
-                    {
-                        // Resizing a visible popover can move its arrow. Reposition
-                        // the same popover against its anchor after sizing the content.
-                        position_popover(popover, anchor, &anchor_view);
-                    }
-                }
-                popover.setAnimates(animates);
-                if let Some(window) = view.window() {
-                    if let Some(link) = link.as_deref().filter(|_| link_focused) {
-                        window.makeFirstResponder(Some(link));
-                    } else {
-                        window.makeFirstResponder(None);
-                    }
-                }
-            })
-            .map_err(|err| err.to_string())
+    fn active_popover(window_label: &str, id: &str) -> Option<Retained<QuotaPopover>> {
+        ACTIVE.with(|active| {
+            active
+                .borrow()
+                .as_ref()
+                .filter(|delegate| {
+                    let state = delegate.ivars();
+                    state.id == id && state.window_label == window_label
+                })
+                .cloned()
+        })
     }
 
-    type ShowSender = oneshot::Sender<Result<bool, String>>;
+    pub fn update(window_label: &str, id: &str, content: QuotaPopoverContent) {
+        let Some(delegate) = active_popover(window_label, id) else {
+            return;
+        };
+        let state = delegate.ivars();
+        let popover = &state.popover;
+        if !popover.isShown() {
+            return;
+        }
 
-    fn present(
+        let anchor = popover.positioningRect();
+        let old_size = popover.contentSize();
+        let link_focused = popover
+            .contentViewController()
+            .and_then(|controller| controller.view().window())
+            .and_then(|window| window.firstResponder())
+            .is_some_and(|responder| responder.downcast::<UsageLink>().is_ok());
+        let animates = popover.animates();
+        popover.setAnimates(false);
+        let (view, link) = set_content(popover, &content, &delegate, delegate.mtm());
+        if popover.contentSize() != old_size {
+            if let Some(anchor_view) = state
+                .anchor_view
+                .load()
+                .filter(|view| view.window().is_some())
+            {
+                // Resizing a visible popover can move its arrow. Reposition
+                // the same popover against its anchor after sizing the content.
+                position_popover(popover, anchor, &anchor_view);
+            }
+        }
+        popover.setAnimates(animates);
+        if let Some(window) = view.window() {
+            if let Some(link) = link.as_deref().filter(|_| link_focused) {
+                window.makeFirstResponder(Some(link));
+            } else {
+                window.makeFirstResponder(None);
+            }
+        }
+        if let Some(link) = link {
+            link.refresh_hover();
+        }
+    }
+
+    pub fn close(window_label: &str, id: &str) {
+        if let Some(delegate) = active_popover(window_label, id) {
+            delegate.take_active();
+            delegate.close_immediately();
+        }
+    }
+
+    pub fn present(
         window: &WebviewWindow,
         request: QuotaPopoverRequest,
-        tx: ShowSender,
-        on_shown: Channel<()>,
-    ) -> Result<(), (ShowSender, String)> {
-        let prepared = (|| {
-            let mtm = MainThreadMarker::new().ok_or("Popover must run on the main thread")?;
-            if ACTIVE.with(|active| active.borrow().is_some()) {
-                return Err("Another quota popover is open");
-            }
-            let view = window
-                .ns_view()
-                .map_err(|_| "Missing window content view")?
-                as *const NSView;
-            // SAFETY: Tauri's content view is borrowed while the window is
-            // retained and this function runs on the AppKit main thread.
-            let view = unsafe { view.as_ref() }.ok_or("Missing window content view")?;
-            if view.window().is_none() {
-                return Err("Popover anchor is no longer in a window");
-            }
-            Ok((mtm, view, position(&request.anchor, view)?))
-        })();
-        let (mtm, anchor_view, anchor) = match prepared {
-            Ok(prepared) => prepared,
-            Err(error) => return Err((tx, error.into())),
-        };
+        on_closed: Channel<bool>,
+    ) -> Result<(), String> {
+        let mtm = MainThreadMarker::new().ok_or("Popover must run on the main thread")?;
+        let view = window
+            .ns_view()
+            .map_err(|_| "Missing window content view")? as *const NSView;
+        // SAFETY: Tauri's content view is borrowed while the window is
+        // retained and this function runs on the AppKit main thread.
+        let anchor_view = unsafe { view.as_ref() }.ok_or("Missing window content view")?;
+        if anchor_view.window().is_none() {
+            return Err("Popover anchor is no longer in a window".into());
+        }
+        let anchor = position(&request.anchor, anchor_view)?;
+        let previous = ACTIVE.with(|active| active.borrow_mut().take());
+        if let Some(previous) = previous {
+            previous.close_immediately();
+        }
         let popover = NSPopover::new(mtm);
         popover.setBehavior(NSPopoverBehavior::Transient);
         let delegate = QuotaPopover::alloc(mtm).set_ivars(PopoverState {
@@ -369,24 +443,20 @@ mod macos {
                 border: optional_border(request.hover_border.as_deref()),
             },
             selected: Cell::new(false),
-            done: RefCell::new(Some(tx)),
+            on_closed: RefCell::new(Some(on_closed)),
         });
         // SAFETY: NSObject's initializer is the designated superclass initializer.
         let delegate: Retained<QuotaPopover> = unsafe { msg_send![super(delegate), init] };
-        set_content(&popover, &request.content, &delegate, mtm);
+        let (_, link) = set_content(&popover, &request.content, &delegate, mtm);
         popover.setDelegate(Some(ProtocolObject::from_ref(&*delegate)));
-        ACTIVE.with(|active| active.replace(Some(delegate)));
+        ACTIVE.with(|active| active.replace(Some(delegate.clone())));
         position_popover(&popover, anchor, anchor_view);
-        if popover.isShown() {
-            let _ = on_shown.send(());
-        } else {
-            ACTIVE.with(|active| {
-                if let Some(delegate) = active.take() {
-                    if let Some(done) = delegate.ivars().done.take() {
-                        let _ = done.send(Err("Native quota popover did not open".into()));
-                    }
-                }
-            });
+        if !popover.isShown() {
+            delegate.take_active();
+            return Err("Native quota popover did not open".into());
+        }
+        if let Some(link) = link {
+            link.refresh_hover();
         }
         Ok(())
     }
@@ -437,7 +507,7 @@ mod macos {
         content: &QuotaPopoverContent,
         delegate: &QuotaPopover,
         mtm: MainThreadMarker,
-    ) -> (Retained<NSView>, Option<Retained<NSButton>>) {
+    ) -> (Retained<NSView>, Option<Retained<UsageLink>>) {
         let row_height = |bucket: &super::QuotaBucket| {
             if bucket.reset_label.is_some() {
                 58.0

@@ -20,6 +20,7 @@ export interface DesktopQuotaPopoverRequest {
 type DesktopQuotaPopoverRPC = RPCClient & {
   showDesktopQuotaPopover(request: DesktopQuotaPopoverRequest): Promise<boolean>;
   updateDesktopQuotaPopover(id: string, content: DesktopQuotaPopoverContent): Promise<void>;
+  closeDesktopQuotaPopover(id: string): Promise<void>;
 };
 
 export function showDesktopQuotaPopover(request: DesktopQuotaPopoverRequest): Promise<boolean> {
@@ -31,4 +32,8 @@ export function updateDesktopQuotaPopover(
   content: DesktopQuotaPopoverContent,
 ): Promise<void> {
   return (rpc as DesktopQuotaPopoverRPC).updateDesktopQuotaPopover(id, content);
+}
+
+export function closeDesktopQuotaPopover(id: string): Promise<void> {
+  return (rpc as DesktopQuotaPopoverRPC).closeDesktopQuotaPopover(id);
 }

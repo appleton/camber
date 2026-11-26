@@ -170,6 +170,7 @@ pub fn run() {
             native_dialog::show_error_dialog,
             native_menu::file_icon_png,
             native_menu::show_native_menu,
+            native_quota_popover::close_native_quota_popover,
             native_quota_popover::show_native_quota_popover,
             native_quota_popover::update_native_quota_popover,
             navigation::open_changelog,

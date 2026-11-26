@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createPopover, melt } from "@melt-ui/svelte";
   import Icon from "@camber/components/icon";
-  import { tick, untrack } from "svelte";
+  import { onDestroy, tick, untrack } from "svelte";
   import { get } from "svelte/store";
   import { getAccountQuota } from "../../accountQuota";
   import { getOptionalACPConnectionPoolContext } from "../../connectionPoolContext";
@@ -10,6 +10,7 @@
   import Gauge from "../ui/Gauge.svelte";
   import { supportsNativeMenus } from "./desktopContextMenu";
   import {
+    closeDesktopQuotaPopover,
     showDesktopQuotaPopover,
     updateDesktopQuotaPopover,
     type DesktopQuotaPopoverContent,
@@ -39,6 +40,11 @@
   } = createPopover({
     positioning: { placement: "top-end", strategy: "fixed", gutter },
     openFocus: () => popover ?? null,
+    closeFocus: () => button ?? null,
+    onOpenChange: ({ next }) => {
+      if (!next) htmlFallback = false;
+      return next;
+    },
   });
 
   let button = $state<HTMLButtonElement>();
@@ -47,14 +53,19 @@
   type QuotaSnapshot = typeof $quota;
   const usageLinkLabel = $derived(formatUsageLinkLabel($quota.availableResets));
   const usageMessage = $derived(formatUsageMessage($quota));
-  let nativeUnavailable = $state(false);
+  let htmlFallback = $state(false);
   let nativeOpen = $state.raw<{
     id: string;
     source: typeof quota;
     initial: QuotaSnapshot;
     page: string | undefined;
   }>();
-  const useNative = $derived(supportsNativeMenus($appState.environment) && !nativeUnavailable);
+  const useNative = $derived(supportsNativeMenus($appState.environment) && !htmlFallback);
+  let destroyed = false;
+  onDestroy(() => {
+    destroyed = true;
+    if (nativeOpen) void closeDesktopQuotaPopover(nativeOpen.id).catch(() => {});
+  });
   let wasTurnActive = false;
   const highestUsage = $derived(Math.max(0, ...buckets.map((bucket) => bucket.usedPercent)));
   const resetTimeFormat = new Intl.DateTimeFormat(undefined, {
@@ -115,12 +126,12 @@
         anchor: { x, y, width, height },
         content: nativeContent(initial, page),
       });
-      if (selected && page) void rpc.openExternalURL(page);
+      if (selected && page && !destroyed) void rpc.openExternalURL(page);
     } catch {
-      if (!anchor.isConnected) return;
-      nativeUnavailable = true;
+      if (destroyed || !anchor.isConnected) return;
+      htmlFallback = true;
       await tick();
-      open.set(true);
+      if (!destroyed) open.set(true);
     } finally {
       nativeOpen = undefined;
     }
