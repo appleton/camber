@@ -729,8 +729,9 @@ export class DesktopHost {
     const popover = { id: request.id, shown };
     this.quotaPopover = popover;
     try {
+      const { hoverBackground, hoverBorder } = resolveNativeMenuTheme();
       return await invoke("show_native_quota_popover", {
-        request,
+        request: { ...request, hoverBackground, hoverBorder },
         onShown: new Channel<void>(markShown),
       });
     } finally {

@@ -523,7 +523,7 @@ impl StarImages {
 /// Resolves an optional border color: absent, unparsable, or fully
 /// transparent values draw no border.
 #[cfg(target_os = "macos")]
-fn optional_border(hex: Option<&str>) -> Option<Retained<NSColor>> {
+pub(crate) fn optional_border(hex: Option<&str>) -> Option<Retained<NSColor>> {
     let (red, green, blue, alpha) = parse_visible_hex_color(hex?)?;
     Some(NSColor::colorWithSRGBRed_green_blue_alpha(
         red, green, blue, alpha,
@@ -531,7 +531,7 @@ fn optional_border(hex: Option<&str>) -> Option<Retained<NSColor>> {
 }
 
 #[cfg(target_os = "macos")]
-fn ns_color_from_hex(hex: &str) -> Option<Retained<NSColor>> {
+pub(crate) fn ns_color_from_hex(hex: &str) -> Option<Retained<NSColor>> {
     let (red, green, blue, alpha) = parse_hex_color(hex)?;
     Some(NSColor::colorWithSRGBRed_green_blue_alpha(
         red, green, blue, alpha,
@@ -797,7 +797,7 @@ const SMALL_MENU_FONT_SIZE: f64 = 11.0;
 const MENU_PADDING_X: f64 = 4.0;
 /// Row content inset inside the highlight (DOM row `px-2`).
 #[cfg(target_os = "macos")]
-const ROW_INSET_X: f64 = 8.0;
+pub(crate) const ROW_INSET_X: f64 = 8.0;
 /// Corner radius of the hover-fill highlight.
 #[cfg(target_os = "macos")]
 const ROW_HIGHLIGHT_CORNER_RADIUS: f64 = 6.0;
@@ -1601,23 +1601,11 @@ impl MenuRowView {
                     bounds.size.height,
                 ),
             );
-            match ivars.highlight_style {
-                MenuHighlightStyle::System => NSColor::selectedContentBackgroundColor().set(),
-                MenuHighlightStyle::Themed => ivars.hover_background.set(),
-            }
-            NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(
-                highlight_rect,
-                ROW_HIGHLIGHT_CORNER_RADIUS,
-                ROW_HIGHLIGHT_CORNER_RADIUS,
-            )
-            .fill();
-            if let Some(border) = &ivars.hover_border {
-                stroke_rounded_border(
-                    inset_rect(highlight_rect, 0.5),
-                    ROW_HIGHLIGHT_CORNER_RADIUS - 0.5,
-                    border,
-                );
-            }
+            let background = match ivars.highlight_style {
+                MenuHighlightStyle::System => NSColor::selectedContentBackgroundColor(),
+                MenuHighlightStyle::Themed => ivars.hover_background.clone(),
+            };
+            draw_menu_row_highlight(highlight_rect, &background, ivars.hover_border.as_deref());
         }
         if let Some(button) = &ivars.star_button {
             // The DOM star button's own hover fill (`hover:bg-…`, `rounded`):
@@ -1924,6 +1912,20 @@ impl MenuSeparatorView {
             NSSize::new(width, height),
         ));
         self.setNeedsDisplay(true);
+    }
+}
+
+#[cfg(target_os = "macos")]
+pub(crate) fn draw_menu_row_highlight(
+    rect: NSRect,
+    background: &NSColor,
+    border: Option<&NSColor>,
+) {
+    let radius = ROW_HIGHLIGHT_CORNER_RADIUS;
+    background.set();
+    NSBezierPath::bezierPathWithRoundedRect_xRadius_yRadius(rect, radius, radius).fill();
+    if let Some(border) = border {
+        stroke_rounded_border(inset_rect(rect, 0.5), radius - 0.5, border);
     }
 }
 

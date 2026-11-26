@@ -9,6 +9,8 @@ pub struct QuotaPopoverRequest {
     id: String,
     anchor: AnchorRect,
     content: QuotaPopoverContent,
+    hover_background: Option<String>,
+    hover_border: Option<String>,
 }
 
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
@@ -77,14 +79,20 @@ pub async fn update_native_quota_popover(
 #[cfg(target_os = "macos")]
 mod macos {
     use super::{AnchorRect, QuotaPopoverContent, QuotaPopoverRequest};
+    use crate::native_menu::{
+        draw_menu_row_highlight, ns_color_from_hex, optional_border, ROW_INSET_X,
+    };
     use objc2::rc::{Retained, Weak};
     use objc2::runtime::{AnyObject, NSObject, NSObjectProtocol, ProtocolObject};
-    use objc2::{define_class, msg_send, sel, DefinedClass, MainThreadMarker, MainThreadOnly};
+    use objc2::{
+        define_class, msg_send, sel, AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly,
+    };
     use objc2_app_kit::{
-        NSBezelStyle, NSBox, NSBoxType, NSButton, NSCellImagePosition, NSColor, NSControlSize,
-        NSFont, NSFontWeightSemibold, NSImage, NSPopover, NSPopoverBehavior, NSPopoverDelegate,
-        NSProgressIndicator, NSProgressIndicatorStyle, NSScrollView, NSTextAlignment, NSTextField,
-        NSView, NSViewController,
+        NSBezelStyle, NSBox, NSBoxType, NSButton, NSButtonType, NSCellImagePosition, NSColor,
+        NSControlSize, NSEvent, NSFont, NSFontWeightSemibold, NSImage, NSPopover,
+        NSPopoverBehavior, NSPopoverDelegate, NSProgressIndicator, NSProgressIndicatorStyle,
+        NSScrollView, NSTextAlignment, NSTextField, NSTrackingArea, NSTrackingAreaOptions, NSView,
+        NSViewController,
     };
     use objc2_foundation::{NSNotification, NSPoint, NSRect, NSRectEdge, NSSize, NSString};
     use std::cell::{Cell, RefCell};
@@ -107,6 +115,7 @@ mod macos {
         window_label: String,
         anchor_view: Weak<NSView>,
         popover: Retained<NSPopover>,
+        link_highlight: LinkHighlight,
         selected: Cell<bool>,
         done: RefCell<Option<oneshot::Sender<Result<bool, String>>>>,
     }
@@ -149,6 +158,103 @@ mod macos {
             }
         }
     );
+
+    #[derive(Clone)]
+    struct LinkHighlight {
+        background: Retained<NSColor>,
+        border: Option<Retained<NSColor>>,
+    }
+
+    struct UsageLinkState {
+        highlight: LinkHighlight,
+        hovered: Cell<bool>,
+    }
+
+    define_class!(
+        // SAFETY: the button and its tracking callbacks stay on the AppKit main thread.
+        #[unsafe(super(NSButton))]
+        #[thread_kind = MainThreadOnly]
+        #[ivars = UsageLinkState]
+        struct UsageLink;
+
+        impl UsageLink {
+            #[unsafe(method(mouseEntered:))]
+            fn mouse_entered(&self, _event: &NSEvent) {
+                self.ivars().hovered.set(true);
+                NSView::setNeedsDisplay(self, true);
+            }
+
+            #[unsafe(method(mouseExited:))]
+            fn mouse_exited(&self, _event: &NSEvent) {
+                self.ivars().hovered.set(false);
+                NSView::setNeedsDisplay(self, true);
+            }
+
+            #[unsafe(method(drawRect:))]
+            fn draw_rect(&self, _dirty_rect: NSRect) {
+                let state = self.ivars();
+                let bounds = self.bounds();
+                if state.hovered.get() {
+                    draw_menu_row_highlight(
+                        bounds,
+                        &state.highlight.background,
+                        state.highlight.border.as_deref(),
+                    );
+                }
+                if let Some(cell) = self.cell() {
+                    cell.drawWithFrame_inView(
+                        rect(
+                            bounds.origin.x + ROW_INSET_X,
+                            bounds.origin.y,
+                            (bounds.size.width - 2.0 * ROW_INSET_X).max(0.0),
+                            bounds.size.height,
+                        ),
+                        self,
+                    );
+                }
+            }
+        }
+    );
+
+    impl UsageLink {
+        fn new(
+            frame: NSRect,
+            title: &str,
+            delegate: &QuotaPopover,
+            mtm: MainThreadMarker,
+        ) -> Retained<NSButton> {
+            let button = Self::alloc(mtm).set_ivars(UsageLinkState {
+                highlight: delegate.ivars().link_highlight.clone(),
+                hovered: Cell::new(false),
+            });
+            // SAFETY: initWithFrame: is NSButton's designated initializer.
+            let button: Retained<Self> = unsafe { msg_send![super(button), initWithFrame: frame] };
+            button.setButtonType(NSButtonType::MomentaryPushIn);
+            button.setTitle(&NSString::from_str(title));
+            button.setBezelStyle(NSBezelStyle::AccessoryBarAction);
+            button.setBordered(false);
+            let target: &AnyObject = delegate;
+            // SAFETY: the delegate lives until dismissal and implements this action.
+            unsafe {
+                button.setTarget(Some(target));
+                button.setAction(Some(sel!(openUsagePage:)));
+            }
+            // SAFETY: the weak tracking owner implements mouseEntered: and mouseExited:.
+            let area = unsafe {
+                NSTrackingArea::initWithRect_options_owner_userInfo(
+                    NSTrackingArea::alloc(),
+                    NSRect::ZERO,
+                    NSTrackingAreaOptions::MouseEnteredAndExited
+                        | NSTrackingAreaOptions::ActiveAlways
+                        | NSTrackingAreaOptions::InVisibleRect,
+                    Some(&button),
+                    None,
+                )
+            };
+            button.addTrackingArea(&area);
+            Retained::into_super(button)
+        }
+    }
 
     pub async fn show(
         window: WebviewWindow,
@@ -254,6 +360,14 @@ mod macos {
             window_label: window.label().to_owned(),
             anchor_view: Weak::new(anchor_view),
             popover: popover.clone(),
+            link_highlight: LinkHighlight {
+                background: request
+                    .hover_background
+                    .as_deref()
+                    .and_then(ns_color_from_hex)
+                    .unwrap_or_else(NSColor::quaternaryLabelColor),
+                border: optional_border(request.hover_border.as_deref()),
+            },
             selected: Cell::new(false),
             done: RefCell::new(Some(tx)),
         });
@@ -397,18 +511,12 @@ mod macos {
             divider.setBoxType(NSBoxType::Separator);
             panel.addSubview(&divider);
 
-            let target: &AnyObject = delegate;
-            // SAFETY: the delegate lives until dismissal and implements this action.
-            let link = unsafe {
-                NSButton::buttonWithTitle_target_action(
-                    &NSString::from_str(text),
-                    Some(target),
-                    Some(sel!(openUsagePage:)),
-                    mtm,
-                )
-            };
-            link.setBezelStyle(NSBezelStyle::AccessoryBarAction);
-            link.setShowsBorderOnlyWhileMouseInside(true);
+            let link = UsageLink::new(
+                rect(PADDING, top - 28.0, inner_width, 24.0),
+                text,
+                delegate,
+                mtm,
+            );
             link.setAlignment(NSTextAlignment::Left);
             if let Some(arrow) = NSImage::imageWithSystemSymbolName_accessibilityDescription(
                 &NSString::from_str("arrow.up.right"),
@@ -417,7 +525,6 @@ mod macos {
                 link.setImage(Some(&arrow));
                 link.setImagePosition(NSCellImagePosition::ImageRight);
             }
-            link.setFrame(rect(PADDING, top - 28.0, inner_width, 24.0));
             panel.addSubview(&link);
             link
         });
