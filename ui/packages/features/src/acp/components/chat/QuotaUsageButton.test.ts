@@ -42,6 +42,27 @@ it("opens the account usage popover on click and shows each bucket", async () =>
   await waitFor(() => expect(button).toHaveFocus());
 });
 
+it("queues a background refresh when a turn ends during the cooldown", async () => {
+  vi.useFakeTimers();
+  try {
+    vi.mocked(camberAcpQuotaRead).mockClear().mockResolvedValue({ buckets: [] });
+    const view = render(QuotaUsageButton, {
+      agentServer: "codex-acp",
+      hasSession: true,
+      turnActive: false,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    await view.rerender({ turnActive: true });
+    await view.rerender({ turnActive: false });
+
+    expect(camberAcpQuotaRead).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(camberAcpQuotaRead).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 it.each([
   ["codex-acp", "https://chatgpt.com/settings/usage?tab=overview", 4, "4 resets available"],
   ["claude-acp", "https://claude.ai/settings/usage", 1, "1 reset available"],

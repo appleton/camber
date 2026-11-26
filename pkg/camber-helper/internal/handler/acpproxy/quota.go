@@ -22,32 +22,33 @@ import (
 func (h *Handler) ReadQuota(ctx context.Context, params *methods.ACPAgentServerParams, gCtx *glsp.Context) (*methods.ACPReadQuotaOutput, error) {
 	serverName := normalizeServerName(params.AgentServer)
 	output := &methods.ACPReadQuotaOutput{Buckets: []methods.ACPQuotaBucket{}}
-	if serverName != "claude-acp" && serverName != "codex-acp" {
+	var agentNames, probeArgs []string
+	var read func(*quotaPipe, *methods.ACPReadQuotaOutput) error
+	switch serverName {
+	case "claude-acp":
+		agentNames = []string{claudeAgentPackageName}
+		probeArgs = []string{"--cli", "--print", "--input-format", "stream-json", "--output-format", "stream-json",
+			"--verbose", "--no-session-persistence", "--safe-mode", "--strict-mcp-config", "--mcp-config", `{"mcpServers":{}}`}
+		read = readClaudeQuota
+	case "codex-acp":
+		agentNames = []string{"@agentclientprotocol/codex-acp", "@zed-industries/codex-acp"}
+		probeArgs = []string{"cli", "app-server"}
+		read = readCodexQuota
+	default:
 		return output, nil
 	}
 	proc, err := h.initializedProcess(gCtx, serverName)
 	if err != nil {
 		return nil, err
 	}
-	binary, args, env, dir, _, ok := proc.commandSnapshot()
+	binary, args, env, dir, _, ok := proc.commandSnapshot(agentNames...)
 	if !ok {
 		return output, nil
 	}
 
-	var read func(*quotaPipe, *methods.ACPReadQuotaOutput) error
-	switch serverName {
-	case "claude-acp":
-		args = append(args, "--cli", "--print", "--input-format", "stream-json", "--output-format", "stream-json",
-			"--verbose", "--no-session-persistence", "--safe-mode", "--strict-mcp-config", "--mcp-config", `{"mcpServers":{}}`)
-		read = readClaudeQuota
-	case "codex-acp":
-		args = append(args, "cli", "app-server")
-		read = readCodexQuota
-	}
-
 	ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, binary, args...)
+	cmd := exec.CommandContext(ctx, binary, append(args, probeArgs...)...)
 	configureProcessCommand(cmd)
 	cmd.Cancel = func() error { return killProcessTree(cmd) }
 	cmd.Env, cmd.Dir = env, dir
@@ -221,7 +222,7 @@ func (p *quotaPipe) claudeRequest(id string, request, result any) error {
 			return false, nil
 		}
 		if reply.Response.Subtype != "success" || len(reply.Response.Result) == 0 {
-			return true, errors.New("Claude control request failed")
+			return true, errors.New("claude control request failed")
 		}
 		return true, json.Unmarshal(reply.Response.Result, result)
 	})

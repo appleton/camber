@@ -1,9 +1,8 @@
 <script lang="ts">
   import { createPopover, melt } from "@melt-ui/svelte";
   import Icon from "@camber/components/icon";
-  import { camberAcpQuotaRead } from "@camber/helperapi";
-  import type { ACPQuotaBucket } from "@camber/helperapi/schemas";
   import { tick, untrack } from "svelte";
+  import { getAccountQuota } from "../../accountQuota";
   import { getOptionalACPConnectionPoolContext } from "../../connectionPoolContext";
   import { rpc } from "../../hostRpc";
   import Gauge from "../ui/Gauge.svelte";
@@ -22,6 +21,7 @@
     "codex-acp": "https://chatgpt.com/settings/usage?tab=overview",
   };
   const usagePage = $derived(usagePages[agentServer]);
+  const quota = $derived(getAccountQuota(agentServer, connectionPool));
 
   const {
     elements: { trigger, content },
@@ -33,11 +33,9 @@
 
   let button = $state<HTMLButtonElement>();
   let popover = $state<HTMLDivElement>();
-  let buckets = $state.raw<ACPQuotaBucket[]>([]);
-  let availableResets = $state(0);
-  let loading = $state(false);
-  let unavailable = $state(false);
-  let lastRead = 0;
+  const buckets = $derived($quota.buckets ?? []);
+  const availableResets = $derived($quota.availableResets ?? 0);
+  let wasTurnActive = false;
   const highestUsage = $derived(Math.max(0, ...buckets.map((bucket) => bucket.usedPercent)));
   const resetTimeFormat = new Intl.DateTimeFormat(undefined, {
     weekday: "short",
@@ -50,35 +48,26 @@
   });
 
   $effect(() => {
+    const turnEnded = wasTurnActive && !turnActive;
+    wasTurnActive = turnActive;
+    const accountQuota = quota;
     const sessionIdle = hasSession && !turnActive;
     if ($open || sessionIdle) {
-      untrack(() => void refresh());
+      untrack(() => accountQuota.refresh(turnEnded));
     }
   });
 
-  async function refresh(): Promise<void> {
-    if (loading || Date.now() - lastRead < 10_000) return;
-    loading = true;
-    unavailable = false;
-    try {
-      await connectionPool?.connect(agentServer);
-      const result = await camberAcpQuotaRead({ agentServer });
-      buckets = result.buckets ?? [];
-      availableResets = result.availableResets ?? 0;
-      lastRead = Date.now();
-    } catch {
-      availableResets = 0;
-      unavailable = true;
-    } finally {
-      loading = false;
-      await tick();
+  $effect(() => {
+    $quota;
+    if (!$open) return;
+    void tick().then(() => {
       // In WebKit the portal can retain its original position as the rows load.
       if (button && popover?.dataset.side === "top") {
         const top = button.getBoundingClientRect().top - popover.offsetHeight - gutter;
         popover.style.top = `${Math.max(gutter, top)}px`;
       }
-    }
-  }
+    });
+  });
 
   function formatReset(reset: string | undefined): string | null {
     if (!reset) return null;
@@ -142,10 +131,10 @@
       </div>
     {:else}
       <p role="status" class="text-psx-foreground-secondary text-xs">
-        {loading ? "Loading usage…" : "Account usage is unavailable."}
+        {$quota.loading ? "Loading usage…" : "Account usage is unavailable."}
       </p>
     {/each}
-    {#if unavailable && buckets.length > 0}
+    {#if $quota.unavailable && buckets.length > 0}
       <p role="status" class="text-psx-foreground-secondary text-xs">Couldn’t refresh usage.</p>
     {/if}
     {#if usagePage}
