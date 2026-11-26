@@ -1721,6 +1721,7 @@
     data-placement={placement}
     style={panelStyle}
     class="menu-surface p-1"
+    class:prompt-menu-surface={!emptyStateDesktop}
   >
     {#if showAgentOption}
       <button
@@ -1962,6 +1963,7 @@
     onmouseenter={cancelGrace}
     style={subStyle}
     class="menu-surface max-h-[320px] overflow-y-auto p-1"
+    class:prompt-menu-surface={!emptyStateDesktop}
   >
     <!-- No title for the fast/effort submenus: the row that opened them is
          right there, still naming them. The models submenu is the exception —

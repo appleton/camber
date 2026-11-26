@@ -95,7 +95,7 @@
     bind:this={popover}
     role="dialog"
     aria-label="Account usage"
-    class="menu-surface z-50 flex max-h-[50vh] w-64 max-w-[calc(100vw-1rem)] cursor-default flex-col gap-3 overflow-y-auto p-3"
+    class="menu-surface prompt-menu-surface z-50 flex max-h-[50vh] w-64 max-w-[calc(100vw-1rem)] cursor-default flex-col gap-3 overflow-y-auto p-3"
   >
     <h2 class="text-psx-foreground-primary text-xs font-medium">Account usage</h2>
     {#each buckets as bucket}
