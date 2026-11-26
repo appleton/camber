@@ -396,7 +396,8 @@ body {
   height: 16px;
 }
 
-/* Finger-sized, rounded speech/submit controls. */
+/* Finger-sized, rounded composer controls. */
+.mobile-chat [data-prompt-form-footer] [data-testid="prompt-usage-button"],
 .mobile-chat [data-prompt-form-footer] [data-testid="prompt-speech-button"],
 .mobile-chat [data-prompt-form-footer] [data-testid="prompt-submit-button"] {
   width: 36px;

@@ -692,6 +692,11 @@ func New() *CamberHandler {
 		Description: "logs out of the ACP agent's current authenticated state",
 	}, handler.acpProxyHandler.Logout)
 
+	registerExtensionMethodNoDeadline(handler, JSONRPCOperation{
+		Method:      methods.ACPReadQuotaMethod,
+		Description: "reads the active agent account's usage quota windows",
+	}, handler.acpProxyHandler.ReadQuota)
+
 	// NewSession, LoadSession, and ResumeSession can take well over the default 5s serialized
 	// timeout: ACP subprocess spin-up, agent-side auth checks, and the
 	// session-creation work in the agent itself all stack up. They sit in the

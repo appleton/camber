@@ -147,6 +147,10 @@
     ].flatMap((f) => (f.value ? [f] : [])),
   );
 
+  // Melt portals these tooltips to the body, above ConversationPreview's z-100 layer.
+  const tooltipClass =
+    "bg-psx-panel text-psx-foreground-primary shadow-mid z-[101] rounded-md px-2 py-1 text-sm";
+
   const {
     elements: { trigger: gaugeTooltipTrigger, content: gaugeTooltipContent },
     states: { open: gaugeTooltipOpen },
@@ -186,10 +190,7 @@
     <span class="min-w-0 truncate">{label}</span>
   </div>
   {#if $pathTooltipOpen && directoryPath}
-    <div
-      use:melt={$pathTooltipContent}
-      class="bg-psx-panel text-psx-foreground-primary shadow-mid z-50 max-w-96 break-all rounded-md px-2 py-1 text-sm"
-    >
+    <div use:melt={$pathTooltipContent} class={[tooltipClass, "max-w-96 break-all"]}>
       {directoryPath}
     </div>
   {/if}
@@ -253,10 +254,7 @@
       />
     </span>
     {#if $gaugeTooltipOpen}
-      <div
-        use:melt={$gaugeTooltipContent}
-        class="bg-psx-panel text-psx-foreground-primary shadow-mid z-50 rounded-md px-2 py-1 text-sm"
-      >
+      <div use:melt={$gaugeTooltipContent} class={tooltipClass}>
         {usage.used.toLocaleString()} / {usage.max.toLocaleString()} tokens used
       </div>
     {/if}

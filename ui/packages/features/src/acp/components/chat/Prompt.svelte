@@ -24,6 +24,7 @@
   import PromptConfigControls from "./menus/config/PromptConfigControls.svelte";
   import PlanModeIndicator from "./PlanModeIndicator.svelte";
   import GoalIndicator from "./GoalIndicator.svelte";
+  import QuotaUsageButton from "./QuotaUsageButton.svelte";
   import PromptModeControl from "./menus/config/PromptModeControl.svelte";
   import {
     AcpSlashCommand,
@@ -798,6 +799,15 @@
             </div>
           {/if}
           <div class="ml-1 flex shrink-0 items-center gap-1">
+            {#if currentAgentServer === "claude-acp" || currentAgentServer === "codex-acp"}
+              {#key currentAgentServer}
+                <QuotaUsageButton
+                  agentServer={currentAgentServer}
+                  hasSession={chatSession.hasSession}
+                  turnActive={isTurnActive}
+                />
+              {/key}
+            {/if}
             <SpeechButton disabled={resolvedDisabled} />
             {#if isTurnActive}
               {#if chatSession.canEnqueuePrompt && hasPromptContent}
