@@ -39,6 +39,8 @@
     emptyPane?: Snippet<[PaneID]>;
     usePaneShape: boolean;
     paneShapeAnimating: boolean;
+    bottomLeftRadius?: number;
+    bottomRightRadius?: number;
   }
 
   let {
@@ -60,6 +62,8 @@
     emptyPane,
     usePaneShape,
     paneShapeAnimating,
+    bottomLeftRadius,
+    bottomRightRadius,
   }: Props = $props();
 
   let activeDropZone = $state<DropZone | undefined>();
@@ -296,6 +300,12 @@
   class:splits-pane-has-selected-tab={selectedTab !== undefined}
   data-pane-id={pane.id}
   data-version={version}
+  style:--splits-pane-bottom-left-radius={bottomLeftRadius === undefined
+    ? undefined
+    : `${bottomLeftRadius}px`}
+  style:--splits-pane-bottom-right-radius={bottomRightRadius === undefined
+    ? undefined
+    : `${bottomRightRadius}px`}
 >
   {#if usePaneShape}
     <PaneShape
@@ -304,6 +314,8 @@
       {version}
       {paneElement}
       {paneContentElement}
+      {bottomLeftRadius}
+      {bottomRightRadius}
       animating={paneShapeAnimating}
     />
   {/if}
@@ -377,6 +389,8 @@
     overflow: var(--splits-pane-overflow, hidden);
     border: var(--splits-pane-shell-border, var(--splits-pane-border));
     border-radius: var(--splits-pane-radius);
+    border-bottom-left-radius: var(--splits-pane-bottom-left-radius, var(--splits-pane-radius));
+    border-bottom-right-radius: var(--splits-pane-bottom-right-radius, var(--splits-pane-radius));
     background: var(--splits-pane-shell-background, var(--splits-pane-background));
     box-shadow: var(--splits-pane-shell-shadow, var(--splits-pane-shadow));
   }
@@ -389,8 +403,9 @@
     flex: 1;
     overflow: hidden;
     border-radius: var(--splits-pane-content-top-left-radius, 0)
-      var(--splits-pane-content-top-right-radius, 0) var(--splits-pane-radius)
-      var(--splits-pane-radius);
+      var(--splits-pane-content-top-right-radius, 0)
+      var(--splits-pane-bottom-right-radius, var(--splits-pane-radius))
+      var(--splits-pane-bottom-left-radius, var(--splits-pane-radius));
     background: transparent;
     box-shadow: none;
   }

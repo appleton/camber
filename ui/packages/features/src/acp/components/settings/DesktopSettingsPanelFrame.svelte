@@ -1,6 +1,7 @@
 <script lang="ts">
   import Icon, { type IconName } from "@camber/components/icon";
   import type { Snippet } from "svelte";
+  import { desktopPanelCorners } from "../../desktopPanelCorners";
   import { desktopUpdate } from "../../desktopUpdate";
 
   interface DesktopSettingsBreadcrumb {
@@ -80,7 +81,16 @@
   }
 </script>
 
-<section class="desktop-settings-panel text-psx-foreground-primary">
+<section
+  class="desktop-settings-panel text-psx-foreground-primary"
+  style:--desktop-settings-bottom-right-radius={$desktopPanelCorners.bottomRight === undefined
+    ? undefined
+    : `${$desktopPanelCorners.bottomRight}px`}
+  style:--desktop-settings-bottom-left-radius={sidebarCollapsed &&
+  $desktopPanelCorners.bottomLeft !== undefined
+    ? `${$desktopPanelCorners.bottomLeft}px`
+    : undefined}
+>
   <div class="desktop-settings-top-drag-region" data-tauri-drag-region="deep"></div>
   <div class="desktop-settings-frame">
     <div class="desktop-settings-header" data-tauri-drag-region="deep">
@@ -185,6 +195,19 @@
     --desktop-splits-pane-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), 0 1px 6px rgba(0, 0, 0, 0.2);
   }
 
+  .desktop-settings-frame,
+  .desktop-settings-pane {
+    border-radius: var(--desktop-main-panel-radius, 10px);
+    border-bottom-right-radius: var(
+      --desktop-settings-bottom-right-radius,
+      var(--desktop-main-panel-radius, 10px)
+    );
+    border-bottom-left-radius: var(
+      --desktop-settings-bottom-left-radius,
+      var(--desktop-main-panel-radius, 10px)
+    );
+  }
+
   .desktop-settings-frame {
     display: flex;
     box-sizing: border-box;
@@ -194,7 +217,6 @@
     min-height: 0;
     flex-direction: column;
     overflow: visible;
-    border-radius: var(--desktop-main-panel-radius, 10px);
     padding: var(--desktop-splits-shadow-gutter);
     background: var(--psx-panel);
   }
@@ -265,7 +287,6 @@
     padding-inline: var(--desktop-splits-shadow-gutter);
     overflow-x: hidden;
     overflow-y: auto;
-    border-radius: var(--desktop-main-panel-radius, 10px);
     -webkit-mask-image: linear-gradient(
       to bottom,
       var(--desktop-settings-overflow-mask-top) 0,

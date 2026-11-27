@@ -22,6 +22,7 @@ mod terminal_shell_integration;
 mod updater;
 #[cfg(target_os = "macos")]
 mod window_chrome;
+mod window_corners;
 mod window_state;
 
 use tauri::Emitter;
@@ -153,6 +154,7 @@ pub fn run() {
         .manage(control::ControlState::default())
         .manage(terminal::TerminalState::default())
         .manage(updater::DesktopUpdaterState::default())
+        .manage(window_corners::WindowCornerState::default())
         .invoke_handler(tauri::generate_handler![
             desktop_notification::cancel_clickable_notification,
             desktop_notification::send_clickable_notification,
@@ -189,6 +191,7 @@ pub fn run() {
             settings::set_desktop_update_channel,
             settings::set_desktop_auto_install_updates,
             system_accent::get_system_accent_colors,
+            window_corners::get_desktop_window_corners,
             bundle_guard::desktop_bundle_replaced,
             updater::check_and_stage_desktop_update,
             updater::install_staged_desktop_update,
