@@ -5,7 +5,6 @@ import type {
   RequestPermissionRequest,
   RequestPermissionResponse,
   SessionId,
-  SessionNotification,
 } from "@agentclientprotocol/sdk";
 import {
   camberAcpApprovalsList,
@@ -41,6 +40,7 @@ import {
 import { newConversationID, type ACPClosedSession } from "../navTypes";
 import { buildSessionInfo, type ACPResolvedSessionInfo } from "../sessionInfo";
 import { TurnMaterializer } from "../TurnMaterializer";
+import { isCompactionUpdate, type TranscriptNotification } from "../types";
 import {
   ACPAgentRepository,
   type ACPAgentServerConfigurationChange,
@@ -848,6 +848,7 @@ export class ACPSessionRepositoryWriter {
       session.invalidateGeneration();
       session.queue.reset();
       session.materializer.cancelOpenToolCalls(new Date());
+      session.materializer.cancelOpenCompactions();
       session.publishTranscript();
       if (session.sessionId !== null) {
         // Mark the sessions that actually lost agent-side state. A conversation
@@ -1272,7 +1273,7 @@ export class ACPSessionRepositoryWriter {
       entry.params &&
       typeof entry.params === "object"
     ) {
-      this.handleSessionUpdate(agentServer, entry.params as SessionNotification);
+      this.handleSessionUpdate(agentServer, entry.params as TranscriptNotification);
       return;
     }
 
@@ -1320,8 +1321,8 @@ export class ACPSessionRepositoryWriter {
   }
 
   handleSessionUpdate(
-    agentServerOrParams: string | SessionNotification,
-    maybeParams?: SessionNotification,
+    agentServerOrParams: string | TranscriptNotification,
+    maybeParams?: TranscriptNotification,
   ): void {
     const agentServer = normalizeAgentServerName(
       typeof agentServerOrParams === "string" ? agentServerOrParams : DEFAULT_AGENT_SERVER,
@@ -1331,12 +1332,17 @@ export class ACPSessionRepositoryWriter {
 
     const session = this.sessionFor(params.sessionId, agentServer);
     if (!session) {
+      const { update } = params;
+      if (isCompactionUpdate(update)) return;
       // Could be a streaming update for a throwaway config probe.
       // If so, apply to same-agent local sessions once the cache settles —
       // preserving each draft's own selections, since a probe's pushes
       // (e.g. an initial current_mode_update on session/new) describe the
       // throwaway session, not the user's draft state.
-      const handled = this.agents.handleConfigProbeSessionUpdate(agentServer, params);
+      const handled = this.agents.handleConfigProbeSessionUpdate(agentServer, {
+        ...params,
+        update,
+      });
       if (handled) {
         this.applyCachedConfigToLocalSessionsForAgent(agentServer, undefined, {
           preserveSelections: true,

@@ -296,6 +296,8 @@ export class SessionEventsState {
     for (let i = 0; i < events.length; i++) {
       const event = events[i];
 
+      if (event.eventKind === "compaction" && event.status === "in_progress") continue;
+
       if (
         event.eventKind === "mode_change" &&
         (firstAgentActivityIndex === -1 || i < firstAgentActivityIndex)
@@ -661,7 +663,9 @@ export class SessionEventsState {
     let segmentStart = liveTail.start;
     for (let i = segmentStart; i <= events.length; i++) {
       const isBoundary =
-        i === events.length || (isSteerMessage(events[i]) && !this.findTurnForIndex(i));
+        i === events.length ||
+        events[i].eventKind === "compaction" ||
+        (isSteerMessage(events[i]) && !this.findTurnForIndex(i));
       if (!isBoundary) continue;
       this.addCompactFoldForRange(folds, events, liveTail, segmentStart, i - 1);
       segmentStart = i + 1;
@@ -918,6 +922,7 @@ function isTransientForThoughtVisibility(event: SessionEvent): boolean {
   return (
     event.eventKind === "agent_thought" ||
     event.eventKind === "mode_change" ||
+    (event.eventKind === "compaction" && event.status === "in_progress") ||
     isBlankAgentMessage(event)
   );
 }

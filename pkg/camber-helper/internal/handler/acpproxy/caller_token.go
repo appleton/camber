@@ -110,7 +110,6 @@ func (h *Handler) observeCallerTokenLeak(serverName, sessionID string, update ac
 	if empty {
 		return
 	}
-	session := promptSessionKey{agentServer: normalizeServerName(serverName), sessionID: sessionID}
 	var streamKind, streamText string
 	switch {
 	case update.AgentMessageChunk != nil && update.AgentMessageChunk.Content.Text != nil:
@@ -123,9 +122,17 @@ func (h *Handler) observeCallerTokenLeak(serverName, sessionID string, update ac
 	if err != nil {
 		raw = nil
 	}
+	h.observeOutputForCallerTokens(serverName, sessionID, streamKind, streamText, raw, toolCall)
+}
 
+func (h *Handler) observeOutputForCallerTokens(serverName, sessionID, streamKind, streamText string, raw []byte, toolCall bool) {
+	t := &h.callers
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	if len(t.byToken) == 0 {
+		return
+	}
+	session := promptSessionKey{agentServer: normalizeServerName(serverName), sessionID: sessionID}
 	var leaked []string
 	if streamKind != "" {
 		key := leakWindowKey{session: session, kind: streamKind}

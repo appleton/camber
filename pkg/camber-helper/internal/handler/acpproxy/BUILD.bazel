@@ -7,6 +7,7 @@ go_library(
         "caller_token.go",
         "claude_auth_probe.go",
         "client.go",
+        "compaction.go",
         "control_context.go",
         "elicitation.go",
         "events.go",

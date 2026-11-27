@@ -6,6 +6,7 @@ import {
   type Client,
   type Stream,
 } from "@agentclientprotocol/sdk";
+import { isCompactionUpdate, STANDARD_COMPACTION_NOTIFICATION } from "./types";
 
 // Notifications the SDK routes to typed Client methods; every other inbound
 // notification reaches Client.extNotification.
@@ -39,6 +40,20 @@ function isExtensionNotification(message: AnyMessage): boolean {
   );
 }
 
+// Until the SDK validates these standard updates, use the extension dispatch
+// path so they can pass through the same notification ordering gate.
+function adaptCompactionNotification(message: AnyMessage): AnyMessage {
+  if (
+    "method" in message &&
+    message.method === CLIENT_METHODS.session_update &&
+    !("id" in message && message.id != null) &&
+    isCompactionUpdate((message.params as { update?: { sessionUpdate?: unknown } })?.update)
+  ) {
+    return { ...message, method: STANDARD_COMPACTION_NOTIFICATION };
+  }
+  return message;
+}
+
 /**
  * Keeps extension notifications in order with the session updates around them.
  *
@@ -67,7 +82,8 @@ class ExtensionNotificationGate {
       writable: transport.writable,
       readable: transport.readable.pipeThrough(
         new TransformStream<AnyMessage, AnyMessage>({
-          async transform(message, controller) {
+          async transform(input, controller) {
+            const message = adaptCompactionNotification(input);
             if (!gate.enabled || gate.closed || !isExtensionNotification(message)) {
               controller.enqueue(message);
               return;

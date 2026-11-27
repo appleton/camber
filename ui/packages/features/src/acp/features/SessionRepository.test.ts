@@ -3160,6 +3160,79 @@ describe("ACPSessionRepositoryWriter", () => {
     ).toEqual(["user_message:initial prompt", "agent_message:live before snapshot and more"]);
   });
 
+  it("handles standard compaction during Claude history replay and live delivery", async () => {
+    const repo = new ACPSessionRepositoryWriter();
+    const transport = new RPCTransport({
+      jsonrpcCall: vi.fn().mockResolvedValue({}),
+      jsonrpcNotify: vi.fn().mockResolvedValue(undefined),
+    });
+    createACPConnection(() => new ACPClient(repo, "claude-acp"), transport);
+    const update = (fields: Record<string, unknown>) =>
+      transport.receive({
+        jsonrpc: "2.0",
+        method: "session/update",
+        params: { sessionId: "s-loaded", update: fields },
+      });
+
+    await connectRepo(
+      repo,
+      mockConnection({
+        loadSession: vi.fn(async () => {
+          update({
+            sessionUpdate: "compaction_update",
+            compactionId: "replayed",
+            status: "completed",
+            summary: [textBlock("Earlier summary")],
+          });
+          await vi.waitFor(() =>
+            expect(
+              repo.getSessionByConversationId("conv-loaded")?.replayMaterializer?.events,
+            ).toHaveLength(1),
+          );
+          return {};
+        }),
+      }),
+      undefined,
+      "claude-acp",
+    );
+    const session = await repo.loadSessionRecord(
+      "s-loaded",
+      "/repo",
+      [],
+      { conversationId: "conv-loaded" },
+      "claude-acp",
+    );
+    await vi.waitFor(() =>
+      expect(session?.events).toMatchObject([
+        {
+          eventKind: "compaction",
+          compactionId: "replayed",
+          summary: [textBlock("Earlier summary")],
+        },
+      ]),
+    );
+    expect(session?.compacting).toBe(false);
+
+    update({ sessionUpdate: "compaction_update", compactionId: "live", status: "in_progress" });
+    await vi.waitFor(() => expect(session?.compacting).toBe(true));
+    update({
+      sessionUpdate: "compaction_summary_chunk",
+      compactionId: "live",
+      content: textBlock("Live summary"),
+    });
+    update({ sessionUpdate: "compaction_update", compactionId: "live", status: "completed" });
+    await vi.waitFor(() => expect(session?.compacting).toBe(false));
+    expect(session?.events).toMatchObject([
+      { eventKind: "compaction", compactionId: "replayed" },
+      {
+        eventKind: "compaction",
+        compactionId: "live",
+        status: "completed",
+        summary: [textBlock("Live summary")],
+      },
+    ]);
+  });
+
   it("publishes replay updates that arrive after session/load resolves", async () => {
     const repo = new ACPSessionRepositoryWriter();
     helperJsonrpcCall.mockImplementation(async (method: unknown) => {

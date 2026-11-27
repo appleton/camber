@@ -1,4 +1,4 @@
-import type { ContentBlock, SessionNotification } from "@agentclientprotocol/sdk";
+import type { ContentBlock } from "@agentclientprotocol/sdk";
 import { parseCodexGoalUpdate } from "../../goals";
 import { applySessionInfoUpdate } from "../../sessionInfo";
 import {
@@ -6,6 +6,7 @@ import {
   isStreamingChunk,
   TurnMaterializer,
 } from "../../TurnMaterializer";
+import { isCompactionUpdate, type TranscriptNotification } from "../../types";
 import { textPromptContent } from "./content";
 import { withoutHostContextBlocks } from "./hostContext";
 import type { ACPSession } from "./Session.svelte";
@@ -57,11 +58,12 @@ export class ACPSessionTranscript {
     s.env.publishLiveStatuses();
   }
 
-  applyReplayUpdate(params: SessionNotification): void {
+  applyReplayUpdate(params: TranscriptNotification): void {
     const s = this.session;
     const replay = s.replayMaterializer;
     if (!replay) return;
     replay.apply(params.update);
+    if (isCompactionUpdate(params.update)) return;
     s.titles.extractFromAgentMessage(replay, params.update, { replay: true });
     switch (params.update.sessionUpdate) {
       case "available_commands_update": {
@@ -94,9 +96,16 @@ export class ACPSessionTranscript {
     }
   }
 
-  applySessionUpdate(params: SessionNotification): void {
+  applySessionUpdate(params: TranscriptNotification): void {
     const s = this.session;
     if (s.sessionId === null) return;
+    const { update } = params;
+    if (isCompactionUpdate(update)) {
+      s.materializer.apply(update);
+      s.publishTranscript({ batched: isStreamingChunk(update) });
+      s.env.publishLiveStatuses();
+      return;
+    }
     const messageId = getSessionUpdateMessageId(params.update);
     if (messageId !== null && s.ignoredMessageIds.has(messageId)) return;
 
@@ -110,7 +119,7 @@ export class ACPSessionTranscript {
 
     if (!suppressInitialModeEvent) {
       s.materializer.apply(params.update);
-      s.titles.extractFromAgentMessage(s.materializer, params.update);
+      s.titles.extractFromAgentMessage(s.materializer, update);
       s.publishTranscript({ batched: streamingChunk });
     }
 

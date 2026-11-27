@@ -14,6 +14,7 @@
   import ModeChange from "./events/ModeChange.svelte";
   import SessionHandoff from "./events/SessionHandoff.svelte";
   import UserMessage from "./events/UserMessage.svelte";
+  import SessionCompaction from "./events/SessionCompaction.svelte";
   import ToolCall from "./events/ToolCall.svelte";
   import ToolCallGroup from "./events/tool/ToolCallGroup.svelte";
   import { CopyToClipboard } from "./ui";
@@ -269,6 +270,8 @@
           />
         {:else if event.eventKind === "handoff"}
           <SessionHandoff {event} />
+        {:else if event.eventKind === "compaction"}
+          <SessionCompaction {event} />
         {/if}
       {/if}
     </Boundary>

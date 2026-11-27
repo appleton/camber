@@ -4,7 +4,16 @@ import { isHostContextBlock, stripInjectedContextBlock } from "./features/sessio
 import { ACP_USER_MESSAGE_STEER_META_KEY } from "./features/session/steering";
 import { unwrapUserMessageBlock } from "./features/session/userMessageBoundary";
 import { applyShellToolOverride } from "./shellToolOverride";
-import type { AgentMessage, AgentThought, SessionEvent, ToolCall, UserMessage } from "./types";
+import type {
+  AgentMessage,
+  AgentThought,
+  CompactionUpdate,
+  SessionCompaction,
+  SessionEvent,
+  ToolCall,
+  TranscriptUpdate,
+  UserMessage,
+} from "./types";
 
 export type { SessionEvent } from "./types";
 
@@ -49,6 +58,8 @@ export class TurnMaterializer {
   private messageIndex = new Map<string, number>();
   private explicitMessageRelationships = new Map<string, string>();
   private toolCallIndex = new Map<string, number>();
+  private compactionIndex = new Map<string, number>();
+  private activeCompactions = new Set<string>();
   private lastMessageKey: string | null = null;
   private currentTurn: CurrentTurnMetadata | null = null;
 
@@ -68,7 +79,11 @@ export class TurnMaterializer {
     return this.currentTurn?.startIndex ?? null;
   }
 
-  apply(update: SessionUpdate): void {
+  get compacting(): boolean {
+    return this.activeCompactions.size > 0;
+  }
+
+  apply(update: TranscriptUpdate): void {
     const eventKind = chunkKindMap[update.sessionUpdate];
     if (eventKind) {
       this.applyMessageChunk(
@@ -91,6 +106,10 @@ export class TurnMaterializer {
       case "current_mode_update":
         this.applyModeChange(update);
         break;
+      case "compaction_summary_chunk":
+      case "compaction_update":
+        this.applyCompaction(update);
+        break;
       case "config_option_update":
       case "session_info_update":
       case "usage_update":
@@ -105,6 +124,8 @@ export class TurnMaterializer {
     this.messageIndex.clear();
     this.explicitMessageRelationships.clear();
     this.toolCallIndex.clear();
+    this.compactionIndex.clear();
+    this.activeCompactions.clear();
     this.lastMessageKey = null;
     this._turns = [];
     this.currentTurn = null;
@@ -148,6 +169,16 @@ export class TurnMaterializer {
     }
     if (endedAt !== undefined) {
       this.finishCurrentTurn(endedAt, { interrupted: true });
+    }
+  }
+
+  cancelOpenCompactions(): void {
+    for (const id of this.activeCompactions) {
+      this.applyCompaction({
+        sessionUpdate: "compaction_update",
+        compactionId: id,
+        status: "cancelled",
+      });
     }
   }
 
@@ -283,6 +314,43 @@ export class TurnMaterializer {
     this.lastMessageKey = null;
   }
 
+  private applyCompaction(update: CompactionUpdate): void {
+    const id = update.compactionId;
+    let index = this.compactionIndex.get(id);
+    if (index === undefined) {
+      index = this._events.length;
+      this.compactionIndex.set(id, index);
+      this._events.push({
+        eventKind: "compaction",
+        compactionId: id,
+        status: "in_progress",
+        summary: [],
+      });
+      this.activeCompactions.add(id);
+      this.lastMessageKey = null;
+    }
+
+    const event = this._events[index] as SessionCompaction;
+    if (update.sessionUpdate === "compaction_summary_chunk") {
+      const content = update.content;
+      const last = event.summary.at(-1);
+      const summary =
+        last?.type === "text" && content.type === "text"
+          ? [...event.summary.slice(0, -1), { ...last, text: last.text + content.text }]
+          : [...event.summary, content];
+      this._events[index] = { ...event, summary };
+    } else {
+      this._events[index] = {
+        ...event,
+        status: update.status,
+        summary: update.summary === undefined ? event.summary : (update.summary ?? []),
+        error: update.error === undefined ? event.error : update.error,
+      };
+      if (update.status === "in_progress") this.activeCompactions.add(id);
+      else this.activeCompactions.delete(id);
+    }
+  }
+
   private finishCurrentTurn(
     endedAt: Date | string,
     { interrupted = false }: { interrupted?: boolean } = {},
@@ -365,10 +433,11 @@ export function getSessionUpdateMessageId(update: {
  * (cadence- and frame-batched) transcript publish — keep the two in step by
  * asking here rather than re-listing the kinds.
  */
-export function isStreamingChunk(update: SessionUpdate): boolean {
+export function isStreamingChunk(update: TranscriptUpdate): boolean {
   switch (update.sessionUpdate) {
     case "agent_message_chunk":
     case "agent_thought_chunk":
+    case "compaction_summary_chunk":
     case "tool_call":
     case "tool_call_update":
       return true;
