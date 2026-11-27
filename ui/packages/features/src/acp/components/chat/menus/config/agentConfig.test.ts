@@ -10,6 +10,7 @@ import {
   agentPickerOverlayIconUrl,
   agentServerOptions,
   isClaudeAgent,
+  isCodexAgent,
   selectedAgentServer,
   shouldResetSessionForAgentSelection,
 } from "./agentConfig";
@@ -100,6 +101,18 @@ describe("agent config menu helpers", () => {
     expect(isClaudeAgent(agents, "aliasedClaude")).toBe(true);
     expect(isClaudeAgent(agents, "codex")).toBe(false);
     expect(isClaudeAgent(agents, "unknown")).toBe(false);
+  });
+
+  it("identifies Codex by server key or registry agent id", () => {
+    const agents = registry({
+      aliasedCodex: { id: "codex-acp", name: "Codex Agent" },
+      claude: { id: "claude-acp", name: "Claude" },
+    });
+
+    expect(isCodexAgent(agents, "codex-acp")).toBe(true);
+    expect(isCodexAgent(agents, "aliasedCodex")).toBe(true);
+    expect(isCodexAgent(agents, "claude")).toBe(false);
+    expect(isCodexAgent(agents, "unknown")).toBe(false);
   });
 
   it("resets the current draft when switching away from the selected session agent", () => {

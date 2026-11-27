@@ -38,6 +38,7 @@
     agentPickerOverlayIconUrl,
     agentServerOptions,
     isClaudeAgent,
+    isCodexAgent,
     selectedAgentServer,
     shouldResetSessionForAgentSelection,
   } from "./agentConfig";
@@ -51,6 +52,8 @@
     fastToggleState,
     optionGroups,
     orderClaudeModelValues,
+    splitClaudeModelValues,
+    splitCodexModelValues,
     promptConfigKind,
     selectedValueName,
     shouldPersistConfigSelection,
@@ -166,10 +169,29 @@
     const values = optionGroups(model).flatMap((g) => g.options);
     return claudeModelOrder ? orderClaudeModelValues(values) : values;
   });
+  // Claude and Codex publish a flat list mixing their current models with
+  // older or pinned ones (Claude: aliases vs pinned full ids; Codex: newest
+  // version per family vs older versions). The current models render inline
+  // whatever the count; the rest move behind a "More models" opener (DOM side
+  // panel, native submenu) or follow them in the single mobile sheet. Null (no
+  // split, any other agent) leaves every surface as is.
+  const modelSplit = $derived.by(() => {
+    if (!model) return null;
+    if (claudeModelOrder) return splitClaudeModelValues(modelValues);
+    if (isCodexAgent(registry, currentAgent)) return splitCodexModelValues(modelValues);
+    return null;
+  });
+  const moreModelValues = $derived(new Set(modelSplit?.more.map((value) => value.value)));
+  // The More models row's dimmed text: the selected model's name, but only
+  // when that model is one of the tucked-away ones.
+  const moreModelsDetail = $derived.by(() => {
+    if (!model || model.type !== "select" || !modelSplit) return "";
+    return modelSplit.more.find((value) => value.value === model.currentValue)?.name ?? "";
+  });
   // With a small model list (fifteen or fewer) the models render inline in the
   // main menu instead of behind a submenu (no search box).
   const inlineModels = $derived(
-    Boolean(model) && modelValues.length > 0 && modelValues.length <= 15,
+    Boolean(model) && modelValues.length > 0 && (modelSplit !== null || modelValues.length <= 15),
   );
 
   const fastLabel = $derived.by(() => {
@@ -883,6 +905,7 @@
   );
 
   const subSearchable = $derived.by(() => {
+    if (activeSub === "model" && modelSplit) return modelSplit.more.length > 5;
     if (activeSub === "agent") return agentServerOptions(repo).length > 5;
     if (activeSubOption && activeSubOption.type === "select") {
       return optionGroups(activeSubOption).flatMap((g) => g.options).length > 5;
@@ -1146,7 +1169,18 @@
       // is hidden, standing in for modelsHeader.
       if (showAgentOption) items.push({ kind: "separator" });
       else items.push({ kind: "separator", label: `${serverName} models` });
-      for (const value of modelValues) items.push(nativeValueAction(model, value));
+      for (const value of modelSplit?.featured ?? modelValues) {
+        items.push(nativeValueAction(model, value));
+      }
+      if (modelSplit) {
+        items.push({
+          kind: "submenu",
+          label: "More models",
+          detail: moreModelsDetail,
+          minWidth: SUB_W,
+          items: modelSplit.more.map((value) => nativeValueAction(model, value)),
+        });
+      }
       if (fast || effort) items.push({ kind: "separator" });
     } else if (model) {
       const modelItems: MenuSpecItem[] = [];
@@ -1479,7 +1513,12 @@
 
 {#snippet selectSubmenu(option: SessionConfigOption)}
   {#each optionGroups(option) as group, groupIndex (group.name ?? `_${groupIndex}`)}
-    {@const visible = orderedValues(option, group.options)}
+    {@const visible = orderedValues(
+      option,
+      modelSplit && option === model
+        ? group.options.filter((value) => moreModelValues.has(value.value))
+        : group.options,
+    )}
     {#if visible.length > 0}
       {#if group.name}
         <div class="text-psx-foreground-tertiary px-2 pb-0.5 pt-1.5 text-xs">{group.name}</div>
@@ -1667,7 +1706,10 @@
 {:else if isMobile && mobileSheet === "model" && model}
   <MobileSelectSheet
     title="Model"
-    options={valueSheetOptions(model, modelValues)}
+    options={valueSheetOptions(
+      model,
+      modelSplit ? [...modelSplit.featured, ...modelSplit.more] : modelValues,
+    )}
     onSelect={(value) => void selectConfigValue(model, value)}
     onClose={() => (mobileSheet = null)}
   />
@@ -1792,9 +1834,37 @@
       {:else}
         {@render modelsHeader()}
       {/if}
-      {#each modelValues as value (value.value)}
+      {#each modelSplit?.featured ?? modelValues as value (value.value)}
         {@render valueRow(model, value, true, true)}
       {/each}
+      {#if modelSplit}
+        <!-- Like the inline model rows above, no leading icon, so the label
+             stays flush with theirs. -->
+        <button
+          type="button"
+          role="menuitem"
+          class={itemClass}
+          onclick={(event) => openSub("model", event.currentTarget)}
+          onmouseenter={(event) => {
+            const row = event.currentTarget;
+            hoverWithGrace(event, () => openSub("model", row));
+          }}
+        >
+          <span class={labelValueClass}>
+            <span class="shrink-0">More models</span>
+            <span class="text-psx-foreground-tertiary min-w-0 truncate text-xs">
+              {moreModelsDetail}
+            </span>
+          </span>
+          <Icon
+            name="chevron"
+            size={12}
+            weight={1.5}
+            class="text-psx-icon shrink-0 -rotate-90"
+            aria-hidden="true"
+          />
+        </button>
+      {/if}
       {#if fast || effort}
         <div class="menu-separator"></div>
       {/if}
