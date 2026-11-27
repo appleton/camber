@@ -436,10 +436,9 @@ export class ACPSessionPrompting {
       }
     } finally {
       if (gen === s.generation) {
-        // Agents do not currently emit a terminal compaction phase when the
-        // summarizer fails or the turn is cancelled. Never let that transient
-        // state survive the turn and keep the conversation permanently active.
+        // A failed or cancelled turn can end before a terminal compaction update.
         s.extensions.camber?.endTurn();
+        s.materializer.cancelOpenCompactions();
         // Flush any batched streaming events synchronously so the transcript is
         // current the instant isPrompting flips. The success/cancel branches
         // already do this; without it the error path would show idle/error one

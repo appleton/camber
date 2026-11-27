@@ -21,13 +21,19 @@ describe("materializeConversationHistory", () => {
             messageId: null,
             content: [{ type: "text", text: "B" }],
           },
+          {
+            eventKind: "compaction",
+            compactionId: "compact-a",
+            status: "completed",
+            summary: [{ type: "text", text: "Retained context" }],
+          },
         ],
         turns: [
           {
             startedAt: "2026-07-16T10:00:00.000Z",
             endedAt: "2026-07-16T10:01:00.000Z",
             startIndex: 0,
-            endIndex: 1,
+            endIndex: 2,
           },
         ],
         plan: null,
@@ -65,13 +71,14 @@ describe("materializeConversationHistory", () => {
     expect(result.events.map((event) => event.eventKind)).toEqual([
       "user_message",
       "agent_message",
+      "compaction",
       "handoff",
       "agent_message",
       "handoff",
     ]);
     expect(result.turns).toEqual([
-      expect.objectContaining({ startIndex: 0, endIndex: 1 }),
-      expect.objectContaining({ startIndex: 3, endIndex: 3 }),
+      expect.objectContaining({ startIndex: 0, endIndex: 2 }),
+      expect.objectContaining({ startIndex: 4, endIndex: 4 }),
     ]);
     expect(result.plan).toEqual(
       expect.objectContaining({ entries: [expect.objectContaining({ content: "Ship it" })] }),

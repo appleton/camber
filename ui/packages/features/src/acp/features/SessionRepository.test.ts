@@ -3184,10 +3184,15 @@ describe("ACPSessionRepositoryWriter", () => {
             status: "completed",
             summary: [textBlock("Earlier summary")],
           });
+          update({
+            sessionUpdate: "compaction_update",
+            compactionId: "unfinished-replay",
+            status: "in_progress",
+          });
           await vi.waitFor(() =>
             expect(
               repo.getSessionByConversationId("conv-loaded")?.replayMaterializer?.events,
-            ).toHaveLength(1),
+            ).toHaveLength(2),
           );
           return {};
         }),
@@ -3209,6 +3214,7 @@ describe("ACPSessionRepositoryWriter", () => {
           compactionId: "replayed",
           summary: [textBlock("Earlier summary")],
         },
+        { eventKind: "compaction", compactionId: "unfinished-replay", status: "cancelled" },
       ]),
     );
     expect(session?.compacting).toBe(false);
@@ -3224,6 +3230,7 @@ describe("ACPSessionRepositoryWriter", () => {
     await vi.waitFor(() => expect(session?.compacting).toBe(false));
     expect(session?.events).toMatchObject([
       { eventKind: "compaction", compactionId: "replayed" },
+      { eventKind: "compaction", compactionId: "unfinished-replay", status: "cancelled" },
       {
         eventKind: "compaction",
         compactionId: "live",
@@ -3231,6 +3238,19 @@ describe("ACPSessionRepositoryWriter", () => {
         summary: [textBlock("Live summary")],
       },
     ]);
+
+    update({
+      sessionUpdate: "compaction_update",
+      compactionId: "unfinished-live",
+      status: "in_progress",
+    });
+    await vi.waitFor(() => expect(session?.compacting).toBe(true));
+    repo.handleTurnEnded("claude-acp", { sessionId: "s-loaded" });
+    expect(session?.compacting).toBe(false);
+    expect(session?.events.at(-1)).toMatchObject({
+      compactionId: "unfinished-live",
+      status: "cancelled",
+    });
   });
 
   it("publishes replay updates that arrive after session/load resolves", async () => {
@@ -5029,6 +5049,14 @@ describe("ACPSessionRepositoryWriter", () => {
         id: "compaction-failed",
         phase: "started",
       });
+      repo.handleSessionUpdate(DEFAULT_AGENT_SERVER, {
+        sessionId: "s-existing",
+        update: {
+          sessionUpdate: "compaction_update",
+          compactionId: "unfinished",
+          status: "in_progress",
+        },
+      });
       expect(session.compacting).toBe(true);
       throw new Error("summarizer failed");
     });
@@ -5039,6 +5067,10 @@ describe("ACPSessionRepositoryWriter", () => {
     await session.prompt("compact");
 
     expect(session.compacting).toBe(false);
+    expect(session.events.at(-1)).toMatchObject({
+      compactionId: "unfinished",
+      status: "cancelled",
+    });
     expect(session.promptError?.error.message).toContain("summarizer failed");
   });
 

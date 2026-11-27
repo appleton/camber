@@ -10,14 +10,24 @@
       ? "Context compaction failed"
       : event.status === "cancelled"
         ? "Context compaction cancelled"
-        : "Context compacted",
+        : event.status === "completed"
+          ? "Context compacted"
+          : "Context compaction",
   );
+  const hasSummary = $derived(
+    event.summary.some((block) =>
+      block.type === "text"
+        ? block.text.trim().length > 0
+        : block.type === "image" || block.type === "resource" || block.type === "resource_link",
+    ),
+  );
+  const error = $derived(event.error?.trim());
 </script>
 
 {#snippet summaryBody()}
   <div class="flex w-full min-w-0 flex-col gap-2">
-    {#if event.error}
-      <p>{event.error}</p>
+    {#if error}
+      <p>{error}</p>
     {/if}
     <ContentRenderer content={event.summary} />
   </div>
@@ -25,9 +35,6 @@
 
 {#if event.status !== "in_progress"}
   <div data-session-compaction>
-    <TranscriptFold
-      {label}
-      children={event.summary.length || event.error ? summaryBody : undefined}
-    />
+    <TranscriptFold {label} children={hasSummary || error ? summaryBody : undefined} />
   </div>
 {/if}

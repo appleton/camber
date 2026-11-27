@@ -113,6 +113,7 @@ func TestStandardCompactionOverACP(t *testing.T) {
 					`{"sessionUpdate":"compaction_update","compactionId":"c1","status":"in_progress"}`,
 					`{"sessionUpdate":"compaction_summary_chunk","compactionId":"c1","content":{"type":"text","text":"Summary"}}`,
 					`{"sessionUpdate":"compaction_update","compactionId":"c1","status":"completed","summary":null}`,
+					`{"sessionUpdate":"compaction_update","compactionId":"c2","status":"_new_status"}`,
 					`{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Continued"}}`,
 				} {
 					if _, err := fmt.Fprintf(agentOut, `{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s1","update":%s}}`+"\n", update); err != nil {
@@ -148,7 +149,7 @@ func TestStandardCompactionOverACP(t *testing.T) {
 	_, err = conn.LoadSession(ctx, newLoadSessionRequest("s1", false))
 	require.NoError(t, err)
 	require.NoError(t, client.waitForSessionUpdates(ctx))
-	require.Len(t, updates, 5)
+	require.Len(t, updates, 6)
 	var kinds []string
 	for _, raw := range updates {
 		var notification standardCompactionNotification
@@ -156,8 +157,9 @@ func TestStandardCompactionOverACP(t *testing.T) {
 		assert.Equal(t, "s1", notification.SessionID)
 		kinds = append(kinds, notification.Update.Kind)
 	}
-	assert.Equal(t, []string{"user_message_chunk", "compaction_update", "compaction_summary_chunk", "compaction_update", "agent_message_chunk"}, kinds)
+	assert.Equal(t, []string{"user_message_chunk", "compaction_update", "compaction_summary_chunk", "compaction_update", "compaction_update", "agent_message_chunk"}, kinds)
 	assert.JSONEq(t, `{"sessionId":"s1","update":{"sessionUpdate":"compaction_update","compactionId":"c1","status":"completed","summary":null}}`, string(updates[3]))
+	assert.JSONEq(t, `{"sessionId":"s1","update":{"sessionUpdate":"compaction_update","compactionId":"c2","status":"_new_status"}}`, string(updates[4]))
 }
 
 func TestMarkExited(t *testing.T) {

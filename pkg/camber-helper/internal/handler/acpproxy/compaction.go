@@ -21,7 +21,7 @@ type standardCompactionNotification struct {
 	Update    struct {
 		Kind    string                `json:"sessionUpdate"`
 		ID      string                `json:"compactionId"`
-		Status  string                `json:"status"`
+		Status  *string               `json:"status"`
 		Content *acpsdk.ContentBlock  `json:"content"`
 		Summary []acpsdk.ContentBlock `json:"summary"`
 		Error   *string               `json:"error"`
@@ -44,11 +44,20 @@ func (w compactionInitializeWriter) Write(frame []byte) (int, error) {
 	if err := json.Unmarshal(envelope["params"], &params); err != nil {
 		return 0, err
 	}
-	var capabilities map[string]json.RawMessage
-	if err := json.Unmarshal(params["clientCapabilities"], &capabilities); err != nil {
-		return 0, err
+	capabilities := make(map[string]json.RawMessage)
+	if raw := params["clientCapabilities"]; raw != nil && string(raw) != "null" {
+		if err := json.Unmarshal(raw, &capabilities); err != nil {
+			return 0, err
+		}
 	}
-	capabilities["session"] = json.RawMessage(`{"compaction":{}}`)
+	session := make(map[string]json.RawMessage)
+	if raw := capabilities["session"]; raw != nil && string(raw) != "null" {
+		if err := json.Unmarshal(raw, &session); err != nil {
+			return 0, err
+		}
+	}
+	session["compaction"] = json.RawMessage(`{}`)
+	capabilities["session"], _ = json.Marshal(session)
 	params["clientCapabilities"], _ = json.Marshal(capabilities)
 	envelope["params"], _ = json.Marshal(params)
 	updated, err := json.Marshal(envelope)
@@ -132,10 +141,8 @@ func (c *acpClient) enqueueStandardCompaction(params json.RawMessage) error {
 	var streamText string
 	switch update.Kind {
 	case "compaction_update":
-		switch update.Status {
-		case "in_progress", "completed", "failed", "cancelled":
-		default:
-			return fmt.Errorf("acpproxy: invalid compaction status")
+		if update.Status == nil {
+			return fmt.Errorf("acpproxy: compaction update requires status")
 		}
 	case "compaction_summary_chunk":
 		if update.Content == nil {

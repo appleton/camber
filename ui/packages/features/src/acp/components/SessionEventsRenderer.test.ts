@@ -42,6 +42,34 @@ describe("SessionEventsRenderer", () => {
     expect(screen.queryByText("Retained context")).toBeNull();
   });
 
+  it("renders a generic compaction marker for an unknown status with no displayable summary", () => {
+    render(SessionEventsRendererHarness, {
+      props: {
+        events: [],
+        items: [
+          {
+            id: "event-0",
+            kind: "event",
+            index: 0,
+            event: {
+              eventKind: "compaction",
+              compactionId: "compact-1",
+              status: "_new_status",
+              summary: [
+                { type: "text", text: " \n" },
+                { type: "audio", data: "AA==", mimeType: "audio/wav" },
+              ],
+              error: " ",
+            },
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText("Context compaction")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Context compaction" })).toBeNull();
+  });
+
   it("renders a visible boundary with both ACP agent icons", () => {
     const { container } = render(SessionEventsRendererHarness, {
       props: {

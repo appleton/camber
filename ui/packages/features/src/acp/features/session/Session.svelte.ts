@@ -650,6 +650,11 @@ export class ACPSession {
 
   handleTurnEnded(): void {
     this.extensions.camber?.endTurn();
+    if (this.materializer.cancelOpenCompactions()) {
+      this.publishTranscript();
+      this.env.publishLiveStatuses();
+    }
+    this.replayMaterializer?.cancelOpenCompactions();
     if (this.loadState.status === "loading") this.turnEndedDuringLoad = true;
     this.retryDeferredConnectorRefresh();
     this.retryHistoryReload();

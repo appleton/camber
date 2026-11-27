@@ -20,13 +20,12 @@ import {
   TurnMaterializer,
   type SessionEvent,
 } from "./TurnMaterializer";
-import type { CompactionStatus } from "./types";
 
 describe("Transcript compaction", () => {
   it("keeps streamed summary blocks in one row at the compaction boundary", () => {
     const materializer = new TurnMaterializer();
     const compactionId = "compact-1";
-    const status = (status: CompactionStatus) =>
+    const status = (status: string) =>
       materializer.apply({ sessionUpdate: "compaction_update", compactionId, status });
     const chunk = (text: string) =>
       materializer.apply({

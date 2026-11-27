@@ -85,6 +85,7 @@ function isSessionEvent(value: unknown): value is SessionEvent {
     "tool_call",
     "mode_change",
     "handoff",
+    "compaction",
   ].includes(value.eventKind);
 }
 

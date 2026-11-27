@@ -268,8 +268,8 @@ export class SessionEventsState {
         const previous = result[j];
         if (
           previous.kind === "event" &&
-          previous.event.eventKind === "user_message" &&
-          !previous.event.steer
+          (previous.event.eventKind === "compaction" ||
+            (previous.event.eventKind === "user_message" && !previous.event.steer))
         ) {
           return false;
         }
@@ -758,17 +758,15 @@ export class SessionEventsState {
       startedAt: string;
       endIndex: number;
       pinned: ReadonlySet<string>;
-      item: Extract<GroupedItem, { kind: "event_group" }>;
-      indices: Set<number>;
+      items: Extract<GroupedItem, { kind: "event_group" }>[];
     }
   >();
 
   /**
-   * Each interrupted "compact" turn's settled fold: the same membership rules
-   * as `compactGroupFor`, expanded to include the automatic tail once
-   * streaming ends. Finished tools before the earliest explicit pin and
-   * interim messages with a later tool form one group per turn, anchored on
-   * its first folded tool; single-tool folds remain allowed. Membership rather
+   * Each interrupted "compact" turn's settled folds include the automatic
+   * tail once streaming ends. Finished tools before the earliest explicit pin
+   * and interim messages with a later tool form groups on each side of a
+   * compaction, anchored on each group's first tool. Membership rather
    * than contiguity means interleaved thoughts render beside the fold without
    * splitting it into re-keyed groups, and folded interim messages stay in it.
    *
@@ -798,16 +796,22 @@ export class SessionEventsState {
         cached.endIndex !== turn.endIndex ||
         cached.pinned !== pinned
       ) {
-        const computed = this.computeInterruptedFold(events, turn, foldPlan);
-        if (!computed) {
-          this.interruptedFoldCache.delete(key);
-          continue;
+        const items: Extract<GroupedItem, { kind: "event_group" }>[] = [];
+        const end = Math.min(turn.endIndex, events.length - 1);
+        let start = turn.startIndex;
+        for (let i = start; i <= end + 1; i++) {
+          if (i <= end && events[i].eventKind !== "compaction") continue;
+          const item = this.computeInterruptedFold(events, turn, foldPlan, start, i - 1);
+          if (item) items.push(item);
+          start = i + 1;
         }
-        cached = { startedAt: turn.startedAt, endIndex: turn.endIndex, pinned, ...computed };
+        cached = { startedAt: turn.startedAt, endIndex: turn.endIndex, pinned, items };
         this.interruptedFoldCache.set(key, cached);
       }
-      const fold = { item: cached.item, pushed: false };
-      for (const i of cached.indices) folds.set(i, fold);
+      for (const item of cached.items) {
+        const fold = { item, pushed: false };
+        for (const { index } of item.events) folds.set(index, fold);
+      }
     }
     // Drop entries for turns no longer among the interrupted folds (a full
     // transcript rewrite removed one, or this instance moved to a different
@@ -819,27 +823,24 @@ export class SessionEventsState {
     return folds;
   }
 
-  /** Computes one interrupted turn's "compact" fold; see `interruptedCompactFoldsFor`. */
   private computeInterruptedFold(
     events: SessionEvent[],
     turn: TurnMetadata,
     foldPlan: LiveTail,
-  ): { item: Extract<GroupedItem, { kind: "event_group" }>; indices: Set<number> } | null {
-    const start = turn.startIndex;
-    const end = Math.min(turn.endIndex, events.length - 1);
+    start: number,
+    end: number,
+  ): Extract<GroupedItem, { kind: "event_group" }> | null {
     let lastToolIndex = -1;
     for (let i = start; i <= end; i++) {
       if (events[i].eventKind === "tool_call") lastToolIndex = i;
     }
     if (lastToolIndex === -1) return null;
     const items: SessionEventGroupItem[] = [];
-    const indices = new Set<number>();
     for (let i = start; i <= end; i++) {
       const event = events[i];
       if (event.eventKind !== "tool_call" || !this.isFinishedTool(event)) continue;
       if (!this.foldsBehindTail(event, i, foldPlan)) continue;
       items.push({ event, index: i });
-      indices.add(i);
     }
     if (items.length === 0) return null;
     const idIndex = items[0].index;
@@ -853,18 +854,14 @@ export class SessionEventsState {
         continue;
       }
       items.push({ event, index: i });
-      indices.add(i);
     }
     items.sort((a, b) => a.index - b.index);
     return {
-      item: {
-        id: `group-${idIndex}`,
-        kind: "event_group" as const,
-        events: items,
-        turn,
-        live: true,
-      },
-      indices,
+      id: `group-${idIndex}`,
+      kind: "event_group",
+      events: items,
+      turn,
+      live: true,
     };
   }
 

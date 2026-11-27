@@ -117,7 +117,10 @@ export class ACPSessionLoader {
       );
       if (gen !== s.generation) return;
       const liveAttach = res._meta?.["camber/liveAttach"] === true;
-      if (!liveAttach) s.replayMaterializer?.completeOpenToolCalls();
+      if (!liveAttach) {
+        s.replayMaterializer?.completeOpenToolCalls();
+        s.replayMaterializer?.cancelOpenCompactions();
+      }
       s.materializer = s.replayMaterializer ?? new TurnMaterializer();
       s.sessionInfo = s.replaySessionInfo;
       s.publishTranscript();
@@ -140,7 +143,10 @@ export class ACPSessionLoader {
       // from replay delivery. Publish once more after persisted config is
       // restored so any replay updates accepted during that window cannot
       // remain materialized but invisible.
-      if (!liveAttach) s.replayMaterializer?.completeOpenToolCalls();
+      if (!liveAttach) {
+        s.replayMaterializer?.completeOpenToolCalls();
+        s.replayMaterializer?.cancelOpenCompactions();
+      }
       if (s.replayMaterializer) {
         s.titles.finalizeInlineTitle(s.replayMaterializer, { replay: true });
       }
@@ -195,6 +201,7 @@ export class ACPSessionLoader {
         for (const update of s.refusedLoadCapture ?? []) {
           s.applySessionUpdate(update);
         }
+        if (s.turnEndedDuringLoad) s.materializer.cancelOpenCompactions();
         s.publishTranscript();
         s.connectorRefreshDeferred = true;
         return;
@@ -211,6 +218,7 @@ export class ACPSessionLoader {
         for (const update of s.refusedLoadCapture ?? []) {
           s.applySessionUpdate(update);
         }
+        if (s.turnEndedDuringLoad) s.materializer.cancelOpenCompactions();
         s.sessionInfo ??= s.replaySessionInfo;
         s.restoredWithoutHistory = false;
         s.historyReloadPending = true;

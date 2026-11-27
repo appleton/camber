@@ -172,7 +172,8 @@ export class TurnMaterializer {
     }
   }
 
-  cancelOpenCompactions(): void {
+  cancelOpenCompactions(): boolean {
+    const interrupted = this.compacting;
     for (const id of this.activeCompactions) {
       this.applyCompaction({
         sessionUpdate: "compaction_update",
@@ -180,6 +181,7 @@ export class TurnMaterializer {
         status: "cancelled",
       });
     }
+    return interrupted;
   }
 
   private applyMessageChunk(

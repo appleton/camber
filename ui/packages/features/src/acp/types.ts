@@ -49,8 +49,6 @@ export type SessionHandoff = {
   createdAt: string;
 };
 
-export type CompactionStatus = "in_progress" | "completed" | "failed" | "cancelled";
-
 export const STANDARD_COMPACTION_NOTIFICATION = "camber/acp/standard_compaction";
 
 export type CompactionUpdate = {
@@ -59,7 +57,7 @@ export type CompactionUpdate = {
 } & (
   | {
       sessionUpdate: "compaction_update";
-      status: CompactionStatus;
+      status: string;
       summary?: ContentBlock[] | null;
       error?: string | null;
     }
@@ -83,7 +81,7 @@ export function isCompactionUpdate(
 export type SessionCompaction = {
   eventKind: "compaction";
   compactionId: string;
-  status: CompactionStatus;
+  status: string;
   summary: ContentBlock[];
   error?: string | null;
 };
