@@ -135,6 +135,7 @@ export type GroupedItem =
 export interface SessionEventsProps {
   readonly events: SessionEvent[];
   readonly turns?: readonly TurnMetadata[];
+  readonly activeTurnStartIndex?: number | null;
   readonly isPrompting?: boolean;
   readonly toolActivity?: ToolActivityMode;
 }
@@ -911,8 +912,11 @@ export class SessionEventsState {
   private readonly postTurnMessages = $derived.by(() => {
     const messages = new Set<number>();
     if (!this.props.turns?.length) return messages;
+    const { events, activeTurnStartIndex } = this.props;
+    const end = Math.min(activeTurnStartIndex ?? events.length, events.length);
     let afterRecordedTurn = false;
-    for (const [index, event] of this.props.events.entries()) {
+    for (let index = 0; index < end; index++) {
+      const event = events[index];
       if (this.findTurnForIndex(index)) {
         afterRecordedTurn = true;
       } else if (event.eventKind === "user_message" && !event.steer) {

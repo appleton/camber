@@ -43,6 +43,11 @@ export class ACPChatSessionScopeWriter {
       get turns() {
         return scope.timelineTurns;
       },
+      get activeTurnStartIndex() {
+        return scope.useSubagentTranscriptTabs
+          ? scope.subagents.topLevelActiveTurnStartIndex
+          : scope.localActiveTurnStartIndex;
+      },
       get isPrompting() {
         return scope.isPrompting;
       },
@@ -57,6 +62,7 @@ export class ACPChatSessionScopeWriter {
   private readonly subagentState = $derived.by(() => {
     const codexTurnActive = this.isPrompting || this.isSending || this.isRemoteWorking;
     return buildSubagentTranscriptIndex(this.events, this.turns, {
+      activeTurnStartIndex: this.localActiveTurnStartIndex,
       codexTurnActive,
       codexActiveTurnStartIndex: codexTurnActive ? this.codexActiveTurnStartIndex : undefined,
     });
@@ -164,6 +170,10 @@ export class ACPChatSessionScopeWriter {
   get isRemoteWorking() {
     if (this.isPrompting || this.isSending) return false;
     return Boolean(this.activeConversationSummary?.liveStatus?.working);
+  }
+  private get localActiveTurnStartIndex(): number | null {
+    const session = this.session;
+    return session?.isPrompting ? session.activeTurnStartIndex : null;
   }
   private get codexActiveTurnStartIndex(): number {
     if (this.isPrompting) {

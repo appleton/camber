@@ -68,6 +68,30 @@ describe("buildSubagentTranscriptIndex", () => {
     expect(buildSubagentTranscriptIndex(events).topLevelEvents).toHaveLength(1);
   });
 
+  it("remaps the active turn start past a hidden Claude child event", () => {
+    const events = materialize([
+      {
+        sessionUpdate: "tool_call",
+        toolCallId: "task-a",
+        title: "Research auth",
+        _meta: { claudeCode: { subagent: true } },
+      },
+      {
+        sessionUpdate: "agent_message_chunk",
+        content: { type: "text", text: "Child reply" },
+        _meta: { claudeCode: { parentToolUseId: "task-a" } },
+      },
+      {
+        sessionUpdate: "agent_message_chunk",
+        content: { type: "text", text: "Starting the next prompt" },
+      },
+    ]);
+
+    const index = buildSubagentTranscriptIndex(events, [], { activeTurnStartIndex: 2 });
+    expect(index.topLevelEvents).toEqual([events[0], events[2]]);
+    expect(index.topLevelActiveTurnStartIndex).toBe(1);
+  });
+
   it("changes transcript revision when an earlier child tool updates after a later message", () => {
     const materializer = new TurnMaterializer();
     for (const update of [

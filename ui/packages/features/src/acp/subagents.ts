@@ -29,6 +29,7 @@ export type SubagentTranscriptIndex = {
   references: ReadonlyMap<string, SubagentReference>;
   topLevelEvents: SessionEvent[];
   topLevelTurns: TurnMetadata[];
+  topLevelActiveTurnStartIndex: number | null;
   referenceForKey(key: string): SubagentReference | undefined;
   referencesForTool(tool: ToolCall): SubagentReference[];
   claudeEvents(key: string): SessionEvent[];
@@ -36,6 +37,7 @@ export type SubagentTranscriptIndex = {
 };
 
 export type SubagentTranscriptIndexOptions = {
+  activeTurnStartIndex?: number | null;
   codexTurnActive?: boolean;
   codexActiveTurnStartIndex?: number;
 };
@@ -117,11 +119,19 @@ export function buildSubagentTranscriptIndex(
 
   settleCodexReferences(references, turns, options);
 
+  // The start is a boundary before the first active event. Child events
+  // removed from the main transcript must not shift it past a visible row.
+  const { activeTurnStartIndex } = options;
+  const topLevelActiveTurnStartIndex =
+    activeTurnStartIndex == null
+      ? null
+      : visibleOriginalIndices.filter((index) => index < activeTurnStartIndex).length;
   const publicReferences = references as ReadonlyMap<string, SubagentReference>;
   return {
     references: publicReferences,
     topLevelEvents,
     topLevelTurns: remapTurns(turns, visibleOriginalIndices),
+    topLevelActiveTurnStartIndex,
     referenceForKey(key) {
       return publicReferences.get(key);
     },
