@@ -320,6 +320,12 @@ export class SessionEventsState {
         continue;
       }
 
+      if (this.postTurnMessages.has(i)) {
+        flushGroup();
+        result.push({ id: `event-${i}`, kind: "event", event, index: i });
+        continue;
+      }
+
       // "compact": each live span between steer prompts folds its tools and
       // interim narration into a group anchored where that span's first tool
       // sits. Check membership before the thought path below so completed
@@ -665,6 +671,7 @@ export class SessionEventsState {
       const isBoundary =
         i === events.length ||
         events[i].eventKind === "compaction" ||
+        this.postTurnMessages.has(i) ||
         (isSteerMessage(events[i]) && !this.findTurnForIndex(i));
       if (!isBoundary) continue;
       this.addCompactFoldForRange(folds, events, liveTail, segmentStart, i - 1);
@@ -871,7 +878,11 @@ export class SessionEventsState {
     latestUserMessageIndex: number,
     liveTail: LiveTail | null,
   ): GroupMode | null {
+    const turn = this.findTurnForIndex(from);
     for (let j = from + 1; j < events.length; j++) {
+      // Late tool calls may arrive after the prompt response without a new
+      // user message. They must not pull the completed reply into their fold.
+      if (this.findTurnForIndex(j) !== turn || this.postTurnMessages.has(j)) return null;
       const e = events[j];
       if (SessionEventsState.isBufferable(e)) continue;
       return this.groupModeForTool(e, j, latestUserMessageIndex, liveTail);
@@ -894,6 +905,28 @@ export class SessionEventsState {
   private findTurnForIndex(index: number): TurnMetadata | undefined {
     return this.turnByIndex.get(index);
   }
+
+  // ACP v1 has no turn boundaries for unsolicited follow-ups. Keep their
+  // message rows visible between tool runs until the next ordinary prompt.
+  private readonly postTurnMessages = $derived.by(() => {
+    const messages = new Set<number>();
+    if (!this.props.turns?.length) return messages;
+    let afterRecordedTurn = false;
+    for (const [index, event] of this.props.events.entries()) {
+      if (this.findTurnForIndex(index)) {
+        afterRecordedTurn = true;
+      } else if (event.eventKind === "user_message" && !event.steer) {
+        afterRecordedTurn = false;
+      } else if (
+        afterRecordedTurn &&
+        event.eventKind === "agent_message" &&
+        !isBlankAgentMessage(event)
+      ) {
+        messages.add(index);
+      }
+    }
+    return messages;
+  });
 
   private latestUserMessageIndex(events: readonly SessionEvent[]): number {
     for (let i = events.length - 1; i >= 0; i--) {

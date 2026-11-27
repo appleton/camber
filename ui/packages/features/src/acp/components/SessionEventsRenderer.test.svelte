@@ -13,12 +13,14 @@
   import { setACPAgentRegistryContext } from "../features/AgentRegistryRepository.svelte";
   import type { ACPSessionRepository } from "../features/SessionRepository.svelte";
   import type { GroupedItem, ToolActivityMode } from "./SessionEventsState.svelte";
+  import type { TurnMetadata } from "../TurnMaterializer";
   import type { SessionEvent } from "../types";
   import SessionEventsRenderer from "./SessionEventsRenderer.svelte";
 
   interface Props {
     events: SessionEvent[];
-    items: GroupedItem[];
+    items?: GroupedItem[];
+    turns?: readonly TurnMetadata[];
     isPrompting?: boolean;
     toolActivity?: ToolActivityMode;
     scrollElement?: HTMLElement;
@@ -28,6 +30,7 @@
   let {
     events,
     items,
+    turns,
     isPrompting = false,
     toolActivity,
     scrollElement,
@@ -61,6 +64,7 @@
         <SessionEventsRenderer
           {events}
           {items}
+          {turns}
           {isPrompting}
           {...toolActivity ? { toolActivity } : {}}
           {scrollElement}
