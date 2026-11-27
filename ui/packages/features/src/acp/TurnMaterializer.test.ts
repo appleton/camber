@@ -21,6 +21,58 @@ import {
   type SessionEvent,
 } from "./TurnMaterializer";
 
+describe("Transcript compaction", () => {
+  it("keeps streamed summary blocks in one row at the compaction boundary", () => {
+    const materializer = new TurnMaterializer();
+    const compactionId = "compact-1";
+    const status = (status: string) =>
+      materializer.apply({ sessionUpdate: "compaction_update", compactionId, status });
+    const chunk = (text: string) =>
+      materializer.apply({
+        sessionUpdate: "compaction_summary_chunk",
+        compactionId,
+        content: { type: "text", text },
+      });
+
+    materializer.apply(textChunk("agent_message_chunk", "Before"));
+    status("in_progress");
+    expect(materializer.compacting).toBe(true);
+    chunk("Previous ");
+    materializer.apply(textChunk("agent_message_chunk", "After"));
+    chunk("context");
+    status("completed");
+
+    expect(materializer.compacting).toBe(false);
+    expect(materializer.events).toMatchObject([
+      { eventKind: "agent_message", content: [{ text: "Before" }] },
+      {
+        eventKind: "compaction",
+        compactionId,
+        status: "completed",
+        summary: [{ text: "Previous context" }],
+      },
+      { eventKind: "agent_message", content: [{ text: "After" }] },
+    ]);
+  });
+
+  it("applies replay and replacement summaries idempotently and honors explicit clears", () => {
+    const materializer = new TurnMaterializer();
+    const update = {
+      sessionUpdate: "compaction_update",
+      compactionId: "compact-1",
+      status: "completed",
+      summary: [{ type: "text", text: "Retained context" }],
+    } as const;
+    materializer.apply({ ...update, summary: [...update.summary] });
+    materializer.apply({ ...update, summary: [...update.summary] });
+    expect(materializer.compacting).toBe(false);
+    expect(materializer.events).toMatchObject([{ summary: [{ text: "Retained context" }] }]);
+
+    materializer.apply({ ...update, summary: null });
+    expect(materializer.events).toMatchObject([{ summary: [] }]);
+  });
+});
+
 function textChunk(
   sessionUpdate: "user_message_chunk" | "agent_message_chunk" | "agent_thought_chunk",
   text: string,

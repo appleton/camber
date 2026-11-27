@@ -79,6 +79,89 @@ func TestBuildInitializeRequest(t *testing.T) {
 	})
 }
 
+func TestStandardCompactionOverACP(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	agentIn, toAgent := io.Pipe()
+	fromAgent, agentOut := io.Pipe()
+	defer toAgent.Close()
+	defer fromAgent.Close()
+	defer agentIn.Close()
+	defer agentOut.Close()
+
+	type request struct {
+		Method string          `json:"method"`
+		Params json.RawMessage `json:"params"`
+		ID     json.RawMessage `json:"id"`
+	}
+	requests := make(chan request, 2)
+	go func() {
+		decoder := json.NewDecoder(agentIn)
+		encoder := json.NewEncoder(agentOut)
+		for range 2 {
+			var req request
+			if decoder.Decode(&req) != nil {
+				return
+			}
+			requests <- req
+			result := map[string]any{}
+			if req.Method == "initialize" {
+				result["protocolVersion"] = 1
+			} else {
+				for _, update := range []string{
+					`{"sessionUpdate":"user_message_chunk","content":{"type":"text","text":"Earlier prompt"}}`,
+					`{"sessionUpdate":"compaction_update","compactionId":"c1","status":"in_progress"}`,
+					`{"sessionUpdate":"compaction_summary_chunk","compactionId":"c1","content":{"type":"text","text":"Summary"}}`,
+					`{"sessionUpdate":"compaction_update","compactionId":"c1","status":"completed","summary":null}`,
+					`{"sessionUpdate":"compaction_update","compactionId":"c2","status":"_new_status"}`,
+					`{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Continued"}}`,
+				} {
+					if _, err := fmt.Fprintf(agentOut, `{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s1","update":%s}}`+"\n", update); err != nil {
+						return
+					}
+				}
+			}
+			if encoder.Encode(map[string]any{"jsonrpc": "2.0", "id": req.ID, "result": result}) != nil {
+				return
+			}
+		}
+	}()
+
+	var updates []json.RawMessage
+	client := &acpClient{notify: func(_ context.Context, method string, params any) {
+		assert.Equal(t, acpsdk.ClientMethodSessionUpdate, method)
+		raw, err := json.Marshal(params)
+		if assert.NoError(t, err) {
+			updates = append(updates, raw)
+		}
+	}}
+	conn := acpsdk.NewClientSideConnection(client, compactionInitializeWriter{toAgent},
+		&compactionNotificationReader{input: bufio.NewReader(fromAgent)})
+	_, err := conn.Initialize(ctx, defaultInitializeRequest())
+	require.NoError(t, err)
+	var initialize struct {
+		ClientCapabilities map[string]json.RawMessage `json:"clientCapabilities"`
+	}
+	require.NoError(t, json.Unmarshal((<-requests).Params, &initialize))
+	assert.JSONEq(t, `{"compaction":{}}`, string(initialize.ClientCapabilities["session"]))
+	assert.JSONEq(t, `{"readTextFile":true,"writeTextFile":true}`, string(initialize.ClientCapabilities["fs"]))
+
+	_, err = conn.LoadSession(ctx, newLoadSessionRequest("s1", false))
+	require.NoError(t, err)
+	require.NoError(t, client.waitForSessionUpdates(ctx))
+	require.Len(t, updates, 6)
+	var kinds []string
+	for _, raw := range updates {
+		var notification standardCompactionNotification
+		require.NoError(t, json.Unmarshal(raw, &notification))
+		assert.Equal(t, "s1", notification.SessionID)
+		kinds = append(kinds, notification.Update.Kind)
+	}
+	assert.Equal(t, []string{"user_message_chunk", "compaction_update", "compaction_summary_chunk", "compaction_update", "compaction_update", "agent_message_chunk"}, kinds)
+	assert.JSONEq(t, `{"sessionId":"s1","update":{"sessionUpdate":"compaction_update","compactionId":"c1","status":"completed","summary":null}}`, string(updates[3]))
+	assert.JSONEq(t, `{"sessionId":"s1","update":{"sessionUpdate":"compaction_update","compactionId":"c2","status":"_new_status"}}`, string(updates[4]))
+}
+
 func TestMarkExited(t *testing.T) {
 	t.Run("clears active process state", func(t *testing.T) {
 		cmd := &exec.Cmd{}

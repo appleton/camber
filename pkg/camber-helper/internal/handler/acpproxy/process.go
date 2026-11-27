@@ -435,7 +435,11 @@ func (p *process) spawnAndInitializeLocked(ctx context.Context, cfg startConfig,
 	go scanForAuthUpdates(cfg.serverName, sniffPipeR, client.notify)
 
 	configuration := &sessionConfigurationCache{}
-	conn := acpsdk.NewClientSideConnection(&configurationClient{acpClient: client, configuration: configuration}, stdin, teedStdout)
+	conn := acpsdk.NewClientSideConnection(
+		&configurationClient{acpClient: client, configuration: configuration},
+		compactionInitializeWriter{stdin},
+		&compactionNotificationReader{input: bufio.NewReader(teedStdout)},
+	)
 
 	initCtx, cancelInitialize := context.WithTimeout(ctx, initializeHandshakeTimeout)
 	defer cancelInitialize()

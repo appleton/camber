@@ -2,7 +2,6 @@ import {
   type Client,
   type RequestPermissionRequest,
   type RequestPermissionResponse,
-  type SessionNotification,
 } from "@agentclientprotocol/sdk";
 import type {
   ACPCompactionNotification,
@@ -12,6 +11,7 @@ import { DEFAULT_AGENT_SERVER, normalizeAgentServerName } from "./agentServers";
 import { CLAUDE_SDK_MESSAGE_METHOD, parseClaudePromptSuggestion } from "./claudePromptSuggestions";
 import type { ACPSessionRepositoryWriter } from "./features/SessionRepository.svelte";
 import { parseClaudeGoalUpdate } from "./goals";
+import { STANDARD_COMPACTION_NOTIFICATION, type TranscriptNotification } from "./types";
 
 export class ACPClient implements Client {
   private agentServer: string;
@@ -27,7 +27,7 @@ export class ACPClient implements Client {
     return this.repo.handleRequestPermission(this.agentServer, params);
   }
 
-  async sessionUpdate(params: SessionNotification): Promise<void> {
+  async sessionUpdate(params: TranscriptNotification): Promise<void> {
     this.repo.handleSessionUpdate(this.agentServer, params);
   }
 
@@ -46,6 +46,8 @@ export class ACPClient implements Client {
           this.agentServer,
           params as unknown as ACPTurnEndedNotification,
         );
+      case STANDARD_COMPACTION_NOTIFICATION:
+        return this.sessionUpdate(params as unknown as TranscriptNotification);
       case "camber/acp/session_replay_started":
         if (typeof params.sessionId === "string") {
           this.repo.handleSessionReplayStarted(this.agentServer, params.sessionId);

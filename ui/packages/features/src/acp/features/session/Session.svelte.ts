@@ -6,7 +6,6 @@ import type {
   SessionConfigOption,
   SessionId,
   SessionModeState,
-  SessionNotification,
 } from "@agentclientprotocol/sdk";
 import { waiting, type AsyncState } from "@camber/lib/async-state";
 import { DEFAULT_AGENT_SERVER, normalizeAgentServerName } from "../../agentServers";
@@ -15,6 +14,7 @@ import { normalizeACPError, type ACPRequestError } from "../../errors";
 import { controlCodexGoal, type ACPGoalState } from "../../goals";
 import type { ACPResolvedSessionInfo } from "../../sessionInfo";
 import { TurnMaterializer, type SessionEvent, type TurnMetadata } from "../../TurnMaterializer";
+import type { TranscriptNotification } from "../../types";
 import { textPromptContent } from "./content";
 import { CamberSessionExtensions } from "./extensions/CamberSessionExtensions.svelte";
 import { ACPSessionConfig, type ACPSetConfigOptionOptions } from "./SessionConfig";
@@ -73,6 +73,7 @@ export class ACPSession {
   plan = $state<Plan | null>(null);
   sessionInfo = $state.raw<ACPResolvedSessionInfo | null>(null);
   lastRemoteMessageId: string | null = null;
+  private standardCompacting = $state(false);
   ignoredMessageIds: Set<string> = new Set();
 
   configOptions = $state<SessionConfigOption[]>([]);
@@ -118,7 +119,7 @@ export class ACPSession {
   // replay materializer like any replay. If the helper then refuses the load
   // (turn running), the loader puts these back on the live transcript instead
   // of discarding them with the replay. Plain field: loader-owned.
-  refusedLoadCapture: SessionNotification[] | null = null;
+  refusedLoadCapture: TranscriptNotification[] | null = null;
   // Opening this conversation found a turn running that the helper could not
   // snapshot (live attach refused with SESSION_ACTIVE; the helper avoids this
   // on the desktop, so it is a safety net). The pane shows the live updates
@@ -247,7 +248,7 @@ export class ACPSession {
     return this.sessionId === null ? this.cwd : null;
   }
   get compacting(): boolean {
-    return this.extensions.camber?.compacting ?? false;
+    return this.standardCompacting || (this.extensions.camber?.compacting ?? false);
   }
   get currentModeId(): string | null {
     return this.config.currentModeId;
@@ -598,12 +599,12 @@ export class ACPSession {
     return this.loader.buildLoadState();
   }
 
-  applyReplayUpdate(params: SessionNotification): void {
+  applyReplayUpdate(params: TranscriptNotification): void {
     this.refusedLoadCapture?.push(params);
     this.transcript.applyReplayUpdate(params);
   }
 
-  applySessionUpdate(params: SessionNotification): void {
+  applySessionUpdate(params: TranscriptNotification): void {
     this.transcript.applySessionUpdate(params);
   }
 
@@ -649,6 +650,11 @@ export class ACPSession {
 
   handleTurnEnded(): void {
     this.extensions.camber?.endTurn();
+    if (this.materializer.cancelOpenCompactions()) {
+      this.publishTranscript();
+      this.env.publishLiveStatuses();
+    }
+    this.replayMaterializer?.cancelOpenCompactions();
     if (this.loadState.status === "loading") this.turnEndedDuringLoad = true;
     this.retryDeferredConnectorRefresh();
     this.retryHistoryReload();
@@ -788,6 +794,7 @@ export class ACPSession {
   }
 
   private flushTranscript(persistMetadata = true): void {
+    this.standardCompacting = this.materializer.compacting;
     const historicalEventCount = this.historicalEvents.length;
     this.events = [...this.historicalEvents, ...this.materializer.events];
     this.turns = [

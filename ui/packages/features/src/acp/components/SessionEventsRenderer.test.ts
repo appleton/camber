@@ -4,6 +4,72 @@ import SessionEventsRendererHarness from "./SessionEventsRenderer.test.svelte";
 import type { GroupedItem } from "./SessionEventsState.svelte";
 
 describe("SessionEventsRenderer", () => {
+  it("renders a collapsed compaction summary between conversation messages", async () => {
+    const { container } = render(SessionEventsRendererHarness, {
+      props: {
+        events: [],
+        items: [
+          agentMessageItem(0, "Before"),
+          {
+            id: "event-1",
+            kind: "event",
+            index: 1,
+            event: {
+              eventKind: "compaction",
+              compactionId: "compact-1",
+              status: "completed",
+              summary: [{ type: "text", text: "Retained context" }],
+            },
+          },
+          agentMessageItem(2, "After"),
+        ],
+      },
+    });
+
+    const row = screen.getByRole("button", { name: "Context compacted" });
+    expect(row).toHaveAttribute("aria-expanded", "false");
+    expect(
+      container.querySelector("[data-session-compaction] [data-tool-group-rule]"),
+    ).toBeInTheDocument();
+    expect(follows(row, screen.getByText("Before"))).toBe(true);
+    expect(follows(screen.getByText("After"), row)).toBe(true);
+    expect(container.querySelector("[data-user-message]")).toBeNull();
+    await fireEvent.click(row);
+    expect(row).toHaveAttribute("aria-expanded", "true");
+    expect(await screen.findByText("Retained context")).toBeVisible();
+    await fireEvent.click(row);
+    expect(row).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Retained context")).toBeNull();
+  });
+
+  it("renders a generic compaction marker for an unknown status with no displayable summary", () => {
+    render(SessionEventsRendererHarness, {
+      props: {
+        events: [],
+        items: [
+          {
+            id: "event-0",
+            kind: "event",
+            index: 0,
+            event: {
+              eventKind: "compaction",
+              compactionId: "compact-1",
+              status: "_new_status",
+              summary: [
+                { type: "text", text: " \n" },
+                { type: "audio", data: "AA==", mimeType: "audio/wav" },
+              ],
+              error: " ",
+            },
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText("Context compaction")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Context compaction" })).toBeNull();
+  });
+
   it("renders a visible boundary with both ACP agent icons", () => {
     const { container } = render(SessionEventsRendererHarness, {
       props: {

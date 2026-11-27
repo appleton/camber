@@ -1,6 +1,8 @@
 import type {
   ToolCall as ACPToolCall,
   ContentBlock,
+  SessionNotification,
+  SessionUpdate,
   ToolCallContent,
 } from "@agentclientprotocol/sdk";
 import type { ExtractUnionMember } from "@camber/lib/types";
@@ -47,13 +49,51 @@ export type SessionHandoff = {
   createdAt: string;
 };
 
+export const STANDARD_COMPACTION_NOTIFICATION = "camber/acp/standard_compaction";
+
+export type CompactionUpdate = {
+  compactionId: string;
+  _meta?: Record<string, unknown> | null;
+} & (
+  | {
+      sessionUpdate: "compaction_update";
+      status: string;
+      summary?: ContentBlock[] | null;
+      error?: string | null;
+    }
+  | { sessionUpdate: "compaction_summary_chunk"; content: ContentBlock }
+);
+
+export type TranscriptUpdate = SessionUpdate | CompactionUpdate;
+export type TranscriptNotification = Omit<SessionNotification, "update"> & {
+  update: TranscriptUpdate;
+};
+
+export function isCompactionUpdate(
+  update: { sessionUpdate?: unknown } | undefined,
+): update is CompactionUpdate {
+  return (
+    update?.sessionUpdate === "compaction_update" ||
+    update?.sessionUpdate === "compaction_summary_chunk"
+  );
+}
+
+export type SessionCompaction = {
+  eventKind: "compaction";
+  compactionId: string;
+  status: string;
+  summary: ContentBlock[];
+  error?: string | null;
+};
+
 export type SessionEvent =
   | UserMessage
   | AgentMessage
   | AgentThought
   | ToolCall
   | ModeChange
-  | SessionHandoff;
+  | SessionHandoff
+  | SessionCompaction;
 
 export function isToolCall(e: SessionEvent): e is ToolCall {
   return e.eventKind === "tool_call";

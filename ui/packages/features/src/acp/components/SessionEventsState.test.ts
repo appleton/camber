@@ -266,6 +266,25 @@ describe("SessionEventsState", () => {
     });
   });
 
+  it("keeps interrupted tool folds on their respective sides of a compaction", () => {
+    const state = new SessionEventsState({
+      events: [
+        tool("read-1", "read", "completed"),
+        { eventKind: "compaction", compactionId: "compact-1", status: "completed", summary: [] },
+        tool("run-1", "execute", "cancelled"),
+      ],
+      isPrompting: false,
+      toolActivity: "compact",
+      turns: [interruptedTurn(0, 2)],
+    });
+
+    expect(state.grouped).toMatchObject([
+      { kind: "event_group", events: [{ index: 0 }] },
+      { kind: "event", index: 1, event: { eventKind: "compaction" } },
+      { kind: "event_group", events: [{ index: 2 }] },
+    ]);
+  });
+
   it("folds every unpinned tool in an interrupted compact turn", () => {
     const state = new SessionEventsState({
       events: [

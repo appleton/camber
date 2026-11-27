@@ -75,6 +75,8 @@ var _ interface {
 // pool acp subprocess and converts them to appropriate LSP notifications.
 func (c *acpClient) HandleExtensionMethod(ctx context.Context, method string, params json.RawMessage) (any, error) {
 	switch method {
+	case compactionTransportMethod:
+		return nil, c.enqueueStandardCompaction(params)
 	case acphelpers.ExtensionMethodShowMessage:
 		var notif acphelpers.ShowMessageNotification
 		if err := json.Unmarshal(params, &notif); err != nil {
