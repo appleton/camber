@@ -132,6 +132,7 @@ export { createACPConnection } from "./createACPConnection";
 export { ACP_DEBUG_DUMP_LOADED_EVENT, normalizeDumpEntries } from "./debugDump";
 export type { ACPDebugAPI, ACPDebugDumpLoadedEventDetail, ACPDumpEntry } from "./debugDump";
 export type { DesktopOpenerInfo } from "./desktopOpeners";
+export { applyDesktopWindowCorners, type DesktopWindowCorners } from "./desktopPanelCorners";
 export { desktopUpdate, type DesktopUpdateState } from "./desktopUpdate";
 export { extractErrorMessage } from "./errors";
 export {

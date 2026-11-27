@@ -8,13 +8,17 @@
 
   let { controller }: Props = $props();
   let animating = $state(false);
+  let bottomRightRadius = $state<number>();
 
   export function setAnimating(value: boolean): void {
     animating = value;
   }
+  export function setBottomRightRadius(value: number | undefined): void {
+    bottomRightRadius = value;
+  }
 </script>
 
-<SplitsView {controller} usePaneShape paneShapeAnimating={animating}>
+<SplitsView {controller} {bottomRightRadius} usePaneShape paneShapeAnimating={animating}>
   {#snippet children(tab)}
     <div data-test-content={tab.id}></div>
   {/snippet}

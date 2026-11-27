@@ -26,9 +26,20 @@
     paneElement?: HTMLElement;
     paneContentElement?: HTMLElement;
     animating: boolean;
+    bottomLeftRadius?: number;
+    bottomRightRadius?: number;
   }
 
-  let { paneId, tabId, version, paneElement, paneContentElement, animating }: Props = $props();
+  let {
+    paneId,
+    tabId,
+    version,
+    paneElement,
+    paneContentElement,
+    animating,
+    bottomLeftRadius,
+    bottomRightRadius,
+  }: Props = $props();
 
   // Quiet period after self-observed geometry churn before settling back to
   // the full-quality filter and a rounded re-measure.
@@ -273,6 +284,21 @@
     return Number.isInteger(value) ? String(value) : value.toFixed(2);
   }
 
+  function bottomRadii(frame: PaneShapeFrame, radii: PaneShapeRadii, base: number, limit: number) {
+    // Apply the same inset to the adaptive fill as to the regular pane fill.
+    const fillInset = frame.edgeRadii.pane - radii.pane;
+    return {
+      left:
+        bottomLeftRadius === undefined
+          ? base
+          : Math.max(0, Math.min(bottomLeftRadius - fillInset, limit)),
+      right:
+        bottomRightRadius === undefined
+          ? base
+          : Math.max(0, Math.min(bottomRightRadius - fillInset, limit)),
+    };
+  }
+
   function paneShapePathForFrame(frame: PaneShapeFrame, radii: PaneShapeRadii): string {
     if (!frame.hasVisibleTab) return paneShapeBodyPathForFrame(frame, radii);
 
@@ -286,6 +312,12 @@
     const paneRadius = Math.max(
       0,
       Math.min(radii.pane, width / 2, Math.max(0, height - frame.contentY)),
+    );
+    const bottom = bottomRadii(
+      frame,
+      radii,
+      paneRadius,
+      Math.min(width, height - frame.contentY) / 2,
     );
     const rightShoulderRadius = Math.min(
       shoulderRadius,
@@ -316,10 +348,10 @@
       ...shoulderRight,
       `L ${n(width - paneRadius)} ${n(frame.contentY)}`,
       `Q ${n(width)} ${n(frame.contentY)} ${n(width)} ${n(frame.contentY + paneRadius)}`,
-      `L ${n(width)} ${n(height - paneRadius)}`,
-      `Q ${n(width)} ${n(height)} ${n(width - paneRadius)} ${n(height)}`,
-      `L ${n(paneRadius)} ${n(height)}`,
-      `Q 0 ${n(height)} 0 ${n(height - paneRadius)}`,
+      `L ${n(width)} ${n(height - bottom.right)}`,
+      `Q ${n(width)} ${n(height)} ${n(width - bottom.right)} ${n(height)}`,
+      `L ${n(bottom.left)} ${n(height)}`,
+      `Q 0 ${n(height)} 0 ${n(height - bottom.left)}`,
       `L 0 ${n(frame.contentY + topLeftPaneRadius)}`,
       ...(topLeftPaneRadius > 0
         ? [`Q 0 ${n(frame.contentY)} ${n(topLeftPaneRadius)} ${n(frame.contentY)}`]
@@ -337,16 +369,17 @@
     const top = Math.max(0, Math.min(frame.contentY, height));
     const bodyHeight = Math.max(0, height - top);
     const paneRadius = Math.max(0, Math.min(radii.pane, width / 2, bodyHeight / 2));
+    const bottom = bottomRadii(frame, radii, paneRadius, Math.min(width, bodyHeight) / 2);
     const n = pathNumber;
 
     return [
       `M ${n(paneRadius)} ${n(top)}`,
       `L ${n(width - paneRadius)} ${n(top)}`,
       `Q ${n(width)} ${n(top)} ${n(width)} ${n(top + paneRadius)}`,
-      `L ${n(width)} ${n(height - paneRadius)}`,
-      `Q ${n(width)} ${n(height)} ${n(width - paneRadius)} ${n(height)}`,
-      `L ${n(paneRadius)} ${n(height)}`,
-      `Q 0 ${n(height)} 0 ${n(height - paneRadius)}`,
+      `L ${n(width)} ${n(height - bottom.right)}`,
+      `Q ${n(width)} ${n(height)} ${n(width - bottom.right)} ${n(height)}`,
+      `L ${n(bottom.left)} ${n(height)}`,
+      `Q 0 ${n(height)} 0 ${n(height - bottom.left)}`,
       `L 0 ${n(top + paneRadius)}`,
       `Q 0 ${n(top)} ${n(paneRadius)} ${n(top)}`,
       "Z",

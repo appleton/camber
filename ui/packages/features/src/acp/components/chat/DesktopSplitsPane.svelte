@@ -17,6 +17,7 @@
   import { onDestroy, tick, untrack, type Component, type Snippet } from "svelte";
   import { DEFAULT_AGENT_SERVER, LOCAL_AGENT_SERVER } from "../../agentServers";
   import { agentPickerIconProps, agentPickerIconUrl } from "./menus/config/agentConfig";
+  import { desktopPanelCorners } from "../../desktopPanelCorners";
   import { desktopUpdate } from "../../desktopUpdate";
   import { getContextRepoContext } from "../../../context";
   import { shortcutHint } from "../../../keybindings";
@@ -4271,6 +4272,12 @@
             >
               <SplitsView
                 controller={entry.mainController}
+                bottomLeftRadius={sidebarCollapsed && !bottomPanelVisible
+                  ? $desktopPanelCorners.bottomLeft
+                  : undefined}
+                bottomRightRadius={!rightSidebarVisible && !bottomPanelVisible
+                  ? $desktopPanelCorners.bottomRight
+                  : undefined}
                 style="--splits-tab-action-icon-size: 12px; --splits-tab-close-size: 16px;"
                 tabBarWindowDrag
                 usePaneShape
@@ -4355,6 +4362,12 @@
                 <div class="desktop-bottom-panel-content">
                   <SplitsView
                     controller={entry.bottomPanelController}
+                    bottomLeftRadius={sidebarCollapsed && bottomPanelVisible
+                      ? $desktopPanelCorners.bottomLeft
+                      : undefined}
+                    bottomRightRadius={!rightSidebarVisible && bottomPanelVisible
+                      ? $desktopPanelCorners.bottomRight
+                      : undefined}
                     style="--splits-tab-action-icon-size: 12px; --splits-tab-close-size: 16px;"
                     tabBarWindowDrag
                     usePaneShape
@@ -4429,6 +4442,9 @@
               <div class="desktop-right-sidebar-content">
                 <SplitsView
                   controller={entry.rightSidebarController}
+                  bottomRightRadius={rightSidebarVisible
+                    ? $desktopPanelCorners.bottomRight
+                    : undefined}
                   style="--splits-tab-action-icon-size: 12px; --splits-tab-close-size: 16px;"
                   tabBarWindowDrag
                   usePaneShape
