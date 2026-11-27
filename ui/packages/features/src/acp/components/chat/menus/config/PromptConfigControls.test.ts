@@ -1165,3 +1165,160 @@ describe("PromptConfigControls extras", () => {
     expect(screen.queryByRole("button", { name: "Use Off by default" })).toBeNull();
   });
 });
+
+// Claude publishes aliases alongside pinned full ids; the picker splits them.
+function claudeSplitModelOption(currentValue: string): SessionConfigOption {
+  return {
+    id: "model",
+    name: "Model",
+    type: "select",
+    currentValue,
+    options: [
+      { value: "default", name: "Default (recommended)" },
+      { value: "claude-opus-4-8", name: "Opus 4.8" },
+      { value: "opus", name: "Opus 5" },
+      { value: "sonnet", name: "Sonnet 5" },
+      { value: "claude-haiku-4-5-20251001", name: "Haiku 4.5" },
+    ],
+  } as SessionConfigOption;
+}
+
+describe("PromptConfigControls Claude More models split (DOM)", () => {
+  beforeEach(() => setEnvironment("vscode", "darwin"));
+  afterEach(() => setEnvironment("", undefined));
+
+  it("shows alias rows inline plus a More models row, and opens the pinned ids", async () => {
+    const { repo } = makeRepo({
+      agentServer: "claude-acp",
+      configOptions: [claudeSplitModelOption("opus")],
+    });
+    render(Harness, { props: { repo, registry: claudeRegistry } });
+
+    await fireEvent.click(trigger());
+
+    expect(screen.getByRole("menuitem", { name: /Default \(recommended\)/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /Opus 5/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /Sonnet 5/ })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /Opus 4\.8/ })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: /Haiku 4\.5/ })).toBeNull();
+
+    await fireEvent.click(screen.getByRole("menuitem", { name: /More models/ }));
+
+    expect(screen.getByRole("menuitem", { name: /Opus 4\.8/ })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /Haiku 4\.5/ })).toBeInTheDocument();
+  });
+
+  it("shows the selected name on More models only when a pinned id is current", async () => {
+    const pinned = makeRepo({
+      agentServer: "claude-acp",
+      configOptions: [claudeSplitModelOption("claude-opus-4-8")],
+    });
+    const { unmount } = render(Harness, { props: { repo: pinned.repo, registry: claudeRegistry } });
+    await fireEvent.click(trigger());
+    expect(screen.getByRole("menuitem", { name: /More models.*Opus 4\.8/ })).toBeInTheDocument();
+    unmount();
+
+    const alias = makeRepo({
+      agentServer: "claude-acp",
+      configOptions: [claudeSplitModelOption("opus")],
+    });
+    render(Harness, { props: { repo: alias.repo, registry: claudeRegistry } });
+    await fireEvent.click(trigger());
+    expect(screen.getByRole("menuitem", { name: "More models" })).toBeInTheDocument();
+  });
+
+  it("does not split the same values for a non-Claude agent", async () => {
+    const { repo } = makeRepo({
+      agentServer: "poolside",
+      configOptions: [claudeSplitModelOption("opus")],
+    });
+    render(Harness, { props: { repo, registry: claudeRegistry } });
+
+    await fireEvent.click(trigger());
+
+    expect(screen.queryByRole("menuitem", { name: /More models/ })).toBeNull();
+    expect(screen.getByRole("menuitem", { name: /Opus 4\.8/ })).toBeInTheDocument();
+  });
+});
+
+describe("PromptConfigControls Claude More models split (native)", () => {
+  beforeEach(() => {
+    setEnvironment("desktop", "darwin");
+    mockPresentNativeMenu.mockReset().mockResolvedValue(undefined);
+  });
+  afterEach(() => setEnvironment("", undefined));
+
+  it("lists aliases inline and pinned ids in a More models submenu", async () => {
+    const { repo } = makeRepo({
+      agentServer: "claude-acp",
+      configOptions: [claudeSplitModelOption("claude-haiku-4-5-20251001")],
+    });
+    render(Harness, { props: { repo, registry: claudeRegistry } });
+
+    await fireEvent.click(trigger());
+
+    const inline = lastSpec().filter(
+      (item) => item.kind === "action" && item.id.startsWith("model:"),
+    );
+    expect(inline.map((item) => (item.kind === "action" ? item.id : ""))).toEqual([
+      "model:default",
+      "model:opus",
+      "model:sonnet",
+    ]);
+    const more = lastSpec().find((item) => item.kind === "submenu" && item.label === "More models");
+    if (more?.kind !== "submenu") throw new Error("expected a More models submenu");
+    expect(more.detail).toBe("Haiku 4.5");
+    expect(more.items.map((item) => (item.kind === "action" ? item.id : ""))).toEqual([
+      "model:claude-opus-4-8",
+      "model:claude-haiku-4-5-20251001",
+    ]);
+  });
+});
+
+describe("PromptConfigControls Codex More models split (DOM)", () => {
+  beforeEach(() => setEnvironment("vscode", "darwin"));
+  afterEach(() => setEnvironment("", undefined));
+
+  it("features the newest model per family and tucks older versions behind More models", async () => {
+    const names: [string, string][] = [
+      ["gpt-6.2-sol", "6.2 Sol"],
+      ["gpt-6.2-astra", "6.2 Astra"],
+      ["gpt-6.1-terra", "6.1 Terra"],
+      ["gpt-6.1-sol", "6.1 Sol"],
+      ["gpt-6-astra", "6 Astra"],
+      ["gpt-6-sol", "6 Sol"],
+      ["gpt-6-luna", "6 Luna"],
+      ["gpt-5.6-sol", "5.6 Sol"],
+      ["gpt-5.6-terra", "5.6 Terra"],
+      ["gpt-5.6-luna", "5.6 Luna"],
+    ];
+    const { repo } = makeRepo({
+      agentServer: "codex-acp",
+      configOptions: [
+        {
+          id: "model",
+          name: "Model",
+          type: "select",
+          currentValue: "gpt-6.2-sol",
+          options: names.map(([value, name]) => ({ value, name })),
+        } as SessionConfigOption,
+      ],
+    });
+    render(Harness, { props: { repo, registry: claudeRegistry } });
+
+    await fireEvent.click(trigger());
+
+    for (const name of ["6.2 Sol", "6.2 Astra", "6.1 Terra", "6 Luna"]) {
+      expect(screen.getByRole("menuitem", { name: new RegExp(`^${name}`) })).toBeInTheDocument();
+    }
+    for (const name of ["6.1 Sol", "6 Astra", "6 Sol", "5.6 Sol", "5.6 Terra", "5.6 Luna"]) {
+      expect(screen.queryByRole("menuitem", { name: new RegExp(`^${name}`) })).toBeNull();
+    }
+
+    await fireEvent.click(screen.getByRole("menuitem", { name: /More models/ }));
+
+    for (const name of ["6.1 Sol", "6 Astra", "6 Sol", "5.6 Sol", "5.6 Terra", "5.6 Luna"]) {
+      expect(screen.getByRole("menuitem", { name: new RegExp(`^${name}`) })).toBeInTheDocument();
+    }
+  });
+});

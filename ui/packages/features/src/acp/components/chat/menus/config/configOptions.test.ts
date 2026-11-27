@@ -13,6 +13,8 @@ import {
   modeIconClass,
   orderClaudeModelValues,
   promptConfigKind,
+  splitClaudeModelValues,
+  splitCodexModelValues,
   valueDescription,
 } from "./configOptions";
 
@@ -215,6 +217,114 @@ describe("orderClaudeModelValues", () => {
     ]);
 
     expect(ordered.map((value) => value.name)).toEqual(["Opus 4.8", "Sonnet 5"]);
+  });
+});
+
+describe("splitClaudeModelValues", () => {
+  it("separates alias rows from pinned full ids, keeping order in each group", () => {
+    const split = splitClaudeModelValues([
+      { value: "default", name: "Default" },
+      { value: "claude-opus-4-8", name: "Opus 4.8" },
+      { value: "opus[1m]", name: "Opus (1M)" },
+      { value: "us.anthropic.claude-haiku-4-5", name: "Haiku 4.5 (gateway)" },
+      { value: "sonnet", name: "Sonnet" },
+      { value: "claude-fable-5-1", name: "Fable 5.1" },
+    ]);
+
+    expect(split?.featured.map((value) => value.value)).toEqual(["default", "opus[1m]", "sonnet"]);
+    expect(split?.more.map((value) => value.value)).toEqual([
+      "claude-opus-4-8",
+      "us.anthropic.claude-haiku-4-5",
+      "claude-fable-5-1",
+    ]);
+  });
+
+  it("returns null when either group would be empty", () => {
+    expect(
+      splitClaudeModelValues([
+        { value: "default", name: "Default" },
+        { value: "opus", name: "Opus" },
+      ]),
+    ).toBeNull();
+    expect(
+      splitClaudeModelValues([
+        { value: "claude-opus-4-8", name: "Opus 4.8" },
+        { value: "claude-haiku-4-5", name: "Haiku 4.5" },
+      ]),
+    ).toBeNull();
+    expect(splitClaudeModelValues([])).toBeNull();
+  });
+});
+
+describe("splitCodexModelValues", () => {
+  const model = (value: string, name = value) => ({ value, name });
+
+  it("features the newest version of each family and keeps input order", () => {
+    const split = splitCodexModelValues([
+      model("gpt-6.2-sol", "6.2 Sol"),
+      model("gpt-6.2-astra", "6.2 Astra"),
+      model("gpt-6.1-terra", "6.1 Terra"),
+      model("gpt-6.1-sol", "6.1 Sol"),
+      model("gpt-6-astra", "6 Astra"),
+      model("gpt-6-sol", "6 Sol"),
+      model("gpt-6-luna", "6 Luna"),
+      model("gpt-5.6-sol", "5.6 Sol"),
+      model("gpt-5.6-terra", "5.6 Terra"),
+      model("gpt-5.6-luna", "5.6 Luna"),
+    ]);
+
+    expect(split?.featured.map((value) => value.name)).toEqual([
+      "6.2 Sol",
+      "6.2 Astra",
+      "6.1 Terra",
+      "6 Luna",
+    ]);
+    expect(split?.more.map((value) => value.name)).toEqual([
+      "6.1 Sol",
+      "6 Astra",
+      "6 Sol",
+      "5.6 Sol",
+      "5.6 Terra",
+      "5.6 Luna",
+    ]);
+  });
+
+  it("compares versions numerically per component", () => {
+    const split = splitCodexModelValues([
+      model("gpt-6-sol"),
+      model("gpt-6.1-sol"),
+      model("gpt-6.10-sol"),
+      model("gpt-6.2-sol"),
+    ]);
+
+    expect(split?.featured.map((value) => value.value)).toEqual(["gpt-6.10-sol"]);
+    expect(split?.more.map((value) => value.value)).toEqual([
+      "gpt-6-sol",
+      "gpt-6.1-sol",
+      "gpt-6.2-sol",
+    ]);
+  });
+
+  it("keeps unparseable values featured and features ties on the newest version", () => {
+    const split = splitCodexModelValues([
+      model("gpt-6.2-sol"),
+      model("gpt-6.2-sol-fast"),
+      model("mystery"),
+      model("gpt-6.1-sol"),
+    ]);
+
+    expect(split?.featured.map((value) => value.value)).toEqual([
+      "gpt-6.2-sol",
+      "gpt-6.2-sol-fast",
+      "mystery",
+    ]);
+    expect(split?.more.map((value) => value.value)).toEqual(["gpt-6.1-sol"]);
+  });
+
+  it("returns null when either group would be empty", () => {
+    expect(splitCodexModelValues([model("gpt-6-sol"), model("gpt-6-astra")])).toBeNull();
+    expect(splitCodexModelValues([model("mystery")])).toBeNull();
+    expect(splitCodexModelValues([])).toBeNull();
   });
 });
 

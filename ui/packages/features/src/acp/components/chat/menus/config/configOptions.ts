@@ -209,6 +209,65 @@ export function orderClaudeModelValues(
     .map((entry) => entry.value);
 }
 
+// The Claude adapter publishes one flat model list that mixes the current
+// generation's aliases (`default`, `opus`, `sonnet[1m]`, ...) with every pinned
+// full model id (`claude-opus-4-8`, `us.anthropic.claude-...`). Pinned ids are
+// rarely wanted, so the picker shows the aliases up front and tucks the pinned
+// ids behind a "More models" submenu. A value is pinned when it contains
+// `claude-`. Returns null when either side would be empty (nothing to tuck away,
+// or nothing to show up front), meaning the list should not be split. Input
+// order is kept within each group.
+export function splitClaudeModelValues(
+  values: SessionConfigSelectOption[],
+): { featured: SessionConfigSelectOption[]; more: SessionConfigSelectOption[] } | null {
+  const featured: SessionConfigSelectOption[] = [];
+  const more: SessionConfigSelectOption[] = [];
+  for (const value of values) {
+    (value.value.includes("claude-") ? more : featured).push(value);
+  }
+  return featured.length > 0 && more.length > 0 ? { featured, more } : null;
+}
+
+// Codex publishes every generation it still serves (`gpt-6.2-sol`,
+// `gpt-6-sol`, `gpt-5.6-sol`, ...) in one flat list, in several families
+// (sol, astra, terra, luna) that are versioned independently. The picker
+// features the newest version of each family and tucks older ones behind
+// "More models". Versions compare numerically per dotted component (6.10 > 6.2,
+// 6 < 6.1). A value that does not parse stays featured: never hide a model we
+// do not understand. Values sharing a family and the newest version (e.g. a
+// suffix variant) are all featured. Null when either group would be empty.
+export function splitCodexModelValues(
+  values: SessionConfigSelectOption[],
+): { featured: SessionConfigSelectOption[]; more: SessionConfigSelectOption[] } | null {
+  const parse = (value: SessionConfigSelectOption) => {
+    const match = /^gpt-(\d+(?:\.\d+)*)-([a-z]+)/i.exec(value.value);
+    if (!match) return null;
+    return { version: match[1].split(".").map(Number), family: match[2].toLowerCase() };
+  };
+  const compare = (a: number[], b: number[]): number => {
+    for (let i = 0; i < Math.max(a.length, b.length); i++) {
+      const diff = (a[i] ?? 0) - (b[i] ?? 0);
+      if (diff !== 0) return diff;
+    }
+    return 0;
+  };
+  const parsed = values.map(parse);
+  const newest = new Map<string, number[]>();
+  for (const entry of parsed) {
+    if (!entry) continue;
+    const best = newest.get(entry.family);
+    if (!best || compare(entry.version, best) > 0) newest.set(entry.family, entry.version);
+  }
+  const featured: SessionConfigSelectOption[] = [];
+  const more: SessionConfigSelectOption[] = [];
+  values.forEach((value, index) => {
+    const entry = parsed[index];
+    const isNewest = !entry || compare(entry.version, newest.get(entry.family) ?? []) === 0;
+    (isNewest ? featured : more).push(value);
+  });
+  return featured.length > 0 && more.length > 0 ? { featured, more } : null;
+}
+
 type KnownEffortRange = {
   // Values the agent must publish for this range to match.
   values: readonly string[];

@@ -60,6 +60,10 @@ export function isClaudeAgent(registry: AcpAgentRegistryRepository, agentServer:
   return agentServer === "claude-acp" || registry.getAgent(agentServer)?.id === "claude-acp";
 }
 
+export function isCodexAgent(registry: AcpAgentRegistryRepository, agentServer: string): boolean {
+  return agentServer === "codex-acp" || registry.getAgent(agentServer)?.id === "codex-acp";
+}
+
 export function agentPickerIconProps(
   registry: AcpAgentRegistryRepository,
   agentServer: string,
