@@ -1522,6 +1522,43 @@ describe("SessionEventsState", () => {
       });
     });
 
+    it("folds live narration when a steer fallback starts a new prompt", () => {
+      const state = new SessionEventsState({
+        events: [
+          { eventKind: "user_message", messageId: "u1", content: [] },
+          agentMessage("Completed reply"),
+          agentMessage("Async follow-up"),
+          steerMessage("Check the remaining files"),
+          agentMessage("I'll check those now"),
+          tool("read-1", "read", "completed"),
+          tool("read-2", "read", "completed"),
+          tool("read-3", "read", "completed"),
+          tool("read-4", "read", "in_progress"),
+        ],
+        turns: [
+          {
+            startedAt: "2026-06-02T10:00:00.000Z",
+            endedAt: "2026-06-02T10:01:00.000Z",
+            startIndex: 0,
+            endIndex: 1,
+          },
+        ],
+        activeTurnStartIndex: 4,
+        isPrompting: true,
+        toolActivity: "compact",
+      });
+
+      expect(state.grouped).toMatchObject([
+        { kind: "event", index: 0 },
+        { kind: "event", index: 1 },
+        { kind: "event", index: 2 },
+        { kind: "event", index: 3 },
+        { kind: "event_group", live: true, events: [{ index: 4 }, { index: 5 }, { index: 6 }] },
+        { kind: "event", index: 7 },
+        { kind: "event", index: 8 },
+      ]);
+    });
+
     it("leaves a single finished tool standalone", () => {
       const state = new SessionEventsState({
         events: [

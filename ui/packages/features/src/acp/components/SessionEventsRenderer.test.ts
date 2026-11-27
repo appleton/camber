@@ -1,9 +1,64 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
+import { TurnMaterializer } from "../TurnMaterializer";
 import SessionEventsRendererHarness from "./SessionEventsRenderer.test.svelte";
 import type { GroupedItem } from "./SessionEventsState.svelte";
 
 describe("SessionEventsRenderer", () => {
+  it.each([
+    { toolActivity: "detailed", isPrompting: false },
+    { toolActivity: "grouped", isPrompting: false },
+    { toolActivity: "compact", isPrompting: false },
+    { toolActivity: "compact", isPrompting: true },
+  ] as const)(
+    "keeps earlier replies visible during async follow-ups ($toolActivity, prompting=$isPrompting)",
+    async ({ toolActivity, isPrompting }) => {
+      const transcript = new TurnMaterializer();
+      transcript.startTurn();
+      transcript.apply({
+        sessionUpdate: "agent_message_chunk",
+        content: { type: "text", text: "Initial summary" },
+      });
+      transcript.completeOpenToolCalls(new Date());
+
+      const { rerender } = render(SessionEventsRendererHarness, {
+        props: { events: [...transcript.events], turns: transcript.turns, toolActivity },
+      });
+      expect(screen.getByText("Initial summary")).toBeVisible();
+
+      for (const summary of ["First follow-up", "Second follow-up"]) {
+        for (const step of [1, 2, 3]) {
+          transcript.apply({
+            sessionUpdate: "tool_call",
+            toolCallId: `${summary}-${step}`,
+            title: "Read a file",
+            kind: "read",
+            status: "completed",
+          });
+        }
+        transcript.apply({
+          sessionUpdate: "agent_message_chunk",
+          content: { type: "text", text: summary },
+        });
+        await rerender({ events: [...transcript.events], isPrompting });
+      }
+
+      const folds = screen.getAllByRole("button", {
+        name: isPrompting ? /^Read [23] files$/ : "3 steps",
+      });
+      const initial = screen.getByText("Initial summary");
+      const first = screen.getByText("First follow-up");
+      const second = screen.getByText("Second follow-up");
+      expect(folds).toHaveLength(2);
+      for (const fold of folds) expect(fold).toHaveAttribute("aria-expanded", "false");
+      for (const summary of [initial, first, second]) expect(summary).toBeVisible();
+      expect(follows(folds[0], initial)).toBe(true);
+      expect(follows(first, folds[0])).toBe(true);
+      expect(follows(folds[1], first)).toBe(true);
+      expect(follows(second, folds[1])).toBe(true);
+    },
+  );
+
   it("renders a collapsed compaction summary between conversation messages", async () => {
     const { container } = render(SessionEventsRendererHarness, {
       props: {
