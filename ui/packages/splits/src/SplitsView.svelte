@@ -22,6 +22,8 @@
     onTabContextMenu?: (args: { paneId: PaneID; tabId: string; event: MouseEvent }) => void;
     usePaneShape?: boolean;
     paneShapeAnimating?: boolean;
+    bottomLeftRadius?: number;
+    bottomRightRadius?: number;
     children: Snippet<[Tab, PaneID]>;
     emptyPane?: Snippet<[PaneID]>;
   }
@@ -41,6 +43,8 @@
     onTabContextMenu,
     usePaneShape = false,
     paneShapeAnimating = false,
+    bottomLeftRadius,
+    bottomRightRadius,
     children: content,
     emptyPane,
   }: Props = $props();
@@ -188,8 +192,11 @@
   <div class="splits-stage" style={stageStyle}>
     {#each layout.panes as paneLayout (paneLayout.paneId)}
       {@const pane = findPane(currentState.rootNode, paneLayout.paneId)}
+      {@const box = paneLayout.box}
+      {@const reachesBottom = Math.abs(box.top.fraction + box.height.fraction - 1) < 1e-9}
+      {@const reachesRight = Math.abs(box.left.fraction + box.width.fraction - 1) < 1e-9}
       {#if pane}
-        <div class="splits-pane-slot" style={layoutBoxStyle(paneLayout.box)}>
+        <div class="splits-pane-slot" style={layoutBoxStyle(box)}>
           <PaneContainer
             {controller}
             {pane}
@@ -205,6 +212,10 @@
             {showTabShortcutLabels}
             {onTabContextMenu}
             {usePaneShape}
+            bottomLeftRadius={reachesBottom && box.left.fraction === 0
+              ? bottomLeftRadius
+              : undefined}
+            bottomRightRadius={reachesBottom && reachesRight ? bottomRightRadius : undefined}
             paneShapeAnimating={paneShapeAnimating || isDividerDragging}
             contentViewLifecycle={controller.configuration.contentViewLifecycle}
             {content}

@@ -1,10 +1,12 @@
 import { DesktopPanel, init } from "@camber/assistant";
 import {
+  applyDesktopWindowCorners,
   appState,
   desktopUpdate,
   NATIVE_MENU_SET_DEFAULT_EVENT,
   sidebarToasts,
   type ACPDebugAPI,
+  type DesktopWindowCorners,
   type NativeMenuSetDefaultPayload,
   type Notifier,
 } from "@camber/features/acp";
@@ -13,6 +15,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { homeDir } from "@tauri-apps/api/path";
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   isPermissionGranted,
@@ -287,6 +290,19 @@ function camberqaDesktopInstance(): DesktopInstanceInfo | undefined {
 interface StartOptions {
   onShellInteractive?: () => void;
   onInitialScreenSettled?: () => void;
+}
+
+async function watchDesktopWindowCorners(): Promise<void> {
+  let receivedChange = false;
+  await getCurrentWebviewWindow().listen<DesktopWindowCorners>(
+    "camber:desktop-window-corners-changed",
+    ({ payload }) => {
+      receivedChange = true;
+      applyDesktopWindowCorners(payload);
+    },
+  );
+  const initial = await invoke<DesktopWindowCorners>("get_desktop_window_corners");
+  if (!receivedChange) applyDesktopWindowCorners(initial);
 }
 
 export async function start({ onShellInteractive, onInitialScreenSettled }: StartOptions = {}) {
@@ -907,6 +923,9 @@ export async function start({ onShellInteractive, onInitialScreenSettled }: Star
   );
 
   watchDesktopAccent();
+  void watchDesktopWindowCorners().catch((error) => {
+    console.warn("Could not follow desktop window corners", error);
+  });
   logStartupDiagnostic("start.completed");
 
   async function applyAndNotifyTheme(themePreference: DesktopSettings["themePreference"]) {

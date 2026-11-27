@@ -61,6 +61,8 @@ pub fn create_main_window<R: Runtime>(app: &mut App<R>) -> tauri::Result<()> {
 
     let window = builder.build()?;
     crate::window_state::save_on_bounds_changes(&window);
+    #[cfg(target_os = "macos")]
+    crate::window_corners::observe(&window);
 
     Ok(())
 }

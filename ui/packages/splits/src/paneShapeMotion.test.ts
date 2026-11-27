@@ -155,6 +155,24 @@ describe("pane shape motion", () => {
     void unmount(component);
   });
 
+  it("updates and restores one bottom corner without waiting for a window resize", async () => {
+    const component = await mountSettledHarness();
+    const path = shadowLayer()!.querySelector("path")!;
+    const initial = path.getAttribute("d")!;
+
+    component.setBottomRightRadius(30);
+    flushSync();
+    expect(path.getAttribute("d")).toBe(
+      initial.replace("L 640 401 Q 640 401 640 401", "L 640 371 Q 640 401 610 401"),
+    );
+
+    component.setBottomRightRadius(undefined);
+    flushSync();
+    expect(path.getAttribute("d")).toBe(initial);
+
+    void unmount(component);
+  });
+
   it("keeps the SVG mounted and re-measures every frame while animating", async () => {
     const component = await mountSettledHarness();
     const settledSvg = shadowLayer()!;
